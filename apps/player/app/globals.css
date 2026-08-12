@@ -1,0 +1,68 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@import url("https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap");
+
+:root {
+  --font-display: "Space Grotesk", sans-serif;
+  --font-body: "Inter", sans-serif;
+  --font-mono: "JetBrains Mono", monospace;
+}
+
+body {
+  @apply bg-ink text-paper font-body;
+}
+
+/* Signature-Element: Textmarker-Annotation über manipulativen Textstellen.
+   Bewusst ein einziger, unverwechselbarer visueller Effekt statt vieler
+   kleiner Animationen — siehe frontend-design Prinzip "Spend your
+   boldness in one place". */
+.marker-highlight {
+  background: linear-gradient(120deg, transparent 0%, transparent 4%, #ffc857 4%, #ffc857 96%, transparent 96%);
+  background-repeat: no-repeat;
+  background-size: 100% 45%;
+  background-position: 0 65%;
+  padding: 0 2px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  * {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+@keyframes slide-up {
+  from {
+    transform: translateY(24px);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+
+@keyframes pulse-once {
+  0% { transform: scale(1); }
+  40% { transform: scale(1.25); }
+  100% { transform: scale(1); }
+}
+
+.tap-pulse:active {
+  animation: pulse-once 0.25s ease-out;
+}
+
+/* iPad/Tablet: Safe-Area für Notch/Home-Indicator, größere Touch-Targets
+   (Apple HIG empfiehlt min. 44x44pt für Touch-Ziele). */
+.safe-top {
+  padding-top: env(safe-area-inset-top);
+}
+.safe-bottom {
+  padding-bottom: env(safe-area-inset-bottom);
+}
+.touch-target {
+  min-height: 44px;
+  min-width: 44px;
+}

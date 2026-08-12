@@ -1,0 +1,23 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Admin-Designsprache: bewusst NICHT wie die Player-App (Tinten/Marker-
+   Gelb) — hier zählt Scanbarkeit über hunderte Zeilen, nicht Erleben.
+   Neutrale Grautöne, eine Akzentfarbe für Aktionen, feste Statusfarben. */
+
+:root {
+  --font-sans: -apple-system, BlinkMacSystemFont, "Segoe UI", Inter, sans-serif;
+  --font-mono: "SF Mono", "JetBrains Mono", Consolas, monospace;
+}
+
+body {
+  @apply bg-canvas text-slate-900;
+  font-family: var(--font-sans);
+}
+
+/* Dichte Tabellenzeilen für 1000+ Einträge — Standard-Zeilenhöhe wäre
+   auf großen Listen zu raumgreifend. */
+.table-row-dense {
+  @apply h-11;
+}
