@@ -1,17 +1,22 @@
 "use client";
 
 import { useState } from "react";
+import { createBrowserClient } from "@supabase/ssr";
 
-export function AddStudentForm({
-  classId,
-}: {
-  classId: string;
-}) {
+function getSupabase() {
+  return createBrowserClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+  );
+}
+
+export function AddStudentForm({ classId }: { classId: string }) {
   const [open, setOpen] = useState(false);
   const [displayName, setDisplayName] = useState("");
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [tempPassword, setTempPassword] = useState<string | null>(null);
+  const [createdUsername, setCreatedUsername] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [pending, setPending] = useState(false);
 
@@ -20,17 +25,32 @@ export function AddStudentForm({
     setPending(true);
     setError(null);
     setTempPassword(null);
+    setCreatedUsername(null);
 
     try {
+      const supabase = getSupabase();
+      const { data: sessionData } = await supabase.auth.getSession();
+      const token = sessionData.session?.access_token;
+
+      if (!token) {
+        setError("Deine Sitzung ist abgelaufen. Bitte neu anmelden.");
+        return;
+      }
+
       const res = await fetch(
         `${process.env.NEXT_PUBLIC_SUPABASE_URL}/functions/v1/create-student-account`,
         {
           method: "POST",
           headers: {
-            Authorization: `Bearer ${await getAccessToken()}`,
+            Authorization: `Bearer ${token}`,
             "Content-Type": "application/json",
           },
-          body: JSON.stringify({ classId, displayName, username, password: password || undefined }),
+          body: JSON.stringify({
+            classId,
+            displayName,
+            username,
+            password: password || undefined,
+          }),
         }
       );
 
@@ -41,25 +61,15 @@ export function AddStudentForm({
       }
 
       setTempPassword(data.tempPassword);
+      setCreatedUsername(data.student.username);
       setDisplayName("");
       setUsername("");
       setPassword("");
-      window.location.reload();
     } catch {
       setError("Verbindung zum Server fehlgeschlagen");
     } finally {
       setPending(false);
     }
-  }
-
-  async function getAccessToken(): Promise<string> {
-    const { createBrowserClient } = await import("@supabase/ssr");
-    const supabase = createBrowserClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-    );
-    const { data } = await supabase.auth.getSession();
-    return data.session?.access_token ?? "";
   }
 
   if (!open) {
@@ -119,9 +129,17 @@ export function AddStudentForm({
       </form>
 
       {tempPassword && (
-        <div className="rounded-md border border-amber-300 bg-amber-50 p-3 text-sm text-amber-900">
-          <strong>Login-Daten notieren:</strong> Das Passwort wird hier einmalig angezeigt.
-          <div className="mt-1 font-mono font-semibold">{tempPassword}</div>
+        <div className="rounded-md border border-amber-300 bg-amber-50 p-3 text-sm text-amber-900 space-y-1">
+          <strong>Login-Daten einmalig notieren</strong>
+          <div>Nutzername: <code className="font-mono font-semibold">{createdUsername}</code></div>
+          <div>Passwort: <code className="font-mono font-semibold">{tempPassword}</code></div>
+          <button
+            type="button"
+            onClick={() => window.location.reload()}
+            className="mt-2 text-xs underline"
+          >
+            Liste aktualisieren
+          </button>
         </div>
       )}
       {error && <p className="text-sm text-red-600">{error}</p>}
