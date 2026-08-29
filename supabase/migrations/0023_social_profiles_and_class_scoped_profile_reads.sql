@@ -30,10 +30,11 @@ create policy "users manage own profile"
   using (auth.uid() = id)
   with check (auth.uid() = id);
 
--- Backfill existing profiles and give new profiles a stable deterministic seed.
+-- Backfill existing profiles. Avatar seeds are random/non-identifying so the
+-- external avatar renderer never receives a user id or email address.
 update public.user_profiles up
 set
   username = coalesce(up.username, split_part(au.email, '.', 1)),
-  avatar_seed = coalesce(up.avatar_seed, up.id::text)
+  avatar_seed = coalesce(up.avatar_seed, gen_random_uuid()::text)
 from auth.users au
 where au.id = up.id;
