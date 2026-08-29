@@ -13,11 +13,13 @@ import { CompetencyPanel, type CompetencyDisplay } from "../../components/Compet
 export function FeedClient({
   initialItems,
   userId,
+  classInstanceId,
   likedContentIds,
   competencyDisplay,
 }: {
   initialItems: FeedItem[];
   userId: string;
+  classInstanceId: string;
   likedContentIds: Set<string>;
   competencyDisplay: CompetencyDisplay[];
 }) {
@@ -28,13 +30,11 @@ export function FeedClient({
   } | null>(null);
   const seenRef = useRef<Set<string>>(new Set());
 
-  // Realtime-Brücke starten: domain_events -> lokaler EventBus
   useEffect(() => {
     const stop = startRealtimeEventBridge(supabase, userId);
     return stop;
   }, [userId]);
 
-  // Auf MissionCompleted reagieren -> Reflexions-Overlay zeigen
   useEffect(() => {
     const unsubscribe = eventBus.on("MissionCompleted", async (event) => {
       const { data: mission } = await supabase
@@ -60,6 +60,7 @@ export function FeedClient({
       userId,
       contentItemId: item.id,
       interactionType: "view",
+      classInstanceId,
     });
   }
 
@@ -67,18 +68,11 @@ export function FeedClient({
     <main className="min-h-screen bg-ink">
       <header className="sticky top-0 z-10 bg-ink/90 backdrop-blur border-b border-ink-border safe-top px-4 py-3 flex items-center justify-between">
         <p className="font-display text-paper text-lg tracking-tight">DR1FT</p>
-        <a
-          href="/messages"
-          className="touch-target flex items-center gap-1.5 font-mono text-xs text-ash"
-        >
+        <a href="/messages" className="touch-target flex items-center gap-1.5 font-mono text-xs text-ash">
           <MessageCircle className="w-4 h-4" /> Nachrichten
         </a>
       </header>
 
-      {/* Ab Tablet-Breite (iPad-Portrait ≈768px+): Zwei Spalten —
-          Feed bleibt in vertrauter Breite, Kompetenz-Panel daneben statt
-          eines Vollbild-Modals. Unter dieser Breite (Phone) bleibt es
-          einspaltig, Panel wandert unten in den Feed-Fluss. */}
       <div className="md:max-w-4xl md:mx-auto md:grid md:grid-cols-[1fr_280px] md:gap-8 md:items-start md:px-6 md:py-6">
         <div className="max-w-md mx-auto md:max-w-none py-4 px-3 md:px-0 space-y-4">
           {initialItems.length === 0 && (
@@ -93,12 +87,12 @@ export function FeedClient({
               key={item.id}
               item={item}
               userId={userId}
+              classInstanceId={classInstanceId}
               initiallyLiked={likedContentIds.has(item.id)}
               onView={() => handleView(item)}
             />
           ))}
 
-          {/* Auf dem Phone erscheint das Panel hier im Fluss statt in der Sidebar */}
           <div className="md:hidden bg-ink-light border border-ink-border rounded-card p-4 mt-2">
             <CompetencyPanel initial={competencyDisplay} />
           </div>
