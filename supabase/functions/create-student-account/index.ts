@@ -1,7 +1,7 @@
 // ============================================================
 // Edge Function: create-student-account
 // Teacher-created student accounts are always attached to the
-// concrete class instance. Global content remains reusable.
+// concrete class instance and receive a complete social profile.
 // ============================================================
 
 import { createClient } from "jsr:@supabase/supabase-js@2";
@@ -67,7 +67,12 @@ Deno.serve(async (req) => {
   }
 
   const studentId = created.user.id;
-  const { error: profileError } = await adminClient.from("user_profiles").upsert({ id: studentId, display_name: displayName }, { onConflict: "id" });
+  const { error: profileError } = await adminClient.from("user_profiles").upsert({
+    id: studentId,
+    display_name: displayName,
+    username: cleanUsername,
+    avatar_seed: studentId,
+  }, { onConflict: "id" });
   if (profileError) {
     await adminClient.auth.admin.deleteUser(studentId);
     return json({ error: profileError.message }, 500);
@@ -79,5 +84,5 @@ Deno.serve(async (req) => {
     return json({ error: membershipError.message }, 500);
   }
 
-  return json({ student: { id: studentId, displayName, username }, tempPassword: password });
+  return json({ student: { id: studentId, displayName, username: cleanUsername }, tempPassword: password });
 });
