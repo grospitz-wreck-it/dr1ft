@@ -19,22 +19,23 @@ export default async function ClassDetailPage({ params }: Props) {
   const { classId } = params;
 
   const { data: classInfo } = await supabase
-    .from("classes")
-    .select("id, name, access_code, is_active, grade_level")
+    .from("class_instances")
+    .select("id, name, access_code, is_active, grade_level, school_year, previous_instance_id")
     .eq("id", classId)
     .maybeSingle();
 
   const { data: roster } = await supabase
-    .from("class_memberships")
-    .select("user_id, role, user_profiles(display_name)")
-    .eq("class_id", classId);
+    .from("class_instance_memberships")
+    .select("user_id, role, joined_at, left_at, user_profiles(display_name)")
+    .eq("class_instance_id", classId)
+    .is("left_at", null);
 
   const students = (roster ?? []).filter((r: any) => r.role === "student");
   const { data: allScenarios } = await supabase.from("scenarios").select("*");
   const { data: assignments } = await supabase
-    .from("class_scenario_assignments")
+    .from("class_instance_scenario_assignments")
     .select("scenario_id, pacing_mode")
-    .eq("class_id", classId);
+    .eq("class_instance_id", classId);
   const assignedIds = new Set((assignments ?? []).map((a) => a.scenario_id));
   const pacingByScenario = new Map((assignments ?? []).map((a) => [a.scenario_id, a.pacing_mode]));
   const assignedScenarioIds = [...assignedIds];
@@ -63,14 +64,14 @@ export default async function ClassDetailPage({ params }: Props) {
   });
   const allCompetencyTitles = [...new Set((dashboard.studentCompetencyProgress ?? []).map((r: any) => r.competency_title).filter(Boolean))];
 
-  if (!classInfo) return <div className="px-6 py-5 text-sm text-slate-500">Klasse nicht gefunden.</div>;
+  if (!classInfo) return <div className="px-6 py-5 text-sm text-slate-500">Klasseninstanz nicht gefunden.</div>;
 
   return (
     <div className="px-6 py-5 max-w-4xl space-y-8">
       <header className="space-y-4">
         <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
           <div>
-            <p className="text-xs2 font-medium uppercase tracking-wide text-slate-400">Klasse</p>
+            <p className="text-xs2 font-medium uppercase tracking-wide text-slate-400">Klasseninstanz · Schuljahr {classInfo.school_year}</p>
             <h1 className="text-2xl font-semibold text-slate-900">{classInfo.name}</h1>
             {classInfo.grade_level && <p className="text-sm text-slate-500">Jahrgang {classInfo.grade_level}</p>}
           </div>
@@ -81,7 +82,7 @@ export default async function ClassDetailPage({ params }: Props) {
           <div>
             <p className="text-xs2 font-medium uppercase tracking-wide text-slate-400">Schüler-Zugangscode</p>
             <p className="mt-1 text-2xl font-mono font-semibold tracking-[0.18em] text-slate-900">{classInfo.access_code}</p>
-            <p className="mt-1 text-xs text-slate-500">Mit diesem Code können Schüler:innen selbst beitreten.</p>
+            <p className="mt-1 text-xs text-slate-500">Gilt nur für diese Klasseninstanz.</p>
           </div>
           <CopyAccessCodeButton code={classInfo.access_code} />
         </div>
@@ -97,7 +98,7 @@ export default async function ClassDetailPage({ params }: Props) {
 
       <section>
         <h2 className="text-sm font-medium text-slate-500 uppercase text-xs2 mb-2">Wo gibt es Schwierigkeiten</h2>
-        <p className="text-xs2 text-slate-400 mb-2">Missionen mit der niedrigsten Abschlussquote in dieser Klasse — mögliche Curriculum-Stellen, die im Unterricht nachbesprochen werden sollten.</p>
+        <p className="text-xs2 text-slate-400 mb-2">Missionen mit der niedrigsten Abschlussquote in dieser Klasse.</p>
         <div className="bg-panel border border-border rounded-lg divide-y divide-border">
           {dashboard.missionBottlenecks?.slice(0, 5).map((row: any) => <div key={row.mission_id} className="px-4 py-3 flex justify-between items-center text-sm"><span className="text-slate-900">{row.mission_title}</span><span className={`text-xs2 px-2 py-0.5 rounded-full text-white ${row.completion_rate < 0.4 ? "bg-status-rejected" : row.completion_rate < 0.7 ? "bg-status-review" : "bg-status-live"}`}>{Math.round(row.completion_rate * 100)}% ({row.completed_count}/{row.student_count})</span></div>)}
           {(!dashboard.missionBottlenecks || dashboard.missionBottlenecks.length === 0) && <p className="px-4 py-3 text-sm text-slate-400">Noch keine Daten.</p>}
@@ -113,7 +114,7 @@ export default async function ClassDetailPage({ params }: Props) {
 
       <section>
         <h2 className="text-sm font-medium text-slate-500 uppercase text-xs2 mb-2">Fortschritt pro Schüler:in</h2>
-        <p className="text-xs2 text-slate-400 mb-2">Nur für dich sichtbar. Zeigt Kompetenz-Level und Missions-Fortschritt — keine Einzelauswertung, welcher Post angeklickt/geliked wurde.</p>
+        <p className="text-xs2 text-slate-400 mb-2">Nur für dich sichtbar. Lernfortschritt bleibt historisch auswertbar; Social Activity anderer Klasseninstanzen ist nicht Teil dieser Ansicht.</p>
         <div className="bg-panel border border-border rounded-lg overflow-x-auto"><table className="w-full text-sm"><thead><tr className="border-b border-border text-left text-slate-400 text-xs2 uppercase"><th className="px-4 py-2">Schüler:in</th>{allCompetencyTitles.map((t) => <th key={t as string} className="px-3 py-2">{t as string}</th>)}<th className="px-3 py-2">Missionen</th></tr></thead><tbody>{[...studentRows.values()].map((s, i) => <tr key={i} className="border-b border-border last:border-0"><td className="px-4 py-2 text-slate-900">{s.name}</td>{allCompetencyTitles.map((t) => <td key={t as string} className="px-3 py-2 text-slate-500">{s.competencies[t as string] ?? "—"}/5</td>)}<td className="px-3 py-2 text-slate-500">{s.completed}/{s.total}</td></tr>)}{studentRows.size === 0 && <tr><td colSpan={2 + allCompetencyTitles.length} className="px-4 py-4 text-center text-slate-400">Noch keine Daten.</td></tr>}</tbody></table></div>
       </section>
 
