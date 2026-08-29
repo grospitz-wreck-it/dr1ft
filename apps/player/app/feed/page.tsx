@@ -20,19 +20,14 @@ export default async function FeedPage() {
     );
   }
 
-  // Die Player-App arbeitet ausschließlich mit der aktiven Klasseninstanz.
-  const { data: instanceMembership } = await supabase
-    .from("class_instance_memberships")
-    .select("class_instance_id")
-    .eq("user_id", user.id)
-    .is("left_at", null)
-    .order("joined_at", { ascending: false })
-    .limit(1)
-    .maybeSingle();
+  // Der aktuelle Klassenkontext wird zentral aufgelöst.
+  // Dadurch hängt die Social Runtime nicht von einer beliebigen zuletzt
+  // angelegten Membership ab.
+  const { data: classInstanceId, error: classInstanceError } = await supabase.rpc(
+    "get_current_class_instance_id"
+  );
 
-  const classInstanceId = instanceMembership?.class_instance_id ?? null;
-
-  if (!classInstanceId) {
+  if (classInstanceError || !classInstanceId) {
     return (
       <main className="min-h-screen flex items-center justify-center text-ash font-body px-6 text-center">
         Du bist aktuell keiner DR1FT-Klasse zugeordnet.
@@ -67,7 +62,7 @@ export default async function FeedPage() {
     level: progressByCompetency.get(c.id) ?? 1,
   }));
 
-  // Eigene Interaktionen sind ebenfalls auf die aktuelle Instanz begrenzt.
+  // Eigene Interaktionen sind auf die aktuelle Instanz begrenzt.
   const { data: recentInteractions } = await supabase
     .from("user_interactions")
     .select("content_item_id, interaction_type")
@@ -92,7 +87,7 @@ export default async function FeedPage() {
     .eq("type", "post")
     .or(scenarioFilter);
 
-  // Soziale Aktivität: Likes derselben Klasseninstanz, niemals global.
+  // Soziale Aktivität: ausschließlich Likes derselben Klasseninstanz.
   const contentIds = (pool ?? []).map((row: any) => row.id);
   const { data: instanceLikes } = contentIds.length
     ? await supabase
