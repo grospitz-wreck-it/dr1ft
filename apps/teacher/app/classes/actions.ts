@@ -42,6 +42,17 @@ export async function createClass(formData: FormData) {
     throw new Error("Klassenname darf nicht leer sein");
   }
 
+  // class_memberships.user_id referenziert user_profiles.id, nicht auth.users.id.
+  // Lehrkräfte werden beim Signup nicht automatisch mit einem Profil angelegt,
+  // daher stellen wir das Profil vor dem Membership-Insert sicher.
+  const { error: profileError } = await supabase
+    .from("user_profiles")
+    .upsert({ id: user.id }, { onConflict: "id" });
+
+  if (profileError) {
+    throw new Error(profileError.message);
+  }
+
   // Zugangscode generieren, bei (seltener) Kollision neu versuchen
   let accessCode = generateAccessCode();
   for (let attempt = 0; attempt < 5; attempt++) {
