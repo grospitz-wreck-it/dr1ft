@@ -1,16 +1,5 @@
 "use client";
 // apps/player/components/PostCard.tsx
-//
-// Content-Karten sind bewusst NEUTRAL und hell — sie sollen wie ein
-// "echter" Social-Post wirken, im Kontrast zur dunklen Analyse-Chrome
-// der App drumherum. Erst die ReflectionOverlay bricht diese Neutralität
-// auf (siehe dort).
-//
-// Like + Kommentare geben dem Feed ein "lebendiges" Gefühl (siehe
-// 06_FEED_PHILOSOPHY: "Living Information Space"). Kommentare sind
-// bewusst NUR lesbar/vorautoriert (redaktionell geprüft) — ein freies
-// Kommentarfeld für Schüler:innen wäre ein eigenes Moderations-/
-// Kinderschutzthema und hier nicht einfach "nebenbei" gelöst.
 
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
@@ -52,11 +41,13 @@ function AuthorRow({ creator }: { creator?: CreatorSummary }) {
 export function PostCard({
   item,
   userId,
+  classInstanceId,
   initiallyLiked,
   onView,
 }: {
   item: FeedItem;
   userId: string;
+  classInstanceId: string;
   initiallyLiked: boolean;
   onView: () => void;
 }) {
@@ -66,6 +57,7 @@ export function PostCard({
   const [commentsOpen, setCommentsOpen] = useState(false);
   const [comments, setComments] = useState<FeedItem[] | null>(null);
 
+  const storedLikeCount = Number((item.extra as any)?.classLikeCount ?? 0);
   const baseLikeCount = Number((item.extra as any)?.baseEngagement ?? 0);
   const commentCount = Number((item.extra as any)?.baseCommentCount ?? 0);
 
@@ -80,18 +72,16 @@ export function PostCard({
     return () => observer.disconnect();
   }, [onView]);
 
-  function toggleLike() {
-    // Bewusst nur "hinzufügen" — kein Zurückziehen einer bereits
-    // gespeicherten Interaktion, das ist für ein Lern-Analytics-System
-    // ohnehin nicht die entscheidende Feinheit. UI wirkt trotzdem sofort.
-    if (!liked) {
-      setLiked(true);
-      recordInteraction(supabase, {
-        userId,
-        contentItemId: item.id,
-        interactionType: "like",
-      });
-    }
+  async function toggleLike() {
+    if (liked) return;
+
+    setLiked(true);
+    await recordInteraction(supabase, {
+      userId,
+      contentItemId: item.id,
+      interactionType: "like",
+      classInstanceId,
+    });
   }
 
   async function toggleComments() {
@@ -114,6 +104,8 @@ export function PostCard({
     }
   }
 
+  const visibleLikeCount = baseLikeCount + Math.max(0, storedLikeCount);
+
   return (
     <article ref={ref} className="bg-paper text-ink rounded-card overflow-hidden shadow-sm">
       <div className="p-4 pb-0">
@@ -125,65 +117,55 @@ export function PostCard({
 
       {item.mediaUrl && item.mediaType === "image" && (
         // eslint-disable-next-line @next/next/no-img-element
-        <img
-          src={item.mediaUrl}
-          alt=""
-          className="w-full max-h-96 object-cover"
-          loading="lazy"
-        />
+        <img src={item.mediaUrl} alt="" className="w-full max-h-96 object-cover" loading="lazy" />
       )}
       {item.mediaUrl && item.mediaType === "video" && (
-        <video
-          src={item.mediaUrl}
-          controls
-          className="w-full max-h-96 object-cover bg-black"
-        />
+        <video src={item.mediaUrl} controls className="w-full max-h-96 object-cover bg-black" />
       )}
 
       <div className="p-4 pt-3">
         <p className="font-body text-[15px] leading-relaxed">{item.body}</p>
 
         <div className="flex items-center gap-1 mt-3 pt-3 border-t border-ink/10">
-        <button
-          onClick={toggleLike}
-          className={`tap-pulse touch-target flex items-center gap-1.5 px-2 text-sm font-body rounded-lg ${
-            liked ? "text-red-500" : "text-ink/50"
-          }`}
-        >
-          <Heart className="w-5 h-5" fill={liked ? "currentColor" : "none"} strokeWidth={2} />
-          {baseLikeCount + (liked ? 1 : 0)}
-        </button>
+          <button
+            onClick={toggleLike}
+            className={`tap-pulse touch-target flex items-center gap-1.5 px-2 text-sm font-body rounded-lg ${
+              liked ? "text-red-500" : "text-ink/50"
+            }`}
+          >
+            <Heart className="w-5 h-5" fill={liked ? "currentColor" : "none"} strokeWidth={2} />
+            {visibleLikeCount + (liked && storedLikeCount === 0 ? 1 : 0)}
+          </button>
 
-        <button
-          onClick={toggleComments}
-          className="touch-target flex items-center gap-1.5 px-2 text-sm font-body text-ink/50 rounded-lg"
-        >
-          <MessageCircle className="w-[18px] h-[18px]" strokeWidth={2} />
-          {comments ? comments.length : commentCount}
-        </button>
-      </div>
-
-      {commentsOpen && (
-        <div className="mt-3 space-y-2">
-          {comments === null && (
-            <>
-              <CommentSkeleton />
-              <CommentSkeleton />
-            </>
-          )}
-          {comments?.length === 0 && (
-            <p className="text-xs text-ink/40">Noch keine Kommentare.</p>
-          )}
-          {comments?.map((c) => (
-            <div key={c.id} className="bg-ink/5 rounded-lg px-3 py-2">
-              <AuthorRow creator={c.creator} />
-              <p className="text-xs">{c.body}</p>
-            </div>
-          ))}
+          <button
+            onClick={toggleComments}
+            className="touch-target flex items-center gap-1.5 px-2 text-sm font-body text-ink/50 rounded-lg"
+          >
+            <MessageCircle className="w-[18px] h-[18px]" strokeWidth={2} />
+            {comments ? comments.length : commentCount}
+          </button>
         </div>
-      )}
+
+        {commentsOpen && (
+          <div className="mt-3 space-y-2">
+            {comments === null && (
+              <>
+                <CommentSkeleton />
+                <CommentSkeleton />
+              </>
+            )}
+            {comments?.length === 0 && (
+              <p className="text-xs text-ink/40">Noch keine Kommentare.</p>
+            )}
+            {comments?.map((c) => (
+              <div key={c.id} className="bg-ink/5 rounded-lg px-3 py-2">
+                <AuthorRow creator={c.creator} />
+                <p className="text-xs">{c.body}</p>
+              </div>
+            ))}
+          </div>
+        )}
       </div>
     </article>
   );
 }
-
