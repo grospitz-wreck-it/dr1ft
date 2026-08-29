@@ -30,7 +30,10 @@ create policy "users manage own profile"
   using (auth.uid() = id)
   with check (auth.uid() = id);
 
--- Store a stable seed when profiles are first created.
-update public.user_profiles
-set avatar_seed = coalesce(avatar_seed, id::text)
-where avatar_seed is null;
+-- Backfill existing profiles and give new profiles a stable deterministic seed.
+update public.user_profiles up
+set
+  username = coalesce(up.username, split_part(au.email, '.', 1)),
+  avatar_seed = coalesce(up.avatar_seed, up.id::text)
+from auth.users au
+where au.id = up.id;
