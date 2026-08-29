@@ -20,27 +20,40 @@ export default async function FeedPage() {
     );
   }
 
-  // Freigeschaltete Szenarien über die Klassen des Nutzers
-  const { data: memberships } = await supabase
-    .from("class_memberships")
-    .select("class_id")
-    .eq("user_id", user.id);
-  const classIds = (memberships ?? []).map((m) => m.class_id);
+  // Die Player-App arbeitet ausschließlich mit der aktiven Klasseninstanz.
+  const { data: instanceMembership } = await supabase
+    .from("class_instance_memberships")
+    .select("class_instance_id")
+    .eq("user_id", user.id)
+    .is("left_at", null)
+    .order("joined_at", { ascending: false })
+    .limit(1)
+    .maybeSingle();
 
+  const classInstanceId = instanceMembership?.class_instance_id ?? null;
+
+  if (!classInstanceId) {
+    return (
+      <main className="min-h-screen flex items-center justify-center text-ash font-body px-6 text-center">
+        Du bist aktuell keiner DR1FT-Klasse zugeordnet.
+      </main>
+    );
+  }
+
+  // Freigeschaltete Szenarien gehören zur konkreten Klasseninstanz.
   const { data: assignments } = await supabase
-    .from("class_scenario_assignments")
+    .from("class_instance_scenario_assignments")
     .select("scenario_id")
-    .in("class_id", classIds.length ? classIds : ["00000000-0000-0000-0000-000000000000"]);
+    .eq("class_instance_id", classInstanceId);
   const assignedScenarioIds = [...new Set((assignments ?? []).map((a) => a.scenario_id))];
 
-  // Kompetenz-Fortschritt
+  // Kompetenz-Fortschritt des aktuellen Klassenkontexts.
   const { data: competencyProgress } = await supabase
     .from("user_competency_progress")
     .select("*")
-    .eq("user_id", user.id);
+    .eq("user_id", user.id)
+    .eq("class_instance_id", classInstanceId);
 
-  // Alle Kompetenzen (für die Anzeige im Panel — auch die, bei denen
-  // noch kein Fortschritt existiert, starten sichtbar bei Level 1)
   const { data: allCompetencies } = await supabase
     .from("competencies")
     .select("id, title");
@@ -54,11 +67,12 @@ export default async function FeedPage() {
     level: progressByCompetency.get(c.id) ?? 1,
   }));
 
-  // Bereits gesehene Inhalte (letzte 200, reicht für Diversitäts-Scoring)
+  // Eigene Interaktionen sind ebenfalls auf die aktuelle Instanz begrenzt.
   const { data: recentInteractions } = await supabase
     .from("user_interactions")
     .select("content_item_id, interaction_type")
     .eq("user_id", user.id)
+    .eq("class_instance_id", classInstanceId)
     .order("created_at", { ascending: false })
     .limit(200);
 
@@ -66,10 +80,6 @@ export default async function FeedPage() {
     .filter((i) => i.interaction_type === "view")
     .map((i) => i.content_item_id);
 
-  // Content-Pool: alle live Posts der freigeschalteten Szenarien PLUS
-  // szenario-unabhängiger Ambient-Content (scenario_id IS NULL) — siehe
-  // 0012_ambient_content.sql. Ohne Ambient-Content wäre jeder Feed-Post
-  // automatisch "verdächtig", weil er zwangsläufig zu einem Szenario gehört.
   const scenarioFilter =
     assignedScenarioIds.length > 0
       ? `scenario_id.in.(${assignedScenarioIds.join(",")}),scenario_id.is.null`
@@ -81,6 +91,22 @@ export default async function FeedPage() {
     .eq("status", "live")
     .eq("type", "post")
     .or(scenarioFilter);
+
+  // Soziale Aktivität: Likes derselben Klasseninstanz, niemals global.
+  const contentIds = (pool ?? []).map((row: any) => row.id);
+  const { data: instanceLikes } = contentIds.length
+    ? await supabase
+        .from("user_interactions")
+        .select("content_item_id, user_id")
+        .eq("class_instance_id", classInstanceId)
+        .eq("interaction_type", "like")
+        .in("content_item_id", contentIds)
+    : { data: [] as { content_item_id: string; user_id: string }[] };
+
+  const likeCounts = new Map<string, number>();
+  for (const like of instanceLikes ?? []) {
+    likeCounts.set(like.content_item_id, (likeCounts.get(like.content_item_id) ?? 0) + 1);
+  }
 
   const { data: profile } = await supabase
     .from("user_profiles")
@@ -116,7 +142,6 @@ export default async function FeedPage() {
     ),
   };
 
-  // camelCase-Mapping (DB liefert snake_case)
   const mappedPool: FeedItem[] = (pool ?? []).map((row: any) => ({
     id: row.id,
     type: row.type,
@@ -136,7 +161,10 @@ export default async function FeedPage() {
     reviewedBy: row.reviewed_by,
     reviewedAt: row.reviewed_at,
     reviewNotes: row.review_notes,
-    extra: row.extra ?? {},
+    extra: {
+      ...(row.extra ?? {}),
+      classLikeCount: likeCounts.get(row.id) ?? 0,
+    },
     createdAt: row.created_at,
     updatedAt: row.updated_at,
     creator: mapCreatorRow(row.creators),
@@ -154,6 +182,7 @@ export default async function FeedPage() {
     <FeedClient
       initialItems={items}
       userId={user.id}
+      classInstanceId={classInstanceId}
       likedContentIds={likedContentIds}
       competencyDisplay={competencyDisplay}
     />
