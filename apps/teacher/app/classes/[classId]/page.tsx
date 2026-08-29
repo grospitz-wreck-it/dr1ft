@@ -25,16 +25,17 @@ export default async function ClassDetailPage({ params }: Props) {
     .maybeSingle();
 
   const { data: roster } = await supabase
-    .from("class_memberships")
-    .select("user_id, role, user_profiles(display_name)")
-    .eq("class_id", classId);
+    .from("class_instance_memberships")
+    .select("user_id, role, joined_at, left_at, user_profiles(display_name)")
+    .eq("class_instance_id", classId)
+    .is("left_at", null);
 
   const students = (roster ?? []).filter((r: any) => r.role === "student");
   const { data: allScenarios } = await supabase.from("scenarios").select("*");
   const { data: assignments } = await supabase
-    .from("class_scenario_assignments")
+    .from("class_instance_scenario_assignments")
     .select("scenario_id, pacing_mode")
-    .eq("class_id", classId);
+    .eq("class_instance_id", classId);
   const assignedIds = new Set((assignments ?? []).map((a) => a.scenario_id));
   const pacingByScenario = new Map((assignments ?? []).map((a) => [a.scenario_id, a.pacing_mode]));
   const assignedScenarioIds = Array.from(assignedIds);
@@ -63,7 +64,7 @@ export default async function ClassDetailPage({ params }: Props) {
   });
   const allCompetencyTitles = Array.from(new Set((dashboard.studentCompetencyProgress ?? []).map((r: any) => r.competency_title).filter(Boolean)));
 
-  if (!classInfo) return <div className="px-6 py-5 text-sm text-slate-500">Klasse nicht gefunden.</div>;
+  if (!classInfo) return <div className="px-6 py-5 text-sm text-slate-500">Klasseninstanz nicht gefunden.</div>;
 
   return (
     <div className="px-6 py-5 max-w-4xl space-y-8">
