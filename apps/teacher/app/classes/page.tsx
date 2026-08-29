@@ -1,6 +1,4 @@
 // apps/teacher/app/classes/page.tsx
-// Übersicht: alle Klassen, für die der eingeloggte Nutzer Lehrkraft ist.
-// Erstellen einer neuen Klasse generiert automatisch einen access_code.
 
 import { supabaseServerClient } from "../../lib/supabaseServerClient";
 import { createClass } from "./actions";
@@ -9,11 +7,15 @@ export default async function TeacherClassesPage() {
   const supabase = supabaseServerClient();
 
   const { data: memberships } = await supabase
-    .from("class_memberships")
-    .select("class_id, role, classes(id, name, access_code, is_active)")
-    .in("role", ["teacher", "school_admin"]);
+    .from("class_instance_memberships")
+    .select("class_instance_id, role, class_instances(id, name, access_code, is_active, grade_level, school_year)")
+    .in("role", ["teacher", "school_admin"])
+    .is("left_at", null);
 
-  const classes = (memberships ?? []).map((m: any) => m.classes);
+  const classes = (memberships ?? [])
+    .map((m: any) => m.class_instances)
+    .filter(Boolean)
+    .sort((a: any, b: any) => String(b.school_year).localeCompare(String(a.school_year)));
 
   return (
     <div className="px-6 py-5 max-w-2xl">
@@ -24,45 +26,21 @@ export default async function TeacherClassesPage() {
           <li key={c.id} className="bg-panel border border-border rounded-lg p-4 flex justify-between items-center">
             <div>
               <p className="font-medium">{c.name}</p>
+              <p className="text-sm text-slate-500">Jahrgang {c.grade_level ?? "—"} · {c.school_year}</p>
               <p className="text-sm text-slate-500">Zugangscode: {c.access_code}</p>
             </div>
-            <a
-              href={`/classes/${c.id}`}
-              className="text-sm underline"
-            >
-              Übersicht öffnen
-            </a>
+            <a href={`/classes/${c.id}`} className="text-sm underline">Übersicht öffnen</a>
           </li>
         ))}
       </ul>
 
       <form action={createClass} className="bg-panel border border-border rounded-lg p-4 space-y-3">
         <h2 className="font-medium">Neue Klasse anlegen</h2>
-        <input
-          type="text"
-          name="name"
-          placeholder="z.B. 9b"
-          required
-          className="border border-border rounded-md px-3 py-2 w-full text-sm"
-        />
-        <input
-          type="number"
-          name="gradeLevel"
-          placeholder="Jahrgang (z.B. 9)"
-          min={1}
-          max={13}
-          className="border border-border rounded-md px-3 py-2 w-full text-sm"
-        />
-        <button
-          type="submit"
-          className="bg-accent hover:bg-accent-hover text-white text-sm px-4 py-2 rounded-md"
-        >
-          Klasse anlegen
-        </button>
-        <p className="text-xs2 text-slate-400">
-          Der Zugangscode wird automatisch erzeugt und danach auf der
-          Klassen-Detailseite angezeigt.
-        </p>
+        <input type="text" name="name" placeholder="z.B. 9b" required className="border border-border rounded-md px-3 py-2 w-full text-sm" />
+        <input type="number" name="gradeLevel" placeholder="Jahrgang (z.B. 9)" min={1} max={13} className="border border-border rounded-md px-3 py-2 w-full text-sm" />
+        <input type="text" name="schoolYear" defaultValue="2026/27" placeholder="Schuljahr, z.B. 2026/27" className="border border-border rounded-md px-3 py-2 w-full text-sm" />
+        <button type="submit" className="bg-accent hover:bg-accent-hover text-white text-sm px-4 py-2 rounded-md">Klasse anlegen</button>
+        <p className="text-xs2 text-slate-400">Die Klasse wird als eigene Klasseninstanz für dieses Schuljahr angelegt.</p>
       </form>
     </div>
   );
