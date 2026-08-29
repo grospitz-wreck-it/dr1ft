@@ -1,5 +1,10 @@
 // ============================================================
 // recordInteraction
+//
+// Zentraler Ort, an dem eine Nutzer-Interaktion entsteht.
+// Runtime-Interaktionen werden immer einer konkreten Klasseninstanz
+// zugeordnet. Dadurch bleiben Social Data und Analytics innerhalb
+// des jeweiligen Klassen-Ökosystems isoliert.
 // ============================================================
 
 import type { SupabaseClient } from "@supabase/supabase-js";
@@ -12,7 +17,7 @@ export async function recordInteraction(
     userId: string;
     contentItemId: string;
     interactionType: InteractionType;
-    classInstanceId?: string;
+    classInstanceId: string;
     metadata?: Record<string, unknown>;
   }
 ): Promise<void> {
@@ -39,7 +44,7 @@ export async function recordInteraction(
     user_id: userId,
     content_item_id: contentItemId,
     interaction_type: interactionType,
-    class_instance_id: classInstanceId ?? null,
+    class_instance_id: classInstanceId,
     metadata,
   });
 
