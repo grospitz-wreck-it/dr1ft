@@ -43,7 +43,12 @@ export default function JoinPage() {
 
     const newUserId = signUpData.user?.id;
     if (newUserId) {
-      await supabase.from("user_profiles").upsert({ id: newUserId, display_name: displayName.trim(), username: cleanUsername, avatar_seed: newUserId });
+      await supabase.from("user_profiles").upsert({
+        id: newUserId,
+        display_name: displayName.trim(),
+        username: cleanUsername,
+        avatar_seed: crypto.randomUUID(),
+      });
     }
     router.push("/feed");
   }
