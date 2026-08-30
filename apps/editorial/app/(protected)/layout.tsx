@@ -8,10 +8,12 @@ import {
   Sparkles,
   Users,
   Library,
+  Home,
 } from "lucide-react";
 import { supabaseServerClient } from "../../lib/supabaseServerClient";
 
 const NAV_ITEMS = [
+  { href: "/", label: "Übersicht", icon: Home },
   { href: "/content", label: "Content-Bibliothek", icon: Library },
   { href: "/scenarios", label: "Szenarien", icon: LayoutGrid },
   { href: "/missions", label: "Missionen & Arcs", icon: Route },
@@ -64,13 +66,15 @@ export default async function ProtectedLayout({
 
   return (
     <div className="min-h-screen flex bg-canvas">
-      <nav className="w-56 shrink-0 border-r border-border bg-panel min-h-screen sticky top-0 flex flex-col">
-        <div className="px-4 py-4 border-b border-border">
-          <p className="font-semibold text-sm text-slate-900">DR1FT</p>
-          <p className="text-xs2 text-slate-500">Redaktion</p>
+      <nav className="w-60 shrink-0 border-r border-border bg-panel min-h-screen sticky top-0 flex flex-col">
+        <div className="px-4 py-5 border-b border-border">
+          <Link href="/" className="block">
+            <p className="font-semibold text-sm text-slate-900">DR1FT</p>
+            <p className="text-xs2 text-slate-500">Editorial Studio</p>
+          </Link>
         </div>
 
-        <ul className="flex-1 py-2">
+        <ul className="flex-1 py-3">
           {NAV_ITEMS.map((item) => {
             const Icon = item.icon;
 
@@ -78,7 +82,7 @@ export default async function ProtectedLayout({
               <li key={item.href}>
                 <Link
                   href={item.href}
-                  className="flex items-center gap-2.5 px-4 py-2 text-sm text-slate-600 hover:bg-canvas hover:text-slate-900"
+                  className="flex items-center gap-2.5 mx-2 px-3 py-2 rounded-lg text-sm text-slate-600 hover:bg-canvas hover:text-slate-900 transition"
                 >
                   <Icon className="w-4 h-4" strokeWidth={1.75} />
                   {item.label}
@@ -87,6 +91,11 @@ export default async function ProtectedLayout({
             );
           })}
         </ul>
+
+        <div className="border-t border-border px-4 py-4">
+          <p className="text-[11px] text-slate-400">Angemeldet als</p>
+          <p className="text-xs font-medium text-slate-600 truncate mt-0.5">{user.email ?? "Redaktion"}</p>
+        </div>
       </nav>
 
       <div className="flex-1 min-w-0">{children}</div>
