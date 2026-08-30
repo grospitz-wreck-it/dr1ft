@@ -1,4 +1,5 @@
 import { supabaseServerClient } from "../../../../../../lib/supabaseServerClient";
+import { PrintReportButton } from "./PrintReportButton";
 
 export default async function StudentReportPage({ params }: { params: { classId: string; studentId: string } }) {
   const supabase = supabaseServerClient();
@@ -29,7 +30,7 @@ export default async function StudentReportPage({ params }: { params: { classId:
       <div className="max-w-4xl mx-auto space-y-6">
         <div className="flex items-center justify-between print:hidden">
           <a href={`/classes/${classId}`} className="text-sm text-slate-500 hover:text-slate-900">← Zur Klasse</a>
-          <button type="button" onClick={() => window.print()} className="rounded-xl bg-accent px-4 py-2 text-sm font-medium text-white hover:bg-accent-hover">Report generieren / drucken</button>
+          <PrintReportButton />
         </div>
 
         <article className="bg-white border border-border rounded-3xl shadow-sm overflow-hidden print:border-0 print:shadow-none">
