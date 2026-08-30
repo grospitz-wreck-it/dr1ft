@@ -83,8 +83,7 @@ create policy "authenticated read ambient generation profiles"
 create policy "users manage own ambient preferences"
   on user_ambient_preferences for all using (auth.uid() = user_id);
 
--- Generated media lives in a dedicated bucket. Files remain private by default;
--- application code can create signed URLs when needed.
+-- Generated ambient images are intentionally usable directly by the feed.
 insert into storage.buckets (id, name, public)
-values ('ambient-assets', 'ambient-assets', false)
-on conflict (id) do nothing;
+values ('ambient-assets', 'ambient-assets', true)
+on conflict (id) do update set public = true;
