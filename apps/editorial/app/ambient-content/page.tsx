@@ -1,94 +1,272 @@
-// apps/admin/app/ambient-content/page.tsx
+// apps/editorial/app/ambient-content/page.tsx
 
-import { Sparkles } from "lucide-react";
+import { Sparkles, Image as ImageIcon, Wand2, Users, SlidersHorizontal, Zap } from "lucide-react";
 import { supabaseServerClient } from "../../lib/supabaseServerClient";
-import { generateAmbientDrafts } from "./actions";
+import { archiveAmbientContent, generateAmbientDrafts } from "./actions";
 import { ContentStatusControl } from "../scenarios/[scenarioId]/ContentStatusControl";
 
 const STATUS_ORDER = ["draft", "in_review", "approved", "live", "rejected", "archived"];
 
+const STYLE_OPTIONS = [
+  ["mixed", "✨ Wild Mix — alles durcheinander"],
+  ["casual", "😎 Locker & natürlich"],
+  ["chatty", "💬 Chatty / Messenger"],
+  ["meme", "💀 Meme-native / Internet"],
+  ["deadpan", "😐 Trocken / deadpan"],
+  ["wholesome", "🫶 Warm / wholesome"],
+  ["chaotic", "🤪 Chaotisch / impulsiv"],
+  ["observational", "👀 Beobachtend"],
+  ["storyteller", "📖 Mini-Storys"],
+  ["minimal", "🫥 Minimalistisch"],
+];
+
+const INTEREST_OPTIONS = [
+  "🎵 Musik", "🎮 Gaming", "🍿 Serien & Filme", "⚽ Sport", "👟 Mode",
+  "🍕 Essen", "🏃 Fitness", "✈️ Reisen", "🐶 Tiere", "📱 Tech",
+  "📚 Schule", "🫶 Freunde", "😂 Memes", "🎨 Kreativität", "📖 Bücher",
+  "🌿 Natur", "🔬 Wissenschaft", "📍 Lokales",
+];
+
+const statusLabel: Record<string, string> = {
+  draft: "ENTWURF",
+  in_review: "REVIEW",
+  approved: "APPROVED",
+  live: "LIVE",
+  rejected: "ABGELEHNT",
+  archived: "ARCHIV",
+};
+
 export default async function AmbientContentPage() {
   const supabase = supabaseServerClient();
 
-  const { data: ambientCreators } = await supabase
-    .from("creators")
-    .select("id, display_name")
-    .eq("creator_role", "ambient");
-
-  const { data: items } = await supabase
-    .from("content_items")
-    .select("*")
-    .is("scenario_id", null)
-    .order("created_at", { ascending: false })
-    .limit(50);
+  const [{ data: ambientCreators }, { data: items }, { data: profiles }] = await Promise.all([
+    supabase.from("creators").select("id, display_name").eq("creator_role", "ambient").order("display_name"),
+    supabase.from("content_items").select("*").is("scenario_id", null).order("created_at", { ascending: false }).limit(100),
+    supabase.from("ambient_generation_profiles").select("key, label, age_band, typo_level, slang_level, emoji_level, image_probability").eq("is_active", true).order("label"),
+  ]);
 
   const grouped = STATUS_ORDER.map((status) => ({
     status,
     items: (items ?? []).filter((c) => c.status === status),
   }));
 
+  const liveCount = (items ?? []).filter((item) => item.status === "live").length;
+  const draftCount = (items ?? []).filter((item) => item.status === "draft").length;
+  const imageCount = (items ?? []).filter((item) => item.media_type === "image").length;
+
   return (
-    <div className="px-6 py-5 max-w-2xl space-y-6">
-      <div>
-        <h1 className="text-lg font-semibold text-slate-900 flex items-center gap-2 mb-1">
-          <Sparkles className="w-4 h-4 text-slate-400" /> Ambient-Content-Generator
-        </h1>
-        <p className="text-sm text-slate-500">
-          KI-generierte Entwürfe landen immer als "draft" — nichts geht ohne
-          redaktionelle Prüfung live.
-        </p>
-      </div>
+    <div className="min-h-screen bg-slate-50 px-6 py-6">
+      <div className="max-w-7xl mx-auto space-y-6">
+        <header className="flex items-end justify-between gap-6">
+          <div>
+            <div className="flex items-center gap-2 text-accent text-xs font-semibold uppercase tracking-widest mb-2">
+              <Sparkles className="w-4 h-4" /> AI Content Studio
+            </div>
+            <h1 className="text-3xl font-semibold tracking-tight text-slate-900">Ambient-Content-Generator</h1>
+            <p className="text-slate-500 mt-2 max-w-3xl">
+              Erzeuge einen ganzen lebendigen Feed statt einfach nur eine Liste von Posts.
+              Zielgruppe, Interessen, Stimmen, Schreibfehler, Slang, Emojis, Formate und Bilder
+              werden als gemeinsames Generationsprofil behandelt.
+            </p>
+          </div>
+          <div className="hidden md:flex gap-2 text-xs">
+            <Stat label="LIVE" value={liveCount} />
+            <Stat label="DRAFTS" value={draftCount} />
+            <Stat label="BILDER" value={imageCount} />
+          </div>
+        </header>
 
-      <form action={generateAmbientDrafts} className="bg-panel border border-border rounded-lg p-4 space-y-3">
-        <input
-          name="theme"
-          placeholder="Thema (z.B. Musik, Schule, Serien, Wetter)"
-          required
-          className="border border-border rounded-md px-3 py-2 w-full text-sm"
-        />
-        <select name="creatorId" className="border border-border rounded-md px-3 py-2 w-full text-sm">
-          <option value="">Kein bestimmter Creator</option>
-          {ambientCreators?.map((c) => (
-            <option key={c.id} value={c.id}>
-              {c.display_name}
-            </option>
-          ))}
-        </select>
-        <select name="count" className="border border-border rounded-md px-3 py-2 w-full text-sm">
-          {[3, 5, 8, 10].map((n) => (
-            <option key={n} value={n}>
-              {n} Posts generieren
-            </option>
-          ))}
-        </select>
-        <button type="submit" className="bg-accent hover:bg-accent-hover text-white text-sm px-4 py-2 rounded-md">
-          Generieren
-        </button>
-      </form>
+        <form action={generateAmbientDrafts} className="grid xl:grid-cols-[1.45fr_1fr] gap-5">
+          <section className="bg-white border border-slate-200 rounded-2xl p-6 shadow-sm space-y-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <h2 className="font-semibold text-slate-900 flex items-center gap-2"><Wand2 className="w-4 h-4 text-accent" /> Feed-Rezept</h2>
+                <p className="text-xs text-slate-500 mt-1">Was soll die Engine heute für uns bauen?</p>
+              </div>
+              <span className="text-[11px] px-2 py-1 rounded-full bg-violet-50 text-violet-700 font-medium">AMBIENT v2</span>
+            </div>
 
-      {grouped.map(
-        (group) =>
-          group.items.length > 0 && (
-            <section key={group.status}>
-              <h2 className="text-sm font-medium text-slate-500 uppercase text-xs2 mb-2">
-                {group.status} ({group.items.length})
-              </h2>
+            <div>
+              <label className="block text-xs font-semibold text-slate-600 mb-2">THEMA / KONTEXT</label>
+              <input name="theme" required placeholder="z.B. Schulweg, Wochenende, neue Musik, Freibad, Gaming-Abend …" className="w-full rounded-xl border border-slate-200 px-4 py-3 text-sm outline-none focus:border-accent" />
+            </div>
+
+            <div>
+              <label className="block text-xs font-semibold text-slate-600 mb-2">INTERESSEN · MAX. 3</label>
+              <input name="interests" placeholder="z.B. Gaming, Musik, Sport" className="w-full rounded-xl border border-slate-200 px-4 py-3 text-sm outline-none focus:border-accent" />
+              <div className="flex flex-wrap gap-1.5 mt-2">
+                {INTEREST_OPTIONS.map((interest) => <span key={interest} className="text-[11px] rounded-full bg-slate-100 px-2 py-1 text-slate-600">{interest}</span>)}
+              </div>
+            </div>
+
+            <div className="grid md:grid-cols-2 gap-4">
+              <Field label="ZIELGRUPPE">
+                <select name="ageBand" defaultValue="14_15" className="control">
+                  <option value="12_13">12–13 · Early Teen</option>
+                  <option value="14_15">14–15 · Teen</option>
+                  <option value="16_17">16–17 · Older Teen</option>
+                  <option value="18_plus">18+ · Young Adult</option>
+                  <option value="all">Altersneutral</option>
+                </select>
+              </Field>
+              <Field label="CREATOR / STIMME">
+                <select name="creatorId" className="control">
+                  <option value="">Automatisch wechseln</option>
+                  {ambientCreators?.map((creator) => <option key={creator.id} value={creator.id}>{creator.display_name}</option>)}
+                </select>
+              </Field>
+            </div>
+
+            <Field label="SCHREIBSTIL">
+              <select name="style" defaultValue="mixed" className="control">
+                {STYLE_OPTIONS.map(([value, label]) => <option key={value} value={value}>{label}</option>)}
+              </select>
+            </Field>
+
+            <div className="grid md:grid-cols-3 gap-4">
+              <SliderSelect name="typoLevel" label="TIPPFEHLER" options={["0 · clean", "1 · gelegentlich", "2 · glaubwürdig", "3 · chaotisch"]} defaultValue="1" />
+              <SliderSelect name="slangLevel" label="JUGENDSPRACHE" options={["0 · neutral", "1 · leicht", "2 · natürlich", "3 · stark"]} defaultValue="2" />
+              <SliderSelect name="emojiLevel" label="EMOJIS" options={["0 · keine", "1 · sparsam", "2 · natürlich", "3 · viel"]} defaultValue="2" />
+            </div>
+
+            <div className="grid md:grid-cols-2 gap-4">
+              <Field label="ANZAHL">
+                <select name="count" defaultValue="20" className="control">
+                  {[5,10,20,30,50].map((n) => <option key={n} value={n}>{n} Items</option>)}
+                </select>
+              </Field>
+              <Field label="TEXT-MODELL">
+                <select name="model" defaultValue="claude" className="control">
+                  <option value="claude">Claude · schnell & textstark</option>
+                  <option value="gemini">Gemini · multimodal</option>
+                </select>
+              </Field>
+            </div>
+          </section>
+
+          <section className="bg-slate-900 text-white rounded-2xl p-6 shadow-sm space-y-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <h2 className="font-semibold flex items-center gap-2"><ImageIcon className="w-4 h-4" /> Visual Engine</h2>
+                <p className="text-xs text-slate-400 mt-1">Gemini erzeugt echte Feed-Bilder aus den generierten Ideen.</p>
+              </div>
+              <span className="text-[11px] px-2 py-1 rounded-full bg-white/10 text-slate-300">NANO BANANA</span>
+            </div>
+
+            <FieldDark label="BILDSTRATEGIE">
+              <select name="imageMode" defaultValue="smart" className="darkControl">
+                <option value="none">Keine Bilder</option>
+                <option value="some">Gelegentlich · 1 von 3</option>
+                <option value="smart">Smart · KI entscheidet</option>
+                <option value="all">Jeder Post mit Bild</option>
+              </select>
+            </FieldDark>
+
+            <FieldDark label="VISUAL STYLE">
+              <select name="imageStyle" defaultValue="authentic social photo" className="darkControl">
+                <option value="authentic social photo">Authentisches Social-Foto</option>
+                <option value="phone snapshot">Handy-Schnappschuss</option>
+                <option value="messy bedroom snapshot">Unperfekter Alltagsmoment</option>
+                <option value="cinematic casual photo">Cinematic, aber beiläufig</option>
+                <option value="illustrated social post">Illustration / digital art</option>
+                <option value="meme visual">Meme-Visual ohne Text</option>
+              </select>
+            </FieldDark>
+
+            <FieldDark label="FORMAT">
+              <select name="aspectRatio" defaultValue="4:5" className="darkControl">
+                <option value="4:5">4:5 · Feed Portrait</option>
+                <option value="1:1">1:1 · Square</option>
+                <option value="9:16">9:16 · Story</option>
+                <option value="16:9">16:9 · Wide</option>
+              </select>
+            </FieldDark>
+
+            <div className="rounded-xl border border-white/10 bg-white/5 p-4 space-y-3">
+              <div className="flex items-center gap-2 text-sm font-medium"><Zap className="w-4 h-4 text-yellow-300" /> Authenticity Engine</div>
+              <div className="text-xs text-slate-400 leading-5">
+                Die Engine variiert Länge, Satzbau, Groß-/Kleinschreibung, Emoji-Dichte,
+                Tippfehler, Slang, Formate und Stimmungen. Dadurch sieht der Feed nicht
+                aus wie 20 Kopien desselben KI-Prompts.
+              </div>
+            </div>
+
+            <div className="rounded-xl border border-white/10 bg-black/20 p-4">
+              <div className="text-xs uppercase tracking-wider text-slate-500 mb-2">PROFILE IM SYSTEM</div>
+              <div className="space-y-1 text-xs text-slate-400">
+                {(profiles ?? []).map((profile) => <div key={profile.key} className="flex justify-between"><span>{profile.label}</span><span>{profile.image_probability}% img</span></div>)}
+              </div>
+            </div>
+
+            <button type="submit" className="w-full rounded-xl bg-white text-slate-900 hover:bg-slate-100 px-5 py-3 font-semibold text-sm flex items-center justify-center gap-2">
+              <Sparkles className="w-4 h-4" /> Ambient Feed generieren
+            </button>
+            <p className="text-[11px] text-slate-500 text-center">Alle Ergebnisse werden als DRAFT gespeichert. Nichts wird automatisch veröffentlicht.</p>
+          </section>
+        </form>
+
+        <section className="grid xl:grid-cols-2 gap-5">
+          {grouped.map((group) => group.items.length > 0 && (
+            <div key={group.status} className="space-y-2">
+              <div className="flex items-center justify-between px-1">
+                <h2 className="text-xs font-semibold tracking-widest text-slate-500">{statusLabel[group.status]} · {group.items.length}</h2>
+              </div>
               <ul className="space-y-2">
                 {group.items.map((item) => (
-                  <li key={item.id} className="bg-panel border border-border rounded-lg p-3 space-y-2">
-                    <p className="text-sm text-slate-900">{item.body}</p>
-                    {item.extra?.generatedBy === "ai" && (
-                      <p className="text-xs2 text-slate-400">
-                        KI-generiert · Thema: {item.extra?.theme}
-                      </p>
-                    )}
-                    <ContentStatusControl contentItemId={item.id} status={item.status} />
+                  <li key={item.id} className="bg-white border border-slate-200 rounded-xl overflow-hidden">
+                    {item.media_url && <img src={item.media_url} alt="" className="w-full max-h-80 object-cover" />}
+                    <div className="p-4 space-y-3">
+                      <p className="text-sm leading-6 text-slate-900">{item.body}</p>
+                      {item.extra?.generatedBy === "ai" && (
+                        <div className="flex flex-wrap gap-1.5 text-[10px] text-slate-500">
+                          <Tag>{item.extra?.ageBand}</Tag>
+                          <Tag>{item.extra?.styleLabel}</Tag>
+                          {item.extra?.format && <Tag>{item.extra.format}</Tag>}
+                          {item.extra?.topic && <Tag>{item.extra.topic}</Tag>}
+                          {item.extra?.imageGenerated && <Tag>🖼 Gemini</Tag>}
+                        </div>
+                      )}
+                      <div className="flex items-center justify-between gap-2">
+                        <ContentStatusControl contentItemId={item.id} status={item.status} />
+                        {item.status !== "archived" && (
+                          <form action={archiveAmbientContent.bind(null, item.id)}>
+                            <button type="submit" className="text-xs text-slate-400 hover:text-slate-700">Archivieren</button>
+                          </form>
+                        )}
+                      </div>
+                    </div>
                   </li>
                 ))}
               </ul>
-            </section>
-          )
-      )}
+            </div>
+          ))}
+        </section>
+      </div>
+
+      <style>{`
+        .control { width:100%; border:1px solid #e2e8f0; border-radius:12px; padding:10px 12px; font-size:13px; background:white; color:#0f172a; }
+        .darkControl { width:100%; border:1px solid rgba(255,255,255,.12); border-radius:12px; padding:10px 12px; font-size:13px; background:rgba(255,255,255,.06); color:white; }
+      `}</style>
     </div>
   );
+}
+
+function Field({ label, children }: { label: string; children: React.ReactNode }) {
+  return <label className="block"><span className="block text-[10px] font-semibold tracking-wider text-slate-500 mb-1.5">{label}</span>{children}</label>;
+}
+
+function FieldDark({ label, children }: { label: string; children: React.ReactNode }) {
+  return <label className="block"><span className="block text-[10px] font-semibold tracking-wider text-slate-500 mb-1.5">{label}</span>{children}</label>;
+}
+
+function SliderSelect({ name, label, options, defaultValue }: { name: string; label: string; options: string[]; defaultValue: string }) {
+  return <Field label={label}><select name={name} defaultValue={defaultValue} className="control">{options.map((option, index) => <option key={option} value={index}>{option}</option>)}</select></Field>;
+}
+
+function Tag({ children }: { children: React.ReactNode }) {
+  return <span className="rounded-full bg-slate-100 px-2 py-1">{children}</span>;
+}
+
+function Stat({ label, value }: { label: string; value: number }) {
+  return <div className="bg-white border border-slate-200 rounded-xl px-4 py-3 min-w-20"><div className="text-[9px] font-semibold tracking-wider text-slate-400">{label}</div><div className="text-xl font-semibold text-slate-900 mt-1">{value}</div></div>;
 }
