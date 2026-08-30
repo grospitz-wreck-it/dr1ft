@@ -12,6 +12,7 @@ import {
   School,
 } from "lucide-react";
 import { supabaseServerClient } from "../../lib/supabaseServerClient";
+import { SignOutButton } from "./SignOutButton";
 
 const NAV_ITEMS = [
   { href: "/", label: "Übersicht", icon: Home },
@@ -40,9 +41,6 @@ export default async function ProtectedLayout({
     redirect("/login");
   }
 
-  // ECHTE Trennung von der Lehrkraft-App: nur wer in platform_staff
-  // steht, kommt überhaupt in diese App rein — nicht nur beim Schreiben
-  // (RLS), sondern schon beim Betreten jeder Seite.
   const { data: staffRow } = await supabase
     .from("platform_staff")
     .select("user_id")
@@ -56,7 +54,6 @@ export default async function ProtectedLayout({
           <p className="text-lg font-semibold text-slate-900 mb-2">
             Kein Zugriff
           </p>
-
           <p className="text-sm text-slate-500">
             Dieser Bereich ist der Redaktion vorbehalten. Falls du Lehrkraft
             bist, nutze bitte die separate Lehrkraft-Anwendung.
@@ -79,7 +76,6 @@ export default async function ProtectedLayout({
         <ul className="flex-1 py-3">
           {NAV_ITEMS.map((item) => {
             const Icon = item.icon;
-
             return (
               <li key={item.href}>
                 <Link
@@ -96,7 +92,10 @@ export default async function ProtectedLayout({
 
         <div className="border-t border-border px-4 py-4">
           <p className="text-[11px] text-slate-400">Angemeldet als</p>
-          <p className="text-xs font-medium text-slate-600 truncate mt-0.5">{user.email ?? "Redaktion"}</p>
+          <p className="text-xs font-medium text-slate-600 truncate mt-0.5">
+            {user.email ?? "Redaktion"}
+          </p>
+          <SignOutButton />
         </div>
       </nav>
 
