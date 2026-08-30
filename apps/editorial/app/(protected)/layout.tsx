@@ -9,6 +9,7 @@ import {
   Users,
   Library,
   Home,
+  School,
 } from "lucide-react";
 import { supabaseServerClient } from "../../lib/supabaseServerClient";
 
@@ -21,6 +22,7 @@ const NAV_ITEMS = [
   { href: "/group-chats", label: "Gruppenchats", icon: MessageSquare },
   { href: "/ambient-content", label: "Ambient-Generator", icon: Sparkles },
   { href: "/staff", label: "Redaktionsteam", icon: Users },
+  { href: "/schools", label: "Schulen & Rollen", icon: School },
 ];
 
 export default async function ProtectedLayout({
@@ -70,7 +72,7 @@ export default async function ProtectedLayout({
         <div className="px-4 py-5 border-b border-border">
           <Link href="/" className="block">
             <p className="font-semibold text-sm text-slate-900">DR1FT</p>
-            <p className="text-xs2 text-slate-500">Editorial Studio</p>
+            <p className="text-xs2 text-slate-500">Redaktion</p>
           </Link>
         </div>
 
