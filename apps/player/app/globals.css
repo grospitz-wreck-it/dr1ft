@@ -33,6 +33,18 @@ body {
   color: var(--drift-ink);
 }
 
+/* Apply the new visual language to the existing utility vocabulary as well,
+   so current player screens change without rewriting their functionality. */
+.bg-ink { background-color: var(--drift-bg) !important; }
+.bg-ink-light { background-color: var(--drift-surface-soft) !important; }
+.border-ink-border { border-color: #d9dfeb !important; }
+.text-paper { color: var(--drift-ink) !important; }
+.bg-paper { background-color: var(--drift-surface) !important; }
+.bg-paper\/90 { background-color: rgb(255 255 255 / 0.9) !important; }
+.text-ash { color: var(--drift-ink-soft) !important; }
+.text-growth { color: var(--drift-mint-strong) !important; }
+.bg-growth { background-color: var(--drift-mint-strong) !important; }
+
 /* Keep the player visually soft without turning semantic learning states into
    a colour code. Pastels are environmental/UI language only. */
 ::selection {
