@@ -8,22 +8,65 @@
   --font-display: "Space Grotesk", sans-serif;
   --font-body: "Inter", sans-serif;
   --font-mono: "JetBrains Mono", monospace;
+
+  /* Player palette: friendly, soft and playful without becoming gender-coded.
+     These tokens describe the world/UI atmosphere, never learning meaning. */
+  --drift-bg: #f7f8fc;
+  --drift-surface: #ffffff;
+  --drift-surface-soft: #f0f3fa;
+  --drift-ink: #26324a;
+  --drift-ink-soft: #68738a;
+  --drift-blue: #dcecff;
+  --drift-mint: #dcf3e8;
+  --drift-lavender: #e8e5fb;
+  --drift-peach: #ffe8d8;
+  --drift-yellow: #fff1bf;
+  --drift-blue-strong: #789bd0;
+  --drift-mint-strong: #69ad96;
+  --drift-lavender-strong: #948acb;
+  --drift-peach-strong: #d99a72;
 }
 
 body {
-  @apply bg-ink text-paper font-body;
+  @apply font-body;
+  background: var(--drift-bg);
+  color: var(--drift-ink);
+}
+
+/* Keep the player visually soft without turning semantic learning states into
+   a colour code. Pastels are environmental/UI language only. */
+::selection {
+  background: var(--drift-blue);
+  color: var(--drift-ink);
 }
 
 /* Signature-Element: Textmarker-Annotation über manipulativen Textstellen.
    Bewusst ein einziger, unverwechselbarer visueller Effekt statt vieler
    kleiner Animationen — siehe frontend-design Prinzip "Spend your
-   boldness in one place". */
+   boldness in one place". This is an intentional gameplay/analysis state,
+   not part of the ordinary feed palette. */
 .marker-highlight {
   background: linear-gradient(120deg, transparent 0%, transparent 4%, #ffc857 4%, #ffc857 96%, transparent 96%);
   background-repeat: no-repeat;
   background-size: 100% 45%;
   background-position: 0 65%;
   padding: 0 2px;
+}
+
+/* Soft utility surfaces for future player components. These remain aesthetic
+   tokens; they must not be used to label content as "good", "bad" or "lesson". */
+@layer components {
+  .player-surface {
+    background: var(--drift-surface);
+    border: 1px solid rgba(38, 50, 74, 0.08);
+    box-shadow: 0 8px 28px rgba(38, 50, 74, 0.06);
+  }
+
+  .player-soft-blue { background: var(--drift-blue); }
+  .player-soft-mint { background: var(--drift-mint); }
+  .player-soft-lavender { background: var(--drift-lavender); }
+  .player-soft-peach { background: var(--drift-peach); }
+  .player-soft-yellow { background: var(--drift-yellow); }
 }
 
 @media (prefers-reduced-motion: reduce) {
