@@ -23,19 +23,41 @@ function buildOverrides(formData: FormData): Record<string, number> {
   return result;
 }
 
+async function validateModuleCompetencies(
+  supabase: ReturnType<typeof supabaseServerClient>,
+  primaryId: string,
+  secondaryIds: string[],
+) {
+  const secondary = Array.from(new Set(secondaryIds.filter(Boolean)));
+  if (!primaryId) throw new Error("Bitte eine primäre Lernkompetenz auswählen.");
+  if (secondary.length > 2) throw new Error("Ein Modul darf höchstens zwei sekundäre Kompetenzen haben.");
+  if (secondary.includes(primaryId)) throw new Error("Die primäre Kompetenz kann nicht gleichzeitig sekundär sein.");
+
+  const ids = [primaryId, ...secondary];
+  const { data, error } = await supabase.from("competencies").select("id").in("id", ids);
+  if (error) throw new Error(error.message);
+  if ((data?.length ?? 0) !== ids.length) throw new Error("Eine ausgewählte Lernkompetenz ist ungültig.");
+  return secondary;
+}
+
 export async function createModule(formData: FormData) {
   const supabase = supabaseServerClient();
   const title = String(formData.get("title") ?? "").trim();
   const description = String(formData.get("description") ?? "").trim();
   const ageRating = String(formData.get("ageRating") ?? "12_plus");
+  const primaryCompetencyId = String(formData.get("primaryCompetencyId") ?? "").trim();
+  const secondaryCompetencyIds = formData.getAll("secondaryCompetencyId").map(String);
   if (!title) throw new Error("Titel darf nicht leer sein");
 
+  const secondary = await validateModuleCompetencies(supabase, primaryCompetencyId, secondaryCompetencyIds);
   const { error } = await supabase.from("scenarios").insert({
     slug: slugify(title) + "-" + Date.now().toString(36),
     title,
     description,
     age_rating: ageRating,
     is_active: false,
+    primary_competency_id: primaryCompetencyId,
+    secondary_competency_ids: secondary,
   });
   if (error) throw new Error(error.message);
   revalidatePath("/modules");
@@ -52,6 +74,21 @@ export async function updateModule(scenarioId: string, formData: FormData) {
     title,
     description,
     age_rating: ageRating,
+    updated_at: new Date().toISOString(),
+  }).eq("id", scenarioId);
+  if (error) throw new Error(error.message);
+  revalidatePath(`/modules/${scenarioId}`);
+  revalidatePath("/modules");
+}
+
+export async function updateModuleCompetencies(scenarioId: string, formData: FormData) {
+  const supabase = supabaseServerClient();
+  const primaryCompetencyId = String(formData.get("primaryCompetencyId") ?? "").trim();
+  const secondaryCompetencyIds = formData.getAll("secondaryCompetencyId").map(String);
+  const secondary = await validateModuleCompetencies(supabase, primaryCompetencyId, secondaryCompetencyIds);
+  const { error } = await supabase.from("scenarios").update({
+    primary_competency_id: primaryCompetencyId,
+    secondary_competency_ids: secondary,
     updated_at: new Date().toISOString(),
   }).eq("id", scenarioId);
   if (error) throw new Error(error.message);
