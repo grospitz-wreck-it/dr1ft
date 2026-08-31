@@ -13,10 +13,25 @@ function slugify(input: string): string {
     .replace(/(^-|-$)/g, "");
 }
 
-/**
- * Erzeugt ein neues Szenario. Slug wird aus dem Titel abgeleitet,
- * sofern nicht explizit angegeben.
- */
+async function validateModuleCompetencies(
+  supabase: ReturnType<typeof supabaseServerClient>,
+  primaryId: string,
+  secondaryIds: string[],
+) {
+  const secondary = Array.from(new Set(secondaryIds.filter(Boolean)));
+  if (!primaryId) throw new Error("Bitte eine primäre Lernkompetenz auswählen.");
+  if (secondary.length > 2) throw new Error("Ein Modul darf höchstens zwei sekundäre Kompetenzen haben.");
+  if (secondary.includes(primaryId)) throw new Error("Die primäre Kompetenz kann nicht gleichzeitig sekundär sein.");
+
+  const ids = [primaryId, ...secondary];
+  const { data, error } = await supabase.from("competencies").select("id").in("id", ids);
+  if (error) throw new Error(error.message);
+  if ((data?.length ?? 0) !== ids.length) throw new Error("Eine ausgewählte Lernkompetenz ist ungültig.");
+
+  return secondary;
+}
+
+/** Erzeugt ein neues Modul (intern weiterhin als scenario gespeichert). */
 export async function createScenario(formData: FormData) {
   const supabase = supabaseServerClient();
 
@@ -24,32 +39,68 @@ export async function createScenario(formData: FormData) {
   const description = String(formData.get("description") ?? "").trim();
   const ageRating = String(formData.get("ageRating") ?? "12_plus");
   const slugInput = String(formData.get("slug") ?? "").trim();
+  const primaryCompetencyId = String(formData.get("primaryCompetencyId") ?? "").trim();
+  const secondaryCompetencyIds = formData.getAll("secondaryCompetencyId").map(String);
 
-  if (!title) {
-    throw new Error("Titel darf nicht leer sein");
-  }
+  if (!title) throw new Error("Titel darf nicht leer sein");
+
+  const secondary = await validateModuleCompetencies(
+    supabase,
+    primaryCompetencyId,
+    secondaryCompetencyIds,
+  );
 
   const slug = slugInput || slugify(title);
 
   const { data: scenario, error } = await supabase
     .from("scenarios")
-    .insert({ title, description, age_rating: ageRating, slug, is_active: false })
+    .insert({
+      title,
+      description,
+      age_rating: ageRating,
+      slug,
+      is_active: false,
+      primary_competency_id: primaryCompetencyId,
+      secondary_competency_ids: secondary,
+    })
     .select()
     .single();
 
-  if (error || !scenario) {
-    throw new Error(error?.message ?? "Szenario konnte nicht angelegt werden");
-  }
+  if (error || !scenario) throw new Error(error?.message ?? "Szenario konnte nicht angelegt werden");
 
   revalidatePath("/scenarios");
   redirect(`/scenarios/${scenario.id}`);
 }
 
-/**
- * Aktiviert/Deaktiviert ein Szenario (is_active). Deaktivierte Szenarien
- * bleiben in der DB, tauchen aber z.B. im Lehrer-Dashboard nicht als
- * zuweisbar auf (Filterung erfolgt dort clientseitig auf is_active).
- */
+/** Aktualisiert die Lernkompetenzen eines bestehenden Moduls. */
+export async function updateScenarioCompetencies(
+  scenarioId: string,
+  formData: FormData,
+) {
+  const supabase = supabaseServerClient();
+  const primaryCompetencyId = String(formData.get("primaryCompetencyId") ?? "").trim();
+  const secondaryCompetencyIds = formData.getAll("secondaryCompetencyId").map(String);
+  const secondary = await validateModuleCompetencies(
+    supabase,
+    primaryCompetencyId,
+    secondaryCompetencyIds,
+  );
+
+  const { error } = await supabase
+    .from("scenarios")
+    .update({
+      primary_competency_id: primaryCompetencyId,
+      secondary_competency_ids: secondary,
+      updated_at: new Date().toISOString(),
+    })
+    .eq("id", scenarioId);
+
+  if (error) throw new Error(error.message);
+  revalidatePath("/scenarios");
+  revalidatePath(`/scenarios/${scenarioId}`);
+}
+
+/** Aktiviert/Deaktiviert ein Szenario (Modul). */
 export async function toggleScenarioActive(scenarioId: string, nextActive: boolean) {
   const supabase = supabaseServerClient();
   const { error } = await supabase
@@ -62,10 +113,7 @@ export async function toggleScenarioActive(scenarioId: string, nextActive: boole
   revalidatePath(`/scenarios/${scenarioId}`);
 }
 
-/**
- * Legt ein neues Content-Item als Draft an. Manipulationstechniken und
- * Ziel-Kompetenzen kommen als kommagetrennte Strings/IDs aus dem Formular.
- */
+/** Legt ein neues Content-Item als Draft an. */
 export async function createContentItem(scenarioId: string, formData: FormData) {
   const supabase = supabaseServerClient();
 
@@ -81,49 +129,30 @@ export async function createContentItem(scenarioId: string, formData: FormData) 
   const baseCommentCount = Number(formData.get("baseCommentCount") ?? 0);
 
   const techniquesRaw = String(formData.get("manipulationTechniques") ?? "");
-  const manipulationTechniques = techniquesRaw
-    .split(",")
-    .map((t) => t.trim())
-    .filter(Boolean);
-
+  const manipulationTechniques = techniquesRaw.split(",").map((t) => t.trim()).filter(Boolean);
   const competencyIds = formData.getAll("targetCompetencies").map(String);
 
-  if (!body) {
-    throw new Error("Inhalt darf nicht leer sein");
-  }
+  if (!body) throw new Error("Inhalt darf nicht leer sein");
   if (isAmbient && manipulationTechniques.length > 0) {
     throw new Error("Ambient-Content darf keine Manipulationstechniken tragen");
   }
 
-  // Optionaler Medien-Upload (Bild/Video). Läuft über den Storage-Bucket
-  // "content-media" — Upload ist per RLS auf platform_staff beschränkt
-  // (siehe 0014_content_media_storage.sql), unabhängig davon, ob der
-  // aufrufende Nutzer diese Server Action überhaupt erreichen kann.
   let mediaUrl: string | null = null;
   let mediaType: string | null = null;
-
   const file = formData.get("media") as File | null;
   if (file && file.size > 0) {
     const ext = file.name.split(".").pop();
     const path = `${scenarioId}/${crypto.randomUUID()}.${ext}`;
-
     const { error: uploadError } = await supabase.storage
       .from("content-media")
       .upload(path, file, { contentType: file.type });
-
-    if (uploadError) {
-      throw new Error(`Medien-Upload fehlgeschlagen: ${uploadError.message}`);
-    }
-
+    if (uploadError) throw new Error(`Medien-Upload fehlgeschlagen: ${uploadError.message}`);
     const { data: publicUrl } = supabase.storage.from("content-media").getPublicUrl(path);
     mediaUrl = publicUrl.publicUrl;
     mediaType = file.type.startsWith("video") ? "video" : "image";
   }
 
   const { error } = await supabase.from("content_items").insert({
-    // Ambient-Content ist bewusst szenario-unabhängig (scenario_id NULL) —
-    // dadurch in JEDEM Feed wiederverwendbar statt pro Szenario neu zu
-    // schreiben (siehe 0012_ambient_content.sql).
     scenario_id: isAmbient ? null : scenarioId,
     parent_id: parentContentId,
     type,
@@ -156,28 +185,19 @@ const ALLOWED_TRANSITIONS: Record<string, string[]> = {
   archived: ["draft"],
 };
 
-/**
- * Wechselt den Freigabe-Status eines Content-Items. Prüft serverseitig,
- * dass nur erlaubte Übergänge stattfinden (siehe ALLOWED_TRANSITIONS) —
- * verhindert z.B. einen Sprung von 'draft' direkt zu 'live' ohne Review.
- */
 export async function updateContentItemStatus(
   contentItemId: string,
   currentStatus: string,
   nextStatus: string,
-  reviewNotes?: string
+  reviewNotes?: string,
 ) {
   const supabase = supabaseServerClient();
-
   const allowed = ALLOWED_TRANSITIONS[currentStatus] ?? [];
   if (!allowed.includes(nextStatus)) {
     throw new Error(`Übergang ${currentStatus} -> ${nextStatus} ist nicht erlaubt`);
   }
 
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-
+  const { data: { user } } = await supabase.auth.getUser();
   const update: Record<string, unknown> = { status: nextStatus };
   if (["approved", "live", "rejected"].includes(nextStatus)) {
     update.reviewed_by = user?.id ?? null;
@@ -185,11 +205,7 @@ export async function updateContentItemStatus(
     if (reviewNotes) update.review_notes = reviewNotes;
   }
 
-  const { error } = await supabase
-    .from("content_items")
-    .update(update)
-    .eq("id", contentItemId);
-
+  const { error } = await supabase.from("content_items").update(update).eq("id", contentItemId);
   if (error) throw new Error(error.message);
   revalidatePath("/scenarios", "layout");
 }
