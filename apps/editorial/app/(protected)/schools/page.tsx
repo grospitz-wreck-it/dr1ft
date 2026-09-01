@@ -1,4 +1,6 @@
+import Link from "next/link";
 import { redirect } from "next/navigation";
+import { ArrowRight, Building2 } from "lucide-react";
 import { supabaseServerClient } from "../../../lib/supabaseServerClient";
 import { SchoolAdminWorkspace } from "./SchoolAdminWorkspace";
 
@@ -7,49 +9,19 @@ export default async function SchoolsPage() {
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) redirect("/login");
 
-  const { data: staff } = await supabase
-    .from("platform_staff")
-    .select("role")
-    .eq("user_id", user.id)
-    .maybeSingle();
-
+  const { data: staff } = await supabase.from("platform_staff").select("role").eq("user_id", user.id).maybeSingle();
   if (staff?.role !== "platform_admin") {
-    return (
-      <div className="p-8">
-        <h1 className="text-lg font-semibold">Kein Zugriff</h1>
-        <p className="text-sm text-slate-500 mt-2">
-          Nur Platform-Admins können Schulen verwalten.
-        </p>
-      </div>
-    );
+    return <div className="p-8"><h1 className="text-lg font-semibold">Kein Zugriff</h1><p className="mt-2 text-sm text-slate-500">Nur Platform-Admins können Schulen verwalten.</p></div>;
   }
 
   const [{ data: schools, error: schoolError }, { data: memberships, error: membershipError }] = await Promise.all([
-    supabase
-      .from("schools")
-      .select("id, name, region, email_domain, created_at")
-      .order("name"),
-    supabase
-      .from("school_memberships")
-      .select("school_id, role, active"),
+    supabase.from("schools").select("id, name, region, email_domain, school_type, student_count, status, plan, funding_type, created_at, updated_at").order("name"),
+    supabase.from("school_memberships").select("school_id, role, active"),
   ]);
 
-  if (schoolError) {
-    return (
-      <div className="p-8">
-        <h1 className="text-lg font-semibold">Schulen konnten nicht geladen werden</h1>
-        <p className="text-sm text-slate-500 mt-2">{schoolError.message}</p>
-      </div>
-    );
-  }
-
-  if (membershipError) {
-    return (
-      <div className="p-8">
-        <h1 className="text-lg font-semibold">Schulrollen konnten nicht geladen werden</h1>
-        <p className="text-sm text-slate-500 mt-2">{membershipError.message}</p>
-      </div>
-    );
+  if (schoolError || membershipError) {
+    const error = schoolError ?? membershipError;
+    return <div className="p-8"><h1 className="text-lg font-semibold">Schulen konnten nicht geladen werden</h1><p className="mt-2 text-sm text-slate-500">{error?.message}</p></div>;
   }
 
   const counts = new Map<string, { total: number; admins: number; teachers: number }>();
@@ -69,5 +41,5 @@ export default async function SchoolsPage() {
     teacherCount: counts.get(school.id)?.teachers ?? 0,
   }));
 
-  return <SchoolAdminWorkspace initialSchools={initialSchools} />;
+  return <main className="min-h-screen bg-canvas"><div className="mx-auto max-w-7xl px-6 py-8 lg:px-8"><div className="mb-8"><p className="text-xs font-semibold uppercase tracking-[0.16em] text-accent">DR1FT Administration</p><h1 className="mt-2 text-3xl font-semibold tracking-tight text-slate-900">Schulen</h1><p className="mt-2 max-w-2xl text-sm leading-6 text-slate-500">Schulen, Zugänge, Nutzung und zukünftige Pläne zentral organisieren.</p></div><SchoolAdminWorkspace initialSchools={initialSchools} /></div></main>;
 }
