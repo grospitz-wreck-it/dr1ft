@@ -42,6 +42,23 @@ Gib ausschließlich valides JSON zurück. Kein Markdown.`;
 function num(fd: FormData, key: string, fallback: number, min: number, max: number) { return Math.min(max, Math.max(min, Number(fd.get(key) ?? fallback) || fallback)); }
 function text(fd: FormData, key: string, fallback: string) { return String(fd.get(key) ?? fallback).trim(); }
 
+const AMBIENT_ITEM_SCHEMA = {
+  type: "array",
+  items: {
+    type: "object",
+    properties: {
+      body: { type: "string" },
+      format: { type: "string", enum: ["status", "question", "story", "observation", "reply", "caption", "poll_idea", "moment"] },
+      mood: { type: "string" },
+      topic: { type: "string" },
+      creatorVibe: { type: "string" },
+      needsImage: { type: "boolean" },
+      imagePrompt: { type: "string" },
+    },
+    required: ["body", "format", "mood", "topic", "creatorVibe", "needsImage", "imagePrompt"],
+  },
+};
+
 async function generateImage(prompt: string, aspectRatio: string, index: number) {
   const apiKey = process.env.GEMINI_API_KEY;
   if (!apiKey) return null;
@@ -92,7 +109,7 @@ export async function generateAmbientDrafts(formData: FormData) {
     if (!response.ok) throw new Error(`Anthropic API Fehler: ${await response.text()}`);
     items = JSON.parse((await response.json()).content?.[0]?.text?.trim() ?? "[]");
   } else {
-    const response = await fetch("https://generativelanguage.googleapis.com/v1beta/interactions", { method: "POST", headers: { "Content-Type": "application/json", "x-goog-api-key": apiKey }, body: JSON.stringify({ model: "gemini-3.7-flash", input: prompt, response_format: { type: "json" } }) });
+    const response = await fetch("https://generativelanguage.googleapis.com/v1beta/interactions", { method: "POST", headers: { "Content-Type": "application/json", "x-goog-api-key": apiKey }, body: JSON.stringify({ model: "gemini-3.7-flash", input: prompt, response_format: { type: "text", mime_type: "application/json", schema: AMBIENT_ITEM_SCHEMA } }) });
     if (!response.ok) throw new Error(`Gemini API Fehler: ${await response.text()}`);
     const data = await response.json();
     items = JSON.parse((data.output_text ?? data.output?.find?.((part: any) => part.type === "text")?.text ?? "[]").trim());
