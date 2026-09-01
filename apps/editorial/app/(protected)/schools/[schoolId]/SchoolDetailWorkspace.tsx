@@ -1,232 +1,46 @@
 "use client";
 
 import { useState } from "react";
-import { Check, Mail, MoreHorizontal, Plus, ShieldCheck, UserRound, UserRoundCog, X } from "lucide-react";
+import { Building2, Check, Mail, MoreHorizontal, Pencil, Plus, Save, ShieldCheck, UserRound, Users, X } from "lucide-react";
 import { createBrowserClient } from "@supabase/ssr";
 
-type School = { id: string; name: string; region: string | null; email_domain: string | null; created_at: string };
+type School = { id: string; name: string; region: string | null; email_domain: string | null; school_type: string | null; student_count: number | null; status: string; plan: string; funding_type: string; internal_notes: string | null; created_at: string; updated_at: string };
 type Member = { id: string; user_id: string; email: string | null; display_name: string | null; role: string; active: boolean; created_at: string };
+type Stats = { total: number; teachers: number; admins: number; leads: number; classes: number };
 
-type Stats = { total: number; teachers: number; admins: number; leads: number };
+function client() { return createBrowserClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!); }
+const ROLE_LABELS: Record<string, string> = { teacher: "Lehrkraft", school_lead: "Schulleitung", school_admin: "Schuladmin" };
+const PLAN_LABELS: Record<string, string> = { free: "Free", starter: "Starter", school: "School", growth: "Growth", enterprise: "Enterprise" };
+const FUNDING_LABELS: Record<string, string> = { none: "Keine Förderung", sponsored: "Sponsored", grant: "Förderung" };
+const TYPE_LABELS: Record<string, string> = { grundschule: "Grundschule", hauptschule: "Hauptschule", realschule: "Realschule", gesamtschule: "Gesamtschule", gymnasium: "Gymnasium", berufskolleg: "Berufskolleg", sonstige: "Sonstige" };
 
-function client() {
-  return createBrowserClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-  );
-}
+export function SchoolDetailWorkspace({ school: initialSchool, initialMembers, stats }: { school: School; initialMembers: Member[]; stats: Stats }) {
+  const [school, setSchool] = useState(initialSchool); const [members, setMembers] = useState(initialMembers); const [tab, setTab] = useState<"overview" | "people" | "insights" | "settings">("overview");
+  const [editing, setEditing] = useState(false); const [form, setForm] = useState(initialSchool); const [showInvite, setShowInvite] = useState(false); const [email, setEmail] = useState(""); const [displayName, setDisplayName] = useState(""); const [role, setRole] = useState("teacher"); const [pendingId, setPendingId] = useState<string | null>(null); const [message, setMessage] = useState<string | null>(null);
 
-const ROLE_LABELS: Record<string, string> = {
-  teacher: "Lehrkraft",
-  school_lead: "Schulleitung",
-  school_admin: "Schuladmin",
-};
+  const activeMembers = members.filter((m) => m.active);
+  function field<K extends keyof School>(key: K, value: School[K]) { setForm((current) => ({ ...current, [key]: value })); }
 
-export function SchoolDetailWorkspace({
-  school,
-  initialMembers,
-  stats,
-}: {
-  school: School;
-  initialMembers: Member[];
-  stats: Stats;
-}) {
-  const [members, setMembers] = useState(initialMembers);
-  const [tab, setTab] = useState<"overview" | "people">("overview");
-  const [showInvite, setShowInvite] = useState(false);
-  const [email, setEmail] = useState("");
-  const [displayName, setDisplayName] = useState("");
-  const [role, setRole] = useState("teacher");
-  const [pendingId, setPendingId] = useState<string | null>(null);
-  const [message, setMessage] = useState<string | null>(null);
+  async function saveSchool(e: React.FormEvent) { e.preventDefault(); setPendingId("school"); setMessage(null); try { const supabase = client(); const { data, error } = await supabase.from("schools").update({ name: form.name, region: form.region || null, email_domain: form.email_domain || null, school_type: form.school_type || null, student_count: form.student_count === null || form.student_count === "" ? null : Number(form.student_count), status: form.status, plan: form.plan, funding_type: form.funding_type, internal_notes: form.internal_notes || null, updated_at: new Date().toISOString() }).eq("id", school.id).select("*").single(); if (error) throw error; setSchool(data); setForm(data); setEditing(false); setMessage("Schulprofil gespeichert."); } catch (error) { setMessage(error instanceof Error ? error.message : "Schulprofil konnte nicht gespeichert werden."); } finally { setPendingId(null); } }
 
-  const activeMembers = members.filter((member) => member.active);
+  async function invite(e: React.FormEvent) { e.preventDefault(); setPendingId("invite"); setMessage(null); try { const supabase = client(); const { data: { session } } = await supabase.auth.getSession(); const response = await fetch(`${process.env.NEXT_PUBLIC_SUPABASE_URL}/functions/v1/provision-school-user`, { method: "POST", headers: { Authorization: `Bearer ${session?.access_token}`, "Content-Type": "application/json" }, body: JSON.stringify({ schoolId: school.id, email, displayName, role }) }); const data = await response.json(); if (!response.ok) throw new Error(data.error ?? "Einladung fehlgeschlagen"); setEmail(""); setDisplayName(""); setRole("teacher"); setShowInvite(false); setMessage("Einladung versendet und Schulrolle angelegt."); window.location.reload(); } catch (error) { setMessage(error instanceof Error ? error.message : "Einladung fehlgeschlagen"); } finally { setPendingId(null); } }
+  async function changeRole(member: Member, nextRole: string) { if (nextRole === member.role) return; setPendingId(member.id); setMessage(null); const { error } = await client().from("school_memberships").update({ role: nextRole }).eq("id", member.id); if (error) setMessage(error.message); else { setMembers((c) => c.map((m) => m.id === member.id ? { ...m, role: nextRole } : m)); setMessage(`${member.display_name || member.email || "Person"} ist jetzt ${ROLE_LABELS[nextRole]}.`); } setPendingId(null); }
+  async function setActive(member: Member, active: boolean) { setPendingId(member.id); const { error } = await client().from("school_memberships").update({ active }).eq("id", member.id); if (error) setMessage(error.message); else { setMembers((c) => c.map((m) => m.id === member.id ? { ...m, active } : m)); setMessage(active ? "Person wieder aktiviert." : "Person deaktiviert."); } setPendingId(null); }
+  async function remove(member: Member) { if (!window.confirm(`${member.display_name || member.email || "Diese Person"} wirklich aus der Schule entfernen?`)) return; setPendingId(member.id); const { error } = await client().from("school_memberships").delete().eq("id", member.id); if (error) setMessage(error.message); else { setMembers((c) => c.filter((m) => m.id !== member.id)); setMessage("Person aus der Schule entfernt."); } setPendingId(null); }
 
-  async function invite(e: React.FormEvent) {
-    e.preventDefault();
-    setPendingId("invite");
-    setMessage(null);
-    try {
-      const supabase = client();
-      const { data: { session } } = await supabase.auth.getSession();
-      const response = await fetch(`${process.env.NEXT_PUBLIC_SUPABASE_URL}/functions/v1/provision-school-user`, {
-        method: "POST",
-        headers: {
-          Authorization: `Bearer ${session?.access_token}`,
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({ schoolId: school.id, email, displayName, role }),
-      });
-      const data = await response.json();
-      if (!response.ok) throw new Error(data.error ?? "Einladung fehlgeschlagen");
-      setEmail("");
-      setDisplayName("");
-      setRole("teacher");
-      setShowInvite(false);
-      setMessage("Einladung versendet und Schulrolle angelegt.");
-      window.location.reload();
-    } catch (error) {
-      setMessage(error instanceof Error ? error.message : "Einladung fehlgeschlagen");
-    } finally {
-      setPendingId(null);
-    }
-  }
+  return <>
+    <section className="mt-8 grid gap-3 sm:grid-cols-2 lg:grid-cols-5">{[["Schüler", school.student_count ?? "—"],["Personen", activeMembers.length],["Lehrkräfte", stats.teachers],["Klassen", stats.classes],["Plan", PLAN_LABELS[school.plan] ?? school.plan]].map(([label,value]) => <div key={String(label)} className="rounded-2xl border border-border bg-panel p-5"><p className="text-xs font-medium text-slate-400">{label}</p><p className="mt-2 text-xl font-semibold text-slate-900">{typeof value === "number" ? value.toLocaleString("de-DE") : value}</p></div>)}</section>
+    <div className="mt-8 flex flex-wrap items-center gap-6 border-b border-border"><button onClick={() => setTab("overview")} className={`border-b-2 px-1 pb-3 text-sm font-medium ${tab === "overview" ? "border-accent text-slate-900" : "border-transparent text-slate-500"}`}>Übersicht</button><button onClick={() => setTab("insights")} className={`border-b-2 px-1 pb-3 text-sm font-medium ${tab === "insights" ? "border-accent text-slate-900" : "border-transparent text-slate-500"}`}>Insights</button><button onClick={() => setTab("people")} className={`border-b-2 px-1 pb-3 text-sm font-medium ${tab === "people" ? "border-accent text-slate-900" : "border-transparent text-slate-500"}`}>Personen & Rollen</button><button onClick={() => setTab("settings")} className={`border-b-2 px-1 pb-3 text-sm font-medium ${tab === "settings" ? "border-accent text-slate-900" : "border-transparent text-slate-500"}`}>Schulprofil</button></div>
+    {message && <div className="mt-5 rounded-xl border border-border bg-panel px-4 py-3 text-sm text-slate-700">{message}</div>}
 
-  async function changeRole(member: Member, nextRole: string) {
-    if (nextRole === member.role) return;
-    setPendingId(member.id);
-    setMessage(null);
-    const supabase = client();
-    const { error } = await supabase.from("school_memberships").update({ role: nextRole }).eq("id", member.id);
-    if (error) {
-      setMessage(error.message);
-    } else {
-      setMembers((current) => current.map((item) => item.id === member.id ? { ...item, role: nextRole } : item));
-      setMessage(`${member.display_name || member.email || "Person"} ist jetzt ${ROLE_LABELS[nextRole]}.`);
-    }
-    setPendingId(null);
-  }
+    {tab === "overview" && <section className="mt-6 grid gap-5 lg:grid-cols-[1.25fr_.75fr]"><div className="rounded-3xl border border-border bg-panel p-6"><div className="flex items-start gap-3"><div className="flex h-10 w-10 items-center justify-center rounded-xl bg-canvas text-slate-500"><Building2 className="h-5 w-5" /></div><div><h2 className="font-semibold text-slate-900">Schulprofil</h2><p className="mt-1 text-sm text-slate-500">Stammdaten, Schulgröße und aktueller DR1FT-Plan.</p></div></div><dl className="mt-6 grid gap-5 sm:grid-cols-2"><div><dt className="text-xs text-slate-400">Schulform</dt><dd className="mt-1 text-sm font-medium text-slate-800">{TYPE_LABELS[school.school_type ?? ""] ?? school.school_type ?? "Nicht hinterlegt"}</dd></div><div><dt className="text-xs text-slate-400">Region</dt><dd className="mt-1 text-sm font-medium text-slate-800">{school.region || "—"}</dd></div><div><dt className="text-xs text-slate-400">Schul-Domain</dt><dd className="mt-1 text-sm font-medium text-slate-800">{school.email_domain ? `@${school.email_domain}` : "Nicht hinterlegt"}</dd></div><div><dt className="text-xs text-slate-400">Förderstatus</dt><dd className="mt-1 text-sm font-medium text-slate-800">{FUNDING_LABELS[school.funding_type] ?? school.funding_type}</dd></div></dl><button onClick={() => { setForm(school); setEditing(true); setTab("settings"); }} className="mt-6 inline-flex items-center gap-2 rounded-xl border border-border px-4 py-2.5 text-sm font-medium text-slate-700 hover:bg-canvas"><Pencil className="h-4 w-4" /> Schulprofil bearbeiten</button></div><div className="rounded-3xl border border-border bg-panel p-6"><p className="text-xs font-semibold uppercase tracking-[0.14em] text-accent">Administration</p><h2 className="mt-2 font-semibold text-slate-900">Zugänge verwalten</h2><p className="mt-2 text-sm leading-6 text-slate-500">Lehrkräfte, Schulleitung und Schuladmins zentral verwalten.</p><button onClick={() => { setTab("people"); setShowInvite(true); }} className="mt-5 inline-flex items-center gap-2 rounded-xl bg-slate-950 px-4 py-2.5 text-sm font-medium text-white"><Plus className="h-4 w-4" /> Person einladen</button></div></section>}
 
-  async function setActive(member: Member, active: boolean) {
-    setPendingId(member.id);
-    setMessage(null);
-    const supabase = client();
-    const { error } = await supabase.from("school_memberships").update({ active }).eq("id", member.id);
-    if (error) {
-      setMessage(error.message);
-    } else {
-      setMembers((current) => current.map((item) => item.id === member.id ? { ...item, active } : item));
-      setMessage(active ? "Person wieder aktiviert." : "Person deaktiviert.");
-    }
-    setPendingId(null);
-  }
+    {tab === "insights" && <section className="mt-6 grid gap-5 lg:grid-cols-2"><div className="rounded-3xl border border-border bg-panel p-6"><p className="text-xs font-semibold uppercase tracking-[0.14em] text-accent">Schulgröße</p><h2 className="mt-2 text-xl font-semibold text-slate-900">Kapazität & Struktur</h2><div className="mt-6 grid grid-cols-2 gap-3"><div className="rounded-2xl bg-canvas p-4"><p className="text-xs text-slate-400">Schüler</p><p className="mt-1 text-2xl font-semibold">{school.student_count?.toLocaleString("de-DE") ?? "—"}</p></div><div className="rounded-2xl bg-canvas p-4"><p className="text-xs text-slate-400">Klassen</p><p className="mt-1 text-2xl font-semibold">{stats.classes}</p></div></div></div><div className="rounded-3xl border border-border bg-panel p-6"><p className="text-xs font-semibold uppercase tracking-[0.14em] text-accent">Nutzer</p><h2 className="mt-2 text-xl font-semibold text-slate-900">Zugänge</h2><div className="mt-6 space-y-3"><div className="flex justify-between rounded-xl bg-canvas p-3 text-sm"><span>Lehrkräfte</span><strong>{stats.teachers}</strong></div><div className="flex justify-between rounded-xl bg-canvas p-3 text-sm"><span>Schulleitung</span><strong>{stats.leads}</strong></div><div className="flex justify-between rounded-xl bg-canvas p-3 text-sm"><span>Schuladmins</span><strong>{stats.admins}</strong></div></div></div></section>}
 
-  async function remove(member: Member) {
-    if (!window.confirm(`${member.display_name || member.email || "Diese Person"} wirklich aus der Schule entfernen?`)) return;
-    setPendingId(member.id);
-    setMessage(null);
-    const supabase = client();
-    const { error } = await supabase.from("school_memberships").delete().eq("id", member.id);
-    if (error) {
-      setMessage(error.message);
-    } else {
-      setMembers((current) => current.filter((item) => item.id !== member.id));
-      setMessage("Person aus der Schule entfernt.");
-    }
-    setPendingId(null);
-  }
+    {tab === "settings" && <section className="mt-6 rounded-3xl border border-border bg-panel p-6"><div className="flex items-start justify-between"><div><p className="text-xs font-semibold uppercase tracking-[0.14em] text-accent">Administration</p><h2 className="mt-1 text-xl font-semibold text-slate-900">Schulprofil</h2><p className="mt-2 text-sm text-slate-500">Diese Angaben steuern Identität, Größe, Status und Plan der Schule.</p></div>{!editing && <button onClick={() => { setForm(school); setEditing(true); }} className="inline-flex items-center gap-2 rounded-xl border border-border px-4 py-2.5 text-sm font-medium"><Pencil className="h-4 w-4" /> Bearbeiten</button>}</div>{editing ? <form onSubmit={saveSchool} className="mt-7 grid gap-5 md:grid-cols-2"><label className="text-sm font-medium">Schulname<input required value={form.name} onChange={(e) => field("name", e.target.value)} className="mt-1.5 w-full rounded-xl border border-border px-3 py-2.5" /></label><label className="text-sm font-medium">Schulform<select value={form.school_type ?? ""} onChange={(e) => field("school_type", e.target.value || null)} className="mt-1.5 w-full rounded-xl border border-border px-3 py-2.5"><option value="">Nicht festgelegt</option>{Object.entries(TYPE_LABELS).map(([k,v]) => <option key={k} value={k}>{v}</option>)}</select></label><label className="text-sm font-medium">Region<input value={form.region ?? ""} onChange={(e) => field("region", e.target.value)} className="mt-1.5 w-full rounded-xl border border-border px-3 py-2.5" /></label><label className="text-sm font-medium">Schülerzahl<input type="number" min="0" value={form.student_count ?? ""} onChange={(e) => field("student_count", e.target.value === "" ? null : Number(e.target.value))} className="mt-1.5 w-full rounded-xl border border-border px-3 py-2.5" /></label><label className="text-sm font-medium">Schul-Domain<input value={form.email_domain ?? ""} onChange={(e) => field("email_domain", e.target.value)} className="mt-1.5 w-full rounded-xl border border-border px-3 py-2.5" /></label><label className="text-sm font-medium">Status<select value={form.status} onChange={(e) => field("status", e.target.value)} className="mt-1.5 w-full rounded-xl border border-border px-3 py-2.5"><option value="active">Aktiv</option><option value="inactive">Inaktiv</option><option value="suspended">Gesperrt</option></select></label><label className="text-sm font-medium">Plan<select value={form.plan} onChange={(e) => field("plan", e.target.value)} className="mt-1.5 w-full rounded-xl border border-border px-3 py-2.5">{Object.entries(PLAN_LABELS).map(([k,v]) => <option key={k} value={k}>{v}</option>)}</select></label><label className="text-sm font-medium">Förderstatus<select value={form.funding_type} onChange={(e) => field("funding_type", e.target.value)} className="mt-1.5 w-full rounded-xl border border-border px-3 py-2.5"><option value="none">Keine Förderung</option><option value="sponsored">Sponsored</option><option value="grant">Förderung</option></select></label><label className="text-sm font-medium md:col-span-2">Interne Notiz<textarea value={form.internal_notes ?? ""} onChange={(e) => field("internal_notes", e.target.value)} className="mt-1.5 min-h-24 w-full rounded-xl border border-border px-3 py-2.5" /></label><div className="flex gap-2 md:col-span-2"><button type="button" onClick={() => setEditing(false)} className="rounded-xl border border-border px-4 py-2.5 text-sm">Abbrechen</button><button disabled={pendingId === "school"} className="inline-flex items-center gap-2 rounded-xl bg-slate-950 px-4 py-2.5 text-sm font-medium text-white disabled:opacity-50"><Save className="h-4 w-4" />{pendingId === "school" ? "Speichert …" : "Änderungen speichern"}</button></div></form> : <dl className="mt-7 grid gap-5 md:grid-cols-2"><div><dt className="text-xs text-slate-400">Schulname</dt><dd className="mt-1 font-medium">{school.name}</dd></div><div><dt className="text-xs text-slate-400">Schulform</dt><dd className="mt-1 font-medium">{TYPE_LABELS[school.school_type ?? ""] ?? school.school_type ?? "—"}</dd></div><div><dt className="text-xs text-slate-400">Schülerzahl</dt><dd className="mt-1 font-medium">{school.student_count?.toLocaleString("de-DE") ?? "—"}</dd></div><div><dt className="text-xs text-slate-400">Plan</dt><dd className="mt-1 font-medium">{PLAN_LABELS[school.plan]}</dd></div><div><dt className="text-xs text-slate-400">Förderstatus</dt><dd className="mt-1 font-medium">{FUNDING_LABELS[school.funding_type]}</dd></div></dl>}</section>}
 
-  return (
-    <>
-      <section className="mt-8 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
-        {[
-          ["Personen", stats.total],
-          ["Lehrkräfte", stats.teachers],
-          ["Schuladmins", stats.admins],
-          ["Schulleitung", stats.leads],
-        ].map(([label, value]) => (
-          <div key={label} className="rounded-2xl border border-border bg-panel p-5">
-            <p className="text-xs font-medium text-slate-400">{label}</p>
-            <p className="mt-2 text-2xl font-semibold text-slate-900">{value}</p>
-          </div>
-        ))}
-      </section>
+    {tab === "people" && <section className="mt-6 rounded-3xl border border-border bg-panel overflow-hidden"><div className="flex flex-col gap-3 border-b border-border p-5 sm:flex-row sm:items-center sm:justify-between"><div><h2 className="font-semibold text-slate-900">Personen & Rollen</h2><p className="mt-1 text-sm text-slate-500">{activeMembers.length} aktive Personen in dieser Schule.</p></div><button onClick={() => setShowInvite(true)} className="inline-flex items-center justify-center gap-2 rounded-xl bg-slate-950 px-4 py-2.5 text-sm font-medium text-white"><Plus className="h-4 w-4" /> Person einladen</button></div><div className="divide-y divide-border">{members.map((member) => <div key={member.id} className={`flex flex-col gap-4 p-5 lg:flex-row lg:items-center lg:justify-between ${member.active ? "" : "bg-canvas/60"}`}><div className="flex min-w-0 items-center gap-3"><div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-canvas text-slate-500"><UserRound className="h-4 w-4" /></div><div className="min-w-0"><p className="truncate text-sm font-medium">{member.display_name || "Name nicht hinterlegt"}</p><p className="truncate text-xs text-slate-500">{member.email || member.user_id}</p></div>{!member.active && <span className="rounded-full bg-slate-100 px-2 py-1 text-[11px] text-slate-500">Deaktiviert</span>}</div><div className="flex flex-wrap items-center gap-2"><select disabled={pendingId === member.id} value={member.role} onChange={(e) => changeRole(member, e.target.value)} className="rounded-lg border border-border bg-panel px-3 py-2 text-xs"><option value="teacher">Lehrkraft</option><option value="school_lead">Schulleitung</option><option value="school_admin">Schuladmin</option></select><button disabled={pendingId === member.id} onClick={() => setActive(member, !member.active)} className="rounded-lg border border-border px-3 py-2 text-xs">{member.active ? "Deaktivieren" : "Aktivieren"}</button><button disabled={pendingId === member.id} onClick={() => remove(member)} className="rounded-lg border border-red-200 px-3 py-2 text-xs text-red-600"><MoreHorizontal className="h-4 w-4" /></button></div></div>)}{members.length === 0 && <div className="p-10 text-center text-sm text-slate-500">Noch keine Personen zugeordnet.</div>}</div></section>}
 
-      <div className="mt-8 flex items-center gap-6 border-b border-border">
-        <button type="button" onClick={() => setTab("overview")} className={`border-b-2 px-1 pb-3 text-sm font-medium ${tab === "overview" ? "border-accent text-slate-900" : "border-transparent text-slate-500"}`}>Übersicht</button>
-        <button type="button" onClick={() => setTab("people")} className={`border-b-2 px-1 pb-3 text-sm font-medium ${tab === "people" ? "border-accent text-slate-900" : "border-transparent text-slate-500"}`}>Personen &amp; Rollen</button>
-      </div>
-
-      {message && <div className="mt-5 rounded-xl border border-border bg-panel px-4 py-3 text-sm text-slate-700">{message}</div>}
-
-      {tab === "overview" ? (
-        <section className="mt-6 grid gap-5 lg:grid-cols-[1.2fr_.8fr]">
-          <div className="rounded-3xl border border-border bg-panel p-6">
-            <div className="flex items-start gap-3">
-              <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-canvas text-slate-500"><ShieldCheck className="h-5 w-5" /></div>
-              <div>
-                <h2 className="font-semibold text-slate-900">Schulprofil</h2>
-                <p className="mt-1 text-sm text-slate-500">Die wichtigsten Verwaltungsinformationen auf einen Blick.</p>
-              </div>
-            </div>
-            <dl className="mt-6 grid gap-4 sm:grid-cols-2">
-              <div><dt className="text-xs text-slate-400">Schulname</dt><dd className="mt-1 text-sm font-medium text-slate-800">{school.name}</dd></div>
-              <div><dt className="text-xs text-slate-400">Region</dt><dd className="mt-1 text-sm font-medium text-slate-800">{school.region || "—"}</dd></div>
-              <div><dt className="text-xs text-slate-400">Schul-Domain</dt><dd className="mt-1 text-sm font-medium text-slate-800">{school.email_domain ? `@${school.email_domain}` : "Nicht hinterlegt"}</dd></div>
-              <div><dt className="text-xs text-slate-400">Aktive Personen</dt><dd className="mt-1 text-sm font-medium text-slate-800">{activeMembers.length}</dd></div>
-            </dl>
-          </div>
-          <div className="rounded-3xl border border-border bg-panel p-6">
-            <p className="text-xs font-semibold uppercase tracking-[0.14em] text-accent">Administration</p>
-            <h2 className="mt-2 font-semibold text-slate-900">Personen verwalten</h2>
-            <p className="mt-2 text-sm leading-6 text-slate-500">Rollen, Aktivität und Zugänge dieser Schule zentral verwalten.</p>
-            <button type="button" onClick={() => { setTab("people"); setShowInvite(true); }} className="mt-5 inline-flex items-center gap-2 rounded-xl bg-slate-950 px-4 py-2.5 text-sm font-medium text-white">
-              <Plus className="h-4 w-4" /> Person einladen
-            </button>
-          </div>
-        </section>
-      ) : (
-        <section className="mt-6 rounded-3xl border border-border bg-panel overflow-hidden">
-          <div className="flex flex-col gap-3 border-b border-border p-5 sm:flex-row sm:items-center sm:justify-between">
-            <div><h2 className="font-semibold text-slate-900">Personen &amp; Rollen</h2><p className="mt-1 text-sm text-slate-500">{activeMembers.length} aktive Personen in dieser Schule.</p></div>
-            <button type="button" onClick={() => setShowInvite(true)} className="inline-flex items-center justify-center gap-2 rounded-xl bg-slate-950 px-4 py-2.5 text-sm font-medium text-white"><Plus className="h-4 w-4" /> Person einladen</button>
-          </div>
-          <div className="divide-y divide-border">
-            {members.map((member) => (
-              <div key={member.id} className={`flex flex-col gap-4 p-5 lg:flex-row lg:items-center lg:justify-between ${member.active ? "" : "bg-canvas/60"}`}>
-                <div className="flex items-center gap-3 min-w-0">
-                  <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-canvas text-slate-500"><UserRound className="h-4 w-4" /></div>
-                  <div className="min-w-0">
-                    <p className="truncate text-sm font-medium text-slate-900">{member.display_name || "Name nicht hinterlegt"}</p>
-                    <p className="truncate text-xs text-slate-500">{member.email || member.user_id}</p>
-                  </div>
-                  {!member.active && <span className="rounded-full bg-slate-100 px-2 py-1 text-[11px] font-medium text-slate-500">Deaktiviert</span>}
-                </div>
-                <div className="flex flex-wrap items-center gap-2 lg:justify-end">
-                  <select
-                    disabled={pendingId === member.id}
-                    value={member.role}
-                    onChange={(e) => changeRole(member, e.target.value)}
-                    className="rounded-lg border border-border bg-panel px-3 py-2 text-xs font-medium text-slate-700"
-                  >
-                    <option value="teacher">Lehrkraft</option>
-                    <option value="school_lead">Schulleitung</option>
-                    <option value="school_admin">Schuladmin</option>
-                  </select>
-                  <button type="button" disabled={pendingId === member.id} onClick={() => setActive(member, !member.active)} className="rounded-lg border border-border px-3 py-2 text-xs font-medium text-slate-600 hover:bg-canvas disabled:opacity-50">
-                    {member.active ? "Deaktivieren" : "Aktivieren"}
-                  </button>
-                  <button type="button" disabled={pendingId === member.id} onClick={() => remove(member)} className="rounded-lg border border-red-200 px-3 py-2 text-xs font-medium text-red-600 hover:bg-red-50 disabled:opacity-50" title="Aus Schule entfernen">
-                    <MoreHorizontal className="h-4 w-4" />
-                  </button>
-                </div>
-              </div>
-            ))}
-            {members.length === 0 && <div className="p-10 text-center text-sm text-slate-500">Noch keine Personen zugeordnet.</div>}
-          </div>
-        </section>
-      )}
-
-      {showInvite && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/30 p-4 backdrop-blur-sm">
-          <div className="w-full max-w-lg rounded-3xl border border-border bg-panel p-6 shadow-2xl">
-            <div className="flex items-start justify-between gap-4">
-              <div><p className="text-xs font-semibold uppercase tracking-[0.14em] text-accent">{school.name}</p><h2 className="mt-1 text-xl font-semibold text-slate-900">Person einladen</h2></div>
-              <button type="button" onClick={() => setShowInvite(false)} className="rounded-lg p-2 text-slate-400 hover:bg-canvas"><X className="h-4 w-4" /></button>
-            </div>
-            <p className="mt-3 text-sm text-slate-500">Die E-Mail-Adresse muss zur hinterlegten Schul-Domain passen.</p>
-            <form onSubmit={invite} className="mt-6 space-y-4">
-              <label className="block text-sm font-medium text-slate-700">Name<input required value={displayName} onChange={(e) => setDisplayName(e.target.value)} className="mt-1.5 w-full rounded-xl border border-border px-3 py-2.5 text-sm" placeholder="Vor- und Nachname" /></label>
-              <label className="block text-sm font-medium text-slate-700">Schul-E-Mail<input required type="email" value={email} onChange={(e) => setEmail(e.target.value)} className="mt-1.5 w-full rounded-xl border border-border px-3 py-2.5 text-sm" placeholder={`name@${school.email_domain || "schule.de"}`} /></label>
-              <label className="block text-sm font-medium text-slate-700">Rolle<select value={role} onChange={(e) => setRole(e.target.value)} className="mt-1.5 w-full rounded-xl border border-border px-3 py-2.5 text-sm"><option value="teacher">Lehrkraft</option><option value="school_lead">Schulleitung</option><option value="school_admin">Schuladmin</option></select></label>
-              <div className="flex justify-end gap-2 pt-2">
-                <button type="button" onClick={() => setShowInvite(false)} className="rounded-xl border border-border px-4 py-2.5 text-sm font-medium text-slate-600">Abbrechen</button>
-                <button disabled={pendingId === "invite"} className="inline-flex items-center gap-2 rounded-xl bg-slate-950 px-4 py-2.5 text-sm font-medium text-white disabled:opacity-50"><Mail className="h-4 w-4" />{pendingId === "invite" ? "Wird gesendet …" : "Einladung senden"}</button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
-    </>
-  );
+    {showInvite && <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/30 p-4 backdrop-blur-sm"><div className="w-full max-w-lg rounded-3xl border border-border bg-panel p-6 shadow-2xl"><div className="flex items-start justify-between"><div><p className="text-xs font-semibold uppercase tracking-[0.14em] text-accent">{school.name}</p><h2 className="mt-1 text-xl font-semibold">Person einladen</h2></div><button onClick={() => setShowInvite(false)} className="p-2 text-slate-400"><X className="h-4 w-4" /></button></div><p className="mt-3 text-sm text-slate-500">Die E-Mail-Adresse muss zur hinterlegten Schul-Domain passen.</p><form onSubmit={invite} className="mt-6 space-y-4"><label className="block text-sm font-medium">Name<input required value={displayName} onChange={(e) => setDisplayName(e.target.value)} className="mt-1.5 w-full rounded-xl border border-border px-3 py-2.5" /></label><label className="block text-sm font-medium">Schul-E-Mail<input required type="email" value={email} onChange={(e) => setEmail(e.target.value)} className="mt-1.5 w-full rounded-xl border border-border px-3 py-2.5" /></label><label className="block text-sm font-medium">Rolle<select value={role} onChange={(e) => setRole(e.target.value)} className="mt-1.5 w-full rounded-xl border border-border px-3 py-2.5"><option value="teacher">Lehrkraft</option><option value="school_lead">Schulleitung</option><option value="school_admin">Schuladmin</option></select></label><div className="flex justify-end gap-2"><button type="button" onClick={() => setShowInvite(false)} className="rounded-xl border border-border px-4 py-2.5">Abbrechen</button><button disabled={pendingId === "invite"} className="rounded-xl bg-slate-950 px-4 py-2.5 text-sm text-white">{pendingId === "invite" ? "Wird gesendet …" : "Einladung senden"}</button></div></form></div></div>}
+  </>;
 }
