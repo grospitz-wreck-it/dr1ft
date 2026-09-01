@@ -80,7 +80,7 @@ export function ContentTable({
   function runBulk(nextStatus: string) {
     startTransition(async () => {
       const result = await bulkUpdateStatus(
-        [...selected],
+        Array.from(selected),
         nextStatus,
       );
 

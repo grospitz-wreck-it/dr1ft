@@ -16,7 +16,7 @@ export default async function ClassDetailPage({ params }: Props) {
   const { data: assignments } = await supabase.from("class_instance_scenario_assignments").select("scenario_id, pacing_mode").eq("class_instance_id", classId);
   const assignedIds = new Set((assignments ?? []).map((a) => a.scenario_id));
   const pacingByScenario = new Map((assignments ?? []).map((a) => [a.scenario_id, a.pacing_mode]));
-  const assignedScenarioIds = [...assignedIds];
+  const assignedScenarioIds = Array.from(assignedIds);
   const { data: missions } = assignedScenarioIds.length ? await supabase.from("missions").select("*, scenarios(title)").in("scenario_id", assignedScenarioIds).eq("status", "live") : { data: [] };
   const { data: session } = await supabase.auth.getSession();
   const dashboardRes = await fetch(`${process.env.NEXT_PUBLIC_SUPABASE_URL}/functions/v1/teacher-dashboard`, { method: "POST", headers: { Authorization: `Bearer ${session.session?.access_token}`, "Content-Type": "application/json" }, body: JSON.stringify({ classId }), cache: "no-store" });
@@ -24,7 +24,7 @@ export default async function ClassDetailPage({ params }: Props) {
   const studentRows = new Map<string, { name: string; competencies: Record<string, number>; completed: number; total: number }>();
   (dashboard.studentCompetencyProgress ?? []).forEach((row: any) => { if (!studentRows.has(row.user_id)) studentRows.set(row.user_id, { name: row.display_name, competencies: {}, completed: 0, total: 0 }); if (row.competency_title) studentRows.get(row.user_id)!.competencies[row.competency_title] = row.level ?? 1; });
   (dashboard.studentMissionProgress ?? []).forEach((row: any) => { if (!studentRows.has(row.user_id)) studentRows.set(row.user_id, { name: row.display_name, competencies: {}, completed: 0, total: 0 }); const entry = studentRows.get(row.user_id)!; entry.completed = Number(row.missions_completed); entry.total = Number(row.missions_total); });
-  const allCompetencyTitles = [...new Set((dashboard.studentCompetencyProgress ?? []).map((r: any) => r.competency_title).filter(Boolean))];
+  const allCompetencyTitles = Array.from(new Set((dashboard.studentCompetencyProgress ?? []).map((r: any) => r.competency_title).filter(Boolean)));
   if (!classInfo) return <div className="px-6 py-5 text-sm text-slate-500">Klasseninstanz nicht gefunden.</div>;
 
   return (
@@ -56,7 +56,7 @@ export default async function ClassDetailPage({ params }: Props) {
 
       <section><h2 className="text-lg font-semibold text-slate-900 mb-3">Missionen &amp; Lernaktivitäten</h2><Panel title="Aktuelle Missionen"><div className="divide-y divide-border">{missions?.map((m: any) => <div key={m.id} className="px-5 py-3 flex justify-between items-start text-sm"><div><p className="font-medium text-slate-900">{m.title}</p><p className="text-xs text-slate-400">{m.scenarios?.title}</p></div><span className="text-xs text-slate-500">{EVENT_LABELS[m.trigger_condition?.event] ?? m.trigger_condition?.event} × {m.trigger_condition?.count ?? 1}</span></div>)}{(!missions || missions.length === 0) && <p className="p-5 text-sm text-slate-400">Noch keine Missionen.</p>}</div></Panel></section>
 
-      <section><h2 className="text-lg font-semibold text-slate-900 mb-3">Fortschritt pro Schüler:in</h2><Panel title="Kompetenzen & Missionen"><div className="overflow-x-auto"><table className="w-full text-sm"><thead><tr className="border-b border-border text-left text-xs uppercase text-slate-400"><th className="px-5 py-3">Schüler:in</th>{allCompetencyTitles.map((t) => <th key={t as string} className="px-3 py-3">{t as string}</th>)}<th className="px-3 py-3">Missionen</th></tr></thead><tbody>{[...studentRows.values()].map((s, i) => <tr key={i} className="border-b border-border last:border-0"><td className="px-5 py-3 text-slate-900">{s.name}</td>{allCompetencyTitles.map((t) => <td key={t as string} className="px-3 py-3 text-slate-500">{s.competencies[t as string] ?? "—"}/5</td>)}<td className="px-3 py-3 text-slate-500">{s.completed}/{s.total}</td></tr>)}{studentRows.size === 0 && <tr><td colSpan={2 + allCompetencyTitles.length} className="px-5 py-6 text-center text-slate-400">Noch keine Daten.</td></tr>}</tbody></table></div></Panel></section>
+      <section><h2 className="text-lg font-semibold text-slate-900 mb-3">Fortschritt pro Schüler:in</h2><Panel title="Kompetenzen & Missionen"><div className="overflow-x-auto"><table className="w-full text-sm"><thead><tr className="border-b border-border text-left text-xs uppercase text-slate-400"><th className="px-5 py-3">Schüler:in</th>{allCompetencyTitles.map((t) => <th key={t as string} className="px-3 py-3">{t as string}</th>)}<th className="px-3 py-3">Missionen</th></tr></thead><tbody>{Array.from(studentRows.values()).map((s, i) => <tr key={i} className="border-b border-border last:border-0"><td className="px-5 py-3 text-slate-900">{s.name}</td>{allCompetencyTitles.map((t) => <td key={t as string} className="px-3 py-3 text-slate-500">{s.competencies[t as string] ?? "—"}/5</td>)}<td className="px-3 py-3 text-slate-500">{s.completed}/{s.total}</td></tr>)}{studentRows.size === 0 && <tr><td colSpan={2 + allCompetencyTitles.length} className="px-5 py-6 text-center text-slate-400">Noch keine Daten.</td></tr>}</tbody></table></div></Panel></section>
     </div>
   );
 }

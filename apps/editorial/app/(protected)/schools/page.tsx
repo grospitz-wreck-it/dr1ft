@@ -1,5 +1,5 @@
 import { redirect } from "next/navigation";
-import { supabaseServerClient } from "../../lib/supabaseServerClient";
+import { supabaseServerClient } from "../../../lib/supabaseServerClient";
 import { SchoolAdminWorkspace } from "./SchoolAdminWorkspace";
 
 export default async function SchoolsPage() {

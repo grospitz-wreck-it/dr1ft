@@ -1,3 +1,4 @@
+import { supabaseServerClient } from "../../../../lib/supabaseServerClient";
 // apps/admin/app/group-chats/[scenarioId]/page.tsx
 
 import { createGroupChat, toggleGroupChatLive, addGroupChatMessage } from "../actions";
