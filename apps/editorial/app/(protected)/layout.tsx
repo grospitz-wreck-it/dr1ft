@@ -27,7 +27,7 @@ const NAV_ITEMS = [
   { href: "/group-chats", label: "Gruppenchats", icon: MessageSquare },
   { href: "/ambient-content", label: "Ambient-Generator", icon: Sparkles },
   { href: "/staff", label: "Redaktionsteam", icon: Users },
-  { href: "/schools", label: "Schulen & Rollen", icon: School },
+  { href: "/schools", label: "Schulen", icon: School },
 ];
 
 export default async function ProtectedLayout({ children }: { children: React.ReactNode }) {
