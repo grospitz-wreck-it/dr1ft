@@ -75,6 +75,36 @@ async function generateImage(prompt: string, aspectRatio: string, index: number)
   return supabase.storage.from("ambient-assets").getPublicUrl(path).data.publicUrl;
 }
 
+async function generateGeminiText(apiKey: string, prompt: string) {
+  const models = ["gemini-3.7-flash", "gemini-3.6-flash", "gemini-3.5-flash-lite"];
+  let lastError = "Unbekannter Gemini-Fehler";
+  for (const model of models) {
+    const response = await fetch("https://generativelanguage.googleapis.com/v1beta/interactions", { method: "POST", headers: { "Content-Type": "application/json", "x-goog-api-key": apiKey }, body: JSON.stringify({ model, input: prompt, response_format: { type: "text", mime_type: "application/json", schema: AMBIENT_ITEM_SCHEMA } }) });
+    if (response.ok) {
+      const data = await response.json();
+      const raw = (data.output_text ?? data.output?.find?.((part: any) => part.type === "text")?.text ?? "[]").trim();
+      return JSON.parse(raw);
+    }
+    const errorText = await response.text();
+    lastError = errorText;
+    const retryable = response.status === 429 || response.status >= 500 || /high demand|temporar|overload|capacity|unavailable/i.test(errorText);
+    if (!retryable) break;
+  }
+  throw new Error(`Gemini API Fehler: ${lastError}`);
+}
+
+function pickImageIndexes(count: number, ratio: number, mode: string, items: any[]) {
+  if (mode === "none" || ratio <= 0) return new Set<number>();
+  if (mode === "all") return new Set(items.map((_, index) => index));
+  const target = Math.min(count, Math.max(0, Math.round(count * ratio / 100)));
+  if (target <= 0) return new Set<number>();
+  const indexes = new Set<number>();
+  const candidates = items.map((item, index) => ({ index, preferred: Boolean(item?.needsImage) }));
+  candidates.sort((a, b) => Number(b.preferred) - Number(a.preferred) || a.index - b.index);
+  for (const candidate of candidates.slice(0, target)) indexes.add(candidate.index);
+  return indexes;
+}
+
 export async function generateAmbientDrafts(formData: FormData) {
   const supabase = supabaseServerClient();
   const theme = text(formData, "theme", "Alltag");
@@ -86,6 +116,7 @@ export async function generateAmbientDrafts(formData: FormData) {
   const slangLevel = num(formData, "slangLevel", 2, 0, 3);
   const emojiLevel = num(formData, "emojiLevel", 2, 0, 3);
   const imageMode = text(formData, "imageMode", "smart");
+  const imageRatio = num(formData, "imageRatio", 35, 0, 100);
   const imageStyle = text(formData, "imageStyle", "authentic social photo");
   const aspectRatio = text(formData, "aspectRatio", "4:5");
   const creatorId = String(formData.get("creatorId") ?? "") || null;
@@ -101,7 +132,7 @@ export async function generateAmbientDrafts(formData: FormData) {
   const ageText = AGE_BANDS[ageBand] ?? ageBand;
   const styleText = STYLE_LABELS[style] ?? style;
   const dateText = new Intl.DateTimeFormat("de-DE", { dateStyle: "full", timeZone: "Europe/Berlin" }).format(new Date());
-  const prompt = `${CORE_PROMPT}\n\n${languageLibrary}\n\nGENERATION PROFILE\n- Zielgruppe: ${ageText}\n- Thema: ${theme}\n- Interessen: ${interests.length ? interests.join(", ") : "frei wählen"}\n- Schreibstil: ${styleText}\n- Tippfehler-Level: ${typoLevel}/3\n- Jugendsprache-Level: ${slangLevel}/3\n- Emoji-Level: ${emojiLevel}/3\n- Heute: ${dateText}\n- Creator: ${creatorVoice?.display_name ?? "wechselnde Ambient-Accounts"}\n- Persona: ${JSON.stringify(creatorVoice?.persona ?? {})}\n- Profilhinweise: ${JSON.stringify(profile?.prompt_rules ?? {})}\n\nAUTHENTICITY CHECK\n- Mindestens einige Posts komplett normal und unspektakulär.\n- Slang nur kontextgerecht.\n- Tippfehler selten und plausibel.\n- Aktuelle Trendwörter nicht gleichmäßig verteilen.\n- Keine Wiederholungen oder Emoji-Schablonen.\n- Kein Erwachsener, der Teenager imitiert.\n- Unterschiede zwischen Stimmen und Altersgruppen müssen erkennbar sein.\n\nErzeuge ${count} Items. Jedes Objekt exakt:\n{ "body": string, "format": "status" | "question" | "story" | "observation" | "reply" | "caption" | "poll_idea" | "moment", "mood": string, "topic": string, "creatorVibe": string, "needsImage": boolean, "imagePrompt": string }`;
+  const prompt = `${CORE_PROMPT}\n\n${languageLibrary}\n\nGENERATION PROFILE\n- Zielgruppe: ${ageText}\n- Thema: ${theme}\n- Interessen: ${interests.length ? interests.join(", ") : "frei wählen"}\n- Schreibstil: ${styleText}\n- Tippfehler-Level: ${typoLevel}/3\n- Jugendsprache-Level: ${slangLevel}/3\n- Emoji-Level: ${emojiLevel}/3\n- Gewünschter Bildanteil: ${imageRatio}%\n- Bildstrategie: ${imageMode}\n- Heute: ${dateText}\n- Creator: ${creatorVoice?.display_name ?? "wechselnde Ambient-Accounts"}\n- Persona: ${JSON.stringify(creatorVoice?.persona ?? {})}\n- Profilhinweise: ${JSON.stringify(profile?.prompt_rules ?? {})}\n\nAUTHENTICITY CHECK\n- Mindestens einige Posts komplett normal und unspektakulär.\n- Slang nur kontextgerecht.\n- Tippfehler selten und plausibel.\n- Aktuelle Trendwörter nicht gleichmäßig verteilen.\n- Keine Wiederholungen oder Emoji-Schablonen.\n- Kein Erwachsener, der Teenager imitiert.\n- Unterschiede zwischen Stimmen und Altersgruppen müssen erkennbar sein.\n\nErzeuge ${count} Items. Jedes Objekt exakt:\n{ "body": string, "format": "status" | "question" | "story" | "observation" | "reply" | "caption" | "poll_idea" | "moment", "mood": string, "topic": string, "creatorVibe": string, "needsImage": boolean, "imagePrompt": string }`;
 
   let items: any[] = [];
   if (provider === "claude") {
@@ -109,21 +140,19 @@ export async function generateAmbientDrafts(formData: FormData) {
     if (!response.ok) throw new Error(`Anthropic API Fehler: ${await response.text()}`);
     items = JSON.parse((await response.json()).content?.[0]?.text?.trim() ?? "[]");
   } else {
-    const response = await fetch("https://generativelanguage.googleapis.com/v1beta/interactions", { method: "POST", headers: { "Content-Type": "application/json", "x-goog-api-key": apiKey }, body: JSON.stringify({ model: "gemini-3.7-flash", input: prompt, response_format: { type: "text", mime_type: "application/json", schema: AMBIENT_ITEM_SCHEMA } }) });
-    if (!response.ok) throw new Error(`Gemini API Fehler: ${await response.text()}`);
-    const data = await response.json();
-    items = JSON.parse((data.output_text ?? data.output?.find?.((part: any) => part.type === "text")?.text ?? "[]").trim());
+    items = await generateGeminiText(apiKey, prompt);
   }
   if (!Array.isArray(items) || !items.length) throw new Error("Keine Ambient-Items generiert.");
 
+  const imageIndexes = pickImageIndexes(items.length, imageRatio, imageMode, items);
   const rows = [];
   for (let index = 0; index < items.length; index++) {
     const item = items[index];
     if (!item?.body || typeof item.body !== "string") continue;
-    const shouldImage = imageMode === "all" || (imageMode === "smart" && Boolean(item.needsImage)) || (imageMode === "some" && index % 3 === 0);
+    const shouldImage = imageIndexes.has(index);
     let mediaUrl: string | null = null;
     if (shouldImage && process.env.GEMINI_API_KEY && item.imagePrompt) mediaUrl = await generateImage(`Create an authentic, ordinary social-media image for a German ${ageText} ambient feed. ${imageStyle}. Topic: ${item.topic}. Mood: ${item.mood}. ${item.imagePrompt}. No logos, readable text, celebrity likeness, political messaging or staged advertising.`, aspectRatio, index);
-    rows.push({ type: "post", scenario_id: null, creator_id: creatorId, body: item.body.trim().slice(0, 1000), media_url: mediaUrl, media_type: mediaUrl ? "image" : null, manipulation_techniques: [], target_competencies: [], difficulty: 1, age_rating: ageBand === "16_17" || ageBand === "18_plus" ? "16_plus" : ageBand === "all" ? "all_ages" : "12_plus", status: "draft", extra: { generatedBy: "ai", generatorVersion: "ambient-studio-v3", provider, theme, ageBand, interests, style, styleLabel: styleText, typoLevel, slangLevel, emojiLevel, format: item.format, mood: item.mood, topic: item.topic, creatorVibe: item.creatorVibe, imageGenerated: Boolean(mediaUrl), imageModel: mediaUrl ? "gemini-3.1-flash-image" : null, languageLibrary: "source-grounded-2026-08" } });
+    rows.push({ type: "post", scenario_id: null, creator_id: creatorId, body: item.body.trim().slice(0, 1000), media_url: mediaUrl, media_type: mediaUrl ? "image" : null, manipulation_techniques: [], target_competencies: [], difficulty: 1, age_rating: ageBand === "16_17" || ageBand === "18_plus" ? "16_plus" : ageBand === "all" ? "all_ages" : "12_plus", status: "draft", extra: { generatedBy: "ai", generatorVersion: "ambient-studio-v3", provider, theme, ageBand, interests, style, styleLabel: styleText, typoLevel, slangLevel, emojiLevel, imageRatio, imageMode, format: item.format, mood: item.mood, topic: item.topic, creatorVibe: item.creatorVibe, imageRequested: shouldImage, imageGenerated: Boolean(mediaUrl), imageModel: mediaUrl ? "gemini-3.1-flash-image" : null, languageLibrary: "source-grounded-2026-08" } });
   }
   if (!rows.length) throw new Error("Die KI hat keine gültigen Items geliefert.");
   const { error } = await supabase.from("content_items").insert(rows);
