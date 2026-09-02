@@ -75,11 +75,29 @@ export interface School { id: string; name: string; region?: string; }
 export interface SchoolClass { id: string; schoolId: string; name: string; accessCode: string; isActive: boolean; }
 export interface ClassMembership { id: string; classId: string; userId: string; role: UserRole; }
 export interface ClassScenarioAssignment { id: string; classId: string; scenarioId: string; }
+
+// Runtime instance = one concrete class in one school year.
 export interface ClassInstance {
-  id: string; classId: string; scenarioId: string; name?: string;
-  status?: "active" | "completed" | "archived"; createdAt?: string; updatedAt?: string;
+  id: string;
+  schoolId: string;
+  name: string;
+  gradeLevel?: number;
+  schoolYear: string;
+  accessCode: string;
+  createdBy?: string;
+  previousInstanceId?: string;
+  isActive: boolean;
+  createdAt: string;
 }
-export interface ClassInstanceMembership { id: string; classInstanceId: string; userId: string; role: UserRole; }
+
+export interface ClassInstanceMembership {
+  id: string;
+  classInstanceId: string;
+  userId: string;
+  role: UserRole;
+  joinedAt?: string;
+  leftAt?: string;
+}
 
 // ---- NPC Dialog ----
 export interface ReplyOption { label: string; nextContentItemId: string; techniqueTag?: string; }
