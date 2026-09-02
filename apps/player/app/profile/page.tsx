@@ -2,141 +2,30 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
+import { ArrowUpRight, Check, Palette, Sparkles } from "lucide-react";
 import { supabaseBrowserClient } from "../../lib/supabaseBrowserClient";
 import { avatarUrl } from "../../lib/avatar";
 
 type Interest = { key: string; label: string; emoji: string | null; category: string };
 
 export default function ProfilePage() {
-  const supabase = supabaseBrowserClient();
-  const router = useRouter();
-  const [userId, setUserId] = useState<string | null>(null);
-  const [displayName, setDisplayName] = useState("");
-  const [username, setUsername] = useState("");
-  const [avatarSeed, setAvatarSeed] = useState("");
-  const [interests, setInterests] = useState<Interest[]>([]);
-  const [selectedInterests, setSelectedInterests] = useState<string[]>([]);
-  const [saving, setSaving] = useState(false);
-  const [message, setMessage] = useState<string | null>(null);
+  const supabase = supabaseBrowserClient(); const router = useRouter();
+  const [userId, setUserId] = useState<string | null>(null); const [displayName, setDisplayName] = useState(""); const [username, setUsername] = useState(""); const [avatarSeed, setAvatarSeed] = useState("");
+  const [interests, setInterests] = useState<Interest[]>([]); const [selectedInterests, setSelectedInterests] = useState<string[]>([]); const [saving, setSaving] = useState(false); const [message, setMessage] = useState<string | null>(null);
 
-  useEffect(() => {
-    (async () => {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) {
-        router.replace("/login");
-        return;
-      }
-      setUserId(user.id);
+  useEffect(() => { (async () => { const { data: { user } } = await supabase.auth.getUser(); if (!user) { router.replace("/login"); return; } setUserId(user.id); const [{ data: profile }, { data: catalog }, { data: preferences }] = await Promise.all([supabase.from("user_profiles").select("display_name, username, avatar_seed").eq("id", user.id).maybeSingle(), supabase.from("ambient_interests").select("key, label, emoji, category").eq("is_active", true).order("sort_order"), supabase.from("user_ambient_preferences").select("interest_keys").eq("user_id", user.id).maybeSingle()]); setDisplayName(profile?.display_name ?? ""); setUsername(profile?.username ?? user.email?.split(".")[0] ?? ""); setAvatarSeed(profile?.avatar_seed ?? user.id); setInterests(catalog ?? []); setSelectedInterests((preferences?.interest_keys ?? []).slice(0, 3)); })(); }, [router, supabase]);
+  function toggleInterest(key: string) { setSelectedInterests((current) => current.includes(key) ? current.filter((value) => value !== key) : current.length < 3 ? [...current, key] : current); }
+  async function save() { if (!userId || !displayName.trim() || !username.trim()) return; setSaving(true); setMessage(null); const cleanUsername = username.trim().replace(/^@/, "").toLowerCase().replace(/[^a-z0-9_]/g, ""); const [{ error: profileError }, { error: preferenceError }] = await Promise.all([supabase.from("user_profiles").upsert({ id: userId, display_name: displayName.trim(), username: cleanUsername, avatar_seed: avatarSeed || userId }), supabase.from("user_ambient_preferences").upsert({ user_id: userId, interest_keys: selectedInterests, onboarding_completed: true, updated_at: new Date().toISOString() })]); setSaving(false); const error = profileError ?? preferenceError; setMessage(error ? error.message : "Profil gespeichert."); if (!error) setUsername(cleanUsername); }
+  function randomizeAvatar() { setAvatarSeed(`${userId ?? "dr1ft"}-${Math.random().toString(36).slice(2, 10)}`); }
+  if (!userId) return <main className="min-h-screen grid place-items-center text-[#68738a]">Profil wird geladen…</main>;
 
-      const [{ data: profile }, { data: catalog }, { data: preferences }] = await Promise.all([
-        supabase.from("user_profiles").select("display_name, username, avatar_seed").eq("id", user.id).maybeSingle(),
-        supabase.from("ambient_interests").select("key, label, emoji, category").eq("is_active", true).order("sort_order"),
-        supabase.from("user_ambient_preferences").select("interest_keys").eq("user_id", user.id).maybeSingle(),
-      ]);
-
-      setDisplayName(profile?.display_name ?? "");
-      setUsername(profile?.username ?? user.email?.split(".")[0] ?? "");
-      setAvatarSeed(profile?.avatar_seed ?? user.id);
-      setInterests(catalog ?? []);
-      setSelectedInterests((preferences?.interest_keys ?? []).slice(0, 3));
-    })();
-  }, [router]);
-
-  function toggleInterest(key: string) {
-    setSelectedInterests((current) =>
-      current.includes(key)
-        ? current.filter((value) => value !== key)
-        : current.length < 3
-          ? [...current, key]
-          : current
-    );
-  }
-
-  async function save() {
-    if (!userId || !displayName.trim() || !username.trim()) return;
-    setSaving(true);
-    setMessage(null);
-    const cleanUsername = username.trim().replace(/^@/, "").toLowerCase().replace(/[^a-z0-9_]/g, "");
-
-    const [{ error: profileError }, { error: preferenceError }] = await Promise.all([
-      supabase.from("user_profiles").upsert({ id: userId, display_name: displayName.trim(), username: cleanUsername, avatar_seed: avatarSeed || userId }),
-      supabase.from("user_ambient_preferences").upsert({ user_id: userId, interest_keys: selectedInterests, onboarding_completed: true, updated_at: new Date().toISOString() }),
-    ]);
-
-    setSaving(false);
-    const error = profileError ?? preferenceError;
-    setMessage(error ? error.message : "Profil & Ambient-Interessen gespeichert.");
-    if (!error) setUsername(cleanUsername);
-  }
-
-  function randomizeAvatar() {
-    setAvatarSeed(`${userId ?? "dr1ft"}-${Math.random().toString(36).slice(2, 10)}`);
-  }
-
-  if (!userId) return <main className="min-h-screen bg-ink flex items-center justify-center text-ash">Profil wird geladen…</main>;
-
-  return (
-    <main className="min-h-screen bg-ink text-paper px-4 py-8">
-      <div className="max-w-md mx-auto space-y-4">
-        <button onClick={() => router.back()} className="text-xs text-ash mb-2">← Zurück</button>
-
-        <section className="bg-ink-light border border-ink-border rounded-card p-6">
-          <div className="flex items-center gap-4 mb-7">
-            <img src={avatarUrl(avatarSeed || userId, 180)} alt="" className="w-24 h-24 rounded-full bg-paper" />
-            <div>
-              <h1 className="font-display text-2xl">Dein Profil</h1>
-              <p className="text-sm text-ash">So sehen dich deine Mitschüler:innen.</p>
-              <button onClick={randomizeAvatar} className="mt-2 text-xs text-marker hover:underline">Neuen Avatar würfeln</button>
-            </div>
-          </div>
-
-          <label className="block text-xs text-ash mb-1">Anzeigename</label>
-          <input value={displayName} onChange={(e) => setDisplayName(e.target.value)} className="w-full rounded-lg px-3 py-3 mb-4 bg-paper text-ink" maxLength={40} />
-
-          <label className="block text-xs text-ash mb-1">Nutzername</label>
-          <input value={username} onChange={(e) => setUsername(e.target.value)} className="w-full rounded-lg px-3 py-3 bg-paper text-ink" maxLength={24} />
-          <p className="text-[11px] text-ash mt-1">@{username.replace(/^@/, "")}</p>
-        </section>
-
-        <section className="bg-ink-light border border-ink-border rounded-card p-6">
-          <div className="flex items-center justify-between mb-2">
-            <div>
-              <h2 className="font-display text-xl">Dein Feed</h2>
-              <p className="text-sm text-ash mt-1">Wähle bis zu 3 Dinge, die dich wirklich interessieren.</p>
-            </div>
-            <span className="text-xs text-marker font-medium">{selectedInterests.length}/3</span>
-          </div>
-
-          <div className="grid grid-cols-2 gap-2 mt-5">
-            {interests.map((interest) => {
-              const selected = selectedInterests.includes(interest.key);
-              return (
-                <button
-                  key={interest.key}
-                  type="button"
-                  onClick={() => toggleInterest(interest.key)}
-                  className={`text-left rounded-xl border px-3 py-3 transition ${selected ? "border-marker bg-marker/10" : "border-ink-border bg-ink hover:border-ash"}`}
-                >
-                  <div className="text-lg">{interest.emoji}</div>
-                  <div className="text-sm mt-1">{interest.label}</div>
-                  {selected && <div className="text-[10px] text-marker mt-1">✓ im Feed</div>}
-                </button>
-              );
-            })}
-          </div>
-
-          <p className="text-[11px] text-ash mt-4 leading-5">
-            Diese Auswahl wird später genutzt, um Ambient-Posts individuell zu mischen.
-            Sie ist kein Lern- oder Leistungsprofil.
-          </p>
-        </section>
-
-        {message && <p className="text-xs text-ash px-1">{message}</p>}
-
-        <button onClick={save} disabled={saving} className="w-full rounded-lg py-3 bg-marker text-ink font-medium disabled:opacity-50">
-          {saving ? "Speichert…" : "Profil speichern"}
-        </button>
-      </div>
-    </main>
-  );
+  return <main className="min-h-screen text-[#26324a] max-w-3xl mx-auto">
+    <header className="pb-7"><p className="text-[10px] uppercase tracking-[0.18em] font-semibold text-[#9aa3b5]">Dein DR1FT</p><h1 className="font-display text-3xl md:text-4xl font-bold tracking-[-0.045em] mt-1">Profil</h1><p className="text-sm text-[#68738a] mt-2">Wie du dich zeigst. Und was in deinem Feed auftaucht.</p></header>
+    <section className="relative overflow-hidden rounded-[30px] bg-[#26324a] text-white p-6 md:p-8 shadow-[0_20px_60px_rgba(38,50,74,0.15)]"><div className="absolute -right-20 -top-24 w-64 h-64 rounded-full bg-[#789bd0]/25 blur-3xl" /><div className="absolute right-16 -bottom-28 w-56 h-56 rounded-full bg-[#b99bd5]/20 blur-3xl" /><div className="relative flex flex-col sm:flex-row items-start sm:items-center gap-5"><div className="relative"><img src={avatarUrl(avatarSeed || userId, 220)} alt="" className="w-28 h-28 rounded-[28px] bg-white/10 ring-4 ring-white/10 object-cover" /><button onClick={randomizeAvatar} className="absolute -bottom-2 -right-2 grid place-items-center w-9 h-9 rounded-xl bg-white text-[#26324a] shadow-lg hover:scale-105 transition" aria-label="Avatar neu würfeln"><Palette className="w-4 h-4" /></button></div><div><p className="text-[10px] uppercase tracking-[0.16em] text-white/45 font-semibold">Dein Auftritt</p><h2 className="font-display text-2xl font-bold tracking-[-0.03em] mt-1">{displayName || "Dein Name"}</h2><p className="text-sm text-white/55 mt-1">@{username.replace(/^@/, "") || "drifter"}</p></div></div></section>
+    <section className="mt-4 rounded-[26px] bg-white border border-white p-5 md:p-6 shadow-[0_12px_40px_rgba(38,50,74,0.05)]"><div className="flex items-center gap-2 mb-5"><span className="grid place-items-center w-8 h-8 rounded-xl bg-[#eef2fa] text-[#789bd0]"><Sparkles className="w-4 h-4" /></span><div><h2 className="font-display font-semibold">Persönliche Daten</h2><p className="text-[11px] text-[#9aa3b5]">Das sehen andere von dir.</p></div></div><div className="grid sm:grid-cols-2 gap-4"><label className="block text-xs font-medium text-[#68738a]">Anzeigename<input value={displayName} onChange={(e) => setDisplayName(e.target.value)} className="mt-1.5 w-full rounded-xl border border-[#e1e5ed] bg-[#f8f9fc] px-3.5 py-3 text-sm outline-none focus:border-[#789bd0] focus:ring-4 focus:ring-[#789bd0]/10" maxLength={40} /></label><label className="block text-xs font-medium text-[#68738a]">Nutzername<input value={username} onChange={(e) => setUsername(e.target.value)} className="mt-1.5 w-full rounded-xl border border-[#e1e5ed] bg-[#f8f9fc] px-3.5 py-3 text-sm outline-none focus:border-[#789bd0] focus:ring-4 focus:ring-[#789bd0]/10" maxLength={24} /><span className="block text-[10px] text-[#a0a8b7] mt-1">@{username.replace(/^@/, "")}</span></label></div></section>
+    <section className="mt-4 rounded-[26px] bg-white border border-white p-5 md:p-6 shadow-[0_12px_40px_rgba(38,50,74,0.05)]"><div className="flex items-start justify-between gap-4"><div><h2 className="font-display text-xl font-semibold">Dein Feed</h2><p className="text-sm text-[#68738a] mt-1">Wähle bis zu 3 Dinge, die dich wirklich interessieren.</p></div><span className="shrink-0 rounded-full bg-[#eef2fa] px-2.5 py-1 text-[11px] font-semibold text-[#789bd0]">{selectedInterests.length}/3</span></div><div className="grid grid-cols-2 sm:grid-cols-3 gap-2.5 mt-5">{interests.map((interest) => { const selected = selectedInterests.includes(interest.key); return <button key={interest.key} type="button" onClick={() => toggleInterest(interest.key)} className={`relative text-left rounded-2xl border p-3.5 transition-all ${selected ? "border-[#789bd0] bg-[#eef2fa] shadow-sm" : "border-[#e5e8ef] bg-[#fafbfc] hover:bg-white hover:-translate-y-0.5"}`}><div className="text-lg">{interest.emoji}</div><div className="text-sm font-medium mt-2">{interest.label}</div>{selected && <span className="absolute top-3 right-3 grid place-items-center w-5 h-5 rounded-full bg-[#789bd0] text-white"><Check className="w-3 h-3" /></span>}</button>; })}</div><p className="text-[11px] text-[#8d96a7] mt-5 leading-5">Diese Auswahl wird genutzt, um Ambient-Posts individuell zu mischen. Sie ist kein Lern- oder Leistungsprofil.</p></section>
+    {message && <div className="mt-4 rounded-xl bg-white border border-[#e1e5ed] px-4 py-3 text-xs text-[#68738a]">{message}</div>}
+    <button onClick={save} disabled={saving} className="mt-4 w-full rounded-2xl py-3.5 bg-[#26324a] text-white font-medium text-sm shadow-[0_12px_30px_rgba(38,50,74,0.16)] hover:-translate-y-0.5 transition disabled:opacity-50">{saving ? "Speichert…" : "Profil speichern"}</button>
+    <button onClick={() => router.push(`/profile/${userId}`)} className="mt-3 w-full flex items-center justify-center gap-2 py-3 text-xs font-medium text-[#789bd0]">Öffentliches Profil ansehen <ArrowUpRight className="w-3.5 h-3.5" /></button>
+  </main>;
 }
