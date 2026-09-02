@@ -23,15 +23,27 @@ export function FeedClient({ initialItems, userId, classInstanceId, likedContent
   const [reflection, setReflection] = useState<{ missionId: string; contentItemId: string } | null>(null);
   const seenRef = useRef<Set<string>>(new Set());
 
-  useEffect(() => startRealtimeEventBridge(supabase, userId), [userId]);
+  useEffect(
+    () => startRealtimeEventBridge(supabase, userId, classInstanceId),
+    [supabase, userId, classInstanceId]
+  );
 
   useEffect(() => {
     const unsubscribe = eventBus.on("MissionCompleted", async (event) => {
-      const { data: mission } = await supabase.from("missions").select("reflection_content_id").eq("id", event.missionId).single();
-      if (mission?.reflection_content_id) setReflection({ missionId: event.missionId, contentItemId: mission.reflection_content_id });
+      if (event.classInstanceId !== classInstanceId) return;
+
+      const { data: mission } = await supabase
+        .from("missions")
+        .select("reflection_content_id")
+        .eq("id", event.missionId)
+        .single();
+
+      if (mission?.reflection_content_id) {
+        setReflection({ missionId: event.missionId, contentItemId: mission.reflection_content_id });
+      }
     });
     return unsubscribe;
-  }, []);
+  }, [supabase, classInstanceId]);
 
   function handleView(item: FeedItem) {
     if (seenRef.current.has(item.id)) return;
