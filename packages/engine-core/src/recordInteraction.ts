@@ -30,12 +30,13 @@ export async function recordInteraction(
   } = params;
 
   if (interactionType === "view") {
-    await eventBus.emit({ type: "PostViewed", userId, contentItemId });
+    await eventBus.emit({ type: "PostViewed", userId, contentItemId, classInstanceId });
   } else if (interactionType === "comment") {
     await eventBus.emit({
       type: "CommentCreated",
       userId,
       contentItemId,
+      classInstanceId,
       body: String(metadata.body ?? ""),
     });
   }
