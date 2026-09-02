@@ -10,12 +10,13 @@ import { supabaseBrowserClient } from "../lib/supabaseBrowserClient";
 import { CommentSkeleton } from "./Skeleton";
 import { avatarUrl } from "../lib/avatar";
 
-function initials(name: string): string { return name.split(" ").map((p) => p[0]).slice(0, 2).join("").toUpperCase(); }
-
 function AuthorRow({ creator }: { creator?: CreatorSummary }) {
   if (!creator) return null;
+  const image = creator.avatarUrl || avatarUrl(creator.id, 80);
   return <Link href={`/creator/${creator.id}`} className="group flex items-center gap-3" onClick={(e) => e.stopPropagation()}>
-    <span className="grid place-items-center w-10 h-10 rounded-[14px] bg-gradient-to-br from-[#26324a] to-[#53627d] text-white text-[11px] font-semibold shadow-sm">{initials(creator.displayName)}</span>
+    <span className="relative block w-11 h-11 shrink-0 overflow-hidden rounded-[15px] bg-gradient-to-br from-[#dcecff] via-[#e8e5fb] to-[#ffe8d8] shadow-sm ring-1 ring-black/[0.04]">
+      <img src={image} alt="" className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105" />
+    </span>
     <span className="min-w-0"><span className="block text-[13px] font-semibold leading-tight group-hover:underline">{creator.displayName}</span><span className="block text-[11px] text-ink/40 mt-0.5">{creator.handle}</span></span>
   </Link>;
 }
@@ -23,7 +24,7 @@ function AuthorRow({ creator }: { creator?: CreatorSummary }) {
 function ReactionPeople({ users }: { users: Array<{ id: string; displayName: string; username: string; avatarSeed: string }> }) {
   if (!users.length) return null;
   const shown = users.slice(0, 3), first = shown[0], remaining = users.length - shown.length;
-  return <div className="flex items-center gap-2.5 mt-3"><div className="flex -space-x-2">{shown.map((user) => <Link key={user.id} href={`/profile/${user.id}`} title={`@${user.username}`} className="block"><img src={avatarUrl(user.avatarSeed, 52)} alt="" className="w-7 h-7 rounded-full bg-ink-light border-2 border-paper shadow-sm" /></Link>)}</div><span className="text-[11px] text-ink/45">{users.length === 1 ? `${first.displayName} gefällt das` : `${first.displayName} und ${remaining} weitere gefällt das`}</span></div>;
+  return <div className="flex items-center gap-2.5 mt-3"><div className="flex -space-x-2">{shown.map((user) => <Link key={user.id} href={`/profile/${user.id}`} title={`@${user.username}`} className="block"><img src={avatarUrl(user.avatarSeed, 52)} alt="" className="w-7 h-7 rounded-[10px] bg-ink-light border-2 border-paper shadow-sm" /></Link>)}</div><span className="text-[11px] text-ink/45">{users.length === 1 ? `${first.displayName} gefällt das` : `${first.displayName} und ${remaining} weitere gefällt das`}</span></div>;
 }
 
 export function PostCard({ item, userId, classInstanceId, initiallyLiked, onView }: {
@@ -65,8 +66,8 @@ export function PostCard({ item, userId, classInstanceId, initiallyLiked, onView
   const technique = item.manipulationTechniques?.[0];
   const difficulty = item.difficulty;
 
-  return <article ref={ref} className="group relative overflow-hidden rounded-[24px] bg-white text-ink shadow-[0_14px_45px_rgba(38,50,74,0.08)] ring-1 ring-black/[0.035] transition-all duration-300 hover:-translate-y-0.5 hover:shadow-[0_20px_55px_rgba(38,50,74,0.11)]">
-    <div className="absolute inset-x-0 top-0 h-1 bg-gradient-to-r from-[#789bd0] via-[#9e9ad0] to-[#e0a77f] opacity-70" />
+  return <article ref={ref} className="group relative overflow-hidden rounded-[26px] bg-white text-ink shadow-[0_16px_48px_rgba(38,50,74,0.08)] ring-1 ring-black/[0.035] transition-all duration-300 hover:-translate-y-1 hover:shadow-[0_24px_62px_rgba(38,50,74,0.12)]">
+    <div className="absolute inset-x-0 top-0 h-1 bg-gradient-to-r from-[#75b9ff] via-[#a59bea] to-[#ffb58d] opacity-85" />
     <div className="flex items-center justify-between px-5 pt-5 pb-4">
       <AuthorRow creator={item.creator} />
       <button className="grid place-items-center w-9 h-9 rounded-xl text-ink/30 hover:bg-ink/5 hover:text-ink/60 transition" aria-label="Weitere Optionen"><MoreHorizontal className="w-5 h-5" /></button>
