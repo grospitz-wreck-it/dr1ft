@@ -1,6 +1,7 @@
 export * from "./eventBus";
 export * from "./feedEngine";
 export * from "./driftState";
+export * from "./contentSemantics";
 export * from "./realtimeEventBridge";
 export * from "./recordInteraction";
 export * from "./analyticsEngine";
