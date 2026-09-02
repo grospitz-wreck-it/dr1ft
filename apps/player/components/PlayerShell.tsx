@@ -36,17 +36,41 @@ export function PlayerShell({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     let mounted = true;
-    (async () => {
-      const { data: { user: authUser } } = await supabase.auth.getUser();
-      if (!authUser) return;
-      const { data: profile } = await supabase.from("user_profiles").select("display_name, username, avatar_seed").eq("id", authUser.id).maybeSingle();
-      if (mounted) setUser({
+
+    async function loadProfile(authUser: { id: string; email?: string | null }) {
+      const { data: profile } = await supabase
+        .from("user_profiles")
+        .select("display_name, username, avatar_seed")
+        .eq("id", authUser.id)
+        .maybeSingle();
+
+      if (!mounted) return;
+      setUser({
         displayName: profile?.display_name || authUser.email?.split("@")[0] || "DR1FT",
         username: profile?.username || "drifter",
         avatarSeed: profile?.avatar_seed || authUser.id,
       });
+    }
+
+    (async () => {
+      const { data: { user: authUser } } = await supabase.auth.getUser();
+      if (authUser) await loadProfile(authUser);
+      else if (mounted) setUser(null);
     })();
-    return () => { mounted = false; };
+
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      if (!session?.user) {
+        setUser(null);
+        return;
+      }
+      // Defer the profile query so Supabase's auth callback is not blocked by another Supabase call.
+      window.setTimeout(() => { void loadProfile(session.user); }, 0);
+    });
+
+    return () => {
+      mounted = false;
+      subscription.unsubscribe();
+    };
   }, [supabase]);
 
   const publicRoute = pathname === "/login" || pathname === "/register" || pathname === "/";
