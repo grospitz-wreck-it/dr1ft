@@ -9,22 +9,19 @@
   --font-body: "Inter", sans-serif;
   --font-mono: "JetBrains Mono", monospace;
 
-  /* DR1FT atmosphere: bright, playful and social. These colours are environmental,
-     never a visible score or semantic learning scale. */
-  --drift-bg: #f6f7fb;
+  /* DR1FT atmosphere: playful social-app energy, but never a visible learning score. */
+  --drift-bg: #f4f2fb;
   --drift-surface: #ffffff;
-  --drift-surface-soft: #eef2f8;
-  --drift-ink: #26324a;
-  --drift-ink-soft: #68738a;
-  --drift-blue: #dcecff;
-  --drift-mint: #dcf3e8;
-  --drift-lavender: #e8e5fb;
-  --drift-peach: #ffe8d8;
-  --drift-yellow: #fff1bf;
-  --drift-blue-strong: #789bd0;
-  --drift-mint-strong: #69ad96;
-  --drift-lavender-strong: #948acb;
-  --drift-peach-strong: #d99a72;
+  --drift-surface-soft: #eeeafa;
+  --drift-ink: #27213d;
+  --drift-ink-soft: #746d89;
+  --drift-purple: #7c3aed;
+  --drift-violet: #a855f7;
+  --drift-pink: #ec4899;
+  --drift-blue: #38bdf8;
+  --drift-mint: #5eead4;
+  --drift-peach: #fb923c;
+  --drift-yellow: #facc15;
 }
 
 html { background: var(--drift-bg); }
@@ -35,10 +32,10 @@ body {
   min-height: 100vh;
   overflow-x: hidden;
   background:
-    radial-gradient(circle at 8% 5%, rgba(220,236,255,.78) 0, rgba(220,236,255,0) 27rem),
-    radial-gradient(circle at 92% 10%, rgba(232,229,251,.82) 0, rgba(232,229,251,0) 25rem),
-    radial-gradient(circle at 78% 82%, rgba(255,232,216,.52) 0, rgba(255,232,216,0) 30rem),
-    linear-gradient(135deg, #f7f8fc 0%, #f4f7fb 48%, #faf7fb 100%);
+    radial-gradient(circle at 7% 4%, rgba(168,85,247,.20) 0, rgba(168,85,247,0) 25rem),
+    radial-gradient(circle at 91% 7%, rgba(56,189,248,.18) 0, rgba(56,189,248,0) 24rem),
+    radial-gradient(circle at 75% 84%, rgba(236,72,153,.14) 0, rgba(236,72,153,0) 28rem),
+    linear-gradient(135deg, #f7f5fc 0%, #f2f1fa 48%, #faf5fb 100%);
   color: var(--drift-ink);
 }
 
@@ -47,46 +44,45 @@ body::after {
   content: "";
   position: fixed;
   z-index: -1;
-  width: 22rem;
-  height: 22rem;
+  width: 24rem;
+  height: 24rem;
   border-radius: 42% 58% 63% 37% / 47% 43% 57% 53%;
-  filter: blur(28px);
-  opacity: .32;
+  filter: blur(30px);
+  opacity: .30;
   pointer-events: none;
   animation: drift-float 18s ease-in-out infinite alternate;
 }
 
 body::before {
-  left: -11rem;
-  top: 42%;
-  background: linear-gradient(135deg, #dcecff, #dcf3e8, #e8e5fb);
+  left: -12rem;
+  top: 38%;
+  background: linear-gradient(135deg, #c4b5fd, #67e8f9, #f0abfc);
 }
 
 body::after {
-  right: -10rem;
-  bottom: -8rem;
-  background: linear-gradient(135deg, #ffe8d8, #fff1bf, #e8e5fb);
+  right: -11rem;
+  bottom: -9rem;
+  background: linear-gradient(135deg, #f9a8d4, #fdba74, #c4b5fd);
   animation-delay: -7s;
 }
 
-/* Apply the new visual language to the existing utility vocabulary as well. */
 .bg-ink { background-color: var(--drift-bg) !important; }
 .bg-ink-light { background-color: var(--drift-surface-soft) !important; }
-.border-ink-border { border-color: #d9dfeb !important; }
+.border-ink-border { border-color: #ddd8ec !important; }
 .text-paper { color: var(--drift-ink) !important; }
 .bg-paper { background-color: var(--drift-surface) !important; }
 .bg-paper\/90 { background-color: rgb(255 255 255 / 0.9) !important; }
 .text-ash { color: var(--drift-ink-soft) !important; }
-.text-growth { color: var(--drift-mint-strong) !important; }
-.bg-growth { background-color: var(--drift-mint-strong) !important; }
+.text-growth { color: #14b8a6 !important; }
+.bg-growth { background-color: #14b8a6 !important; }
 
 ::selection {
-  background: #d9e9ff;
+  background: #ddd6fe;
   color: var(--drift-ink);
 }
 
 .marker-highlight {
-  background: linear-gradient(120deg, transparent 0%, transparent 4%, #ffc857 4%, #ffc857 96%, transparent 96%);
+  background: linear-gradient(120deg, transparent 0%, transparent 4%, #facc15 4%, #facc15 96%, transparent 96%);
   background-repeat: no-repeat;
   background-size: 100% 45%;
   background-position: 0 65%;
@@ -95,25 +91,28 @@ body::after {
 
 @layer components {
   .player-surface {
-    background: rgba(255,255,255,.86);
-    border: 1px solid rgba(255,255,255,.9);
-    box-shadow: 0 18px 55px rgba(38,50,74,.08), 0 2px 8px rgba(38,50,74,.035);
-    backdrop-filter: blur(18px);
+    background: rgba(255,255,255,.76);
+    border: 1px solid rgba(255,255,255,.92);
+    box-shadow: 0 22px 70px rgba(62,40,104,.12), 0 2px 10px rgba(62,40,104,.035);
+    backdrop-filter: blur(22px);
   }
 
-  .player-soft-blue { background: var(--drift-blue); }
-  .player-soft-mint { background: var(--drift-mint); }
-  .player-soft-lavender { background: var(--drift-lavender); }
-  .player-soft-peach { background: var(--drift-peach); }
-  .player-soft-yellow { background: var(--drift-yellow); }
+  .player-soft-blue { background: #e0f2fe; }
+  .player-soft-mint { background: #ccfbf1; }
+  .player-soft-lavender { background: #ede9fe; }
+  .player-soft-peach { background: #ffedd5; }
+  .player-soft-yellow { background: #fef9c3; }
 
-  /* A little more life for existing player surfaces without changing their meaning. */
   main article {
-    box-shadow: 0 16px 48px rgba(38,50,74,.075), 0 2px 7px rgba(38,50,74,.035);
+    box-shadow: 0 20px 58px rgba(62,40,104,.10), 0 2px 8px rgba(62,40,104,.04);
   }
 
   aside > div {
-    box-shadow: 0 22px 65px rgba(38,50,74,.11), 0 2px 8px rgba(38,50,74,.035) !important;
+    box-shadow: 0 24px 70px rgba(62,40,104,.13), 0 2px 10px rgba(62,40,104,.04) !important;
+  }
+
+  .social-glow {
+    box-shadow: 0 14px 42px rgba(124,58,237,.20), 0 4px 16px rgba(236,72,153,.10);
   }
 }
 
