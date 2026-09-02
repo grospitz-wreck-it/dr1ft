@@ -1,18 +1,6 @@
 -- ============================================================
 -- DR1FT — Instance-scoped learning / narrative runtime
---
--- Final runtime boundary for:
---   - competency progress
---   - story arc progress
---   - unlocked missions
---   - domain events
---
--- Learning history remains longitudinal in the same user identity,
--- but each runtime record belongs to the class instance in which it
--- was produced. Social/runtime state must never bleed across classes.
 -- ============================================================
-
--- ---------- COMPETENCY PROGRESS ----------
 
 alter table public.user_competency_progress
   drop constraint if exists user_competency_progress_user_id_competency_id_key;
@@ -20,16 +8,12 @@ alter table public.user_competency_progress
 create unique index if not exists idx_user_competency_progress_instance_unique
   on public.user_competency_progress(user_id, competency_id, class_instance_id);
 
-drop policy if exists "users manage own competency progress"
-  on public.user_competency_progress;
-drop policy if exists "members manage own scoped competency progress"
-  on public.user_competency_progress;
-drop policy if exists "members view instance competency progress"
-  on public.user_competency_progress;
+drop policy if exists "users manage own competency progress" on public.user_competency_progress;
+drop policy if exists "members manage own scoped competency progress" on public.user_competency_progress;
+drop policy if exists "members view instance competency progress" on public.user_competency_progress;
 
 create policy "members manage own scoped competency progress"
-on public.user_competency_progress
-for all
+on public.user_competency_progress for all
 using (
   user_id = auth.uid()
   and class_instance_id is not null
@@ -42,59 +26,42 @@ with check (
 );
 
 create policy "members view instance competency progress"
-on public.user_competency_progress
-for select
+on public.user_competency_progress for select
 using (
   class_instance_id is not null
   and public.is_member_of_class_instance(class_instance_id)
 );
 
--- ---------- NARRATIVE TABLES ----------
-
 alter table public.user_story_arc_progress
-  add column if not exists class_instance_id uuid
-    references public.class_instances(id) on delete cascade;
+  add column if not exists class_instance_id uuid references public.class_instances(id) on delete cascade;
 
 alter table public.user_unlocked_missions
-  add column if not exists class_instance_id uuid
-    references public.class_instances(id) on delete cascade;
+  add column if not exists class_instance_id uuid references public.class_instances(id) on delete cascade;
 
 create index if not exists idx_user_story_arc_progress_instance
   on public.user_story_arc_progress(class_instance_id, user_id);
-
 create index if not exists idx_user_unlocked_missions_instance
   on public.user_unlocked_missions(class_instance_id, user_id);
 
--- Old global uniqueness would make the same narrative impossible to run
--- again for the same learner in a later class instance.
 alter table public.user_story_arc_progress
   drop constraint if exists user_story_arc_progress_user_id_arc_id_key;
-
 alter table public.user_unlocked_missions
   drop constraint if exists user_unlocked_missions_user_id_mission_id_key;
 
 create unique index if not exists idx_user_story_arc_progress_instance_unique
   on public.user_story_arc_progress(user_id, arc_id, class_instance_id);
-
 create unique index if not exists idx_user_unlocked_missions_instance_unique
   on public.user_unlocked_missions(user_id, mission_id, class_instance_id);
 
-drop policy if exists "users manage own arc progress"
-  on public.user_story_arc_progress;
-drop policy if exists "users manage own unlocked missions"
-  on public.user_unlocked_missions;
-drop policy if exists "members manage own scoped arc progress"
-  on public.user_story_arc_progress;
-drop policy if exists "members view instance arc progress"
-  on public.user_story_arc_progress;
-drop policy if exists "members manage own scoped unlocked missions"
-  on public.user_unlocked_missions;
-drop policy if exists "members view instance unlocked missions"
-  on public.user_unlocked_missions;
+drop policy if exists "users manage own arc progress" on public.user_story_arc_progress;
+drop policy if exists "users manage own unlocked missions" on public.user_unlocked_missions;
+drop policy if exists "members manage own scoped arc progress" on public.user_story_arc_progress;
+drop policy if exists "members view instance arc progress" on public.user_story_arc_progress;
+drop policy if exists "members manage own scoped unlocked missions" on public.user_unlocked_missions;
+drop policy if exists "members view instance unlocked missions" on public.user_unlocked_missions;
 
 create policy "members manage own scoped arc progress"
-on public.user_story_arc_progress
-for all
+on public.user_story_arc_progress for all
 using (
   user_id = auth.uid()
   and class_instance_id is not null
@@ -107,16 +74,14 @@ with check (
 );
 
 create policy "members view instance arc progress"
-on public.user_story_arc_progress
-for select
+on public.user_story_arc_progress for select
 using (
   class_instance_id is not null
   and public.is_member_of_class_instance(class_instance_id)
 );
 
 create policy "members manage own scoped unlocked missions"
-on public.user_unlocked_missions
-for all
+on public.user_unlocked_missions for all
 using (
   user_id = auth.uid()
   and class_instance_id is not null
@@ -129,20 +94,15 @@ with check (
 );
 
 create policy "members view instance unlocked missions"
-on public.user_unlocked_missions
-for select
+on public.user_unlocked_missions for select
 using (
   class_instance_id is not null
   and public.is_member_of_class_instance(class_instance_id)
 );
 
--- ---------- DOMAIN EVENTS ----------
-
 alter table public.domain_events
-  add column if not exists class_instance_id uuid
-    references public.class_instances(id) on delete cascade;
+  add column if not exists class_instance_id uuid references public.class_instances(id) on delete cascade;
 
--- Existing instance-aware events can be recovered from their payload.
 update public.domain_events
 set class_instance_id = nullif(payload->>'classInstanceId', '')::uuid
 where class_instance_id is null
@@ -155,68 +115,44 @@ drop policy if exists "users read own domain events" on public.domain_events;
 drop policy if exists "members read instance domain events" on public.domain_events;
 
 create policy "members read instance domain events"
-on public.domain_events
-for select
+on public.domain_events for select
 using (
   user_id = auth.uid()
   and class_instance_id is not null
   and public.is_member_of_class_instance(class_instance_id)
 );
 
--- ---------- INSTANCE-AWARE NARRATIVE FUNCTIONS ----------
-
--- Remove the legacy 2-argument function so no caller can accidentally
--- create global narrative state.
 drop function if exists public.unlock_mission_for_user(uuid, uuid);
 drop function if exists public.start_arc_for_user(uuid, uuid);
 
 create or replace function public.unlock_mission_for_user(
-  p_user_id uuid,
-  p_mission_id uuid,
-  p_class_instance_id uuid
+  p_user_id uuid, p_mission_id uuid, p_class_instance_id uuid
 )
 returns void
-language plpgsql
-security definer
-set search_path = public
+language plpgsql security definer set search_path = public
 as $$
 begin
   if not public.is_member_of_class_instance(p_class_instance_id, p_user_id) then
     raise exception 'User ist kein Mitglied der Klasseninstanz';
   end if;
 
-  insert into public.user_unlocked_missions (
-    user_id, mission_id, class_instance_id
-  )
-  values (
-    p_user_id, p_mission_id, p_class_instance_id
-  )
+  insert into public.user_unlocked_missions(user_id, mission_id, class_instance_id)
+  values (p_user_id, p_mission_id, p_class_instance_id)
   on conflict (user_id, mission_id, class_instance_id) do nothing;
 
-  insert into public.domain_events (
-    event_type, user_id, class_instance_id, payload
-  )
+  insert into public.domain_events(event_type, user_id, class_instance_id, payload)
   values (
-    'MissionStarted',
-    p_user_id,
-    p_class_instance_id,
-    jsonb_build_object(
-      'missionId', p_mission_id,
-      'classInstanceId', p_class_instance_id
-    )
+    'MissionStarted', p_user_id, p_class_instance_id,
+    jsonb_build_object('missionId', p_mission_id, 'classInstanceId', p_class_instance_id)
   );
 end;
 $$;
 
 create or replace function public.start_arc_for_user(
-  p_user_id uuid,
-  p_arc_id uuid,
-  p_class_instance_id uuid
+  p_user_id uuid, p_arc_id uuid, p_class_instance_id uuid
 )
 returns void
-language plpgsql
-security definer
-set search_path = public
+language plpgsql security definer set search_path = public
 as $$
 declare
   v_first_mission_id uuid;
@@ -225,51 +161,31 @@ begin
     raise exception 'User ist kein Mitglied der Klasseninstanz';
   end if;
 
-  insert into public.user_story_arc_progress (
-    user_id, arc_id, class_instance_id, current_step_index, status
-  )
-  values (
-    p_user_id, p_arc_id, p_class_instance_id, 0, 'in_progress'
-  )
+  insert into public.user_story_arc_progress(user_id, arc_id, class_instance_id, current_step_index, status)
+  values (p_user_id, p_arc_id, p_class_instance_id, 0, 'in_progress')
   on conflict (user_id, arc_id, class_instance_id) do nothing;
 
-  select mission_id
-    into v_first_mission_id
+  select mission_id into v_first_mission_id
   from public.story_arc_steps
-  where arc_id = p_arc_id
-    and order_index = 0;
+  where arc_id = p_arc_id and order_index = 0;
 
   if v_first_mission_id is not null then
-    perform public.unlock_mission_for_user(
-      p_user_id, v_first_mission_id, p_class_instance_id
-    );
+    perform public.unlock_mission_for_user(p_user_id, v_first_mission_id, p_class_instance_id);
   end if;
 end;
 $$;
 
--- ---------- ARC ADVANCEMENT ----------
-
 create or replace function public.advance_story_arc_after_mission()
 returns trigger
-language plpgsql
-security definer
-set search_path = public
+language plpgsql security definer set search_path = public
 as $$
 declare
   v_step record;
   v_next_mission_id uuid;
 begin
-  if new.status <> 'completed' then
-    return new;
-  end if;
-
-  if tg_op = 'UPDATE' and old.status = 'completed' then
-    return new;
-  end if;
-
-  if new.class_instance_id is null then
-    return new;
-  end if;
+  if new.status <> 'completed' then return new; end if;
+  if tg_op = 'UPDATE' and old.status = 'completed' then return new; end if;
+  if new.class_instance_id is null then return new; end if;
 
   for v_step in
     select sas.arc_id, sas.order_index
@@ -282,115 +198,88 @@ begin
       and uap.current_step_index = sas.order_index
       and uap.status = 'in_progress'
   loop
-    select mission_id
-      into v_next_mission_id
+    select mission_id into v_next_mission_id
     from public.story_arc_steps
-    where arc_id = v_step.arc_id
-      and order_index = v_step.order_index + 1;
+    where arc_id = v_step.arc_id and order_index = v_step.order_index + 1;
 
     if v_next_mission_id is not null then
-      perform public.unlock_mission_for_user(
-        new.user_id,
-        v_next_mission_id,
-        new.class_instance_id
-      );
-
+      perform public.unlock_mission_for_user(new.user_id, v_next_mission_id, new.class_instance_id);
       update public.user_story_arc_progress
-      set current_step_index = v_step.order_index + 1,
-          updated_at = now()
-      where user_id = new.user_id
-        and arc_id = v_step.arc_id
-        and class_instance_id = new.class_instance_id;
+      set current_step_index = v_step.order_index + 1, updated_at = now()
+      where user_id = new.user_id and arc_id = v_step.arc_id and class_instance_id = new.class_instance_id;
     else
       update public.user_story_arc_progress
-      set status = 'completed',
-          updated_at = now()
-      where user_id = new.user_id
-        and arc_id = v_step.arc_id
-        and class_instance_id = new.class_instance_id;
+      set status = 'completed', updated_at = now()
+      where user_id = new.user_id and arc_id = v_step.arc_id and class_instance_id = new.class_instance_id;
     end if;
   end loop;
-
   return new;
 end;
 $$;
 
--- ---------- BOOTSTRAP AGAINST CLASS INSTANCES ----------
-
 create or replace function public.bootstrap_arcs_for_class_scenario()
 returns trigger
-language plpgsql
-security definer
-set search_path = public
+language plpgsql security definer set search_path = public
 as $$
 declare
   v_arc record;
   v_student record;
 begin
   for v_arc in
-    select id
-    from public.story_arcs
-    where scenario_id = new.scenario_id
-      and status = 'live'
+    select id from public.story_arcs
+    where scenario_id = new.scenario_id and status = 'live'
   loop
     for v_student in
-      select user_id
-      from public.class_instance_memberships
+      select user_id from public.class_instance_memberships
       where class_instance_id = new.class_instance_id
-        and role = 'student'
-        and left_at is null
+        and role = 'student' and left_at is null
     loop
-      perform public.start_arc_for_user(
-        v_student.user_id,
-        v_arc.id,
-        new.class_instance_id
-      );
+      perform public.start_arc_for_user(v_student.user_id, v_arc.id, new.class_instance_id);
     end loop;
   end loop;
-
   return new;
 end;
 $$;
 
 create or replace function public.bootstrap_arcs_for_new_member()
 returns trigger
-language plpgsql
-security definer
-set search_path = public
+language plpgsql security definer set search_path = public
 as $$
 declare
   v_arc record;
 begin
-  if new.role <> 'student' or new.left_at is not null then
-    return new;
-  end if;
+  if new.role <> 'student' or new.left_at is not null then return new; end if;
 
   for v_arc in
     select sa.id
     from public.story_arcs sa
-    join public.class_instance_scenario_assignments csa
-      on csa.scenario_id = sa.scenario_id
-    where csa.class_instance_id = new.class_instance_id
-      and sa.status = 'live'
+    join public.class_instance_scenario_assignments csa on csa.scenario_id = sa.scenario_id
+    where csa.class_instance_id = new.class_instance_id and sa.status = 'live'
   loop
-    perform public.start_arc_for_user(
-      new.user_id,
-      v_arc.id,
-      new.class_instance_id
-    );
+    perform public.start_arc_for_user(new.user_id, v_arc.id, new.class_instance_id);
   end loop;
-
   return new;
 end;
 $$;
 
--- ---------- INSTANCE-AWARE MISSION GATING ----------
+-- Wire the bootstrap functions to the instance-era tables. The legacy
+-- triggers from 0007 remain for historical schemas but cannot be used by
+-- the current runtime.
+drop trigger if exists trg_bootstrap_arcs_for_class_instance_scenario
+  on public.class_instance_scenario_assignments;
+create trigger trg_bootstrap_arcs_for_class_instance_scenario
+  after insert on public.class_instance_scenario_assignments
+  for each row execute function public.bootstrap_arcs_for_class_scenario();
+
+drop trigger if exists trg_bootstrap_arcs_for_class_instance_member
+  on public.class_instance_memberships;
+create trigger trg_bootstrap_arcs_for_class_instance_member
+  after insert on public.class_instance_memberships
+  for each row execute function public.bootstrap_arcs_for_new_member();
 
 create or replace function public.evaluate_missions_after_interaction()
 returns trigger
-language plpgsql
-security definer
-set search_path = public
+language plpgsql security definer set search_path = public
 as $$
 declare
   v_scenario_id uuid;
@@ -399,76 +288,44 @@ declare
   v_actual_count int;
   v_already_done boolean;
 begin
-  if new.class_instance_id is null then
-    return new;
-  end if;
+  if new.class_instance_id is null then return new; end if;
 
-  select scenario_id
-    into v_scenario_id
-  from public.content_items
-  where id = new.content_item_id;
-
-  if v_scenario_id is null then
-    return new;
-  end if;
+  select scenario_id into v_scenario_id
+  from public.content_items where id = new.content_item_id;
+  if v_scenario_id is null then return new; end if;
 
   for v_mission in
-    select *
-    from public.missions
-    where scenario_id = v_scenario_id
-      and status = 'live'
+    select * from public.missions
+    where scenario_id = v_scenario_id and status = 'live'
   loop
-    if exists (
-      select 1
-      from public.story_arc_steps
-      where mission_id = v_mission.id
-    ) and not exists (
-      select 1
-      from public.user_unlocked_missions
-      where user_id = new.user_id
-        and mission_id = v_mission.id
-        and class_instance_id = new.class_instance_id
-    ) then
+    if exists (select 1 from public.story_arc_steps where mission_id = v_mission.id)
+       and not exists (
+         select 1 from public.user_unlocked_missions
+         where user_id = new.user_id and mission_id = v_mission.id
+           and class_instance_id = new.class_instance_id
+       ) then
       continue;
     end if;
 
     select exists (
-      select 1
-      from public.user_mission_progress
-      where user_id = new.user_id
-        and mission_id = v_mission.id
-        and class_instance_id = new.class_instance_id
-        and status = 'completed'
+      select 1 from public.user_mission_progress
+      where user_id = new.user_id and mission_id = v_mission.id
+        and class_instance_id = new.class_instance_id and status = 'completed'
     ) into v_already_done;
-
-    if v_already_done then
-      continue;
-    end if;
+    if v_already_done then continue; end if;
 
     v_required_count := coalesce((v_mission.trigger_condition->>'count')::int, 1);
-    v_actual_count := public.count_matching_interactions(
-      new.user_id,
-      v_mission.id,
-      new.class_instance_id
-    );
+    v_actual_count := public.count_matching_interactions(new.user_id, v_mission.id, new.class_instance_id);
 
     if v_actual_count >= v_required_count then
-      insert into public.user_mission_progress (
-        user_id, mission_id, class_instance_id, status, completed_at
-      )
-      values (
-        new.user_id, v_mission.id, new.class_instance_id, 'completed', now()
-      )
+      insert into public.user_mission_progress(user_id, mission_id, class_instance_id, status, completed_at)
+      values (new.user_id, v_mission.id, new.class_instance_id, 'completed', now())
       on conflict (user_id, mission_id, class_instance_id)
-        do update set status = 'completed', completed_at = now();
+      do update set status = 'completed', completed_at = now();
 
-      insert into public.domain_events (
-        event_type, user_id, class_instance_id, payload
-      )
+      insert into public.domain_events(event_type, user_id, class_instance_id, payload)
       values (
-        'MissionCompleted',
-        new.user_id,
-        new.class_instance_id,
+        'MissionCompleted', new.user_id, new.class_instance_id,
         jsonb_build_object(
           'missionId', v_mission.id,
           'scenarioId', v_scenario_id,
@@ -478,18 +335,9 @@ begin
       );
     end if;
   end loop;
-
   return new;
 end;
 $$;
 
--- ---------- FUNCTION GRANTS ----------
-
-grant execute on function public.unlock_mission_for_user(uuid, uuid, uuid)
-to authenticated;
-
-grant execute on function public.start_arc_for_user(uuid, uuid, uuid)
-to authenticated;
-
--- Existing trigger names are retained; their functions now use the
--- class-instance runtime context.
+grant execute on function public.unlock_mission_for_user(uuid, uuid, uuid) to authenticated;
+grant execute on function public.start_arc_for_user(uuid, uuid, uuid) to authenticated;
