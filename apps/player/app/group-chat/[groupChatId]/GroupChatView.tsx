@@ -5,7 +5,7 @@
 // Personen nacheinander in den Chat schreiben. Macht Gruppendruck/soziale
 // Bewährung sichtbar erlebbar statt nur behauptet.
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { ThumbsUp } from "lucide-react";
 import { recordInteraction } from "@dr1ft/engine-core";
 import type { FeedItem } from "../../../lib/types";
@@ -25,20 +25,30 @@ export function GroupChatView({
 }) {
   const supabase = supabaseBrowserClient();
   const [visibleCount, setVisibleCount] = useState(Math.min(1, messages.length));
+  const seenRef = useRef<Set<string>>(new Set());
+
+  function recordView(message: FeedItem | undefined) {
+    if (!message || seenRef.current.has(message.id)) return;
+    seenRef.current.add(message.id);
+    void recordInteraction(supabase, {
+      userId,
+      contentItemId: message.id,
+      interactionType: "view",
+      classInstanceId,
+    });
+  }
+
+  // Der erste sichtbare Chatbeitrag zählt ebenfalls als gesehen.
+  useEffect(() => {
+    recordView(messages[0]);
+  }, [messages, userId, classInstanceId, supabase]);
 
   useEffect(() => {
     if (visibleCount >= messages.length) return;
     const timer = setTimeout(() => {
-      setVisibleCount((c) => c + 1);
       const msg = messages[visibleCount];
-      if (msg) {
-        void recordInteraction(supabase, {
-          userId,
-          contentItemId: msg.id,
-          interactionType: "view",
-          classInstanceId,
-        });
-      }
+      setVisibleCount((c) => c + 1);
+      recordView(msg);
     }, REVEAL_DELAY_MS);
     return () => clearTimeout(timer);
   }, [visibleCount, messages, userId, classInstanceId, supabase]);
