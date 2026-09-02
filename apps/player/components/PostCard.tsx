@@ -1,9 +1,8 @@
 "use client";
-// apps/player/components/PostCard.tsx
 
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
-import { Heart, MessageCircle } from "lucide-react";
+import { Heart, MessageCircle, MoreHorizontal, Sparkles } from "lucide-react";
 import type { FeedItem, CreatorSummary } from "../lib/types";
 import { mapCreatorRow } from "../lib/types";
 import { recordInteraction } from "@dr1ft/engine-core";
@@ -15,17 +14,16 @@ function initials(name: string): string { return name.split(" ").map((p) => p[0]
 
 function AuthorRow({ creator }: { creator?: CreatorSummary }) {
   if (!creator) return null;
-  return <Link href={`/creator/${creator.id}`} className="flex items-center gap-2 mb-2 group" onClick={(e) => e.stopPropagation()}>
-    <span className="w-6 h-6 rounded-full bg-ink text-paper text-[10px] font-mono flex items-center justify-center shrink-0">{initials(creator.displayName)}</span>
-    <span className="text-xs font-medium text-ink group-hover:underline">{creator.displayName}</span>
-    <span className="text-xs text-ink/40">{creator.handle}</span>
+  return <Link href={`/creator/${creator.id}`} className="group flex items-center gap-3" onClick={(e) => e.stopPropagation()}>
+    <span className="grid place-items-center w-10 h-10 rounded-[14px] bg-gradient-to-br from-[#26324a] to-[#53627d] text-white text-[11px] font-semibold shadow-sm">{initials(creator.displayName)}</span>
+    <span className="min-w-0"><span className="block text-[13px] font-semibold leading-tight group-hover:underline">{creator.displayName}</span><span className="block text-[11px] text-ink/40 mt-0.5">{creator.handle}</span></span>
   </Link>;
 }
 
 function ReactionPeople({ users }: { users: Array<{ id: string; displayName: string; username: string; avatarSeed: string }> }) {
   if (!users.length) return null;
   const shown = users.slice(0, 3), first = shown[0], remaining = users.length - shown.length;
-  return <div className="flex items-center gap-2 mt-2"><div className="flex -space-x-2">{shown.map((user) => <Link key={user.id} href={`/profile/${user.id}`} title={`@${user.username}`} className="block"><img src={avatarUrl(user.avatarSeed, 52)} alt="" className="w-7 h-7 rounded-full bg-ink-light border-2 border-paper" /></Link>)}</div><span className="text-[11px] text-ink/45">{users.length === 1 ? `${first.displayName} gefällt das` : `${first.displayName} und ${remaining} weitere gefällt das`}</span></div>;
+  return <div className="flex items-center gap-2.5 mt-3"><div className="flex -space-x-2">{shown.map((user) => <Link key={user.id} href={`/profile/${user.id}`} title={`@${user.username}`} className="block"><img src={avatarUrl(user.avatarSeed, 52)} alt="" className="w-7 h-7 rounded-full bg-ink-light border-2 border-paper shadow-sm" /></Link>)}</div><span className="text-[11px] text-ink/45">{users.length === 1 ? `${first.displayName} gefällt das` : `${first.displayName} und ${remaining} weitere gefällt das`}</span></div>;
 }
 
 export function PostCard({ item, userId, classInstanceId, initiallyLiked, onView }: {
@@ -56,19 +54,48 @@ export function PostCard({ item, userId, classInstanceId, initiallyLiked, onView
   async function toggleComments() {
     const next = !commentsOpen; setCommentsOpen(next);
     if (next && comments === null) {
-      const { data } = await supabase.from("content_items").select("*, creators(id, display_name, handle, avatar_url)").eq("parent_id", item.id).eq("type", "comment").eq("status", "live").eq("scenario_id", item.scenarioId).order("created_at", { ascending: true });
+      const query = supabase.from("content_items").select("*, creators(id, display_name, handle, avatar_url)").eq("parent_id", item.id).eq("type", "comment").eq("status", "live");
+      const scoped = item.scenarioId ? query.eq("scenario_id", item.scenarioId) : query.is("scenario_id", null);
+      const { data } = await scoped.order("created_at", { ascending: true });
       setComments((data ?? []).map((row: any) => ({ ...row, creator: mapCreatorRow(row.creators) })));
     }
   }
 
   const visibleLikeCount = baseLikeCount + Math.max(0, storedLikeCount) + (liked && storedLikeCount === 0 ? 1 : 0);
-  return <article ref={ref} className="bg-paper text-ink rounded-card overflow-hidden shadow-sm">
-    <div className="p-4 pb-0"><AuthorRow creator={item.creator} /><p className="font-mono text-[11px] text-ink/50 mb-2 uppercase tracking-wide">{item.type}</p></div>
-    {item.mediaUrl && item.mediaType === "image" && <img src={item.mediaUrl} alt="" className="w-full max-h-96 object-cover" loading="lazy" />}
-    {item.mediaUrl && item.mediaType === "video" && <video src={item.mediaUrl} controls className="w-full max-h-96 object-cover bg-black" />}
-    <div className="p-4 pt-3"><p className="font-body text-[15px] leading-relaxed">{item.body}</p><ReactionPeople users={reactionUsers} />
-      <div className="flex items-center gap-1 mt-3 pt-3 border-t border-ink/10"><button onClick={toggleLike} className={`tap-pulse touch-target flex items-center gap-1.5 px-2 text-sm font-body rounded-lg ${liked ? "text-red-500" : "text-ink/50"}`}><Heart className="w-5 h-5" fill={liked ? "currentColor" : "none"} strokeWidth={2} />{visibleLikeCount}</button><button onClick={toggleComments} className="touch-target flex items-center gap-1.5 px-2 text-sm font-body text-ink/50 rounded-lg"><MessageCircle className="w-[18px] h-[18px]" strokeWidth={2} />{comments ? comments.length : commentCount}</button></div>
-      {commentsOpen && <div className="mt-3 space-y-2">{comments === null && <><CommentSkeleton /><CommentSkeleton /></>}{comments?.length === 0 && <p className="text-xs text-ink/40">Noch keine Kommentare.</p>}{comments?.map((c) => <div key={c.id} className="bg-ink/5 rounded-lg px-3 py-2"><AuthorRow creator={c.creator} /><p className="text-xs">{c.body}</p></div>)}</div>}
+  const technique = item.manipulationTechniques?.[0];
+  const difficulty = item.difficulty;
+
+  return <article ref={ref} className="group relative overflow-hidden rounded-[24px] bg-white text-ink shadow-[0_14px_45px_rgba(38,50,74,0.08)] ring-1 ring-black/[0.035] transition-all duration-300 hover:-translate-y-0.5 hover:shadow-[0_20px_55px_rgba(38,50,74,0.11)]">
+    <div className="absolute inset-x-0 top-0 h-1 bg-gradient-to-r from-[#789bd0] via-[#9e9ad0] to-[#e0a77f] opacity-70" />
+    <div className="flex items-center justify-between px-5 pt-5 pb-4">
+      <AuthorRow creator={item.creator} />
+      <button className="grid place-items-center w-9 h-9 rounded-xl text-ink/30 hover:bg-ink/5 hover:text-ink/60 transition" aria-label="Weitere Optionen"><MoreHorizontal className="w-5 h-5" /></button>
+    </div>
+
+    {item.mediaUrl && item.mediaType === "image" && <div className="relative overflow-hidden bg-[#eef1f6]"><img src={item.mediaUrl} alt="" className="w-full max-h-[520px] object-cover transition-transform duration-700 group-hover:scale-[1.012]" loading="lazy" /></div>}
+    {item.mediaUrl && item.mediaType === "video" && <video src={item.mediaUrl} controls className="w-full max-h-[520px] object-cover bg-black" />}
+
+    <div className="px-5 pt-4 pb-5">
+      <div className="flex items-center gap-2 mb-3">
+        <span className="rounded-full bg-[#f1f3f8] px-2.5 py-1 text-[9px] font-semibold uppercase tracking-[0.14em] text-ink/45">{item.type}</span>
+        {difficulty && <span className="rounded-full bg-[#f8eee8] px-2.5 py-1 text-[9px] font-semibold uppercase tracking-[0.12em] text-[#a46e4d]">Level {difficulty}</span>}
+        {technique && <span className="ml-auto inline-flex items-center gap-1 text-[9px] font-medium text-ink/30"><Sparkles className="w-3 h-3" /> entdecke selbst</span>}
+      </div>
+      {item.title && <h2 className="font-display text-[22px] font-semibold leading-[1.15] tracking-[-0.035em] mb-2">{item.title}</h2>}
+      <p className="font-body text-[15px] leading-[1.65] text-ink/80">{item.body}</p>
+      <ReactionPeople users={reactionUsers} />
+
+      <div className="flex items-center gap-1 mt-4 pt-3 border-t border-ink/[0.07]">
+        <button onClick={toggleLike} aria-label={liked ? "Gefällt mir nicht mehr" : "Gefällt mir"} className={`touch-target inline-flex items-center gap-2 px-2.5 rounded-xl text-sm transition-all duration-200 hover:bg-ink/5 ${liked ? "text-[#d66f6f]" : "text-ink/45 hover:text-ink"}`}>
+          <Heart className="w-[19px] h-[19px]" fill={liked ? "currentColor" : "none"} strokeWidth={2} /> <span className="font-medium">{visibleLikeCount}</span>
+        </button>
+        <button onClick={toggleComments} aria-label="Kommentare anzeigen" className={`touch-target inline-flex items-center gap-2 px-2.5 rounded-xl text-sm transition hover:bg-ink/5 ${commentsOpen ? "text-ink" : "text-ink/45 hover:text-ink"}`}>
+          <MessageCircle className="w-[18px] h-[18px]" strokeWidth={2} /> <span className="font-medium">{comments ? comments.length : commentCount}</span>
+        </button>
+        <span className="ml-auto text-[9px] uppercase tracking-[0.14em] text-ink/25">dein Blick zählt</span>
+      </div>
+
+      {commentsOpen && <div className="mt-3 pt-3 border-t border-ink/[0.06] space-y-2">{comments === null && <><CommentSkeleton /><CommentSkeleton /></>}{comments?.length === 0 && <p className="text-xs text-ink/40 py-2">Noch keine Kommentare.</p>}{comments?.map((c) => <div key={c.id} className="bg-[#f5f6fa] rounded-2xl px-3.5 py-3"><AuthorRow creator={c.creator} /><p className="text-xs leading-5 mt-2 text-ink/75">{c.body}</p></div>)}</div>}
     </div>
   </article>;
 }
