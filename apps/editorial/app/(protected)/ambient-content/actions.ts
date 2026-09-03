@@ -59,40 +59,55 @@ const AMBIENT_ITEM_SCHEMA = {
   },
 };
 
-async function generateImage(prompt: string, aspectRatio: string, index: number) {
+async function storeAmbientImage(base64: string, mimeType: string, index: number) {
+  const supabase = supabaseServerClient();
+  const extension = mimeType.includes("png") ? "png" : "jpg";
+  const path = `generated/${new Date().toISOString().slice(0, 10)}/${crypto.randomUUID()}-${index}.${extension}`;
+  const { error } = await supabase.storage.from("ambient-assets").upload(path, Buffer.from(base64, "base64"), { contentType: mimeType, upsert: false });
+  if (error) throw new Error(`Ambient-Bild konnte nicht gespeichert werden: ${error.message}`);
+  return supabase.storage.from("ambient-assets").getPublicUrl(path).data.publicUrl;
+}
+
+async function generateCloudflareImage(prompt: string, aspectRatio: string, index: number) {
   const workerUrl = process.env.CLOUDFLARE_AMBIENT_IMAGE_URL?.trim();
   const apiKey = process.env.CLOUDFLARE_AMBIENT_IMAGE_API_KEY?.trim();
-  if (!workerUrl) throw new Error("CLOUDFLARE_AMBIENT_IMAGE_URL ist nicht gesetzt.");
-  if (!apiKey) throw new Error("CLOUDFLARE_AMBIENT_IMAGE_API_KEY ist nicht gesetzt.");
-
-  const response = await fetch(workerUrl, {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      "Authorization": `Bearer ${apiKey}`,
-    },
-    body: JSON.stringify({
-      prompt,
-      aspectRatio,
-      steps: 4,
-    }),
-    cache: "no-store",
-  });
-
-  if (!response.ok) {
-    const errorText = await response.text();
-    throw new Error(`Cloudflare FLUX Bildgenerierung fehlgeschlagen (${response.status}): ${errorText}`);
-  }
-
+  if (!workerUrl || !apiKey) throw new Error("Cloudflare FLUX ist nicht konfiguriert.");
+  const response = await fetch(workerUrl, { method: "POST", headers: { "Content-Type": "application/json", "Authorization": `Bearer ${apiKey}` }, body: JSON.stringify({ prompt, aspectRatio, steps: 4 }), cache: "no-store" });
+  if (!response.ok) throw new Error(`Cloudflare FLUX Fehler (${response.status}): ${await response.text()}`);
   const data = await response.json();
   const base64 = typeof data?.image === "string" ? data.image : null;
   if (!base64) throw new Error("Cloudflare FLUX hat kein Bild zurückgegeben.");
+  const url = await storeAmbientImage(base64, "image/jpeg", index);
+  return { url, provider: "cloudflare", model: "@cf/black-forest-labs/flux-1-schnell" };
+}
 
-  const supabase = supabaseServerClient();
-  const path = `generated/${new Date().toISOString().slice(0, 10)}/${crypto.randomUUID()}-${index}.jpg`;
-  const { error } = await supabase.storage.from("ambient-assets").upload(path, Buffer.from(base64, "base64"), { contentType: "image/jpeg", upsert: false });
-  if (error) throw new Error(`Ambient-Bild konnte nicht gespeichert werden: ${error.message}`);
-  return supabase.storage.from("ambient-assets").getPublicUrl(path).data.publicUrl;
+async function generateGeminiImage(prompt: string, aspectRatio: string, index: number) {
+  const apiKey = process.env.GEMINI_API_KEY;
+  if (!apiKey) throw new Error("GEMINI_API_KEY ist nicht gesetzt.");
+  const response = await fetch("https://generativelanguage.googleapis.com/v1beta/interactions", { method: "POST", headers: { "Content-Type": "application/json", "x-goog-api-key": apiKey }, body: JSON.stringify({ model: "gemini-3.1-flash-image", input: prompt, response_format: { type: "image", aspect_ratio: aspectRatio, image_size: "1K" } }) });
+  if (!response.ok) throw new Error(`Gemini Bildgenerierung fehlgeschlagen (${response.status}): ${await response.text()}`);
+  const data = await response.json();
+  const image = data.output_image ?? data.output?.find?.((part: any) => part.type === "image")?.image;
+  const base64 = image?.data ?? image?.base64;
+  if (!base64) throw new Error("Gemini hat kein Bild zurückgegeben.");
+  const mimeType = image?.mime_type ?? "image/png";
+  const url = await storeAmbientImage(base64, mimeType, index);
+  return { url, provider: "gemini", model: "gemini-3.1-flash-image" };
+}
+
+async function generateImage(prompt: string, aspectRatio: string, index: number) {
+  let cloudflareError = "";
+  try {
+    return await generateCloudflareImage(prompt, aspectRatio, index);
+  } catch (error) {
+    cloudflareError = error instanceof Error ? error.message : "Unbekannter Cloudflare-Fehler";
+  }
+  try {
+    return await generateGeminiImage(prompt, aspectRatio, index);
+  } catch (error) {
+    const geminiError = error instanceof Error ? error.message : "Unbekannter Gemini-Fehler";
+    throw new Error(`Bildgenerierung fehlgeschlagen. FLUX: ${cloudflareError}. Gemini-Fallback: ${geminiError}`);
+  }
 }
 
 async function generateGeminiText(apiKey: string, prompt: string) {
@@ -171,8 +186,15 @@ export async function generateAmbientDrafts(formData: FormData) {
     if (!item?.body || typeof item.body !== "string") continue;
     const shouldImage = imageIndexes.has(index);
     let mediaUrl: string | null = null;
-    if (shouldImage && item.imagePrompt) mediaUrl = await generateImage(`Create an authentic, ordinary social-media image for a German ${ageText} ambient feed. ${imageStyle}. Topic: ${item.topic}. Mood: ${item.mood}. ${item.imagePrompt}. No logos, readable text, celebrity likeness, political messaging or staged advertising.`, aspectRatio, index);
-    rows.push({ type: "post", scenario_id: null, creator_id: creatorId, body: item.body.trim().slice(0, 1000), media_url: mediaUrl, media_type: mediaUrl ? "image" : null, manipulation_techniques: [], target_competencies: [], difficulty: 1, age_rating: ageBand === "16_17" || ageBand === "18_plus" ? "16_plus" : ageBand === "all" ? "all_ages" : "12_plus", status: "draft", extra: { generatedBy: "ai", generatorVersion: "ambient-studio-v3", provider, theme, ageBand, interests, style, styleLabel: styleText, typoLevel, slangLevel, emojiLevel, imageRatio, imageMode, format: item.format, mood: item.mood, topic: item.topic, creatorVibe: item.creatorVibe, imageRequested: shouldImage, imageGenerated: Boolean(mediaUrl), imageModel: mediaUrl ? "@cf/black-forest-labs/flux-1-schnell" : null, languageLibrary: "source-grounded-2026-08" } });
+    let imageProvider: string | null = null;
+    let imageModel: string | null = null;
+    if (shouldImage && item.imagePrompt) {
+      const image = await generateImage(`Create an authentic, ordinary social-media image for a German ${ageText} ambient feed. ${imageStyle}. Topic: ${item.topic}. Mood: ${item.mood}. ${item.imagePrompt}. No logos, readable text, celebrity likeness, political messaging or staged advertising.`, aspectRatio, index);
+      mediaUrl = image.url;
+      imageProvider = image.provider;
+      imageModel = image.model;
+    }
+    rows.push({ type: "post", scenario_id: null, creator_id: creatorId, body: item.body.trim().slice(0, 1000), media_url: mediaUrl, media_type: mediaUrl ? "image" : null, manipulation_techniques: [], target_competencies: [], difficulty: 1, age_rating: ageBand === "16_17" || ageBand === "18_plus" ? "16_plus" : ageBand === "all" ? "all_ages" : "12_plus", status: "draft", extra: { generatedBy: "ai", generatorVersion: "ambient-studio-v4", provider, theme, ageBand, interests, style, styleLabel: styleText, typoLevel, slangLevel, emojiLevel, imageRatio, imageMode, format: item.format, mood: item.mood, topic: item.topic, creatorVibe: item.creatorVibe, imageRequested: shouldImage, imageGenerated: Boolean(mediaUrl), imageProvider, imageModel, languageLibrary: "source-grounded-2026-08" } });
   }
   if (!rows.length) throw new Error("Die KI hat keine gültigen Items geliefert.");
   const { error } = await supabase.from("content_items").insert(rows);
