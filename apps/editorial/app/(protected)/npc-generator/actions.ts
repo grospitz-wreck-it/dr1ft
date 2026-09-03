@@ -12,7 +12,24 @@ type ActorType = (typeof ACTOR_TYPES)[number];
 async function gemini(apiKey: string, prompt: string, schema: object) {
   const response = await fetch("https://generativelanguage.googleapis.com/v1beta/interactions", { method: "POST", headers: { "Content-Type": "application/json", "x-goog-api-key": apiKey }, body: JSON.stringify({ model: "gemini-3.7-flash", input: prompt, response_format: { type: "text", mime_type: "application/json", schema } }) });
   if (!response.ok) throw new Error(`Gemini API Fehler: ${await response.text()}`);
-  const data = await response.json(); const raw = (data.output_text ?? data.output?.find?.((part: any) => part.type === "text")?.text ?? "").trim(); return JSON.parse(raw);
+
+  const data = await response.json();
+  const raw = (
+    data.output_text ??
+    data.output?.find?.((part: any) => part.type === "text")?.text ??
+    data.steps?.slice?.().reverse?.().find?.((step: any) => step.type === "model_output")?.content?.find?.((part: any) => part.type === "text")?.text ??
+    ""
+  ).trim();
+
+  if (!raw) {
+    throw new Error(`Gemini hat keine Textausgabe geliefert (Status: ${data.status ?? "unbekannt"}).`);
+  }
+
+  try {
+    return JSON.parse(raw);
+  } catch {
+    throw new Error(`Gemini hat kein gültiges JSON geliefert: ${raw.slice(0, 500)}`);
+  }
 }
 function requireKey() { const key = process.env.GEMINI_API_KEY; if (!key) throw new Error("GEMINI_API_KEY ist nicht gesetzt."); return key; }
 function cleanHandle(value: string) { const base = value.toLowerCase().replace(/[^a-z0-9_]/g, "").slice(0, 24) || "actor"; return `${base}_${crypto.randomUUID().slice(0, 6)}`; }
