@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
-import { Heart, MessageCircle, MoreHorizontal, Sparkles } from "lucide-react";
+import { Heart, MessageCircle, MoreHorizontal, Send, Sparkles } from "lucide-react";
 import type { FeedItem, CreatorSummary } from "../lib/types";
 import { mapCreatorRow } from "../lib/types";
 import { recordInteraction } from "@dr1ft/engine-core";
@@ -10,22 +10,27 @@ import { supabaseBrowserClient } from "../lib/supabaseBrowserClient";
 import { CommentSkeleton } from "./Skeleton";
 import { avatarUrl } from "../lib/avatar";
 
-function AuthorRow({ creator }: { creator?: CreatorSummary }) {
-  if (!creator) return null;
-  const image = creator.avatarUrl || avatarUrl(creator.id, 80);
-  return <Link href={`/creator/${creator.id}`} className="group flex items-center gap-3" onClick={(e) => e.stopPropagation()}>
+function AuthorRow({ creator, student }: { creator?: CreatorSummary; student?: { id: string; displayName: string; username: string; avatarSeed: string } }) {
+  if (!creator && !student) return null;
+  const image = creator ? (creator.avatarUrl || avatarUrl(creator.id, 80)) : avatarUrl(student!.avatarSeed, 80);
+  const name = creator?.displayName ?? student?.displayName ?? "DR1FT User";
+  const handle = creator?.handle ?? `@${student?.username ?? "user"}`;
+  const href = creator ? `/creator/${creator.id}` : `/profile/${student!.id}`;
+  return <Link href={href} className="group flex items-center gap-3" onClick={(e) => e.stopPropagation()}>
     <span className="relative block w-11 h-11 shrink-0 overflow-hidden rounded-[15px] p-[2px] bg-gradient-to-br from-fuchsia-400 via-violet-400 to-cyan-300 shadow-[0_5px_16px_rgba(124,58,237,.18)]">
       <span className="block h-full w-full overflow-hidden rounded-[12px] bg-[#f3eefb]"><img src={image} alt="" className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-110" /></span>
     </span>
-    <span className="min-w-0"><span className="block text-[13px] font-semibold leading-tight group-hover:text-violet-600 transition-colors">{creator.displayName}</span><span className="block text-[11px] text-[#8c849d] mt-0.5">{creator.handle}</span></span>
+    <span className="min-w-0"><span className="block text-[13px] font-semibold leading-tight group-hover:text-violet-600 transition-colors">{name}</span><span className="block text-[11px] text-[#8c849d] mt-0.5">{handle}</span></span>
   </Link>;
 }
 
 function ReactionPeople({ users }: { users: Array<{ id: string; displayName: string; username: string; avatarSeed: string }> }) {
-  if (!users.length) return null;
+  if (!users.length) return <p className="text-[11px] text-[#aaa1b1] mt-3">Noch keine Reaktionen aus deiner Klasse.</p>;
   const shown = users.slice(0, 3), first = shown[0], remaining = users.length - shown.length;
   return <div className="flex items-center gap-2.5 mt-3"><div className="flex -space-x-2">{shown.map((user) => <Link key={user.id} href={`/profile/${user.id}`} title={`@${user.username}`} className="block"><img src={avatarUrl(user.avatarSeed, 52)} alt="" className="w-7 h-7 rounded-[10px] bg-white border-2 border-white shadow-sm" /></Link>)}</div><span className="text-[11px] text-[#82798f]">{users.length === 1 ? `${first.displayName} gefällt das` : `${first.displayName} und ${remaining} weitere gefällt das`}</span></div>;
 }
+
+type CommentView = FeedItem & { studentAuthor?: { id: string; displayName: string; username: string; avatarSeed: string } };
 
 export function PostCard({ item, userId, classInstanceId, initiallyLiked, onView }: {
   item: FeedItem; userId: string; classInstanceId: string; initiallyLiked: boolean; onView: () => void;
@@ -34,7 +39,10 @@ export function PostCard({ item, userId, classInstanceId, initiallyLiked, onView
   const ref = useRef<HTMLDivElement>(null);
   const [liked, setLiked] = useState(initiallyLiked);
   const [commentsOpen, setCommentsOpen] = useState(false);
-  const [comments, setComments] = useState<FeedItem[] | null>(null);
+  const [comments, setComments] = useState<CommentView[] | null>(null);
+  const [commentText, setCommentText] = useState("");
+  const [commentSending, setCommentSending] = useState(false);
+  const [commentError, setCommentError] = useState<string | null>(null);
   const storedLikeCount = Number((item.extra as any)?.classLikeCount ?? 0);
   const baseLikeCount = Number((item.extra as any)?.baseEngagement ?? 0);
   const commentCount = Number((item.extra as any)?.baseCommentCount ?? 0);
@@ -52,13 +60,71 @@ export function PostCard({ item, userId, classInstanceId, initiallyLiked, onView
     await recordInteraction(supabase, { userId, contentItemId: item.id, interactionType: "like", classInstanceId });
   }
 
+  async function loadComments() {
+    const query = supabase.from("content_items").select("*, creators(id, display_name, handle, avatar_url)").eq("parent_id", item.id).eq("class_instance_id", classInstanceId).eq("type", "comment").eq("status", "live");
+    const { data, error } = await query.order("created_at", { ascending: true });
+    if (error) {
+      setCommentError(error.message);
+      setComments([]);
+      return;
+    }
+    setComments((data ?? []).map((row: any) => {
+      const author = row.extra?.createdBy === "student" && row.extra?.studentUserId
+        ? { id: row.extra.studentUserId, displayName: row.extra.displayName ?? "DR1FT User", username: row.extra.username ?? "user", avatarSeed: row.extra.avatarSeed ?? row.extra.studentUserId }
+        : undefined;
+      return { ...row, creator: mapCreatorRow(row.creators), studentAuthor: author };
+    }));
+  }
+
   async function toggleComments() {
-    const next = !commentsOpen; setCommentsOpen(next);
-    if (next && comments === null) {
-      const query = supabase.from("content_items").select("*, creators(id, display_name, handle, avatar_url)").eq("parent_id", item.id).eq("type", "comment").eq("status", "live");
-      const scoped = item.scenarioId ? query.eq("scenario_id", item.scenarioId) : query.is("scenario_id", null);
-      const { data } = await scoped.order("created_at", { ascending: true });
-      setComments((data ?? []).map((row: any) => ({ ...row, creator: mapCreatorRow(row.creators) })));
+    const next = !commentsOpen;
+    setCommentsOpen(next);
+    setCommentError(null);
+    if (next && comments === null) await loadComments();
+  }
+
+  async function submitComment(e: React.FormEvent<HTMLFormElement>) {
+    e.preventDefault();
+    const text = commentText.trim();
+    if (!text || commentSending) return;
+    setCommentSending(true);
+    setCommentError(null);
+    try {
+      const response = await fetch(`/api/content/${item.id}/comment`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ body: text }) });
+      const payload = await response.json().catch(() => ({}));
+      if (!response.ok) throw new Error(payload.error ?? "Kommentar konnte nicht gespeichert werden.");
+      const created = payload.comment;
+      const optimistic: CommentView = {
+        id: created.id,
+        type: "comment",
+        scenarioId: null,
+        creatorId: null,
+        parentId: item.id,
+        title: null,
+        body: created.body,
+        mediaUrl: null,
+        mediaType: null,
+        manipulationTechniques: [],
+        targetCompetencies: [],
+        difficulty: 1,
+        ageRating: "12_plus",
+        sourceRefs: [],
+        status: "live",
+        reviewedBy: null,
+        reviewedAt: null,
+        reviewNotes: null,
+        extra: created.extra ?? {},
+        createdAt: created.created_at,
+        updatedAt: created.created_at,
+        creator: undefined,
+        studentAuthor: { id: userId, displayName: "Du", username: "du", avatarSeed: userId },
+      };
+      setComments((current) => [...(current ?? []), optimistic]);
+      setCommentText("");
+    } catch (error) {
+      setCommentError(error instanceof Error ? error.message : "Kommentar konnte nicht gespeichert werden.");
+    } finally {
+      setCommentSending(false);
     }
   }
 
@@ -97,7 +163,16 @@ export function PostCard({ item, userId, classInstanceId, initiallyLiked, onView
         <span className="ml-auto text-[9px] uppercase tracking-[0.14em] text-[#aaa1b1]">dein Blick zählt</span>
       </div>
 
-      {commentsOpen && <div className="mt-3 pt-3 border-t border-violet-100/80 space-y-2">{comments === null && <><CommentSkeleton /><CommentSkeleton /></>}{comments?.length === 0 && <p className="text-xs text-[#9b93a8] py-2">Noch keine Kommentare.</p>}{comments?.map((c) => <div key={c.id} className="bg-[#f6f3fa] rounded-2xl px-3.5 py-3"><AuthorRow creator={c.creator} /><p className="text-xs leading-5 mt-2 text-[#665d73]">{c.body}</p></div>)}</div>}
+      {commentsOpen && <div className="mt-3 pt-3 border-t border-violet-100/80 space-y-3">
+        {comments === null && <><CommentSkeleton /><CommentSkeleton /></>}
+        {comments?.length === 0 && <p className="text-xs text-[#9b93a8] py-1">Noch keine Kommentare. Sei der Erste.</p>}
+        {comments?.map((c) => <div key={c.id} className="bg-[#f6f3fa] rounded-2xl px-3.5 py-3"><AuthorRow creator={c.creator} student={c.studentAuthor} /><p className="text-xs leading-5 mt-2 text-[#665d73]">{c.body}</p></div>)}
+        <form onSubmit={submitComment} className="flex items-end gap-2 pt-1">
+          <textarea value={commentText} onChange={(e) => setCommentText(e.target.value.slice(0, 500))} placeholder="Schreib etwas dazu …" rows={2} className="min-h-[44px] flex-1 resize-none rounded-2xl border border-violet-100 bg-white px-3.5 py-2.5 text-sm text-[#27213d] outline-none placeholder:text-[#aaa1b1] focus:border-violet-300 focus:ring-2 focus:ring-violet-100" />
+          <button type="submit" disabled={!commentText.trim() || commentSending} className="grid place-items-center w-11 h-11 shrink-0 rounded-2xl bg-[#171027] text-white disabled:opacity-35 hover:bg-violet-700 transition" aria-label="Kommentar senden"><Send className="w-4 h-4" /></button>
+        </form>
+        {commentError && <p className="text-xs text-rose-500">{commentError}</p>}
+      </div>}
     </div>
   </article>;
 }
