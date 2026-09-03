@@ -1,19 +1,6 @@
 import { redirect } from "next/navigation";
 import Link from "next/link";
-import {
-  LayoutGrid,
-  MessagesSquare,
-  MessageSquare,
-  Route,
-  Sparkles,
-  Users,
-  Library,
-  Home,
-  School,
-  Layers3,
-  Settings2,
-  Bot,
-} from "lucide-react";
+import { LayoutGrid, MessagesSquare, MessageSquare, Route, Sparkles, Users, Library, Home, School, Layers3, Settings2, Bot } from "lucide-react";
 import { supabaseServerClient } from "../../lib/supabaseServerClient";
 import { SignOutButton } from "./SignOutButton";
 
@@ -26,7 +13,7 @@ const NAV_ITEMS = [
   { href: "/missions", label: "Missionen & Arcs", icon: Route },
   { href: "/npc-dialogs", label: "NPC-Dialoge", icon: MessagesSquare },
   { href: "/group-chats", label: "Gruppenchats", icon: MessageSquare },
-  { href: "/npc-generator", label: "NPC-Generator", icon: Bot },
+  { href: "/npc-generator", label: "Akteur-Generator", icon: Bot },
   { href: "/ambient-content", label: "Ambient-Generator", icon: Sparkles },
   { href: "/staff", label: "Redaktionsteam", icon: Users },
   { href: "/schools", label: "Schulen", icon: School },
