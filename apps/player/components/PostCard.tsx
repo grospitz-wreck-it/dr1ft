@@ -8,29 +8,14 @@
 
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
-import {
-  Check,
-  ChevronDown,
-  Eye,
-  Flag,
-  Heart,
-  Image as ImageIcon,
-  MessageCircle,
-  MoreHorizontal,
-  Search,
-  Share2,
-  UserRound,
-  X,
-} from "lucide-react";
+import { Check, ChevronDown, Eye, Flag, Heart, Image as ImageIcon, MessageCircle, MoreHorizontal, Search, Share2, UserRound, X } from "lucide-react";
 import type { FeedItem, CreatorSummary } from "../lib/types";
 import { mapCreatorRow } from "../lib/types";
 import { recordInteraction } from "@dr1ft/engine-core";
 import { supabaseBrowserClient } from "../lib/supabaseBrowserClient";
 import { CommentSkeleton } from "./Skeleton";
 
-function initials(name: string): string {
-  return name.split(" ").map((p) => p[0]).slice(0, 2).join("").toUpperCase();
-}
+function initials(name: string): string { return name.split(" ").map((p) => p[0]).slice(0, 2).join("").toUpperCase(); }
 function getString(value: unknown): string | undefined { return typeof value === "string" ? value : undefined; }
 function getStringArray(value: unknown): string[] { return Array.isArray(value) ? value.filter((v): v is string => typeof v === "string") : []; }
 
@@ -69,9 +54,7 @@ export function PostCard({ item, userId, initiallyLiked, onView }: { item: FeedI
     await recordInteraction(supabase, { userId, contentItemId: item.id, interactionType, metadata });
   }
 
-  function toggleLike() {
-    if (!liked) { setLiked(true); recordInteraction(supabase, { userId, contentItemId: item.id, interactionType: "like" }); }
-  }
+  function toggleLike() { if (!liked) { setLiked(true); recordInteraction(supabase, { userId, contentItemId: item.id, interactionType: "like" }); } }
 
   async function toggleComments() {
     const next = !commentsOpen; setCommentsOpen(next);
@@ -111,7 +94,10 @@ export function PostCard({ item, userId, initiallyLiked, onView }: { item: FeedI
     setComparison({ related: null, loading: true });
     const { data, error } = await supabase.from("content_items").select("*, creators(id, display_name, handle, avatar_url)").eq("scenario_id", item.scenarioId).eq("type", "post").eq("status", "live");
     if (error) { setComparison({ related: null, loading: false, error: "Die Vergleichsinformation konnte nicht geladen werden." }); return; }
-    const relatedRow = (data ?? []).find((row: any) => row.extra?.relation?.type === "corroborates" && row.extra?.relation?.relatedContentId === item.id);
+    const relatedRow = (data ?? []).find((row: any) => {
+      const relation = row.extra?.relation;
+      return ["corroborates", "contradicts", "supports"].includes(relation?.type) && relation?.relatedContentId === item.id;
+    });
     if (!relatedRow) { setComparison({ related: null, loading: false, error: "Für diesen Beitrag ist keine weitere Vergleichsinformation hinterlegt." }); return; }
     setComparison({ related: { ...relatedRow, creator: mapCreatorRow(relatedRow.creators) }, loading: false });
   }
