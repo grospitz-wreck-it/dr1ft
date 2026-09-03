@@ -102,6 +102,11 @@ export interface Mission {
   status: ContentStatus;
 }
 
+/**
+ * Interactions that are intentionally available through the generic Card
+ * Interaction Layer. The same affordances are rendered for ambient and
+ * scenario content; the content metadata decides what the action reveals.
+ */
 export type InteractionType =
   | "view"
   | "like"
@@ -110,7 +115,12 @@ export type InteractionType =
   | "ignore"
   | "comment"
   | "follow"
-  | "block";
+  | "block"
+  | "inspect_source"
+  | "inspect_media"
+  | "inspect_context"
+  | "inspect_profile"
+  | "compare_information";
 
 export interface UserInteraction {
   id: string;
