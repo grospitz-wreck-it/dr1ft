@@ -28,11 +28,26 @@ function isActive(pathname: string, href: string) {
   return pathname === href || pathname.startsWith(`${href}/`);
 }
 
+function formatRelativeTime(value: string) {
+  const seconds = Math.max(0, Math.floor((Date.now() - new Date(value).getTime()) / 1000));
+  if (seconds < 10) return "gerade eben";
+  if (seconds < 60) return `vor ${seconds} Sek.`;
+  const minutes = Math.floor(seconds / 60);
+  if (minutes < 60) return `vor ${minutes} Min.`;
+  return `vor ${Math.floor(minutes / 60)} Std.`;
+}
+
+type LiveActivity = {
+  text: string;
+  createdAt: string;
+};
+
 export function PlayerShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const supabase = supabaseBrowserClient();
   const [user, setUser] = useState<{ displayName: string; username: string; avatarSeed: string } | null>(null);
   const [open, setOpen] = useState(false);
+  const [liveActivity, setLiveActivity] = useState<LiveActivity | null>(null);
 
   useEffect(() => {
     let mounted = true;
@@ -51,6 +66,66 @@ export function PlayerShell({ children }: { children: React.ReactNode }) {
     });
     return () => { mounted = false; subscription.unsubscribe(); };
   }, [supabase]);
+
+  useEffect(() => {
+    if (!user) {
+      setLiveActivity(null);
+      return;
+    }
+
+    let mounted = true;
+    let interval: number | null = null;
+
+    async function loadLiveActivity() {
+      const { data: classInstanceId, error: instanceError } = await supabase.rpc("get_current_class_instance_id");
+      if (instanceError || !classInstanceId) {
+        if (mounted) setLiveActivity(null);
+        return;
+      }
+
+      const { data: comment } = await supabase
+        .from("content_items")
+        .select("created_at, extra")
+        .eq("class_instance_id", classInstanceId)
+        .eq("type", "comment")
+        .eq("status", "live")
+        .not("parent_id", "is", null)
+        .order("created_at", { ascending: false })
+        .limit(1)
+        .maybeSingle();
+
+      if (!mounted) return;
+      if (!comment) {
+        setLiveActivity(null);
+        return;
+      }
+
+      const extra = (comment.extra ?? {}) as Record<string, unknown>;
+      const createdBy = extra.createdBy;
+      const displayName = typeof extra.displayName === "string" && extra.displayName.trim() ? extra.displayName : "Jemand aus deiner Klasse";
+      const text = createdBy === "student"
+        ? `${displayName} hat gerade kommentiert.`
+        : "Jemand aus deiner Klasse hat gerade reagiert.";
+
+      setLiveActivity({ text, createdAt: comment.created_at });
+    }
+
+    void loadLiveActivity();
+    interval = window.setInterval(() => { void loadLiveActivity(); }, 8000);
+
+    const channel = supabase
+      .channel("player-live-class-activity")
+      .on("postgres_changes", { event: "INSERT", schema: "public", table: "content_items" }, () => {
+        void loadLiveActivity();
+      })
+      .subscribe();
+
+    return () => {
+      mounted = false;
+      if (interval !== null) window.clearInterval(interval);
+      void supabase.removeChannel(channel);
+    };
+  }, [supabase, user?.displayName]);
 
   const publicRoute = pathname === "/login" || pathname === "/register" || pathname === "/";
   const showShell = !!user && !publicRoute;
@@ -79,9 +154,13 @@ export function PlayerShell({ children }: { children: React.ReactNode }) {
                 </Link>; })}
               </nav>
               <div className="mt-7 mx-2 rounded-[22px] p-4 bg-gradient-to-br from-fuchsia-500/15 via-violet-500/15 to-cyan-400/10 border border-white/10">
-                <div className="flex items-center gap-2 mb-2"><span className="w-2 h-2 rounded-full bg-emerald-300 shadow-[0_0_0_4px_rgba(110,231,183,.12),0_0_12px_rgba(110,231,183,.55)]"/><span className="text-[10px] uppercase tracking-[0.14em] font-semibold text-white/45">DR1FT läuft</span></div>
-                <p className="font-display font-semibold text-sm leading-snug text-white">Schau dich um. Nicht alles ist so, wie es aussieht.</p>
-                <p className="text-[11px] text-white/45 mt-2 leading-4">Dein Feed verändert sich mit dem, was du tust.</p>
+                <div className="flex items-center gap-2 mb-2"><span className="w-2 h-2 rounded-full bg-emerald-300 shadow-[0_0_0_4px_rgba(110,231,183,.12),0_0_12px_rgba(110,231,183,.55)]"/><span className="text-[10px] uppercase tracking-[0.14em] font-semibold text-white/45">LIVE IN DEINER KLASSE</span></div>
+                <p className="font-display font-semibold text-sm leading-snug text-white">
+                  {liveActivity?.text ?? "Gerade ist es ruhig."}
+                </p>
+                <p className="text-[11px] text-white/45 mt-2 leading-4">
+                  {liveActivity ? formatRelativeTime(liveActivity.createdAt) : "Aber das kann sich jederzeit ändern."}
+                </p>
               </div>
             </div>
             <div className="relative p-3 mt-auto border-t border-white/[.06]">
