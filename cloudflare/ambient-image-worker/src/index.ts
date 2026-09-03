@@ -1,5 +1,9 @@
+interface AiBinding {
+  run(model: string, input: Record<string, unknown>): Promise<{ image?: string }>;
+}
+
 interface Env {
-  AI: Ai;
+  AI: AiBinding;
   AMBIENT_IMAGE_API_KEY?: string;
 }
 
@@ -69,7 +73,7 @@ export default {
 
     let body: ImageRequest;
     try {
-      body = await request.json<ImageRequest>();
+      body = (await request.json()) as ImageRequest;
     } catch {
       return json({ error: "Request body must be valid JSON" }, 400);
     }
