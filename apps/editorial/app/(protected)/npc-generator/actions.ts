@@ -66,25 +66,39 @@ function cleanHandle(value: string) {
 
 export async function generateNpcProfile(formData: FormData) {
   const supabase = supabaseServerClient();
-  const classInstanceId = String(formData.get("classInstanceId") ?? "").trim();
+  const interestKeys = String(formData.get("interestKeys") ?? "")
+    .split(",")
+    .map((v) => v.trim())
+    .filter(Boolean)
+    .slice(0, 3);
   const keywords = String(formData.get("keywords") ?? "").split(",").map((v) => v.trim()).filter(Boolean).slice(0, 12);
   const context = String(formData.get("context") ?? "").trim().slice(0, 3000);
-  if (!classInstanceId) throw new Error("classInstanceId fehlt.");
+  if (interestKeys.length !== 3) throw new Error("Bitte genau 3 Interessen auswählen.");
   if (!keywords.length) throw new Error("Mindestens ein Stichwort fehlt.");
+
+  const { data: catalog, error: catalogError } = await supabase
+    .from("ambient_interests")
+    .select("key, label, category")
+    .in("key", interestKeys);
+  if (catalogError) throw new Error(catalogError.message);
+  if ((catalog ?? []).length !== 3) throw new Error("Mindestens ein ausgewähltes Interesse ist nicht mehr verfügbar.");
+  const selectedInterests = interestKeys.map((key) => catalog?.find((interest) => interest.key === key)).filter(Boolean) as { key: string; label: string; category: string }[];
 
   const key = requireKey();
   const result = await gemini(key, `Du bist die NPC-Engine von DR1FT. Erzeuge einen glaubwürdigen fiktionalen Jugendlichen für eine schulische Social-Media-Simulation.
 
 STICHWORTE: ${keywords.join(", ")}
+AUSGEWÄHLTE INTERESSEN: ${selectedInterests.map((interest) => `${interest.label} [${interest.key}]`).join(", ")}
 KONTEXT: ${context || "Schulalltag, Freundeskreis und digitaler Feed"}
 
 WICHTIG:
+- Die drei ausgewählten Interessen sind die kanonischen Interessen der Figur. Baue Persönlichkeit und Feed-Verhalten sichtbar darum herum.
 - Keine Karikatur und keine stereotype Teenager-Sprache.
 - Keine reale Person nachahmen.
 - Keine sexualisierten, medizinischen oder gefährlichen Inhalte.
 - Die Figur soll Widersprüche, Vorlieben, Unsicherheiten, soziale Bedürfnisse und Grenzen haben.
 - Die Persönlichkeit ist eine Ausgangslage, keine feste Schublade. Sie darf sich später durch Erlebnisse verändern.
-- Interessen und Sprachstil müssen aus Stichworten und Kontext entstehen.
+- Gib bei interests die drei ausgewählten Interessen als Bezeichnungen wieder; die kanonischen Schlüssel werden separat gespeichert.
 - Gib nur valides JSON zurück.`, NPC_SCHEMA);
 
   const { data: npc, error } = await supabase.from("npc_profiles").insert({
@@ -95,20 +109,22 @@ WICHTIG:
     context,
     persona: result.persona ?? {},
     voice: result.voice ?? {},
-    interests: Array.isArray(result.interests) ? result.interests.slice(0, 12) : [],
+    interests: selectedInterests.map((interest) => interest.label),
+    interest_keys: interestKeys,
   }).select("*").single();
   if (error) throw new Error(error.message);
 
-  const { error: instanceError } = await supabase.from("npc_instance_profiles").insert({
+  await supabase.from("npc_generation_runs").insert({
+    class_instance_id: null,
     npc_id: npc.id,
-    class_instance_id: classInstanceId,
-    current_state: { mood: "neutral", energy: 0.5, openness: 0.5, confidence: 0.5, reflection: 0.5 },
-    relationship_state: {},
-    activity_state: { posts: 0, comments: 0, likes: 0 },
+    generation_type: "profile",
+    keywords,
+    context,
+    provider: "gemini",
+    model: "gemini-3.7-flash",
+    status: "draft",
+    output: { ...result, selectedInterestKeys: interestKeys },
   });
-  if (instanceError) throw new Error(instanceError.message);
-
-  await supabase.from("npc_generation_runs").insert({ class_instance_id: classInstanceId, npc_id: npc.id, generation_type: "profile", keywords, context, provider: "gemini", model: "gemini-3.7-flash", status: "draft", output: result });
   revalidatePath("/npc-generator");
   return npc.id;
 }
@@ -130,6 +146,7 @@ NAME: ${npc.display_name}
 ALTER: ${npc.age}
 STICHWORTE: ${(npc.keywords ?? []).join(", ")}
 INTERESSEN: ${(npc.interests ?? []).join(", ")}
+INTERESSEN-SCHLÜSSEL: ${(npc.interest_keys ?? []).join(", ")}
 PERSONA: ${JSON.stringify(npc.persona)}
 STIMME: ${JSON.stringify(npc.voice)}
 INSTANZKONTEXT: ${npc.context}
@@ -163,6 +180,8 @@ export async function generateNpcReaction(formData: FormData) {
   const result = await gemini(key, `Entscheide, wie dieser NPC auf einen Social-Media-Beitrag eines anderen Schülers reagieren würde.
 NPC: ${npc.display_name}, ${npc.age} Jahre
 KEYWORDS: ${(npc.keywords ?? []).join(", ")}
+INTERESSEN: ${(npc.interests ?? []).join(", ")}
+INTERESSEN-SCHLÜSSEL: ${(npc.interest_keys ?? []).join(", ")}
 PERSONA: ${JSON.stringify(npc.persona)}
 STIMME: ${JSON.stringify(npc.voice)}
 AKTUELLER ZUSTAND: ${JSON.stringify(runtime.current_state)}
