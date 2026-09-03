@@ -5,8 +5,8 @@ import { useMemo, useState } from "react";
 
 type Interest = { key: string; label: string; emoji: string | null; category: string };
 
-export function NpcInterestSelector({ interests }: { interests: Interest[] }) {
-  const [selected, setSelected] = useState<string[]>([]);
+export function NpcInterestSelector({ interests, initialSelected = [] }: { interests: Interest[]; initialSelected?: string[] }) {
+  const [selected, setSelected] = useState<string[]>(initialSelected.slice(0, 3));
   const grouped = useMemo(
     () => interests.reduce<Record<string, Interest[]>>((groups, interest) => {
       (groups[interest.category] ??= []).push(interest);
