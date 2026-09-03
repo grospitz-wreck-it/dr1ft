@@ -10,20 +10,29 @@ export async function POST(request: Request, { params }: { params: { contentId: 
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return NextResponse.json({ error: "Nicht angemeldet." }, { status: 401 });
 
+  const { data: classInstanceId, error: instanceError } = await supabase.rpc("get_current_class_instance_id");
+  if (instanceError || !classInstanceId) {
+    return NextResponse.json({ error: "Keine aktive Klasseninstanz gefunden." }, { status: 403 });
+  }
+
   const { data: content } = await supabase
     .from("content_items")
-    .select("id,class_instance_id,status,type")
+    .select("id,class_instance_id,status,type,scenario_id")
     .eq("id", params.contentId)
     .maybeSingle();
 
-  if (!content?.class_instance_id || content.status !== "live" || content.type !== "post") {
+  if (!content || content.status !== "live" || content.type !== "post") {
     return NextResponse.json({ error: "Beitrag nicht verfügbar." }, { status: 404 });
+  }
+
+  if (content.class_instance_id && content.class_instance_id !== classInstanceId) {
+    return NextResponse.json({ error: "Kein Zugriff auf diesen Beitrag." }, { status: 403 });
   }
 
   const { data: membership } = await supabase
     .from("class_instance_memberships")
     .select("id")
-    .eq("class_instance_id", content.class_instance_id)
+    .eq("class_instance_id", classInstanceId)
     .eq("user_id", user.id)
     .is("left_at", null)
     .maybeSingle();
@@ -47,10 +56,10 @@ export async function POST(request: Request, { params }: { params: { contentId: 
     .from("content_items")
     .insert({
       type: "comment",
-      scenario_id: null,
+      scenario_id: content.scenario_id,
       creator_id: null,
       parent_id: content.id,
-      class_instance_id: content.class_instance_id,
+      class_instance_id: classInstanceId,
       body: text,
       status: "live",
       manipulation_techniques: [],
@@ -68,7 +77,7 @@ export async function POST(request: Request, { params }: { params: { contentId: 
     user_id: user.id,
     content_item_id: content.id,
     interaction_type: "comment",
-    class_instance_id: content.class_instance_id,
+    class_instance_id: classInstanceId,
     metadata: { commentId: comment.id },
   });
 
