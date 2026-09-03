@@ -6,6 +6,7 @@ import { supabaseServerClient } from "../../../lib/supabaseServerClient";
 const ACTOR_TYPES = ["person", "creator", "news_outlet", "brand", "company", "organization", "community", "bot"] as const;
 type ActorType = (typeof ACTOR_TYPES)[number];
 function cleanHandle(value: string) { return value.toLowerCase().replace(/[^a-z0-9_]/g, "").slice(0, 24) || "actor"; }
+function list(value: FormDataEntryValue | null, max: number) { return String(value ?? "").split(",").map(v => v.trim()).filter(Boolean).slice(0, max); }
 
 export async function updateNpcProfile(formData: FormData) {
   const supabase = supabaseServerClient();
@@ -15,9 +16,9 @@ export async function updateNpcProfile(formData: FormData) {
   const actorType = String(formData.get("actorType") ?? "person") as ActorType;
   const ageRaw = String(formData.get("age") ?? "").trim();
   const age = ageRaw ? Math.min(99, Math.max(12, Number(ageRaw) || 14)) : null;
-  const interestKeys = String(formData.get("interestKeys") ?? "").split(",").map(v => v.trim()).filter(Boolean).slice(0, 3);
-  const moduleIds = String(formData.get("moduleIds") ?? "").split(",").map(v => v.trim()).filter(Boolean).slice(0, 20);
-  const keywords = String(formData.get("keywords") ?? "").split(",").map(v => v.trim()).filter(Boolean).slice(0, 12);
+  const interestKeys = list(formData.get("interestKeys"), 3);
+  const moduleIds = list(formData.get("moduleIds"), 20);
+  const keywords = list(formData.get("keywords"), 12);
   const context = String(formData.get("context") ?? "").trim().slice(0, 3000);
 
   if (!id) throw new Error("Akteur-ID fehlt.");
@@ -36,7 +37,7 @@ export async function updateNpcProfile(formData: FormData) {
   if ((interests ?? []).length !== 3) throw new Error("Mindestens ein ausgewähltes Interesse ist nicht mehr verfügbar.");
   if ((modules ?? []).length !== moduleIds.length) throw new Error("Mindestens ein ausgewähltes Modul ist nicht verfügbar.");
 
-  const { error } = await supabase.from("npc_profiles").update({
+  const { error } = await supabase.from("actor_profiles").update({
     display_name: displayName,
     handle,
     actor_type: actorType,
@@ -49,9 +50,9 @@ export async function updateNpcProfile(formData: FormData) {
   }).eq("id", id);
   if (error) throw new Error(error.message);
 
-  const { error: deleteError } = await supabase.from("npc_module_assignments").delete().eq("npc_id", id);
+  const { error: deleteError } = await supabase.from("npc_module_assignments").delete().eq("actor_id", id);
   if (deleteError) throw new Error(deleteError.message);
-  const { error: assignmentError } = await supabase.from("npc_module_assignments").insert(moduleIds.map(scenario_id => ({ npc_id: id, scenario_id })));
+  const { error: assignmentError } = await supabase.from("npc_module_assignments").insert(moduleIds.map(scenario_id => ({ actor_id: id, npc_id: id, scenario_id })));
   if (assignmentError) throw new Error(assignmentError.message);
 
   revalidatePath("/npc-generator");
