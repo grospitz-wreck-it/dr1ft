@@ -7,8 +7,10 @@ import { FeedClient } from "./FeedClient";
 export default async function FeedPage() {
   const supabase = supabaseServerClient();
   const { data: { user } } = await supabase.auth.getUser();
+  console.log("[DR1FT feed diagnostic] auth", { userId: user?.id ?? null });
   if (!user) return <main className="min-h-screen flex items-center justify-center text-ash font-body">Bitte einloggen.</main>;
   const { data: classInstanceId, error: classInstanceError } = await supabase.rpc("get_current_class_instance_id");
+  console.log("[DR1FT feed diagnostic] class instance", { userId: user.id, classInstanceId: classInstanceId ?? null, error: classInstanceError?.message ?? null, code: classInstanceError?.code ?? null });
   if (classInstanceError || !classInstanceId) return <main className="min-h-screen flex items-center justify-center text-ash font-body px-6 text-center">Du bist aktuell keiner DR1FT-Klasse zugeordnet.</main>;
   const { data: assignments } = await supabase.from("class_instance_scenario_assignments").select("scenario_id").eq("class_instance_id", classInstanceId);
   const assignedScenarioIds = [...new Set((assignments ?? []).map((a) => a.scenario_id))];
