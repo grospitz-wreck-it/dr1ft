@@ -8,6 +8,7 @@ import {
   toggleBlockLive,
   toggleModule,
   updateModule,
+  updateModuleBlock,
   updateModuleCompetencies,
 } from "../actions";
 
