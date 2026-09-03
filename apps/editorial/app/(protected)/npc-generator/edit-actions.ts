@@ -4,12 +4,8 @@ import { revalidatePath } from "next/cache";
 import { supabaseServerClient } from "../../../lib/supabaseServerClient";
 
 const ACTOR_TYPES = ["person", "creator", "news_outlet", "brand", "company", "organization", "community", "bot"] as const;
-
 type ActorType = (typeof ACTOR_TYPES)[number];
-
-function cleanHandle(value: string) {
-  return value.toLowerCase().replace(/[^a-z0-9_]/g, "").slice(0, 24) || "actor";
-}
+function cleanHandle(value: string) { return value.toLowerCase().replace(/[^a-z0-9_]/g, "").slice(0, 24) || "actor"; }
 
 export async function updateNpcProfile(formData: FormData) {
   const supabase = supabaseServerClient();
@@ -20,7 +16,7 @@ export async function updateNpcProfile(formData: FormData) {
   const ageRaw = String(formData.get("age") ?? "").trim();
   const age = ageRaw ? Math.min(99, Math.max(12, Number(ageRaw) || 14)) : null;
   const interestKeys = String(formData.get("interestKeys") ?? "").split(",").map(v => v.trim()).filter(Boolean).slice(0, 3);
-  const moduleIds = formData.getAll("moduleIds").map(v => String(v).trim()).filter(Boolean).slice(0, 20);
+  const moduleIds = String(formData.get("moduleIds") ?? "").split(",").map(v => v.trim()).filter(Boolean).slice(0, 20);
   const keywords = String(formData.get("keywords") ?? "").split(",").map(v => v.trim()).filter(Boolean).slice(0, 12);
   const context = String(formData.get("context") ?? "").trim().slice(0, 3000);
 
@@ -32,7 +28,7 @@ export async function updateNpcProfile(formData: FormData) {
   if (!moduleIds.length) throw new Error("Bitte mindestens ein Modul auswählen.");
 
   const [{ data: interests, error: interestError }, { data: modules, error: moduleError }] = await Promise.all([
-    supabase.from("ambient_interests").select("key").in("key", interestKeys),
+    supabase.from("ambient_interests").select("key, label").in("key", interestKeys),
     supabase.from("scenarios").select("id").in("id", moduleIds),
   ]);
   if (interestError) throw new Error(interestError.message);
@@ -47,7 +43,7 @@ export async function updateNpcProfile(formData: FormData) {
     age: actorType === "person" || actorType === "creator" ? age : null,
     keywords,
     context,
-    interests: interestKeys,
+    interests: interestKeys.map(key => interests?.find(i => i.key === key)?.label ?? key),
     interest_keys: interestKeys,
     updated_at: new Date().toISOString(),
   }).eq("id", id);
@@ -55,7 +51,6 @@ export async function updateNpcProfile(formData: FormData) {
 
   const { error: deleteError } = await supabase.from("npc_module_assignments").delete().eq("npc_id", id);
   if (deleteError) throw new Error(deleteError.message);
-
   const { error: assignmentError } = await supabase.from("npc_module_assignments").insert(moduleIds.map(scenario_id => ({ npc_id: id, scenario_id })));
   if (assignmentError) throw new Error(assignmentError.message);
 
