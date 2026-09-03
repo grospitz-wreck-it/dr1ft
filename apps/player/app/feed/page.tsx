@@ -7,13 +7,38 @@ import { FeedClient } from "./FeedClient";
 export default async function FeedPage() {
   const supabase = supabaseServerClient();
   const { data: { user } } = await supabase.auth.getUser();
-  console.log("[DR1FT feed diagnostic] auth", { userId: user?.id ?? null });
   if (!user) return <main className="min-h-screen flex items-center justify-center text-ash font-body">Bitte einloggen.</main>;
   const { data: classInstanceId, error: classInstanceError } = await supabase.rpc("get_current_class_instance_id");
-  console.log("[DR1FT feed diagnostic] class instance", { userId: user.id, classInstanceId: classInstanceId ?? null, error: classInstanceError?.message ?? null, code: classInstanceError?.code ?? null });
-  if (classInstanceError || !classInstanceId) return <main className="min-h-screen flex items-center justify-center text-ash font-body px-6 text-center">Du bist aktuell keiner DR1FT-Klasse zugeordnet.</main>;
-  const { data: assignments } = await supabase.from("class_instance_scenario_assignments").select("scenario_id").eq("class_instance_id", classInstanceId);
-  const assignedScenarioIds = [...new Set((assignments ?? []).map((a) => a.scenario_id))];
+  const { data: assignments, error: assignmentsError } = classInstanceId
+    ? await supabase.from("class_instance_scenario_assignments").select("scenario_id").eq("class_instance_id", classInstanceId)
+    : { data: [], error: null };
+  const scenarioIds = [...new Set((assignments ?? []).map((a) => a.scenario_id))];
+  const scenarioFilter = scenarioIds.length > 0 ? `scenario_id.in.(${scenarioIds.join(",")}),scenario_id.is.null` : "scenario_id.is.null";
+  const { data: pool, error: poolError } = classInstanceId
+    ? await supabase.from("content_items").select("*, creators(id, display_name, handle, avatar_url)").eq("status", "live").eq("type", "post").or(scenarioFilter).or(`class_instance_id.eq.${classInstanceId},class_instance_id.is.null`)
+    : { data: [], error: null };
+
+  if (classInstanceError || !classInstanceId || assignmentsError || poolError) {
+    return (
+      <main className="min-h-screen flex items-center justify-center bg-[#080610] text-ash font-body px-6">
+        <div className="w-full max-w-xl rounded-2xl border border-white/10 bg-white/[0.04] p-6 space-y-4">
+          <h1 className="text-xl font-semibold text-white">DR1FT Feed – Diagnose</h1>
+          <dl className="space-y-2 text-sm">
+            <div><dt className="text-white/50">User-ID</dt><dd className="font-mono text-white break-all">{user.id}</dd></div>
+            <div><dt className="text-white/50">Class Instance</dt><dd className="font-mono text-white break-all">{classInstanceId ?? "NULL"}</dd></div>
+            <div><dt className="text-white/50">RPC-Fehler</dt><dd className="font-mono text-white break-all">{classInstanceError ? `${classInstanceError.code ?? ""} ${classInstanceError.message}` : "—"}</dd></div>
+            <div><dt className="text-white/50">Szenario-Zuweisungen</dt><dd className="text-white">{scenarioIds.length}</dd></div>
+            <div><dt className="text-white/50">Assignments-Fehler</dt><dd className="font-mono text-white break-all">{assignmentsError ? `${assignmentsError.code ?? ""} ${assignmentsError.message}` : "—"}</dd></div>
+            <div><dt className="text-white/50">Feed-Posts</dt><dd className="text-white">{pool?.length ?? 0}</dd></div>
+            <div><dt className="text-white/50">Feed-Fehler</dt><dd className="font-mono text-white break-all">{poolError ? `${poolError.code ?? ""} ${poolError.message}` : "—"}</dd></div>
+          </dl>
+          <p className="text-xs text-white/40">Temporäre Diagnose – wird nach der Fehleranalyse entfernt.</p>
+        </div>
+      </main>
+    );
+  }
+
+  const assignedScenarioIds = scenarioIds;
   const { data: competencyProgress } = await supabase.from("user_competency_progress").select("*").eq("user_id", user.id).eq("class_instance_id", classInstanceId);
   const { data: allCompetencies } = await supabase.from("competencies").select("id, title");
   const progressByCompetency = new Map((competencyProgress ?? []).map((c) => [c.competency_id, c.level]));
@@ -25,8 +50,6 @@ export default async function FeedPage() {
   const interestKeys = Array.isArray(ambientPreferences?.interest_keys) ? ambientPreferences.interest_keys.filter((key): key is string => typeof key === "string").slice(0, 3) : [];
   const { data: recentInteractions } = await supabase.from("user_interactions").select("content_item_id, interaction_type").eq("user_id", user.id).eq("class_instance_id", classInstanceId).order("created_at", { ascending: false }).limit(200);
   const recentlySeenContentIds = (recentInteractions ?? []).filter((i) => i.interaction_type === "view").map((i) => i.content_item_id);
-  const scenarioFilter = assignedScenarioIds.length > 0 ? `scenario_id.in.(${assignedScenarioIds.join(",")}),scenario_id.is.null` : "scenario_id.is.null";
-  const { data: pool } = await supabase.from("content_items").select("*, creators(id, display_name, handle, avatar_url)").eq("status", "live").eq("type", "post").or(scenarioFilter).or(`class_instance_id.eq.${classInstanceId},class_instance_id.is.null`);
   const contentIds = (pool ?? []).map((row: any) => row.id);
   const { data: instanceLikes } = contentIds.length ? await supabase.from("user_interactions").select("content_item_id, user_id").eq("class_instance_id", classInstanceId).eq("interaction_type", "like").in("content_item_id", contentIds) : { data: [] as { content_item_id: string; user_id: string }[] };
   const { data: npcLikes } = contentIds.length ? await supabase.from("npc_social_interactions").select("content_item_id").eq("class_instance_id", classInstanceId).eq("interaction_type", "like").in("content_item_id", contentIds) : { data: [] as { content_item_id: string }[] };
