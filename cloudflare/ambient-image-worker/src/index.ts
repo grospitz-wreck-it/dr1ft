@@ -9,7 +9,6 @@ interface Env {
 
 interface ImageRequest {
   prompt?: unknown;
-  seed?: unknown;
   steps?: unknown;
   aspectRatio?: unknown;
 }
@@ -19,16 +18,13 @@ const MODEL = "@cf/black-forest-labs/flux-1-schnell";
 function json(data: unknown, status = 200): Response {
   return Response.json(data, {
     status,
-    headers: {
-      "Cache-Control": "no-store",
-    },
+    headers: { "Cache-Control": "no-store" },
   });
 }
 
 function authorized(request: Request, env: Env): boolean {
   const expected = env.AMBIENT_IMAGE_API_KEY;
   if (!expected) return false;
-
   const bearer = request.headers.get("authorization");
   const headerKey = request.headers.get("x-dr1ft-image-key");
   return bearer === `Bearer ${expected}` || headerKey === expected;
@@ -63,13 +59,8 @@ export default {
       return json({ ok: true, service: "dr1ft-ambient-image", model: MODEL });
     }
 
-    if (request.method !== "POST") {
-      return json({ error: "Method not allowed" }, 405);
-    }
-
-    if (!authorized(request, env)) {
-      return json({ error: "Unauthorized" }, 401);
-    }
+    if (request.method !== "POST") return json({ error: "Method not allowed" }, 405);
+    if (!authorized(request, env)) return json({ error: "Unauthorized" }, 401);
 
     let body: ImageRequest;
     try {
@@ -79,21 +70,15 @@ export default {
     }
 
     const rawPrompt = typeof body.prompt === "string" ? body.prompt.trim() : "";
-    if (!rawPrompt) {
-      return json({ error: "prompt is required" }, 400);
-    }
+    if (!rawPrompt) return json({ error: "prompt is required" }, 400);
 
-    const prompt = `${rawPrompt}\n\nImage format: ${aspectLabel(body.aspectRatio)}. Generate a natural, ordinary social-media image. Avoid readable text, logos, celebrities, political messaging and advertising.`.slice(0, 2048);
+    const prompt = `${rawPrompt}\n\nGenerate a natural, ordinary social-media image. Avoid readable text, logos, celebrities, political messaging and advertising.`.slice(0, 2048);
     const steps = toPositiveInt(body.steps, 4, 8);
-    const seedValue = Number(body.seed);
-    const seed = Number.isSafeInteger(seedValue) && seedValue >= 0 ? seedValue : Math.floor(Math.random() * 2147483647);
 
     try {
-      const result = await env.AI.run(MODEL, {
-        prompt,
-        steps,
-        seed,
-      });
+      // FLUX.1 Schnell's Workers AI input schema accepts prompt and steps.
+      // Do not pass seed: Workers AI rejects it for this model/version.
+      const result = await env.AI.run(MODEL, { prompt, steps });
 
       if (!result || typeof result.image !== "string" || !result.image) {
         return json({ error: "Workers AI returned no image" }, 502);
@@ -104,7 +89,6 @@ export default {
         model: MODEL,
         mimeType: "image/jpeg",
         image: result.image,
-        seed,
         steps,
         aspectRatio: aspectLabel(body.aspectRatio),
       });
