@@ -3,7 +3,8 @@
   "private": true,
   "workspaces": [
     "apps/*",
-    "packages/*"
+    "packages/*",
+    "cloudflare/*"
   ],
   "scripts": {
     "player": "yarn workspace @dr1ft/player dev -p 3000",
