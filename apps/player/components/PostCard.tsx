@@ -82,6 +82,12 @@ export function PostCard({
   const [comments, setComments] = useState<FeedItem[] | null>(null);
   const [menuOpen, setMenuOpen] = useState(false);
   const [feedback, setFeedback] = useState<string | null>(null);
+  const [comparison, setComparison] = useState<{
+    source: FeedItem;
+    loading: boolean;
+    selected?: "contradict" | "support";
+    error?: string;
+  } | null>(null);
 
   const baseLikeCount = Number((item.extra as any)?.baseEngagement ?? 0);
   const commentCount = Number((item.extra as any)?.baseCommentCount ?? 0);
@@ -114,13 +120,14 @@ export function PostCard({
       | "compare_information"
       | "share"
       | "report"
-      | "ignore"
+      | "ignore",
+    metadata: Record<string, unknown> = { ui: "generic_card_actions" }
   ) {
     await recordInteraction(supabase, {
       userId,
       contentItemId: item.id,
       interactionType,
-      metadata: { ui: "generic_card_actions" },
+      metadata,
     });
   }
 
@@ -196,8 +203,67 @@ export function PostCard({
   }
 
   async function compareInformation() {
-    await track("compare_information");
-    showFeedback("Die Informationen lassen sich am besten mit einer weiteren Quelle vergleichen.");
+    await track("compare_information", { ui: "generic_card_actions", phase: "open_comparison" });
+
+    const scenarioId = item.scenarioId;
+    if (!scenarioId) {
+      showFeedback("Für diesen Beitrag ist keine weitere Vergleichsinformation hinterlegt.");
+      return;
+    }
+
+    setComparison({ source: item, loading: true });
+
+    const { data, error } = await supabase
+      .from("content_items")
+      .select("*, creators(id, display_name, handle, avatar_url)")
+      .eq("scenario_id", scenarioId)
+      .eq("type", "post")
+      .eq("status", "live");
+
+    if (error) {
+      setComparison({ source: item, loading: false, error: "Die Vergleichsinformation konnte nicht geladen werden." });
+      return;
+    }
+
+    const related = (data ?? []).find((row: any) => {
+      const relation = row.extra?.relation;
+      return relation?.type === "corroborates" && relation?.relatedContentId === item.id;
+    });
+
+    if (!related) {
+      setComparison({ source: item, loading: false, error: "Für diesen Beitrag ist keine weitere Vergleichsinformation hinterlegt." });
+      return;
+    }
+
+    setComparison({
+      source: item,
+      loading: false,
+      selected: undefined,
+      ...(related ? { source: { ...item, creator: item.creator } } : {}),
+    });
+    (window as any).__dr1ftComparisonSource = {
+      id: related.id,
+      item: {
+        ...related,
+        creator: mapCreatorRow(related.creators),
+      } as FeedItem,
+    };
+  }
+
+  async function chooseComparison(result: "contradict" | "support") {
+    const related = (window as any).__dr1ftComparisonSource?.item as FeedItem | undefined;
+    setComparison((current) => current ? { ...current, selected: result } : current);
+    await track("compare_information", {
+      ui: "comparison_experience",
+      phase: "decision",
+      result,
+      comparedContentItemId: related?.id ?? null,
+    });
+  }
+
+  function closeComparison() {
+    setComparison(null);
+    try { delete (window as any).__dr1ftComparisonSource; } catch {}
   }
 
   async function share() {
@@ -218,7 +284,11 @@ export function PostCard({
     setMenuOpen(false);
   }
 
-  return (
+  const comparisonSource = comparison && !comparison.loading
+    ? ((window as any).__dr1ftComparisonSource?.item as FeedItem | undefined)
+    : undefined;
+
+  return <>
     <article ref={ref} className="relative bg-paper text-ink rounded-card overflow-visible shadow-sm">
       <div className="p-4 pb-0">
         <AuthorRow creator={item.creator} />
@@ -309,7 +379,69 @@ export function PostCard({
         )}
       </div>
     </article>
-  );
+
+    {comparison && (
+      <div className="fixed inset-0 z-50 flex items-center justify-center bg-ink/50 p-4" role="dialog" aria-modal="true" aria-label="Informationen vergleichen">
+        <div className="w-full max-w-2xl rounded-2xl bg-paper shadow-2xl overflow-hidden">
+          <div className="flex items-center justify-between px-5 py-4 border-b border-ink/10">
+            <div>
+              <p className="font-mono text-[10px] uppercase tracking-wider text-ink/40">Informationen vergleichen</p>
+              <h2 className="font-display text-xl mt-1">Schau dir beide Aussagen an.</h2>
+            </div>
+            <button onClick={closeComparison} className="touch-target rounded-lg text-ink/50 hover:bg-ink/5" aria-label="Vergleich schließen"><X className="w-5 h-5" /></button>
+          </div>
+
+          {comparison.loading && <div className="p-8 text-sm text-ink/50">Eine weitere Information wird geladen …</div>}
+
+          {!comparison.loading && comparison.error && <div className="p-8 text-sm text-ink/50">{comparison.error}</div>}
+
+          {!comparison.loading && !comparison.error && comparisonSource && (
+            <div className="p-5">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="rounded-xl border border-ink/10 bg-ink/[0.025] p-4">
+                  <p className="font-mono text-[10px] uppercase tracking-wider text-ink/40 mb-3">Aussage 1</p>
+                  <AuthorRow creator={item.creator} />
+                  <p className="text-sm leading-relaxed">{item.body}</p>
+                </div>
+                <div className="rounded-xl border border-ink/10 bg-ink/[0.025] p-4">
+                  <p className="font-mono text-[10px] uppercase tracking-wider text-ink/40 mb-3">Aussage 2</p>
+                  <AuthorRow creator={comparisonSource.creator} />
+                  <p className="text-sm leading-relaxed">{comparisonSource.body}</p>
+                </div>
+              </div>
+
+              <div className="mt-5 border-t border-ink/10 pt-5">
+                <p className="text-sm font-medium mb-3">Wie verhalten sich die beiden Aussagen zueinander?</p>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <button
+                    onClick={() => chooseComparison("contradict")}
+                    className={`rounded-xl border px-4 py-3 text-left text-sm transition ${comparison.selected === "contradict" ? "border-ink bg-ink text-paper" : "border-ink/15 hover:bg-ink/5"}`}
+                  >
+                    Sie widersprechen sich.
+                  </button>
+                  <button
+                    onClick={() => chooseComparison("support")}
+                    className={`rounded-xl border px-4 py-3 text-left text-sm transition ${comparison.selected === "support" ? "border-ink bg-ink text-paper" : "border-ink/15 hover:bg-ink/5"}`}
+                  >
+                    Sie stützen dieselbe Aussage.
+                  </button>
+                </div>
+
+                {comparison.selected && (
+                  <div className="mt-4 rounded-xl bg-ink/5 px-4 py-3 text-sm leading-relaxed" role="status">
+                    {comparison.selected === "contradict"
+                      ? "Genau. Die beiden Aussagen widersprechen sich. Das ist ein wichtiger Befund beim Quellenvergleich."
+                      : "Schau noch einmal genau hin: Die beiden Aussagen stehen hier nicht für dieselbe Information."
+                    }
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+        </div>
+      </div>
+    )}
+  </>;
 }
 
 function ActionButton({
