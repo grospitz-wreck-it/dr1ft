@@ -105,15 +105,16 @@ export function PostCard({
     window.setTimeout(() => setFeedback(null), 2800);
   }
 
-  async function track(interactionType:
-    | "inspect_source"
-    | "inspect_media"
-    | "inspect_context"
-    | "inspect_profile"
-    | "compare_information"
-    | "share"
-    | "report"
-    | "ignore"
+  async function track(
+    interactionType:
+      | "inspect_source"
+      | "inspect_media"
+      | "inspect_context"
+      | "inspect_profile"
+      | "compare_information"
+      | "share"
+      | "report"
+      | "ignore"
   ) {
     await recordInteraction(supabase, {
       userId,
@@ -156,11 +157,13 @@ export function PostCard({
 
   async function inspectSource() {
     await track("inspect_source");
-    const namedAuthor = getString(action.expected_observation) || getStringArray(action.expected_observation)[0];
+    const observations = getStringArray(action.expected_observation);
     if (item.sourceRefs?.length) {
       showFeedback(`Quelle: ${item.sourceRefs[0].label}`);
-    } else if (namedAuthor === "no_named_author" || getStringArray(action.expected_observation).includes("no_named_author")) {
+    } else if (observations.includes("no_named_author")) {
       showFeedback("Hier ist keine konkrete Autorin oder kein konkreter Autor genannt.");
+    } else if (observations.includes("no_concrete_source")) {
+      showFeedback("Hier ist keine konkrete Quelle angegeben.");
     } else {
       showFeedback("Die Quelle sieht glaubwürdig aus.");
     }
@@ -199,12 +202,6 @@ export function PostCard({
 
   async function share() {
     await track("share");
-    await recordInteraction(supabase, {
-      userId,
-      contentItemId: item.id,
-      interactionType: "share",
-      metadata: { ui: "generic_card_actions", simulated: true },
-    });
     showFeedback("Beitrag zum Teilen vorgemerkt.");
     setMenuOpen(false);
   }
