@@ -12,24 +12,10 @@ type ActorType = (typeof ACTOR_TYPES)[number];
 async function gemini(apiKey: string, prompt: string, schema: object) {
   const response = await fetch("https://generativelanguage.googleapis.com/v1beta/interactions", { method: "POST", headers: { "Content-Type": "application/json", "x-goog-api-key": apiKey }, body: JSON.stringify({ model: "gemini-3.7-flash", input: prompt, response_format: { type: "text", mime_type: "application/json", schema } }) });
   if (!response.ok) throw new Error(`Gemini API Fehler: ${await response.text()}`);
-
   const data = await response.json();
-  const raw = (
-    data.output_text ??
-    data.output?.find?.((part: any) => part.type === "text")?.text ??
-    data.steps?.slice?.().reverse?.().find?.((step: any) => step.type === "model_output")?.content?.find?.((part: any) => part.type === "text")?.text ??
-    ""
-  ).trim();
-
-  if (!raw) {
-    throw new Error(`Gemini hat keine Textausgabe geliefert (Status: ${data.status ?? "unbekannt"}).`);
-  }
-
-  try {
-    return JSON.parse(raw);
-  } catch {
-    throw new Error(`Gemini hat kein gültiges JSON geliefert: ${raw.slice(0, 500)}`);
-  }
+  const raw = (data.output_text ?? data.output?.find?.((part: any) => part.type === "text")?.text ?? data.steps?.slice?.().reverse?.().find?.((step: any) => step.type === "model_output")?.content?.find?.((part: any) => part.type === "text")?.text ?? "").trim();
+  if (!raw) throw new Error(`Gemini hat keine Textausgabe geliefert (Status: ${data.status ?? "unbekannt"}).`);
+  try { return JSON.parse(raw); } catch { throw new Error(`Gemini hat kein gültiges JSON geliefert: ${raw.slice(0, 500)}`); }
 }
 function requireKey() { const key = process.env.GEMINI_API_KEY; if (!key) throw new Error("GEMINI_API_KEY ist nicht gesetzt."); return key; }
 function cleanHandle(value: string) { const base = value.toLowerCase().replace(/[^a-z0-9_]/g, "").slice(0, 24) || "actor"; return `${base}_${crypto.randomUUID().slice(0, 6)}`; }
@@ -39,23 +25,18 @@ export async function generateNpcProfile(formData: FormData) {
   const actorType = String(formData.get("actorType") ?? "person") as ActorType;
   if (!ACTOR_TYPES.includes(actorType)) throw new Error("Ungültiger Akteur-Typ.");
   const interestKeys = String(formData.get("interestKeys") ?? "").split(",").map(v => v.trim()).filter(Boolean).slice(0, 3);
-  const moduleIds = formData.getAll("moduleIds").map(v => String(v).trim()).filter(Boolean).slice(0, 20);
+  const moduleIds = String(formData.get("moduleIds") ?? "").split(",").map(v => v.trim()).filter(Boolean).slice(0, 20);
   const keywords = String(formData.get("keywords") ?? "").split(",").map(v => v.trim()).filter(Boolean).slice(0, 12);
   const context = String(formData.get("context") ?? "").trim().slice(0, 3000);
   if (interestKeys.length !== 3) throw new Error("Bitte genau 3 Interessen auswählen.");
   if (!keywords.length) throw new Error("Mindestens ein Stichwort fehlt.");
   if (!moduleIds.length) throw new Error("Bitte mindestens ein Modul auswählen.");
-
-  const [{ data: catalog, error: catalogError }, { data: modules, error: moduleError }] = await Promise.all([
-    supabase.from("ambient_interests").select("key, label, category").in("key", interestKeys),
-    supabase.from("scenarios").select("id, title").in("id", moduleIds),
-  ]);
+  const [{ data: catalog, error: catalogError }, { data: modules, error: moduleError }] = await Promise.all([supabase.from("ambient_interests").select("key, label, category").in("key", interestKeys), supabase.from("scenarios").select("id, title").in("id", moduleIds)]);
   if (catalogError) throw new Error(catalogError.message); if (moduleError) throw new Error(moduleError.message);
   if ((catalog ?? []).length !== 3) throw new Error("Mindestens ein ausgewähltes Interesse ist nicht mehr verfügbar.");
   if ((modules ?? []).length !== moduleIds.length) throw new Error("Mindestens ein ausgewähltes Modul ist nicht verfügbar.");
   const selectedInterests = interestKeys.map(key => catalog?.find(i => i.key === key)).filter(Boolean) as { key: string; label: string; category: string }[];
   const selectedModules = moduleIds.map(id => modules?.find(m => m.id === id)).filter(Boolean) as { id: string; title: string }[];
-
   const key = requireKey();
   const result = await gemini(key, `Du bist die Akteur-Engine von DR1FT. Erzeuge einen glaubwürdigen fiktionalen Akteur für eine schulische Social-Media-Simulation.
 
@@ -74,7 +55,6 @@ WICHTIG:
 - Der Akteur darf Widersprüche, Ziele, Grenzen und veränderbare Zustände besitzen.
 - Gib bei interests die drei ausgewählten Interessen als Bezeichnungen wieder.
 - Gib nur valides JSON zurück.`, NPC_SCHEMA);
-
   const { data: npc, error } = await supabase.from("npc_profiles").insert({ display_name: result.displayName, handle: cleanHandle(result.handle), age: actorType === "person" || actorType === "creator" ? Math.min(18, Math.max(12, Number(result.age) || 14)) : null, actor_type: actorType, keywords, context, persona: result.persona ?? {}, voice: result.voice ?? {}, interests: selectedInterests.map(i => i.label), interest_keys: interestKeys }).select("*").single();
   if (error) throw new Error(error.message);
   const { error: assignmentError } = await supabase.from("npc_module_assignments").insert(selectedModules.map(module => ({ npc_id: npc.id, scenario_id: module.id })));
