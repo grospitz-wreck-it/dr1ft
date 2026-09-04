@@ -110,22 +110,128 @@ async function generateImage(prompt: string, aspectRatio: string, index: number)
   }
 }
 
+function parseGeneratedItems(raw: unknown): any[] {
+  if (Array.isArray(raw)) return raw;
+  if (raw && typeof raw === "object" && Array.isArray((raw as any).items)) {
+    return (raw as any).items;
+  }
+
+  if (typeof raw !== "string") return [];
+
+  let text = raw.trim();
+
+  // Markdown-Codeblock entfernen, falls das Modell ihn trotz Vorgabe liefert.
+  text = text.replace(/^```(?:json)?\\s*/i, "").replace(/\\s*```$/i, "").trim();
+
+  try {
+    const parsed = JSON.parse(text);
+    if (Array.isArray(parsed)) return parsed;
+    if (parsed && Array.isArray(parsed.items)) return parsed.items;
+  } catch {
+    // Fallback: erstes JSON-Array aus zusätzlichem Modelltext extrahieren.
+    const start = text.indexOf("[");
+    const end = text.lastIndexOf("]");
+    if (start >= 0 && end > start) {
+      try {
+        const parsed = JSON.parse(text.slice(start, end + 1));
+        if (Array.isArray(parsed)) return parsed;
+      } catch {
+        // Weiter zum normalen Fehlerpfad.
+      }
+    }
+  }
+
+  return [];
+}
+
 async function generateGeminiText(apiKey: string, prompt: string) {
   const models = ["gemini-3.7-flash", "gemini-3.6-flash", "gemini-3.5-flash-lite"];
   let lastError = "Unbekannter Gemini-Fehler";
+
   for (const model of models) {
-    const response = await fetch("https://generativelanguage.googleapis.com/v1beta/interactions", { method: "POST", headers: { "Content-Type": "application/json", "x-goog-api-key": apiKey }, body: JSON.stringify({ model, input: prompt, response_format: { type: "text", mime_type: "application/json", schema: AMBIENT_ITEM_SCHEMA } }) });
+    const response = await fetch(
+      "https://generativelanguage.googleapis.com/v1beta/interactions",
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "x-goog-api-key": apiKey,
+        },
+        body: JSON.stringify({
+          model,
+          input: prompt,
+          response_format: {
+            type: "text",
+            mime_type: "application/json",
+            schema: AMBIENT_ITEM_SCHEMA,
+          },
+        }),
+      },
+    );
+
     if (response.ok) {
       const data = await response.json();
-      const raw = (data.output_text ?? data.output?.find?.((part: any) => part.type === "text")?.text ?? "[]").trim();
-      return JSON.parse(raw);
+      const raw =
+        data.output_text ??
+        data.output?.find?.((part: any) => part.type === "text")?.text ??
+        "";
+
+      const items = parseGeneratedItems(raw);
+
+      if (items.length) return items;
+
+      lastError = `Gemini ${model} lieferte kein gültiges Item-Array.`;
+      continue;
     }
+
     const errorText = await response.text();
     lastError = errorText;
-    const retryable = response.status === 429 || response.status >= 500 || /high demand|temporar|overload|capacity|unavailable/i.test(errorText);
+
+    const retryable =
+      response.status === 429 ||
+      response.status >= 500 ||
+      /high demand|temporar|overload|capacity|unavailable/i.test(errorText);
+
     if (!retryable) break;
   }
+
   throw new Error(`Gemini API Fehler: ${lastError}`);
+}
+
+async function generateClaudeText(apiKey: string, prompt: string) {
+  const response = await fetch("https://api.anthropic.com/v1/messages", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      "x-api-key": apiKey,
+      "anthropic-version": "2023-06-01",
+    },
+    body: JSON.stringify({
+      model: "claude-haiku-4-5-20251001",
+      max_tokens: 12000,
+      system: CORE_PROMPT,
+      messages: [
+        {
+          role: "user",
+          content: prompt,
+        },
+      ],
+    }),
+  });
+
+  if (!response.ok) {
+    throw new Error(`Anthropic API Fehler: ${await response.text()}`);
+  }
+
+  const data = await response.json();
+  const raw = data.content?.[0]?.text ?? "";
+  const items = parseGeneratedItems(raw);
+
+  if (!items.length) {
+    throw new Error("Claude lieferte kein gültiges Item-Array.");
+  }
+
+  return items;
 }
 
 function pickImageIndexes(count: number, ratio: number, mode: string, items: any[]) {
@@ -170,14 +276,43 @@ export async function generateAmbientDrafts(formData: FormData) {
   const prompt = `${CORE_PROMPT}\n\n${languageLibrary}\n\nGENERATION PROFILE\n- Zielgruppe: ${ageText}\n- Thema: ${theme}\n- Interessen: ${interests.length ? interests.join(", ") : "frei wählen"}\n- Schreibstil: ${styleText}\n- Tippfehler-Level: ${typoLevel}/3\n- Jugendsprache-Level: ${slangLevel}/3\n- Emoji-Level: ${emojiLevel}/3\n- Gewünschter Bildanteil: ${imageRatio}%\n- Bildstrategie: ${imageMode}\n- Heute: ${dateText}\n- Creator: ${creatorVoice?.display_name ?? "wechselnde Ambient-Accounts"}\n- Persona: ${JSON.stringify(creatorVoice?.persona ?? {})}\n- Profilhinweise: ${JSON.stringify(profile?.prompt_rules ?? {})}\n\nAUTHENTICITY CHECK\n- Mindestens einige Posts komplett normal und unspektakulär.\n- Slang nur kontextgerecht.\n- Tippfehler selten und plausibel.\n- Aktuelle Trendwörter nicht gleichmäßig verteilen.\n- Keine Wiederholungen oder Emoji-Schablonen.\n- Kein Erwachsener, der Teenager imitiert.\n- Unterschiede zwischen Stimmen und Altersgruppen müssen erkennbar sein.\n\nErzeuge ${count} Items. Jedes Objekt exakt:\n{ "body": string, "format": "status" | "question" | "story" | "observation" | "reply" | "caption" | "poll_idea" | "moment", "mood": string, "topic": string, "creatorVibe": string, "needsImage": boolean, "imagePrompt": string }`;
 
   let items: any[] = [];
+
   if (provider === "claude") {
-    const response = await fetch("https://api.anthropic.com/v1/messages", { method: "POST", headers: { "Content-Type": "application/json", "x-api-key": apiKey, "anthropic-version": "2023-06-01" }, body: JSON.stringify({ model: "claude-haiku-4-5-20251001", max_tokens: Math.min(12000, 900 * count), system: CORE_PROMPT, messages: [{ role: "user", content: prompt }] }) });
-    if (!response.ok) throw new Error(`Anthropic API Fehler: ${await response.text()}`);
-    items = JSON.parse((await response.json()).content?.[0]?.text?.trim() ?? "[]");
+    items = await generateClaudeText(apiKey, prompt);
   } else {
-    items = await generateGeminiText(apiKey, prompt);
+    try {
+      items = await generateGeminiText(apiKey, prompt);
+    } catch (geminiError) {
+      const geminiMessage =
+        geminiError instanceof Error
+          ? geminiError.message
+          : "Unbekannter Gemini-Fehler";
+
+      const claudeKey = process.env.ANTHROPIC_API_KEY;
+      if (!claudeKey) {
+        throw new Error(
+          `Gemini-Textgenerierung fehlgeschlagen: ${geminiMessage}`,
+        );
+      }
+
+      try {
+        items = await generateClaudeText(claudeKey, prompt);
+      } catch (claudeError) {
+        const claudeMessage =
+          claudeError instanceof Error
+            ? claudeError.message
+            : "Unbekannter Claude-Fehler";
+
+        throw new Error(
+          `Textgenerierung fehlgeschlagen. Gemini: ${geminiMessage}. Claude-Fallback: ${claudeMessage}`,
+        );
+      }
+    }
   }
-  if (!Array.isArray(items) || !items.length) throw new Error("Keine Ambient-Items generiert.");
+
+  if (!Array.isArray(items) || !items.length) {
+    throw new Error("Keine gültigen Ambient-Items generiert.");
+  }
 
   const imageIndexes = pickImageIndexes(items.length, imageRatio, imageMode, items);
   const rows = [];
