@@ -194,10 +194,12 @@ async function generateGeminiText(apiKey: string, prompt: string) {
       const raw =
         data.output_text ??
         data.output?.find?.((part: any) => part.type === "text")?.text ??
-        data.steps?.flatMap?.((step: any) =>
-          step.output?.filter?.((part: any) => part.type === "text") ?? []
-        )?.map?.((part: any) => part.text)?.join?.("") ??
-        data.steps?.find?.((step: any) => typeof step.text === "string")?.text ??
+        data.steps
+          ?.filter?.((step: any) => step.type === "model_output")
+          ?.flatMap?.((step: any) => step.content ?? [])
+          ?.filter?.((part: any) => part.type === "text")
+          ?.map?.((part: any) => part.text)
+          ?.join?.("") ??
         "";
 
       const items = parseGeneratedItems(raw);
