@@ -43,20 +43,26 @@ function num(fd: FormData, key: string, fallback: number, min: number, max: numb
 function text(fd: FormData, key: string, fallback: string) { return String(fd.get(key) ?? fallback).trim(); }
 
 const AMBIENT_ITEM_SCHEMA = {
-  type: "array",
-  items: {
-    type: "object",
-    properties: {
-      body: { type: "string" },
-      format: { type: "string", enum: ["status", "question", "story", "observation", "reply", "caption", "poll_idea", "moment"] },
-      mood: { type: "string" },
-      topic: { type: "string" },
-      creatorVibe: { type: "string" },
-      needsImage: { type: "boolean" },
-      imagePrompt: { type: "string" },
+  type: "object",
+  properties: {
+    items: {
+      type: "array",
+      items: {
+        type: "object",
+        properties: {
+          body: { type: "string" },
+          format: { type: "string", enum: ["status", "question", "story", "observation", "reply", "caption", "poll_idea", "moment"] },
+          mood: { type: "string" },
+          topic: { type: "string" },
+          creatorVibe: { type: "string" },
+          needsImage: { type: "boolean" },
+          imagePrompt: { type: "string" },
+        },
+        required: ["body", "format", "mood", "topic", "creatorVibe", "needsImage", "imagePrompt"],
+      },
     },
-    required: ["body", "format", "mood", "topic", "creatorVibe", "needsImage", "imagePrompt"],
   },
+  required: ["items"],
 };
 
 async function storeAmbientImage(base64: string, mimeType: string, index: number) {
@@ -112,32 +118,45 @@ async function generateImage(prompt: string, aspectRatio: string, index: number)
 
 function parseGeneratedItems(raw: unknown): any[] {
   if (Array.isArray(raw)) return raw;
-  if (raw && typeof raw === "object" && Array.isArray((raw as any).items)) {
-    return (raw as any).items;
+
+  if (raw && typeof raw === "object") {
+    const value = raw as any;
+    if (Array.isArray(value.items)) return value.items;
   }
 
   if (typeof raw !== "string") return [];
 
   let text = raw.trim();
 
-  // Markdown-Codeblock entfernen, falls das Modell ihn trotz Vorgabe liefert.
-  text = text.replace(/^```(?:json)?\\s*/i, "").replace(/\\s*```$/i, "").trim();
+  text = text
+    .replace(/^```(?:json)?\\s*/i, "")
+    .replace(/\\s*```$/i, "")
+    .trim();
 
   try {
     const parsed = JSON.parse(text);
+
     if (Array.isArray(parsed)) return parsed;
     if (parsed && Array.isArray(parsed.items)) return parsed.items;
   } catch {
-    // Fallback: erstes JSON-Array aus zusätzlichem Modelltext extrahieren.
-    const start = text.indexOf("[");
-    const end = text.lastIndexOf("]");
+    const start = text.indexOf("{");
+    const end = text.lastIndexOf("}");
+
     if (start >= 0 && end > start) {
       try {
         const parsed = JSON.parse(text.slice(start, end + 1));
+        if (parsed && Array.isArray(parsed.items)) return parsed.items;
+      } catch {}
+    }
+
+    const arrayStart = text.indexOf("[");
+    const arrayEnd = text.lastIndexOf("]");
+
+    if (arrayStart >= 0 && arrayEnd > arrayStart) {
+      try {
+        const parsed = JSON.parse(text.slice(arrayStart, arrayEnd + 1));
         if (Array.isArray(parsed)) return parsed;
-      } catch {
-        // Weiter zum normalen Fehlerpfad.
-      }
+      } catch {}
     }
   }
 
@@ -145,7 +164,7 @@ function parseGeneratedItems(raw: unknown): any[] {
 }
 
 async function generateGeminiText(apiKey: string, prompt: string) {
-  const models = ["gemini-3.7-flash", "gemini-3.6-flash", "gemini-3.5-flash-lite"];
+  const models = ["gemini-3.5-flash-lite", "gemini-3.6-flash", "gemini-3.5-flash"];
   let lastError = "Unbekannter Gemini-Fehler";
 
   for (const model of models) {
@@ -171,9 +190,14 @@ async function generateGeminiText(apiKey: string, prompt: string) {
 
     if (response.ok) {
       const data = await response.json();
+
       const raw =
         data.output_text ??
         data.output?.find?.((part: any) => part.type === "text")?.text ??
+        data.steps?.flatMap?.((step: any) =>
+          step.output?.filter?.((part: any) => part.type === "text") ?? []
+        )?.map?.((part: any) => part.text)?.join?.("") ??
+        data.steps?.find?.((step: any) => typeof step.text === "string")?.text ??
         "";
 
       const items = parseGeneratedItems(raw);
@@ -273,7 +297,7 @@ export async function generateAmbientDrafts(formData: FormData) {
   const ageText = AGE_BANDS[ageBand] ?? ageBand;
   const styleText = STYLE_LABELS[style] ?? style;
   const dateText = new Intl.DateTimeFormat("de-DE", { dateStyle: "full", timeZone: "Europe/Berlin" }).format(new Date());
-  const prompt = `${CORE_PROMPT}\n\n${languageLibrary}\n\nGENERATION PROFILE\n- Zielgruppe: ${ageText}\n- Thema: ${theme}\n- Interessen: ${interests.length ? interests.join(", ") : "frei wählen"}\n- Schreibstil: ${styleText}\n- Tippfehler-Level: ${typoLevel}/3\n- Jugendsprache-Level: ${slangLevel}/3\n- Emoji-Level: ${emojiLevel}/3\n- Gewünschter Bildanteil: ${imageRatio}%\n- Bildstrategie: ${imageMode}\n- Heute: ${dateText}\n- Creator: ${creatorVoice?.display_name ?? "wechselnde Ambient-Accounts"}\n- Persona: ${JSON.stringify(creatorVoice?.persona ?? {})}\n- Profilhinweise: ${JSON.stringify(profile?.prompt_rules ?? {})}\n\nAUTHENTICITY CHECK\n- Mindestens einige Posts komplett normal und unspektakulär.\n- Slang nur kontextgerecht.\n- Tippfehler selten und plausibel.\n- Aktuelle Trendwörter nicht gleichmäßig verteilen.\n- Keine Wiederholungen oder Emoji-Schablonen.\n- Kein Erwachsener, der Teenager imitiert.\n- Unterschiede zwischen Stimmen und Altersgruppen müssen erkennbar sein.\n\nErzeuge ${count} Items. Jedes Objekt exakt:\n{ "body": string, "format": "status" | "question" | "story" | "observation" | "reply" | "caption" | "poll_idea" | "moment", "mood": string, "topic": string, "creatorVibe": string, "needsImage": boolean, "imagePrompt": string }`;
+  const prompt = `${CORE_PROMPT}\n\n${languageLibrary}\n\nGENERATION PROFILE\n- Zielgruppe: ${ageText}\n- Thema: ${theme}\n- Interessen: ${interests.length ? interests.join(", ") : "frei wählen"}\n- Schreibstil: ${styleText}\n- Tippfehler-Level: ${typoLevel}/3\n- Jugendsprache-Level: ${slangLevel}/3\n- Emoji-Level: ${emojiLevel}/3\n- Gewünschter Bildanteil: ${imageRatio}%\n- Bildstrategie: ${imageMode}\n- Heute: ${dateText}\n- Creator: ${creatorVoice?.display_name ?? "wechselnde Ambient-Accounts"}\n- Persona: ${JSON.stringify(creatorVoice?.persona ?? {})}\n- Profilhinweise: ${JSON.stringify(profile?.prompt_rules ?? {})}\n\nAUTHENTICITY CHECK\n- Mindestens einige Posts komplett normal und unspektakulär.\n- Slang nur kontextgerecht.\n- Tippfehler selten und plausibel.\n- Aktuelle Trendwörter nicht gleichmäßig verteilen.\n- Keine Wiederholungen oder Emoji-Schablonen.\n- Kein Erwachsener, der Teenager imitiert.\n- Unterschiede zwischen Stimmen und Altersgruppen müssen erkennbar sein.\n\nErzeuge ${count} Items und gib ausschließlich dieses JSON-Objekt zurück:\n{ "items": [{ "body": string, "format": "status" | "question" | "story" | "observation" | "reply" | "caption" | "poll_idea" | "moment", "mood": string, "topic": string, "creatorVibe": string, "needsImage": boolean, "imagePrompt": string }] }`;
 
   let items: any[] = [];
 
