@@ -1,18 +1,8 @@
 // ============================================================
 // Realtime Event Bridge
 //
-// Verbindet die DB-seitige domain_events-Tabelle (siehe
-// 0004_mission_engine.sql) mit dem app-seitigen EventBus.
-//
-// Warum diese Brücke statt direktem DB-Zugriff pro Engine:
-// Analytics-, NPC- und Narrative-Engine sollen nur DomainEvent-Objekte
-// kennen (siehe shared-types), nicht Supabase/SQL. Das hält sie
-// austauschbar und einfach zu testen (siehe eventBus.ts / feedEngine.ts).
-//
-// Aktuell wird nur "MissionCompleted" aus der DB gespeist, da das die
-// bislang einzige Engine ist, deren Logik in Postgres läuft. Events wie
-// "PostViewed" entstehen weiterhin direkt in der App (siehe unten) und
-// müssen NICHT über die DB rückübersetzt werden.
+// DB-domain_events -> app EventBus.
+// Runtime events are strictly scoped to the active class instance.
 // ============================================================
 
 import type { SupabaseClient } from "@supabase/supabase-js";
@@ -25,19 +15,29 @@ interface DomainEventRow {
   payload: Record<string, unknown>;
 }
 
-function rowToDomainEvent(row: DomainEventRow): DomainEvent | null {
+function getClassInstanceId(payload: Record<string, unknown>): string | null {
+  const value = payload.classInstanceId ?? payload.class_instance_id;
+  return typeof value === "string" && value.length > 0 ? value : null;
+}
+
+function rowToDomainEvent(row: DomainEventRow, classInstanceId: string): DomainEvent | null {
+  const eventInstanceId = getClassInstanceId(row.payload);
+  if (!eventInstanceId || eventInstanceId !== classInstanceId) return null;
+
   switch (row.event_type) {
     case "MissionStarted":
       return {
         type: "MissionStarted",
         userId: row.user_id,
         missionId: String(row.payload.missionId),
+        classInstanceId: eventInstanceId,
       };
     case "MissionCompleted":
       return {
         type: "MissionCompleted",
         userId: row.user_id,
         missionId: String(row.payload.missionId),
+        classInstanceId: eventInstanceId,
       };
     case "CompetencyUpdated":
       return {
@@ -45,25 +45,22 @@ function rowToDomainEvent(row: DomainEventRow): DomainEvent | null {
         userId: row.user_id,
         competencyId: String(row.payload.competencyId),
         level: Number(row.payload.level),
+        classInstanceId: eventInstanceId,
       };
     default:
-      // Unbekannter Event-Typ (z.B. zukünftige Erweiterung) -> bewusst
-      // ignorieren statt zu crashen, nur loggen.
       console.warn(`[RealtimeBridge] Unbekannter event_type: ${row.event_type}`);
       return null;
   }
 }
 
-/**
- * Startet das Realtime-Abo für den aktuell eingeloggten Nutzer.
- * Gibt eine Cleanup-Funktion zurück (z.B. für useEffect-Rückgabe).
- */
+/** Startet das Realtime-Abo für Nutzer + aktive Klasseninstanz. */
 export function startRealtimeEventBridge(
   supabase: SupabaseClient,
-  userId: string
+  userId: string,
+  classInstanceId: string
 ): () => void {
   const channel = supabase
-    .channel(`domain-events-${userId}`)
+    .channel(`domain-events-${userId}-${classInstanceId}`)
     .on(
       "postgres_changes",
       {
@@ -73,10 +70,8 @@ export function startRealtimeEventBridge(
         filter: `user_id=eq.${userId}`,
       },
       (payload) => {
-        const domainEvent = rowToDomainEvent(payload.new as DomainEventRow);
-        if (domainEvent) {
-          eventBus.emit(domainEvent);
-        }
+        const domainEvent = rowToDomainEvent(payload.new as DomainEventRow, classInstanceId);
+        if (domainEvent) eventBus.emit(domainEvent);
       }
     )
     .subscribe();
