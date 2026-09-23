@@ -4,6 +4,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 import { createBrowserClient } from "@supabase/ssr";
 
 function supabaseBrowserClient() {
@@ -80,6 +81,13 @@ export default function LoginPage() {
         >
           {pending ? "Meldet an…" : "Einloggen"}
         </button>
+
+        <Link
+          href="/forgot-password"
+          className="block text-center text-sm text-slate-500 hover:text-slate-900 hover:underline"
+        >
+          Passwort vergessen?
+        </Link>
 
         <p className="text-xs text-gray-500">
           Zugänge werden ausschließlich von einem platform_admin über
