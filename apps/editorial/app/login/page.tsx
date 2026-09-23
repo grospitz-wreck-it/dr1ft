@@ -1,9 +1,7 @@
 "use client";
-// apps/admin/app/login/page.tsx
-// Für Lehrkräfte und Redaktion — normale E-Mail-Anmeldung, da Erwachsene.
 
 import { useState } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { createBrowserClient } from "@supabase/ssr";
 
 function supabaseBrowserClient() {
@@ -13,9 +11,16 @@ function supabaseBrowserClient() {
   );
 }
 
+function safeNext(value: string | null) {
+  if (!value || !value.startsWith("/") || value.startsWith("//")) return "/content";
+  return value;
+}
+
 export default function LoginPage() {
   const supabase = supabaseBrowserClient();
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const next = safeNext(searchParams.get("next"));
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -34,47 +39,22 @@ export default function LoginPage() {
       return;
     }
 
-    router.push("/content");
+    router.push(next);
+    router.refresh();
   }
 
   return (
     <main className="min-h-screen flex items-center justify-center px-4 bg-gray-50">
-      <form
-        onSubmit={handleSubmit}
-        className="bg-white border rounded-lg p-6 w-full max-w-sm space-y-4"
-      >
+      <form onSubmit={handleSubmit} className="bg-white border rounded-lg p-6 w-full max-w-sm space-y-4">
         <h1 className="text-xl font-semibold">Login</h1>
-
-        <input
-          type="email"
-          value={email}
-          onChange={(e) => setEmail(e.target.value)}
-          placeholder="E-Mail"
-          required
-          className="w-full border rounded px-3 py-2 text-sm"
-        />
-        <input
-          type="password"
-          value={password}
-          onChange={(e) => setPassword(e.target.value)}
-          placeholder="Passwort"
-          required
-          className="w-full border rounded px-3 py-2 text-sm"
-        />
-
+        <input type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="E-Mail" required className="w-full border rounded px-3 py-2 text-sm" />
+        <input type="password" value={password} onChange={(e) => setPassword(e.target.value)} placeholder="Passwort" required className="w-full border rounded px-3 py-2 text-sm" />
         {error && <p className="text-xs text-red-600">{error}</p>}
-
-        <button
-          type="submit"
-          disabled={pending}
-          className="w-full bg-black text-white rounded px-4 py-2 text-sm disabled:opacity-50"
-        >
+        <button type="submit" disabled={pending} className="w-full bg-black text-white rounded px-4 py-2 text-sm disabled:opacity-50">
           {pending ? "Meldet an…" : "Einloggen"}
         </button>
-
         <p className="text-xs text-gray-500">
-          Zugänge werden ausschließlich von einem platform_admin über
-          /staff vergeben — kein Self-Serve-Signup für die Redaktion.
+          Zugänge werden von DR1FT bzw. der jeweiligen Schule vergeben.
         </p>
       </form>
     </main>
