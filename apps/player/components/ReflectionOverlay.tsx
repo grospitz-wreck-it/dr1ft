@@ -77,7 +77,7 @@ export function ReflectionOverlay({
               Erkannte Muster
             </p>
             <div className="flex flex-wrap gap-2">
-              {[...new Set(techniqueTags)].map((tag) => (
+              {Array.from(new Set(techniqueTags)).map((tag) => (
                 <span
                   key={String(tag)}
                   className="marker-highlight font-mono text-[12px] text-ink"
