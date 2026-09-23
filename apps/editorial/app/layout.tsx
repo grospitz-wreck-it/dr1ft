@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
-import { redirect } from "next/navigation";
 import Link from "next/link";
+import { headers } from "next/headers";
 import {
   LayoutGrid,
   MessagesSquare,
@@ -27,15 +27,26 @@ const NAV_ITEMS = [
   { href: "/staff", label: "Redaktionsteam", icon: Users },
 ];
 
+const PUBLIC_PATHS = ["/login", "/forgot-password", "/reset-password"];
+
 export default async function RootLayout({ children }: { children: React.ReactNode }) {
+  const pathname = headers().get("x-pathname") ?? "";
+
+  // Public auth pages must not initialize the authenticated server client.
+  if (PUBLIC_PATHS.some((path) => pathname === path || pathname.startsWith(path + "/"))) {
+    return (
+      <html lang="de">
+        <body>{children}</body>
+      </html>
+    );
+  }
+
   const supabase = supabaseServerClient();
 
   const {
     data: { user },
   } = await supabase.auth.getUser();
 
-  // /login is intentionally public. The middleware protects all other
-  // routes, so an unauthenticated request must be allowed to render here.
   if (!user) {
     return (
       <html lang="de">
@@ -44,9 +55,6 @@ export default async function RootLayout({ children }: { children: React.ReactNo
     );
   }
 
-  // ECHTE Trennung von der Lehrkraft-App: nur wer in platform_staff
-  // steht, kommt überhaupt in diese App rein — nicht nur beim Schreiben
-  // (RLS), sondern schon beim Betreten jeder Seite.
   const { data: staffRow } = await supabase
     .from("platform_staff")
     .select("user_id")
