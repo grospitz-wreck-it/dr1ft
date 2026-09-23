@@ -1,5 +1,6 @@
 import Link from "next/link";
 
+const EDITORIAL_URL = process.env.NEXT_PUBLIC_EDITORIAL_URL ?? "http://localhost:3003";
 const TEACHER_URL = process.env.NEXT_PUBLIC_TEACHER_URL ?? "http://localhost:3001";
 const PLAYER_URL = process.env.NEXT_PUBLIC_PLAYER_URL ?? "http://localhost:3000";
 
@@ -17,7 +18,7 @@ export function SiteNav() {
         </nav>
 
         <nav aria-label="Bereiche" className="ml-auto flex items-center gap-1 rounded-xl border border-border bg-subtle p-1">
-          <a href={TEACHER_URL + "/classes"} className="role-nav role-nav-school">
+          <a href={EDITORIAL_URL + "/login?next=/schools"} className="role-nav role-nav-school">
             <span className="role-nav-label">Schulen</span>
             <span className="hidden xl:inline">Schul-Admin &amp; Schulleitung</span>
           </a>
@@ -51,7 +52,7 @@ export function SiteFooter() {
           <Link href="/lexikon" className="hover:text-ink">Lexikon</Link>
           <Link href="/simulation" className="hover:text-ink">Simulation</Link>
           <Link href="/preise" className="hover:text-ink">Preise</Link>
-          <a href={TEACHER_URL + "/classes"} className="hover:text-ink">Schul-Admin</a>
+          <a href={EDITORIAL_URL + "/login?next=/schools"} className="hover:text-ink">Schul-Admin</a>
           <a href={TEACHER_URL + "/login"} className="hover:text-ink">Lehrkräfte-Login</a>
           <a href={PLAYER_URL + "/join"} className="hover:text-ink">Schüler:innen</a>
         </div>
