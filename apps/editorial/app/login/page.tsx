@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { useRouter, useSearchParams } from "next/navigation";
+import { useRouter } from "next/navigation";
 import { createBrowserClient } from "@supabase/ssr";
 
 function supabaseBrowserClient() {
@@ -19,8 +19,6 @@ function safeNext(value: string | null) {
 export default function LoginPage() {
   const supabase = supabaseBrowserClient();
   const router = useRouter();
-  const searchParams = useSearchParams();
-  const next = safeNext(searchParams.get("next"));
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -39,6 +37,7 @@ export default function LoginPage() {
       return;
     }
 
+    const next = safeNext(new URLSearchParams(window.location.search).get("next"));
     router.push(next);
     router.refresh();
   }
