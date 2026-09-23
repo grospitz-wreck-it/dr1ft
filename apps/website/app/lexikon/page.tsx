@@ -1,6 +1,8 @@
 import { createClient } from "@supabase/supabase-js";
 import { SiteNav, SiteFooter } from "../../components/SiteNav";
 
+export const dynamic = "force-dynamic";
+
 function supabasePublicClient() {
   return createClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
