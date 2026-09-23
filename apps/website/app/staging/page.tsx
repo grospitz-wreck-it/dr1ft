@@ -1,16 +1,10 @@
-import { FormEvent } from "react";
-
 export default function StagingPage({
   searchParams,
 }: {
-  searchParams: { next?: string };
+  searchParams: { next?: string; error?: string };
 }) {
   const next = searchParams.next && searchParams.next.startsWith("/") ? searchParams.next : "/";
-
-  async function unlock(event: FormEvent<HTMLFormElement>) {
-    // Native POST keeps the gate usable without client-side state.
-    // The actual password check happens in the server route.
-  }
+  const hasError = searchParams.error === "1";
 
   return (
     <main className="min-h-screen bg-ink text-white flex items-center justify-center px-6">
@@ -25,6 +19,13 @@ export default function StagingPage({
             Diese Website befindet sich aktuell im geschützten Testbetrieb.
             Erst nach Eingabe des Staging-Passworts wird die eigentliche Website geöffnet.
           </p>
+
+          {hasError && (
+            <div className="mt-5 rounded-xl border border-red-300/20 bg-red-400/10 px-4 py-3 text-sm text-red-100">
+              Das Passwort ist nicht korrekt.
+            </div>
+          )}
+
           <form action="/api/staging/unlock" method="post" className="mt-7 space-y-4">
             <input type="hidden" name="next" value={next} />
             <label className="block">
