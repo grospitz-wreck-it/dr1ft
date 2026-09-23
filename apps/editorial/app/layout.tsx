@@ -10,7 +10,6 @@ import {
   Users,
   Library,
 } from "lucide-react";
-import { supabaseServerClient } from "../lib/supabaseServerClient";
 import "./globals.css";
 
 export const metadata: Metadata = {
@@ -30,49 +29,18 @@ const NAV_ITEMS = [
 const PUBLIC_PATHS = ["/login", "/forgot-password", "/reset-password"];
 
 export default async function RootLayout({ children }: { children: React.ReactNode }) {
+  // The middleware is the single source of truth for authentication and
+  // editorial access. The root layout only decides whether the navigation
+  // shell should be rendered.
   const pathname = headers().get("x-pathname") ?? "";
+  const isPublicAuthPage = PUBLIC_PATHS.some(
+    (path) => pathname === path || pathname.startsWith(path + "/")
+  );
 
-  // Public auth pages must not initialize the authenticated server client.
-  if (PUBLIC_PATHS.some((path) => pathname === path || pathname.startsWith(path + "/"))) {
+  if (isPublicAuthPage) {
     return (
       <html lang="de">
         <body>{children}</body>
-      </html>
-    );
-  }
-
-  const supabase = supabaseServerClient();
-
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-
-  if (!user) {
-    return (
-      <html lang="de">
-        <body>{children}</body>
-      </html>
-    );
-  }
-
-  const { data: staffRow } = await supabase
-    .from("platform_staff")
-    .select("user_id")
-    .eq("user_id", user.id)
-    .maybeSingle();
-
-  if (!staffRow) {
-    return (
-      <html lang="de">
-        <body className="min-h-screen flex items-center justify-center bg-canvas font-sans">
-          <div className="text-center max-w-sm px-6">
-            <p className="text-lg font-semibold text-slate-900 mb-2">Kein Zugriff</p>
-            <p className="text-sm text-slate-500">
-              Dieser Bereich ist der Redaktion vorbehalten. Falls du Lehrkraft
-              bist, nutze bitte die separate Lehrkraft-Anwendung.
-            </p>
-          </div>
-        </body>
       </html>
     );
   }
