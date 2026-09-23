@@ -13,9 +13,9 @@ export function SiteNav() {
         </Link>
 
         <nav className="hidden lg:flex items-center gap-7 text-sm text-slate-400">
-          <Link href="/schulen" className="hover:text-cyan-300 transition-colors">Schulen</Link>
-          <Link href="/lehrkraefte" className="hover:text-cyan-300 transition-colors">Lehrkräfte</Link>
-          <Link href="/schueler" className="hover:text-cyan-300 transition-colors">Schüler:innen</Link>
+          <a href={`${EDITORIAL_URL}/login?next=%2Fschool-admin`} className="hover:text-cyan-300 transition-colors">Schulen</a>
+          <a href={`${TEACHER_URL}/login`} className="hover:text-cyan-300 transition-colors">Lehrkräfte</a>
+          <a href={`${PLAYER_URL}/join`} className="hover:text-cyan-300 transition-colors">Schüler:innen</a>
           <Link href="/#produkt" className="hover:text-cyan-300 transition-colors">Produkt</Link>
           <Link href="/simulation" className="hover:text-cyan-300 transition-colors">Simulation</Link>
           <Link href="/preise" className="hover:text-cyan-300 transition-colors">Preise</Link>
@@ -48,15 +48,15 @@ export function SiteFooter() {
           <div>
             <p className="text-white font-medium mb-3">Für Schulen</p>
             <div className="space-y-2">
-              <Link href="/schulen" className="block hover:text-cyan-300 transition-colors">Schullösung</Link>
+              <a href={`${EDITORIAL_URL}/login?next=%2Fschool-admin`} className="block hover:text-cyan-300 transition-colors">Schul-Login</a>
               <Link href="/preise" className="block hover:text-cyan-300 transition-colors">Preise</Link>
-              <a href={`${EDITORIAL_URL}/school-admin`} className="block hover:text-cyan-300 transition-colors">Schul-Admin</a>
+              <a href={`${EDITORIAL_URL}/login?next=%2Fschool-admin`} className="block hover:text-cyan-300 transition-colors">Schul-Login</a>
             </div>
           </div>
           <div>
             <p className="text-white font-medium mb-3">Für Lehrkräfte</p>
             <div className="space-y-2">
-              <Link href="/lehrkraefte" className="block hover:text-cyan-300 transition-colors">Lehrkraft-Bereich</Link>
+              <a href={`${TEACHER_URL}/login`} className="block hover:text-cyan-300 transition-colors">Lehrkraft-Login</a>
               <a href={`${TEACHER_URL}/login`} className="block hover:text-cyan-300 transition-colors">Login</a>
               <a href={`${TEACHER_URL}/signup`} className="block hover:text-cyan-300 transition-colors">Registrieren</a>
             </div>
@@ -64,7 +64,7 @@ export function SiteFooter() {
           <div>
             <p className="text-white font-medium mb-3">Für Schüler:innen</p>
             <div className="space-y-2">
-              <Link href="/schueler" className="block hover:text-cyan-300 transition-colors">So funktioniert der Zugang</Link>
+              <a href={`${PLAYER_URL}/join`} className="block hover:text-cyan-300 transition-colors">Schüler-Zugang</a>
               <a href={`${PLAYER_URL}/join`} className="block hover:text-cyan-300 transition-colors">Klassen-Code eingeben</a>
               <Link href="/lexikon" className="block hover:text-cyan-300 transition-colors">Lexikon</Link>
             </div>
