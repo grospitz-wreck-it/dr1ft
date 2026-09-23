@@ -23,16 +23,27 @@ const TYPE_ICONS: Record<string, any> = {
   reflection_prompt: Lightbulb,
 };
 
+type SearchParams = Record<string, string | undefined>;
+
 export function ContentTable({
   rows,
-  hrefWith,
+  searchParams,
 }: {
   rows: any[];
-  hrefWith: (overrides: Record<string, string | undefined>) => string;
+  searchParams: SearchParams;
 }) {
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [isPending, startTransition] = useTransition();
   const [lastResult, setLastResult] = useState<string | null>(null);
+
+  function hrefWith(overrides: Record<string, string | undefined>): string {
+    const params = new URLSearchParams();
+    const merged = { ...searchParams, ...overrides };
+    Object.entries(merged).forEach(([key, value]) => {
+      if (value) params.set(key, value);
+    });
+    return `/content?${params.toString()}`;
+  }
 
   function toggle(id: string) {
     setSelected((prev) => {
