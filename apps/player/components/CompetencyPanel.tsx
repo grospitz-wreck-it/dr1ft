@@ -33,15 +33,22 @@ export function CompetencyPanel({ initial }: { initial: CompetencyDisplay[] }) {
   const [justUpdated, setJustUpdated] = useState<string | null>(null);
 
   useEffect(() => {
+    let timeoutId: ReturnType<typeof setTimeout> | undefined;
+
     const unsubscribe = eventBus.on("CompetencyUpdated", (event) => {
       setCompetencies((prev) =>
         prev.map((c) => (c.id === event.competencyId ? { ...c, level: event.level } : c))
       );
       setJustUpdated(event.competencyId);
-      const t = setTimeout(() => setJustUpdated(null), 1500);
-      return () => clearTimeout(t);
+
+      if (timeoutId) clearTimeout(timeoutId);
+      timeoutId = setTimeout(() => setJustUpdated(null), 1500);
     });
-    return unsubscribe;
+
+    return () => {
+      if (timeoutId) clearTimeout(timeoutId);
+      unsubscribe();
+    };
   }, []);
 
   if (competencies.length === 0) return null;
