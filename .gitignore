@@ -8,3 +8,10 @@ supabase/.temp/
 .env.local
 .env.*.local
 !.env.example
+
+# Local Supabase CLI
+supabase/.temp/
+apps/teacher/supabase/.temp/
+
+# Next.js generated files
+apps/*/next-env.d.ts

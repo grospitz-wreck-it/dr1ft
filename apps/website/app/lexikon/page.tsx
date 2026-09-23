@@ -1,6 +1,8 @@
 import { createClient } from "@supabase/supabase-js";
 import { SiteNav, SiteFooter } from "../../components/SiteNav";
 
+export const dynamic = "force-dynamic";
+
 function supabasePublicClient() {
   return createClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -45,7 +47,7 @@ export default async function LexikonPage() {
           geschützten Schulbereich verfügbar.
         </p>
 
-        {[...grouped.entries()].map(([category, items]) => (
+        {Array.from(grouped.entries()).map(([category, items]) => (
           <div key={category} className="mb-10">
             <h2 className="font-display text-lg font-semibold mb-4">
               {CATEGORY_LABELS[category] ?? category}
