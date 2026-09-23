@@ -34,8 +34,14 @@ export default async function RootLayout({ children }: { children: React.ReactNo
     data: { user },
   } = await supabase.auth.getUser();
 
+  // /login is intentionally public. The middleware protects all other
+  // routes, so an unauthenticated request must be allowed to render here.
   if (!user) {
-    redirect("/login");
+    return (
+      <html lang="de">
+        <body>{children}</body>
+      </html>
+    );
   }
 
   // ECHTE Trennung von der Lehrkraft-App: nur wer in platform_staff
