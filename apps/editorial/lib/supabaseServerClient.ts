@@ -1,6 +1,5 @@
 // apps/admin/lib/supabaseServerClient.ts
-// Echter Server Client mit Cookie-basierter Session (Next.js App Router).
-// Voraussetzung: `npm install @supabase/ssr` in apps/admin.
+// Server-side Supabase client with cookie-based session handling.
 
 import { createServerClient, type CookieOptions } from "@supabase/ssr";
 import { cookies } from "next/headers";
@@ -13,28 +12,20 @@ export function supabaseServerClient() {
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
     {
       cookies: {
-        get(name: string) {
-          return cookieStore.get(name)?.value;
+        getAll() {
+          return cookieStore.getAll();
         },
-        set(name: string, value: string, options: CookieOptions) {
-          // In Server Components kann set() fehlschlagen (readonly context) —
-          // in Server Actions/Route Handlers funktioniert es. Bewusst try/catch,
-          // damit Aufrufe aus Server Components nicht crashen.
+        setAll(cookiesToSet: Array<{ name: string; value: string; options: CookieOptions }>) {
           try {
-            cookieStore.set({ name, value, ...options });
+            cookiesToSet.forEach(({ name, value, options }) => {
+              cookieStore.set({ name, value, ...options });
+            });
           } catch {
-            // no-op: Session-Refresh übernimmt dann die Middleware
-          }
-        },
-        remove(name: string, options: CookieOptions) {
-          try {
-            cookieStore.set({ name, value: "", ...options });
-          } catch {
-            // no-op, siehe oben
+            // Server Components may expose a readonly cookie store.
+            // Session refresh is handled by middleware.
           }
         },
       },
     }
   );
 }
-
