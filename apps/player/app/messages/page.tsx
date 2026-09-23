@@ -31,7 +31,7 @@ export default async function MessagesInboxPage() {
     .from("class_scenario_assignments")
     .select("scenario_id")
     .in("class_id", classIds.length ? classIds : ["00000000-0000-0000-0000-000000000000"]);
-  const scenarioIds = [...new Set((assignments ?? []).map((a) => a.scenario_id))];
+  const scenarioIds = Array.from(new Set((assignments ?? []).map((a) => a.scenario_id)));
 
   const { data: npcCreators } = await supabase
     .from("creators")
