@@ -7,8 +7,26 @@
 :root {
   --font-display: "Space Grotesk", sans-serif;
   --font-body: "Inter", sans-serif;
+  --dr1ft-cyan: #22d3ee;
+  --dr1ft-blue: #06b6d4;
+  --dr1ft-red: #fb7185;
+  --dr1ft-magenta: #d946ef;
+  --dr1ft-night: #080d1d;
+}
+
+html {
+  scroll-behavior: smooth;
 }
 
 body {
   @apply bg-canvas text-ink font-body;
+  background:
+    radial-gradient(circle at 15% 5%, rgba(34, 211, 238, .06), transparent 28rem),
+    radial-gradient(circle at 85% 12%, rgba(217, 70, 239, .05), transparent 30rem),
+    #080d1d;
+}
+
+::selection {
+  background: rgba(34, 211, 238, .35);
+  color: white;
 }
