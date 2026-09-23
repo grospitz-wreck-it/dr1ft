@@ -16,6 +16,15 @@ export async function middleware(request: NextRequest) {
   const requestHeaders = new Headers(request.headers);
   requestHeaders.set("x-pathname", request.nextUrl.pathname);
 
+  // Auth pages do not need a Supabase server client at all.
+  // This also keeps the login/reset pages completely independent of
+  // session-cookie parsing.
+  if (isPublicAuthPath(request.nextUrl.pathname)) {
+    return NextResponse.next({
+      request: { headers: requestHeaders },
+    });
+  }
+
   let response = NextResponse.next({
     request: { headers: requestHeaders },
   });
@@ -25,20 +34,13 @@ export async function middleware(request: NextRequest) {
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
     {
       cookies: {
-        get(name: string) {
-          return request.cookies.get(name)?.value;
+        getAll() {
+          return request.cookies.getAll();
         },
-        set(name: string, value: string, options: CookieOptions) {
-          response = NextResponse.next({
-            request: { headers: requestHeaders },
+        setAll(cookiesToSet) {
+          cookiesToSet.forEach(({ name, value, options }) => {
+            response.cookies.set(name, value, options);
           });
-          response.cookies.set({ name, value, ...options });
-        },
-        remove(name: string, options: CookieOptions) {
-          response = NextResponse.next({
-            request: { headers: requestHeaders },
-          });
-          response.cookies.set({ name, value: "", ...options });
         },
       },
     }
@@ -48,25 +50,20 @@ export async function middleware(request: NextRequest) {
     data: { user },
   } = await supabase.auth.getUser();
 
-  // Auth pages are public. We still run the middleware here so the root
-  // layout receives x-pathname and can hide the application navigation.
-  if (isPublicAuthPath(request.nextUrl.pathname)) {
-    return response;
-  }
-
   if (!user) {
     const loginUrl = new URL("/login", request.url);
     loginUrl.searchParams.set("next", request.nextUrl.pathname);
     return NextResponse.redirect(loginUrl);
   }
 
-  // Editorial access is explicitly limited to platform staff.
   const { data: staffRow } = await supabase
     .from("platform_staff")
-    .select("user_id")
+    .select("user_id, role")
     .eq("user_id", user.id)
     .maybeSingle();
 
+  // platform_admin is explicitly a global editorial super-admin.
+  // Other platform_staff roles are also allowed into the editorial app.
   if (!staffRow) {
     const loginUrl = new URL("/login", request.url);
     loginUrl.searchParams.set("error", "not-authorized");
@@ -77,7 +74,5 @@ export async function middleware(request: NextRequest) {
 }
 
 export const config = {
-  // Include the auth pages as well: they need x-pathname so the root
-  // layout does not render the application navigation on the login screen.
   matcher: ["/((?!_next|favicon.ico).*)"],
 };
