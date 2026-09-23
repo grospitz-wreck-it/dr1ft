@@ -44,7 +44,9 @@ export default function LoginPage() {
       return;
     }
 
-    router.push(getSafeNextPath());
+    // Do a full navigation so the freshly persisted Supabase auth cookies
+    // are definitely present before the protected server route renders.
+    window.location.assign(getSafeNextPath());
   }
 
   return (
