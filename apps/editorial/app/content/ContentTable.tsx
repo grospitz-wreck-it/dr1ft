@@ -48,7 +48,7 @@ export function ContentTable({
 
   function runBulk(nextStatus: string) {
     startTransition(async () => {
-      const result = await bulkUpdateStatus([...selected], nextStatus);
+      const result = await bulkUpdateStatus(Array.from(selected), nextStatus);
       setLastResult(`${result.updated} aktualisiert, ${result.skipped} übersprungen (ungültiger Übergang)`);
       setSelected(new Set());
     });
