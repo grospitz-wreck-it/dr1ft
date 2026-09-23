@@ -1,8 +1,16 @@
 // apps/admin/middleware.ts
-// Standard-Pattern für @supabase/ssr: Session bei jedem Request aktuell halten.
+// Session-Refresh + Zugangsprüfung für die Redaktionsanwendung.
 
 import { createServerClient, type CookieOptions } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
+
+const PUBLIC_AUTH_PATHS = ["/login", "/forgot-password", "/reset-password"];
+
+function isPublicAuthPath(pathname: string) {
+  return PUBLIC_AUTH_PATHS.some(
+    (path) => pathname === path || pathname.startsWith(path + "/")
+  );
+}
 
 export async function middleware(request: NextRequest) {
   const requestHeaders = new Headers(request.headers);
@@ -40,14 +48,28 @@ export async function middleware(request: NextRequest) {
     data: { user },
   } = await supabase.auth.getUser();
 
-  if (
-    !user &&
-    !request.nextUrl.pathname.startsWith("/login") &&
-    !request.nextUrl.pathname.startsWith("/forgot-password") &&
-    !request.nextUrl.pathname.startsWith("/reset-password")
-  ) {
+  // Auth pages are public. We still run the middleware here so the root
+  // layout receives x-pathname and can hide the application navigation.
+  if (isPublicAuthPath(request.nextUrl.pathname)) {
+    return response;
+  }
+
+  if (!user) {
     const loginUrl = new URL("/login", request.url);
     loginUrl.searchParams.set("next", request.nextUrl.pathname);
+    return NextResponse.redirect(loginUrl);
+  }
+
+  // Editorial access is explicitly limited to platform staff.
+  const { data: staffRow } = await supabase
+    .from("platform_staff")
+    .select("user_id")
+    .eq("user_id", user.id)
+    .maybeSingle();
+
+  if (!staffRow) {
+    const loginUrl = new URL("/login", request.url);
+    loginUrl.searchParams.set("error", "not-authorized");
     return NextResponse.redirect(loginUrl);
   }
 
@@ -55,5 +77,7 @@ export async function middleware(request: NextRequest) {
 }
 
 export const config = {
-  matcher: ["/((?!login|forgot-password|reset-password|_next|favicon.ico).*)"],
+  // Include the auth pages as well: they need x-pathname so the root
+  // layout does not render the application navigation on the login screen.
+  matcher: ["/((?!_next|favicon.ico).*)"],
 };
