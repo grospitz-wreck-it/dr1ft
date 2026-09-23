@@ -1,12 +1,6 @@
 "use client";
+
 // apps/player/app/join/page.tsx
-//
-// Bewusst KEIN E-Mail-Feld: Schüler:innen brauchen keine eigene Mail-
-// Adresse. Aus Nutzername + Klassen-Zugangscode wird eine synthetische
-// Adresse gebaut ("<nutzername>.<code>@dr1ft.local"), die nie verschickt
-// wird — sie dient nur Supabase Auth intern als eindeutiger Login-Schlüssel,
-// damit der normale, robuste Passwort-Login funktioniert (inkl.
-// geräteübergreifend, anders als z.B. anonyme Sessions).
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
@@ -62,64 +56,137 @@ export default function JoinPage() {
   }
 
   return (
-    <main className="min-h-screen bg-ink flex items-center justify-center px-4">
-      <form
-        onSubmit={handleSubmit}
-        className="bg-ink-light border border-ink-border rounded-card p-6 w-full max-w-sm space-y-4"
-      >
-        <h1 className="font-display text-2xl text-paper">Klasse beitreten</h1>
-        <p className="font-body text-sm text-ash">
-          Deine Lehrkraft hat dir einen Zugangscode gegeben.
-        </p>
+    <main className="min-h-screen bg-ink text-paper px-4 py-8 sm:py-12 safe-top safe-bottom">
+      <div className="mx-auto flex min-h-[calc(100vh-4rem)] w-full max-w-md items-center justify-center">
+        <section className="w-full">
+          <div className="mb-6 flex items-center justify-between">
+            <div>
+              <p className="font-mono text-[11px] uppercase tracking-[0.22em] text-ash">
+                DR1FT / Schülerzugang
+              </p>
+              <div className="mt-2 flex items-center gap-2">
+                <span className="h-2 w-2 rounded-full bg-growth" aria-hidden="true" />
+                <span className="font-body text-xs text-ash">Klassenraum verbinden</span>
+              </div>
+            </div>
+            <span className="font-display text-xl font-bold tracking-tight text-paper">DR1FT</span>
+          </div>
 
-        <input
-          value={accessCode}
-          onChange={(e) => setAccessCode(e.target.value.toUpperCase())}
-          placeholder="Zugangscode (z.B. AB3CD9)"
-          required
-          className="w-full rounded-lg px-3 py-2 text-sm bg-paper text-ink"
-        />
-        <input
-          value={displayName}
-          onChange={(e) => setDisplayName(e.target.value)}
-          placeholder="Anzeigename (z.B. Spitzname, kein Klarname nötig)"
-          required
-          className="w-full rounded-lg px-3 py-2 text-sm bg-paper text-ink"
-        />
-        <input
-          value={username}
-          onChange={(e) => setUsername(e.target.value)}
-          placeholder="Nutzername für den Login"
-          required
-          className="w-full rounded-lg px-3 py-2 text-sm bg-paper text-ink"
-        />
-        <input
-          value={password}
-          onChange={(e) => setPassword(e.target.value)}
-          type="password"
-          placeholder="Passwort (mind. 6 Zeichen)"
-          minLength={6}
-          required
-          className="w-full rounded-lg px-3 py-2 text-sm bg-paper text-ink"
-        />
+          <form
+            onSubmit={handleSubmit}
+            className="rounded-card border border-ink-border bg-ink-light p-5 shadow-2xl sm:p-7"
+          >
+            <div className="mb-7">
+              <span className="marker-highlight font-mono text-[11px] uppercase tracking-[0.18em] text-ink">
+                Zugang einrichten
+              </span>
+              <h1 className="mt-3 font-display text-3xl font-bold tracking-tight text-paper">
+                Klasse beitreten
+              </h1>
+              <p className="mt-2 max-w-sm font-body text-sm leading-6 text-ash">
+                Deine Lehrkraft hat dir einen Zugangscode gegeben. Damit verbindest du dich mit
+                deinem Klassenraum.
+              </p>
+            </div>
 
-        {error && <p className="text-xs text-red-400">{error}</p>}
+            <div className="space-y-4">
+              <label className="block">
+                <span className="mb-1.5 block font-mono text-[11px] uppercase tracking-[0.12em] text-ash">
+                  Klassen-Code
+                </span>
+                <input
+                  value={accessCode}
+                  onChange={(e) => setAccessCode(e.target.value.toUpperCase())}
+                  placeholder="z. B. AB3CD9"
+                  autoComplete="off"
+                  required
+                  className="touch-target w-full rounded-lg border border-ink-border bg-ink px-3.5 py-3 font-mono text-sm uppercase tracking-[0.16em] text-paper outline-none transition placeholder:text-ash/70 focus:border-marker focus:ring-2 focus:ring-marker/20"
+                />
+              </label>
 
-        <button
-          type="submit"
-          disabled={pending}
-          className="w-full bg-marker text-ink font-body font-medium rounded-lg py-3 text-sm disabled:opacity-50"
-        >
-          {pending ? "Tritt bei…" : "Beitreten"}
-        </button>
+              <label className="block">
+                <span className="mb-1.5 block font-mono text-[11px] uppercase tracking-[0.12em] text-ash">
+                  Anzeigename
+                </span>
+                <input
+                  value={displayName}
+                  onChange={(e) => setDisplayName(e.target.value)}
+                  placeholder="z. B. Spitzname"
+                  autoComplete="nickname"
+                  required
+                  className="touch-target w-full rounded-lg border border-ink-border bg-ink px-3.5 py-3 font-body text-sm text-paper outline-none transition placeholder:text-ash/70 focus:border-growth focus:ring-2 focus:ring-growth/20"
+                />
+                <span className="mt-1.5 block font-body text-xs text-ash">
+                  Ein Klarname ist nicht nötig.
+                </span>
+              </label>
 
-        <p className="text-xs text-ash">
-          Schon dabei?{" "}
-          <a href="/login" className="underline">
-            Zum Login
-          </a>
-        </p>
-      </form>
+              <label className="block">
+                <span className="mb-1.5 block font-mono text-[11px] uppercase tracking-[0.12em] text-ash">
+                  Nutzername
+                </span>
+                <input
+                  value={username}
+                  onChange={(e) => setUsername(e.target.value)}
+                  placeholder="Dein Login-Name"
+                  autoComplete="username"
+                  required
+                  className="touch-target w-full rounded-lg border border-ink-border bg-ink px-3.5 py-3 font-body text-sm text-paper outline-none transition placeholder:text-ash/70 focus:border-growth focus:ring-2 focus:ring-growth/20"
+                />
+              </label>
+
+              <label className="block">
+                <span className="mb-1.5 block font-mono text-[11px] uppercase tracking-[0.12em] text-ash">
+                  Passwort
+                </span>
+                <input
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  type="password"
+                  placeholder="Mindestens 6 Zeichen"
+                  autoComplete="new-password"
+                  minLength={6}
+                  required
+                  className="touch-target w-full rounded-lg border border-ink-border bg-ink px-3.5 py-3 font-body text-sm text-paper outline-none transition placeholder:text-ash/70 focus:border-growth focus:ring-2 focus:ring-growth/20"
+                />
+              </label>
+            </div>
+
+            {error && (
+              <div
+                role="alert"
+                className="mt-5 rounded-lg border border-red-400/30 bg-red-400/10 px-3.5 py-3 font-body text-sm leading-5 text-red-300"
+              >
+                {error}
+              </div>
+            )}
+
+            <button
+              type="submit"
+              disabled={pending}
+              className="tap-pulse touch-target mt-6 w-full rounded-lg bg-marker px-4 py-3 font-body text-sm font-semibold text-ink transition hover:brightness-105 focus:outline-none focus:ring-2 focus:ring-marker/50 disabled:cursor-wait disabled:opacity-50"
+            >
+              {pending ? "Klasse wird verbunden…" : "Klasse beitreten"}
+            </button>
+
+            <div className="mt-5 border-t border-ink-border pt-4 text-center">
+              <p className="font-body text-xs text-ash">
+                Schon dabei?{" "}
+                <a
+                  href="/login"
+                  className="font-medium text-paper underline decoration-ink-border underline-offset-4 transition hover:text-marker"
+                >
+                  Zum Login
+                </a>
+              </p>
+            </div>
+          </form>
+
+          <p className="mt-5 text-center font-mono text-[10px] uppercase tracking-[0.14em] text-ash/70">
+            Sicherer Klassen-Zugang · Keine E-Mail-Adresse erforderlich
+          </p>
+        </section>
+      </div>
     </main>
   );
 }
