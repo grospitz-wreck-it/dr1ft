@@ -28,13 +28,14 @@ export async function middleware(request: NextRequest) {
     }
   );
 
-  // Löst bei Bedarf einen Token-Refresh aus
   const {
     data: { user },
   } = await supabase.auth.getUser();
 
   if (!user && !request.nextUrl.pathname.startsWith("/login")) {
     const loginUrl = new URL("/login", request.url);
+    const next = request.nextUrl.pathname + request.nextUrl.search;
+    if (next !== "/") loginUrl.searchParams.set("next", next);
     return NextResponse.redirect(loginUrl);
   }
 
