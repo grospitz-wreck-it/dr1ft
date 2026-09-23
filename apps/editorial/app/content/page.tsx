@@ -150,7 +150,7 @@ export default async function ContentLibraryPage({ searchParams }: Props) {
           )}
         </form>
 
-        <ContentTable rows={rows ?? []} hrefWith={hrefWith} />
+        <ContentTable rows={rows ?? []} searchParams={searchParams} />
 
         {/* Pagination */}
         <div className="flex items-center justify-between mt-4 text-sm text-slate-500">
