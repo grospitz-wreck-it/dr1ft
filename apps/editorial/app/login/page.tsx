@@ -13,6 +13,15 @@ function supabaseBrowserClient() {
   );
 }
 
+function getSafeNextPath() {
+  if (typeof window === "undefined") return "/content";
+
+  const next = new URLSearchParams(window.location.search).get("next");
+  if (!next || !next.startsWith("/") || next.startsWith("//")) return "/content";
+
+  return next;
+}
+
 export default function LoginPage() {
   const supabase = supabaseBrowserClient();
   const router = useRouter();
@@ -34,7 +43,7 @@ export default function LoginPage() {
       return;
     }
 
-    router.push("/content");
+    router.push(getSafeNextPath());
   }
 
   return (
