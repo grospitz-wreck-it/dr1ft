@@ -3,7 +3,11 @@ import { NextRequest, NextResponse } from "next/server";
 const COOKIE = "dr1ft_staging";
 
 function base64Url(bytes: ArrayBuffer) {
-  return btoa(String.fromCharCode(...new Uint8Array(bytes)))
+  const binary = Array.from(new Uint8Array(bytes))
+    .map((byte) => String.fromCharCode(byte))
+    .join("");
+
+  return btoa(binary)
     .replace(/\+/g, "-")
     .replace(/\//g, "_")
     .replace(/=+$/g, "");
@@ -23,7 +27,11 @@ async function verifyToken(token: string, secret: string) {
     false,
     ["sign"],
   );
-  const signature = await crypto.subtle.sign("HMAC", key, new TextEncoder().encode(`${parts[0]}.${parts[1]}`));
+  const signature = await crypto.subtle.sign(
+    "HMAC",
+    key,
+    new TextEncoder().encode(`${parts[0]}.${parts[1]}`),
+  );
   return base64Url(signature) === parts[2];
 }
 
