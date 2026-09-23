@@ -38,6 +38,18 @@ export async function middleware(request: NextRequest) {
           return request.cookies.getAll();
         },
         setAll(cookiesToSet) {
+          // Keep both the request and response cookies in sync. This is
+          // important when Supabase refreshes an expired session token:
+          // Server Components must see the refreshed request cookie in the
+          // same request in which middleware refreshes it.
+          cookiesToSet.forEach(({ name, value }) => {
+            request.cookies.set(name, value);
+          });
+
+          response = NextResponse.next({
+            request: { headers: requestHeaders },
+          });
+
           cookiesToSet.forEach(({ name, value, options }) => {
             response.cookies.set(name, value, options);
           });
