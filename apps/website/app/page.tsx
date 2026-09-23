@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { Shield, Users, BookOpen, BarChart3, ArrowRight } from "lucide-react";
+import { Shield, Users, BookOpen, BarChart3, ArrowRight, Building2, GraduationCap, School } from "lucide-react";
 import { SiteNav, SiteFooter } from "../components/SiteNav";
 
 export default function HomePage() {
@@ -39,6 +39,37 @@ export default function HomePage() {
                 Preise für Schulen
               </Link>
             </div>
+          </div>
+        </div>
+      </section>
+
+      <section className="bg-[#060A16] border-b border-white/10 text-white py-20">
+        <div className="max-w-6xl mx-auto px-6">
+          <p className="text-cyan-300 text-xs font-semibold uppercase tracking-[.18em] mb-3">DR1FT für jede Rolle</p>
+          <h2 className="font-display text-3xl sm:text-4xl font-bold">Drei Bereiche. Ein Lernsystem.</h2>
+          <p className="text-slate-400 mt-3 max-w-2xl">Schulen, Lehrkräfte und Schüler:innen bekommen jeweils einen klaren Zugang und die passenden Werkzeuge.</p>
+          <div className="grid md:grid-cols-3 gap-5 mt-10">
+            <Link href="/schulen" className="group border border-white/10 bg-white/[.035] rounded-2xl p-7 hover:border-cyan-300/40 hover:-translate-y-1 transition-all">
+              <Building2 className="w-7 h-7 text-cyan-300 mb-6" />
+              <p className="text-xs font-semibold tracking-[.16em] text-cyan-300 mb-2">SCHULEN</p>
+              <h3 className="font-display text-xl font-semibold mb-3">Die Schule schafft den Rahmen.</h3>
+              <p className="text-sm text-slate-400 leading-relaxed">Verwaltung, Zugänge und eine gemeinsame Plattform für Medienkompetenz.</p>
+              <span className="mt-6 inline-flex items-center gap-2 text-sm font-semibold">Schullösung ansehen <ArrowRight className="w-4 h-4" /></span>
+            </Link>
+            <Link href="/lehrkraefte" className="group border border-white/10 bg-white/[.035] rounded-2xl p-7 hover:border-fuchsia-300/40 hover:-translate-y-1 transition-all">
+              <GraduationCap className="w-7 h-7 text-fuchsia-300 mb-6" />
+              <p className="text-xs font-semibold tracking-[.16em] text-fuchsia-300 mb-2">LEHRKRÄFTE</p>
+              <h3 className="font-display text-xl font-semibold mb-3">Unterricht gezielt begleiten.</h3>
+              <p className="text-sm text-slate-400 leading-relaxed">Klassen anlegen, Szenarien zuweisen und Kompetenzentwicklung sichtbar machen.</p>
+              <span className="mt-6 inline-flex items-center gap-2 text-sm font-semibold">Lehrkraft-Bereich <ArrowRight className="w-4 h-4" /></span>
+            </Link>
+            <Link href="/schueler" className="group border border-white/10 bg-white/[.035] rounded-2xl p-7 hover:border-cyan-300/40 hover:-translate-y-1 transition-all">
+              <School className="w-7 h-7 text-cyan-300 mb-6" />
+              <p className="text-xs font-semibold tracking-[.16em] text-cyan-300 mb-2">SCHÜLER:INNEN</p>
+              <h3 className="font-display text-xl font-semibold mb-3">Einsteigen und selbst erkennen.</h3>
+              <p className="text-sm text-slate-400 leading-relaxed">Mit Klassen-Code direkt in den Feed — ohne öffentlichen Social-Media-Account.</p>
+              <span className="mt-6 inline-flex items-center gap-2 text-sm font-semibold">Zum Schüler-Zugang <ArrowRight className="w-4 h-4" /></span>
+            </Link>
           </div>
         </div>
       </section>
