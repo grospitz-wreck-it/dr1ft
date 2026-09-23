@@ -13,21 +13,16 @@ function isPublicAuthPath(pathname: string) {
 }
 
 export async function middleware(request: NextRequest) {
-  const requestHeaders = new Headers(request.headers);
-  requestHeaders.set("x-pathname", request.nextUrl.pathname);
+  request.headers.set("x-pathname", request.nextUrl.pathname);
 
   // Auth pages do not need a Supabase server client at all.
   // This also keeps the login/reset pages completely independent of
   // session-cookie parsing.
   if (isPublicAuthPath(request.nextUrl.pathname)) {
-    return NextResponse.next({
-      request: { headers: requestHeaders },
-    });
+    return NextResponse.next({ request });
   }
 
-  let response = NextResponse.next({
-    request: { headers: requestHeaders },
-  });
+  let response = NextResponse.next({ request });
 
   const supabase = createServerClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -46,9 +41,7 @@ export async function middleware(request: NextRequest) {
             request.cookies.set(name, value);
           });
 
-          response = NextResponse.next({
-            request: { headers: requestHeaders },
-          });
+          response = NextResponse.next({ request });
 
           cookiesToSet.forEach(({ name, value, options }) => {
             response.cookies.set(name, value, options);
