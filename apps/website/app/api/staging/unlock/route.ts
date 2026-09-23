@@ -15,18 +15,18 @@ export async function POST(request: Request) {
 
   const expected = process.env.STAGING_PASSWORD ?? "";
   if (!expected || password.length !== expected.length) {
-    return NextResponse.redirect(new URL("/staging?error=1", request.url));
+    return NextResponse.redirect(new URL("/staging?error=1", request.url), 303);
   }
 
   const passwordOk = timingSafeEqual(Buffer.from(password), Buffer.from(expected));
   if (!passwordOk || !process.env.STAGING_SESSION_SECRET) {
-    return NextResponse.redirect(new URL("/staging?error=1", request.url));
+    return NextResponse.redirect(new URL("/staging?error=1", request.url), 303);
   }
 
   const payload = `v1.${Date.now()}`;
   const token = `${payload}.${sign(payload)}`;
 
-  const response = NextResponse.redirect(new URL(next, request.url));
+  const response = NextResponse.redirect(new URL(next, request.url), 303);
   response.cookies.set("dr1ft_staging", token, {
     httpOnly: true,
     secure: process.env.NODE_ENV === "production",
