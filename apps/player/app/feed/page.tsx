@@ -31,7 +31,7 @@ export default async function FeedPage() {
     .from("class_scenario_assignments")
     .select("scenario_id")
     .in("class_id", classIds.length ? classIds : ["00000000-0000-0000-0000-000000000000"]);
-  const assignedScenarioIds = [...new Set((assignments ?? []).map((a) => a.scenario_id))];
+  const assignedScenarioIds = Array.from(new Set((assignments ?? []).map((a) => a.scenario_id)));
 
   // Kompetenz-Fortschritt
   const { data: competencyProgress } = await supabase
