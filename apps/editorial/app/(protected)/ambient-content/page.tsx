@@ -4,7 +4,7 @@ import type { ReactNode } from "react";
 import { Sparkles, Image as ImageIcon, Wand2, Zap, Search, SlidersHorizontal } from "lucide-react";
 import { supabaseServerClient } from "../../../lib/supabaseServerClient";
 import { archiveAmbientContent, generateAmbientDrafts } from "./actions";
-import { ContentStatusControl } from "../scenarios/[scenarioId]/ContentStatusControl";
+import { ContentStatusControl } from "../../scenarios/[scenarioId]/ContentStatusControl";
 
 const STATUS_ORDER = ["draft", "in_review", "approved", "live", "rejected", "archived"];
 const STYLE_OPTIONS = [["mixed", "✨ Wild Mix — alles durcheinander"], ["casual", "😎 Locker & natürlich"], ["chatty", "💬 Chatty / Messenger"], ["meme", "💀 Meme-native / Internet"], ["deadpan", "😐 Trocken / deadpan"], ["wholesome", "🫶 Warm / wholesome"], ["chaotic", "🤪 Chaotisch / impulsiv"], ["observational", "👀 Beobachtend"], ["storyteller", "📖 Mini-Storys"], ["minimal", "🫥 Minimalistisch"]];
