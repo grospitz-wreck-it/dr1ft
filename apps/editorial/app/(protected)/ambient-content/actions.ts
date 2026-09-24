@@ -293,9 +293,24 @@ export async function generateAmbientDrafts(formData: FormData) {
 
   const creatorVoice = creatorId ? (await supabase.from("creators").select("display_name, persona").eq("id", creatorId).maybeSingle()).data : null;
   const profile = (await supabase.from("ambient_generation_profiles").select("*").eq("age_band", ageBand).eq("is_active", true).limit(1).maybeSingle()).data;
-  const provider = model === "gemini" ? "gemini" : "claude";
-  const apiKey = provider === "gemini" ? process.env.GEMINI_API_KEY : process.env.ANTHROPIC_API_KEY;
-  if (!apiKey) throw new Error(`${provider === "gemini" ? "GEMINI_API_KEY" : "ANTHROPIC_API_KEY"} ist nicht gesetzt.`);
+  // Gemini ist optional. Wenn der Nutzer Gemini auswählt, aber in Vercel
+  // noch kein GEMINI_API_KEY hinterlegt ist, fällt der Generator automatisch
+  // auf Claude zurück, sofern ANTHROPIC_API_KEY vorhanden ist.
+  let provider: "gemini" | "claude" = model === "gemini" ? "gemini" : "claude";
+  let apiKey = provider === "gemini" ? process.env.GEMINI_API_KEY : process.env.ANTHROPIC_API_KEY;
+
+  if (!apiKey && provider === "gemini" && process.env.ANTHROPIC_API_KEY) {
+    provider = "claude";
+    apiKey = process.env.ANTHROPIC_API_KEY;
+  }
+
+  if (!apiKey) {
+    throw new Error(
+      provider === "gemini"
+        ? "GEMINI_API_KEY ist nicht gesetzt. Alternativ kann Claude mit ANTHROPIC_API_KEY verwendet werden."
+        : "ANTHROPIC_API_KEY ist nicht gesetzt.",
+    );
+  }
 
   const languageLibrary = buildAmbientLanguagePrompt(ageBand, slangLevel, typoLevel);
   const ageText = AGE_BANDS[ageBand] ?? ageBand;
