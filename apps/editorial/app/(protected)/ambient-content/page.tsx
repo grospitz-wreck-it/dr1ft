@@ -37,20 +37,22 @@ export default async function AmbientContentPage({ searchParams = {} }: Props) {
   if (creatorFilter) itemsQuery = itemsQuery.eq("creator_id", creatorFilter);
   if (q) itemsQuery = itemsQuery.ilike("body", `%${q}%`);
 
-  const [{ data: ambientCreators }, { data: items }, { data: profiles }, { data: missions }, { data: arcSteps }, { data: arcs }, { data: classAssignments }] = await Promise.all([
+  const [{ data: ambientCreators }, { data: items }, { data: profiles }, { data: missions }, { data: arcSteps }, { data: arcs }, { data: classes }] = await Promise.all([
     supabase.from("creators").select("id, display_name").eq("creator_role", "ambient").order("display_name"),
     itemsQuery,
     supabase.from("ambient_generation_profiles").select("key, label, age_band, typo_level, slang_level, emoji_level, image_probability").eq("is_active", true).order("label"),
     supabase.from("missions").select("id, title, scenario_id, reflection_content_id"),
     supabase.from("story_arc_steps").select("arc_id, mission_id"),
     supabase.from("story_arcs").select("id, title, scenario_id"),
-    supabase.from("class_scenario_assignments").select("class_id, scenario_id, classes(id, name, grade_level)"),
+    supabase.from("classes").select("id, name, grade_level"),
   ]);
 
+  // Keep the page resilient if an optional metadata query is unavailable in the
+  // current Supabase schema/cache. The core Ambient feed must still render.
   const missionRows = missions ?? [];
   const arcRows = arcs ?? [];
   const arcStepRows = arcSteps ?? [];
-  const assignmentRows = classAssignments ?? [];
+  const classRows = classes ?? [];
 
   const missionByContent = new Map<string, { id: string; title: string; scenarioId: string | null }[]>();
   for (const mission of missionRows) {
@@ -70,19 +72,14 @@ export default async function AmbientContentPage({ searchParams = {} }: Props) {
   }
 
   const classesByScenario = new Map<string, { id: string; name: string; gradeLevel: number | null }[]>();
-  for (const assignment of assignmentRows) {
-    const classRow = Array.isArray(assignment.classes) ? assignment.classes[0] : assignment.classes;
-    if (!classRow || !assignment.scenario_id) continue;
-    const current = classesByScenario.get(assignment.scenario_id) ?? [];
-    if (!current.some((item) => item.id === classRow.id)) {
-      current.push({ id: classRow.id, name: classRow.name, gradeLevel: classRow.grade_level });
-    }
-    classesByScenario.set(assignment.scenario_id, current);
-  }
+  // Ambient posts intentionally have no scenario_id. Class usage can therefore
+  // only be resolved once an explicit content↔class/scenario relationship exists.
+  // Keep the class vocabulary available without relying on a fragile nested embed.
+  const allClasses = classRows.map((row) => ({ id: row.id, name: row.name, gradeLevel: row.grade_level }));
 
   const ageOptions = Array.from(new Set((items ?? []).map((item) => item.extra?.ageBand ?? item.age_rating).filter(Boolean))).sort();
   const gradeOptions = Array.from(new Set(
-    Array.from(classesByScenario.values()).flatMap((classes) => classes.map((item) => item.gradeLevel).filter((value): value is number => typeof value === "number"))
+    allClasses.map((item) => item.gradeLevel).filter((value): value is number => typeof value === "number")
   )).sort((a, b) => a - b);
   const missionOptions = Array.from(new Map(missionRows.map((mission) => [mission.id, mission])).values()).sort((a, b) => a.title.localeCompare(b.title));
   const arcOptions = Array.from(new Map(arcRows.map((arc) => [arc.id, arc])).values()).sort((a, b) => a.title.localeCompare(b.title));
