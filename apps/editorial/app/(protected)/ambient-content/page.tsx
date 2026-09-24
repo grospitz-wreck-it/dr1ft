@@ -37,7 +37,15 @@ export default async function AmbientContentPage({ searchParams = {} }: Props) {
   if (creatorFilter) itemsQuery = itemsQuery.eq("creator_id", creatorFilter);
   if (q) itemsQuery = itemsQuery.ilike("body", `%${q}%`);
 
-  const [{ data: ambientCreators }, { data: items }, { data: profiles }, { data: missions }, { data: arcSteps }, { data: arcs }, { data: classes }] = await Promise.all([
+  const [
+    creatorsResult,
+    itemsResult,
+    profilesResult,
+    missionsResult,
+    arcStepsResult,
+    arcsResult,
+    classesResult,
+  ] = await Promise.all([
     supabase.from("creators").select("id, display_name").eq("creator_role", "ambient").order("display_name"),
     itemsQuery,
     supabase.from("ambient_generation_profiles").select("key, label, age_band, typo_level, slang_level, emoji_level, image_probability").eq("is_active", true).order("label"),
@@ -47,12 +55,23 @@ export default async function AmbientContentPage({ searchParams = {} }: Props) {
     supabase.from("classes").select("id, name, grade_level"),
   ]);
 
-  // Keep the page resilient if an optional metadata query is unavailable in the
-  // current Supabase schema/cache. The core Ambient feed must still render.
-  const missionRows = missions ?? [];
-  const arcRows = arcs ?? [];
-  const arcStepRows = arcSteps ?? [];
-  const classRows = classes ?? [];
+  const ambientCreators = creatorsResult.data ?? [];
+  const items = itemsResult.data ?? [];
+  const profiles = profilesResult.data ?? [];
+  const missionRows = missionsResult.data ?? [];
+  const arcRows = arcsResult.data ?? [];
+  const arcStepRows = arcStepsResult.data ?? [];
+  const classRows = classesResult.data ?? [];
+
+  const metadataErrors = [
+    creatorsResult.error,
+    itemsResult.error,
+    profilesResult.error,
+    missionsResult.error,
+    arcStepsResult.error,
+    arcsResult.error,
+    classesResult.error,
+  ].filter(Boolean);
 
   const missionByContent = new Map<string, { id: string; title: string; scenarioId: string | null }[]>();
   for (const mission of missionRows) {
@@ -77,14 +96,14 @@ export default async function AmbientContentPage({ searchParams = {} }: Props) {
   // Keep the class vocabulary available without relying on a fragile nested embed.
   const allClasses = classRows.map((row) => ({ id: row.id, name: row.name, gradeLevel: row.grade_level }));
 
-  const ageOptions = Array.from(new Set((items ?? []).map((item) => item.extra?.ageBand ?? item.age_rating).filter(Boolean))).sort();
+  const ageOptions = Array.from(new Set(items.map((item) => item.extra?.ageBand ?? item.age_rating).filter(Boolean))).sort();
   const gradeOptions = Array.from(new Set(
     allClasses.map((item) => item.gradeLevel).filter((value): value is number => typeof value === "number")
   )).sort((a, b) => a - b);
-  const missionOptions = Array.from(new Map(missionRows.map((mission) => [mission.id, mission])).values()).sort((a, b) => a.title.localeCompare(b.title));
-  const arcOptions = Array.from(new Map(arcRows.map((arc) => [arc.id, arc])).values()).sort((a, b) => a.title.localeCompare(b.title));
+  const missionOptions = Array.from(new Map(missionRows.map((mission) => [mission.id, mission])).values()).sort((a, b) => String(a.title ?? "").localeCompare(String(b.title ?? "")));
+  const arcOptions = Array.from(new Map(arcRows.map((arc) => [arc.id, arc])).values()).sort((a, b) => String(a.title ?? "").localeCompare(String(b.title ?? "")));
 
-  const filteredItems = (items ?? []).filter((item) => {
+  const filteredItems = items.filter((item) => {
     const hasImage = item.media_type === "image" || Boolean(item.media_url);
     const imageProvider = item.extra?.imageProvider;
     const mediaOk = mediaFilter === "all" || (mediaFilter === "image" && hasImage) || (mediaFilter === "text" && !hasImage);
@@ -104,7 +123,7 @@ export default async function AmbientContentPage({ searchParams = {} }: Props) {
   });
 
   const grouped = STATUS_ORDER.map((status) => ({ status, items: filteredItems.filter((c) => c.status === status) })).filter((group) => group.items.length > 0);
-  const allAmbient = items ?? [];
+  const allAmbient = items;
   const liveCount = allAmbient.filter((item) => item.status === "live").length;
   const draftCount = allAmbient.filter((item) => item.status === "draft").length;
   const imageCount = allAmbient.filter((item) => item.media_type === "image").length;
@@ -126,6 +145,12 @@ export default async function AmbientContentPage({ searchParams = {} }: Props) {
   };
 
   return <div className="min-h-screen bg-slate-50 px-6 py-6"><div className="max-w-7xl mx-auto space-y-6">
+    {metadataErrors.length > 0 && (
+      <div className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-xs text-amber-900">
+        <div className="font-semibold">Ambient-Studio: optionale Metadaten konnten nicht geladen werden.</div>
+        <div className="mt-1 break-words">{metadataErrors.map((error) => error?.message).filter(Boolean).join(" · ")}</div>
+      </div>
+    )}
     <header className="flex items-end justify-between gap-6"><div><div className="flex items-center gap-2 text-accent text-xs font-semibold uppercase tracking-widest mb-2"><Sparkles className="w-4 h-4" /> AI Content Studio</div><h1 className="text-3xl font-semibold tracking-tight text-slate-900">Ambient-Content-Generator</h1><p className="text-slate-500 mt-2 max-w-3xl">Ambient ist ausschließlich eigenständiger Feed-Content. Szenario-, Klassen- und Instanz-Content bleibt aus dieser Übersicht heraus.</p></div><div className="hidden md:flex gap-2 text-xs"><Stat label="LIVE" value={liveCount}/><Stat label="DRAFTS" value={draftCount}/><Stat label="BILDER" value={imageCount}/></div></header>
 
     <form action={generateAmbientDrafts} className="grid xl:grid-cols-[1.45fr_1fr] gap-5">
