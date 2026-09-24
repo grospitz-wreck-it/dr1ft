@@ -37,7 +37,7 @@ export default async function ClassDetailPage({ params }: Props) {
     .eq("class_id", classId);
   const assignedIds = new Set((assignments ?? []).map((a) => a.scenario_id));
   const pacingByScenario = new Map((assignments ?? []).map((a) => [a.scenario_id, a.pacing_mode]));
-  const assignedScenarioIds = [...assignedIds];
+  const assignedScenarioIds = Array.from(assignedIds);
   const { data: missions } = assignedScenarioIds.length
     ? await supabase.from("missions").select("*, scenarios(title)").in("scenario_id", assignedScenarioIds).eq("status", "live")
     : { data: [] };
@@ -61,7 +61,7 @@ export default async function ClassDetailPage({ params }: Props) {
     entry.completed = Number(row.missions_completed);
     entry.total = Number(row.missions_total);
   });
-  const allCompetencyTitles = [...new Set((dashboard.studentCompetencyProgress ?? []).map((r: any) => r.competency_title).filter(Boolean))];
+  const allCompetencyTitles = Array.from(new Set((dashboard.studentCompetencyProgress ?? []).map((r: any) => r.competency_title).filter(Boolean)));
 
   if (!classInfo) return <div className="px-6 py-5 text-sm text-slate-500">Klasse nicht gefunden.</div>;
 
@@ -114,7 +114,7 @@ export default async function ClassDetailPage({ params }: Props) {
       <section>
         <h2 className="text-sm font-medium text-slate-500 uppercase text-xs2 mb-2">Fortschritt pro Schüler:in</h2>
         <p className="text-xs2 text-slate-400 mb-2">Nur für dich sichtbar. Zeigt Kompetenz-Level und Missions-Fortschritt — keine Einzelauswertung, welcher Post angeklickt/geliked wurde.</p>
-        <div className="bg-panel border border-border rounded-lg overflow-x-auto"><table className="w-full text-sm"><thead><tr className="border-b border-border text-left text-slate-400 text-xs2 uppercase"><th className="px-4 py-2">Schüler:in</th>{allCompetencyTitles.map((t) => <th key={t as string} className="px-3 py-2">{t as string}</th>)}<th className="px-3 py-2">Missionen</th></tr></thead><tbody>{[...studentRows.values()].map((s, i) => <tr key={i} className="border-b border-border last:border-0"><td className="px-4 py-2 text-slate-900">{s.name}</td>{allCompetencyTitles.map((t) => <td key={t as string} className="px-3 py-2 text-slate-500">{s.competencies[t as string] ?? "—"}/5</td>)}<td className="px-3 py-2 text-slate-500">{s.completed}/{s.total}</td></tr>)}{studentRows.size === 0 && <tr><td colSpan={2 + allCompetencyTitles.length} className="px-4 py-4 text-center text-slate-400">Noch keine Daten.</td></tr>}</tbody></table></div>
+        <div className="bg-panel border border-border rounded-lg overflow-x-auto"><table className="w-full text-sm"><thead><tr className="border-b border-border text-left text-slate-400 text-xs2 uppercase"><th className="px-4 py-2">Schüler:in</th>{allCompetencyTitles.map((t) => <th key={t as string} className="px-3 py-2">{t as string}</th>)}<th className="px-3 py-2">Missionen</th></tr></thead><tbody>{Array.from(studentRows.values()).map((s, i) => <tr key={i} className="border-b border-border last:border-0"><td className="px-4 py-2 text-slate-900">{s.name}</td>{allCompetencyTitles.map((t) => <td key={t as string} className="px-3 py-2 text-slate-500">{s.competencies[t as string] ?? "—"}/5</td>)}<td className="px-3 py-2 text-slate-500">{s.completed}/{s.total}</td></tr>)}{studentRows.size === 0 && <tr><td colSpan={2 + allCompetencyTitles.length} className="px-4 py-4 text-center text-slate-400">Noch keine Daten.</td></tr>}</tbody></table></div>
       </section>
 
       <section>
