@@ -1,6 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { redirect } from "next/navigation";
 import { supabaseServerClient } from "../../../lib/supabaseServerClient";
 import { buildAmbientLanguagePrompt } from "../../../lib/ambientLanguageLibrary";
 
@@ -273,7 +274,8 @@ function pickImageIndexes(count: number, ratio: number, mode: string, items: any
 }
 
 export async function generateAmbientDrafts(formData: FormData) {
-  const supabase = supabaseServerClient();
+  try {
+    const supabase = supabaseServerClient();
   const theme = text(formData, "theme", "Alltag");
   const ageBand = text(formData, "ageBand", "14_15");
   const style = text(formData, "style", "mixed");
@@ -360,7 +362,12 @@ export async function generateAmbientDrafts(formData: FormData) {
   if (!rows.length) throw new Error("Die KI hat keine gültigen Items geliefert.");
   const { error } = await supabase.from("content_items").insert(rows);
   if (error) throw new Error(error.message);
-  revalidatePath("/ambient-content");
+    revalidatePath("/ambient-content");
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "Unbekannter Fehler bei der Ambient-Generierung.";
+    console.error("[ambient-generator]", error);
+    redirect(`/ambient-content?generationError=${encodeURIComponent(message.slice(0, 900))}`);
+  }
 }
 
 export async function archiveAmbientContent(contentItemId: string) {
