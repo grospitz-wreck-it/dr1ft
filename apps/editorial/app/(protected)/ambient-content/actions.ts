@@ -296,6 +296,9 @@ export async function generateAmbientDrafts(formData: FormData) {
   // Gemini ist optional. Wenn der Nutzer Gemini auswählt, aber in Vercel
   // noch kein GEMINI_API_KEY hinterlegt ist, fällt der Generator automatisch
   // auf Claude zurück, sofern ANTHROPIC_API_KEY vorhanden ist.
+  const geminiConfigured = Boolean(process.env.GEMINI_API_KEY?.trim());
+  console.info("[ambient-generator] Gemini API key configured:", geminiConfigured);
+
   let provider: "gemini" | "claude" = model === "gemini" ? "gemini" : "claude";
   let apiKey = provider === "gemini" ? process.env.GEMINI_API_KEY : process.env.ANTHROPIC_API_KEY;
 
@@ -307,7 +310,7 @@ export async function generateAmbientDrafts(formData: FormData) {
   if (!apiKey) {
     throw new Error(
       provider === "gemini"
-        ? "GEMINI_API_KEY ist nicht gesetzt. Alternativ kann Claude mit ANTHROPIC_API_KEY verwendet werden."
+        ? "GEMINI_API_KEY ist zur Laufzeit nicht verfügbar (Vercel Production Environment)."
         : "ANTHROPIC_API_KEY ist nicht gesetzt.",
     );
   }
