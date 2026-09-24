@@ -756,3 +756,6 @@ Wichtig: Inhalte, die reale Extremismus-Symbole/-Codes zeigen sollen, immer
 über kuratierte externe Quellen (z.B. jugendschutz.net) einspeisen und über
 den Redaktions-Workflow (status: in_review) freigeben lassen — nie automatisch
 per KI generieren und live schalten.
+
+
+<!-- deployment trigger: 2026-09-24 -->
