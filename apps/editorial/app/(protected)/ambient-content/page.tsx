@@ -11,7 +11,7 @@ const STYLE_OPTIONS = [["mixed", "✨ Wild Mix — alles durcheinander"], ["casu
 const INTEREST_OPTIONS = ["🎵 Musik", "🎮 Gaming", "🍿 Serien & Filme", "⚽ Sport", "👟 Mode", "🍕 Essen", "🏃 Fitness", "✈️ Reisen", "🐶 Tiere", "📱 Tech", "📚 Schule", "🫶 Freunde", "😂 Memes", "🎨 Kreativität", "📖 Bücher", "🌿 Natur", "🔬 Wissenschaft", "📍 Lokales"];
 const statusLabel: Record<string, string> = { draft: "ENTWURF", in_review: "REVIEW", approved: "APPROVED", live: "LIVE", rejected: "ABGELEHNT", archived: "ARCHIV" };
 
-type Props = { searchParams?: { status?: string; q?: string; media?: string; provider?: string; creator?: string; age?: string; grade?: string; mission?: string; arc?: string } };
+type Props = { searchParams?: { status?: string; q?: string; media?: string; provider?: string; creator?: string; age?: string; grade?: string; mission?: string; arc?: string; generationError?: string } };
 
 export default async function AmbientContentPage({ searchParams = {} }: Props) {
   const supabase = supabaseServerClient();
@@ -24,6 +24,7 @@ export default async function AmbientContentPage({ searchParams = {} }: Props) {
   const gradeFilter = String(searchParams.grade ?? "").trim();
   const missionFilter = String(searchParams.mission ?? "").trim();
   const arcFilter = String(searchParams.arc ?? "").trim();
+  const generationError = String(searchParams.generationError ?? "").trim();
 
   let itemsQuery = supabase
     .from("content_items")
@@ -144,6 +145,13 @@ export default async function AmbientContentPage({ searchParams = {} }: Props) {
   };
 
   return <div className="min-h-screen bg-slate-50 px-6 py-6"><div className="max-w-7xl mx-auto space-y-6">
+    {generationError && (
+      <div className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-900">
+        <div className="font-semibold">Ambient-Generierung fehlgeschlagen</div>
+        <div className="mt-1 break-words">{generationError}</div>
+      </div>
+    )}
+
     {metadataErrors.length > 0 && (
       <div className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-xs text-amber-900">
         <div className="font-semibold">Ambient-Studio: optionale Metadaten konnten nicht geladen werden.</div>
