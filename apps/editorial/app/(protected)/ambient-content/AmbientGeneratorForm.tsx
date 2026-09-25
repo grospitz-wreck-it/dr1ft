@@ -1,10 +1,9 @@
 "use client";
 
 import { useActionState, useEffect, useState, type ReactNode } from "react";
-import type { generateAmbientDrafts } from "./actions";
+import type { AmbientGenerationState, generateAmbientDrafts } from "./actions";
 
 type Action = typeof generateAmbientDrafts;
-type State = Awaited<ReturnType<Action>>;
 
 export function AmbientGeneratorForm({
   action,
@@ -13,7 +12,7 @@ export function AmbientGeneratorForm({
   action: Action;
   children: ReactNode;
 }) {
-  const [state, formAction] = useActionState(action, null as State);
+  const [state, formAction] = useActionState<AmbientGenerationState, FormData>(action, null);
   const [formKey, setFormKey] = useState(0);
 
   useEffect(() => {
