@@ -21,11 +21,19 @@ export function GenerateAmbientButton() {
         <div className="rounded-xl border border-white/10 bg-white/5 px-4 py-3 space-y-2" role="status" aria-live="polite">
           <div className="flex items-center gap-2 text-xs text-slate-300">
             <Loader2 className="w-3.5 h-3.5 animate-spin" />
-            <span>Gemini erstellt gerade die Feed-Inhalte.</span>
+            <span>Ambient-Feed wird aufgebaut …</span>
+          </div>
+          <div className="h-1.5 overflow-hidden rounded-full bg-white/10" aria-hidden="true">
+            <div className="h-full w-1/3 rounded-full bg-white/70 animate-[ambient-progress_1.4s_ease-in-out_infinite]" />
+          </div>
+          <div className="grid grid-cols-3 gap-2 text-[10px]">
+            <span className="rounded-lg bg-white/10 px-2 py-1.5 text-center text-slate-200">① Texte</span>
+            <span className="rounded-lg bg-white/5 px-2 py-1.5 text-center text-slate-400">② Visuals</span>
+            <span className="rounded-lg bg-white/5 px-2 py-1.5 text-center text-slate-400">③ Speichern</span>
           </div>
           <div className="flex items-center gap-2 text-xs text-slate-500">
             <CheckCircle2 className="w-3.5 h-3.5" />
-            <span>Anschließend werden passende Visuals erzeugt und alles als DRAFT gespeichert.</span>
+            <span>FLUX erzeugt passende Bilder; anschließend werden alle Ergebnisse als DRAFT gespeichert.</span>
           </div>
           <p className="text-[10px] text-slate-600">Je nach Anzahl und Bildanteil kann das etwas dauern. Bitte dieses Fenster geöffnet lassen.</p>
         </div>
