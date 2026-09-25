@@ -273,7 +273,9 @@ function pickImageIndexes(count: number, ratio: number, mode: string, items: any
   return indexes;
 }
 
-export async function generateAmbientDrafts(formData: FormData) {
+export type AmbientGenerationState = { ok: boolean } | null;
+
+export async function generateAmbientDrafts(_prevState: AmbientGenerationState, formData: FormData): Promise<{ ok: true }> {
   try {
     const supabase = supabaseServerClient();
   const theme = text(formData, "theme", "Alltag");
@@ -381,6 +383,7 @@ export async function generateAmbientDrafts(formData: FormData) {
   const { error } = await supabase.from("content_items").insert(rows);
   if (error) throw new Error(error.message);
     revalidatePath("/ambient-content");
+    return { ok: true };
   } catch (error) {
     const message = error instanceof Error ? error.message : "Unbekannter Fehler bei der Ambient-Generierung.";
     console.error("[ambient-generator]", error);
