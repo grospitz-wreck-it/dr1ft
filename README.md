@@ -759,3 +759,4 @@ per KI generieren und live schalten.
 
 
 <!-- deployment trigger: 2026-09-24 -->
+<!-- vercel retry trigger: 2026-09-25T05:56:24.930Z -->
