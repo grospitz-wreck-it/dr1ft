@@ -13,7 +13,7 @@ interface ImageRequest {
   aspectRatio?: unknown;
 }
 
-const MODEL = "@cf/black-forest-labs/flux-1-schnell";
+const MODEL = "@cf/black-forest-labs/flux-2-klein-4b";
 
 function json(data: unknown, status = 200): Response {
   return Response.json(data, {
@@ -73,12 +73,30 @@ export default {
     if (!rawPrompt) return json({ error: "prompt is required" }, 400);
 
     const prompt = `${rawPrompt}\n\nGenerate a natural, ordinary social-media image. Avoid readable text, logos, celebrities, political messaging and advertising.`.slice(0, 2048);
-    const steps = toPositiveInt(body.steps, 4, 8);
+    const dimensions: Record<string, [number, number]> = {
+    "1:1": [1024, 1024],
+    "4:5": [1024, 1280],
+    "5:4": [1280, 1024],
+    "16:9": [1344, 768],
+    "9:16": [768, 1344],
+    "3:4": [1024, 1365],
+    "4:3": [1365, 1024],
+  };
+  const ratio = aspectLabel(body.aspectRatio);
+  const [width, height] = dimensions[ratio] ?? dimensions["1:1"];
 
-    try {
-      // FLUX.1 Schnell's Workers AI input schema accepts prompt and steps.
-      // Do not pass seed: Workers AI rejects it for this model/version.
-      const result = await env.AI.run(MODEL, { prompt, steps });
+  try {
+      const form = new FormData();
+      form.append("prompt", prompt);
+      form.append("width", String(width));
+      form.append("height", String(height));
+      const formResponse = new Response(form);
+      const result = await env.AI.run(MODEL, {
+        multipart: {
+          body: formResponse.body!,
+          contentType: formResponse.headers.get("content-type")!,
+        },
+      });
 
       if (!result || typeof result.image !== "string" || !result.image) {
         return json({ error: "Workers AI returned no image" }, 502);
@@ -89,8 +107,9 @@ export default {
         model: MODEL,
         mimeType: "image/jpeg",
         image: result.image,
-        steps,
-        aspectRatio: aspectLabel(body.aspectRatio),
+        aspectRatio: ratio,
+        width,
+        height,
       });
     } catch (error) {
       const message = error instanceof Error ? error.message : "Unknown Workers AI error";
