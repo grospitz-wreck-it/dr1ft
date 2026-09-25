@@ -85,7 +85,7 @@ async function generateCloudflareImage(prompt: string, aspectRatio: string, inde
   const base64 = typeof data?.image === "string" ? data.image : null;
   if (!base64) throw new Error("Cloudflare FLUX hat kein Bild zurückgegeben.");
   const url = await storeAmbientImage(base64, "image/jpeg", index);
-  return { url, provider: "cloudflare", model: "@cf/black-forest-labs/flux-1-schnell" };
+  return { url, provider: "cloudflare", model: "@cf/black-forest-labs/flux-2-klein-4b" };
 }
 
 async function generateGeminiImage(prompt: string, aspectRatio: string, index: number) {
@@ -370,7 +370,7 @@ export async function generateAmbientDrafts(formData: FormData) {
     let imageProvider: string | null = null;
     let imageModel: string | null = null;
     if (shouldImage && item.imagePrompt) {
-      const image = await generateImage(`Create an authentic, ordinary social-media image for a German ${ageText} ambient feed. ${imageStyle}. Topic: ${item.topic}. Mood: ${item.mood}. ${item.imagePrompt}. No logos, readable text, celebrity likeness, political messaging or staged advertising.`, aspectRatio, index);
+      const image = await generateImage(`Create an authentic, ordinary social-media image for a German social-media feed. ${imageStyle}. Topic: ${item.topic}. Mood: ${item.mood}. ${item.imagePrompt}. Natural smartphone photography, candid everyday setting, realistic lighting, slightly imperfect framing. No age, age range, minor/teen references, logos, readable text, celebrity likeness, political messaging or staged advertising.`, aspectRatio, index);
       mediaUrl = image.url;
       imageProvider = image.provider;
       imageModel = image.model;
