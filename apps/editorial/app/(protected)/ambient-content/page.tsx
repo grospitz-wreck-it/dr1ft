@@ -6,6 +6,7 @@ import { supabaseServerClient } from "../../../lib/supabaseServerClient";
 import { AmbientInterestPicker } from "./AmbientInterestPicker";
 import { GenerateAmbientButton } from "./GenerateAmbientButton";
 import { generateAmbientDrafts } from "./actions";
+import { AmbientGeneratorForm } from "./AmbientGeneratorForm";
 
 const STATUS_ORDER = ["draft", "in_review", "approved", "live", "rejected", "archived"];
 const STYLE_OPTIONS = [["mixed", "✨ Wild Mix — alles durcheinander"], ["casual", "😎 Locker & natürlich"], ["chatty", "💬 Chatty / Messenger"], ["meme", "💀 Meme-native / Internet"], ["deadpan", "😐 Trocken / deadpan"], ["wholesome", "🫶 Warm / wholesome"], ["chaotic", "🤪 Chaotisch / impulsiv"], ["observational", "👀 Beobachtend"], ["storyteller", "📖 Mini-Storys"], ["minimal", "🫥 Minimalistisch"]];
@@ -161,7 +162,7 @@ export default async function AmbientContentPage({ searchParams = {} }: Props) {
     )}
     <header className="flex items-end justify-between gap-6"><div><div className="flex items-center gap-2 text-accent text-xs font-semibold uppercase tracking-widest mb-2"><Sparkles className="w-4 h-4" /> AI Content Studio</div><h1 className="text-3xl font-semibold tracking-tight text-slate-900">Ambient-Content-Generator</h1><p className="text-slate-500 mt-2 max-w-3xl">Ambient ist ausschließlich eigenständiger Feed-Content. Szenario-, Klassen- und Instanz-Content bleibt aus dieser Übersicht heraus.</p></div><div className="hidden md:flex gap-2 text-xs"><Stat label="LIVE" value={liveCount}/><Stat label="DRAFTS" value={draftCount}/><Stat label="BILDER" value={imageCount}/></div></header>
 
-    <form action={generateAmbientDrafts} className="grid xl:grid-cols-[1.45fr_1fr] gap-5">
+    <AmbientGeneratorForm action={generateAmbientDrafts}>
       <section className="bg-white border border-slate-200 rounded-2xl p-6 shadow-sm space-y-6">
         <div className="flex items-center justify-between"><div><h2 className="font-semibold text-slate-900 flex items-center gap-2"><Wand2 className="w-4 h-4 text-accent"/> Feed-Rezept</h2><p className="text-xs text-slate-500 mt-1">Wie soll sich der Feed anfühlen?</p></div><span className="text-[11px] px-2 py-1 rounded-full bg-violet-50 text-violet-700 font-medium">AMBIENT v4</span></div>
         <div><label className="block text-xs font-semibold text-slate-600 mb-2">THEMA / KONTEXT</label><input name="theme" required defaultValue="" placeholder="z.B. Schulweg, Wochenende, neue Musik, Freibad, Gaming-Abend …" className="w-full rounded-xl border border-slate-200 px-4 py-3 text-sm outline-none focus:border-accent"/></div>
@@ -181,7 +182,7 @@ export default async function AmbientContentPage({ searchParams = {} }: Props) {
         <div className="rounded-xl border border-white/10 bg-black/20 p-4"><div className="text-xs uppercase tracking-wider text-slate-500 mb-2">PROFILE IM SYSTEM</div><div className="space-y-1 text-xs text-slate-400">{(profiles ?? []).map((profile)=><div key={profile.key} className="flex justify-between"><span>{profile.label}</span><span>{profile.image_probability}% img</span></div>)}</div></div>
         <GenerateAmbientButton />
       </section>
-    </form>
+    </AmbientGeneratorForm>
 
     <section className="bg-white border border-slate-200 rounded-2xl p-4 shadow-sm space-y-4"><div className="flex items-center justify-between gap-3"><div className="flex items-center gap-2"><SlidersHorizontal className="w-4 h-4 text-slate-500"/><h2 className="font-semibold text-sm text-slate-900">Content-Übersicht</h2>{activeFilterCount > 0 && <span className="text-[10px] rounded-full bg-accent/10 text-accent px-2 py-1 font-semibold">{activeFilterCount} Filter</span>}</div><span className="text-xs text-slate-400">{filteredItems.length} von {allAmbient.length} Ambient-Posts</span></div>
       <form method="get" className="grid lg:grid-cols-4 gap-2">
