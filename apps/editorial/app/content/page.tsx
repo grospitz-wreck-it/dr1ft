@@ -26,6 +26,7 @@ interface Props {
     type?: string;
     scenario?: string; // scenario id, oder "ambient" für scenario_id IS NULL
     technique?: string;
+    media?: string;
     page?: string;
     item?: string; // öffnet den Detail-Drawer für diese ID
   };
@@ -59,6 +60,11 @@ export default async function ContentLibraryPage({ searchParams }: Props) {
   }
   if (searchParams.technique) {
     query = query.contains("manipulation_techniques", [searchParams.technique]);
+  }
+  if (searchParams.media === "image") {
+    query = query.not("media_url", "is", null);
+  } else if (searchParams.media === "text") {
+    query = query.is("media_url", null);
   }
 
   const { data: rows, count } = await query;
@@ -133,6 +139,11 @@ export default async function ContentLibraryPage({ searchParams }: Props) {
               <option key={s.id} value={s.id}>{s.title}</option>
             ))}
           </select>
+          <select name="media" defaultValue={searchParams.media ?? ""} className="border border-border rounded-md px-2 py-1.5 text-sm">
+            <option value="">Alle Medien</option>
+            <option value="image">Mit Bild</option>
+            <option value="text">Nur Text</option>
+          </select>
           <input
             type="text"
             name="technique"
@@ -143,7 +154,7 @@ export default async function ContentLibraryPage({ searchParams }: Props) {
           <button type="submit" className="bg-accent hover:bg-accent-hover text-white text-sm px-4 py-1.5 rounded-md">
             Filtern
           </button>
-          {(searchParams.q || searchParams.status || searchParams.type || searchParams.scenario || searchParams.technique) && (
+          {(searchParams.q || searchParams.status || searchParams.type || searchParams.scenario || searchParams.technique || searchParams.media) && (
             <a href="/content" className="text-xs2 text-slate-400 hover:text-slate-600">
               Zurücksetzen
             </a>
