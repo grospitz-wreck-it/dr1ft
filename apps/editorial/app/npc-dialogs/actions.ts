@@ -381,7 +381,7 @@ export async function createNpcMessage(
       body,
       extra: {},
       status: "draft",
-      age_rating: "12_plus",
+      age_rating:\n        dialog.age_band === "9_11"\n          ? "all_ages"\n          : dialog.age_band === "16_17" || dialog.age_band === "18_plus"\n            ? "16_plus"\n            : "12_plus",
     })
     .select("id")
     .single();
