@@ -204,8 +204,9 @@ export async function updateContentItemStatus(
 }
 
 
-const AGE_BANDS = ["12_13", "14_15", "16_17", "18_plus"] as const;
+const AGE_BANDS = ["9_11", "12_13", "14_15", "16_17", "18_plus"] as const;
 const AGE_LABELS: Record<string, string> = {
+  "9_11": "9–11 Jahre",
   "12_13": "12–13 Jahre",
   "14_15": "14–15 Jahre",
   "16_17": "16–17 Jahre",
