@@ -25,7 +25,7 @@ function groupKey(scenario: any) {
 export default async function ScenariosPage({
   searchParams = {},
 }: {
-  searchParams?: { group?: string };
+  searchParams?: { group?: string; generationError?: string };
 }) {
   const supabase = supabaseServerClient();
 
@@ -191,6 +191,13 @@ export default async function ScenariosPage({
             </div>
           </form>
         </section>
+
+        {searchParams.generationError && (
+          <section className="rounded-2xl border border-red-200 bg-red-50 px-5 py-4">
+            <div className="text-xs font-semibold uppercase tracking-wider text-red-700">KI-Entwurf fehlgeschlagen</div>
+            <div className="mt-1 text-sm text-red-800 break-words">{searchParams.generationError}</div>
+          </section>
+        )}
 
         {selectedFamily && (
           <section className="rounded-2xl border border-accent/20 bg-accent/5 px-5 py-4">
