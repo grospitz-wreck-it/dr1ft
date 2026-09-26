@@ -45,9 +45,49 @@ export interface Competency {
 export interface CreatorPersona {
   styleNotes?: string;
   rhetoricPatterns?: string[];
-  credibilityScore?: number; // 0-1, wie glaubwürdig der Account wirkt
-  bio?: string; // Profiltext, öffentlich sichtbar
-  followerCount?: number; // Fake-Anzeigewert, rein kosmetisch
+  mannerisms?: string[];
+  recurringDetails?: string[];
+  worldview?: string;
+  boundaries?: string[];
+  credibilityScore?: number;
+  bio?: string;
+  followerCount?: number;
+}
+
+export type NpcCategory =
+  | "student"
+  | "club"
+  | "party"
+  | "brand"
+  | "citizen"
+  | "influencer"
+  | "institution"
+  | "creator"
+  | "other";
+
+export type NpcRole = "ambient" | "story" | "hybrid";
+
+export interface NpcDialog {
+  id: string;
+  creatorId: string;
+  scenarioId?: string;
+  storyArcId?: string;
+  ageBand: "9_11" | "12_13" | "14_15" | "16_17" | "18_plus";
+  title: string;
+  description?: string;
+  rootContentItemId?: string;
+  status: ContentStatus;
+}
+
+export interface NpcStoryLink {
+  id: string;
+  creatorId: string;
+  scenarioId: string;
+  storyArcId?: string;
+  ageBand: NpcDialog["ageBand"];
+  roleLabel?: string;
+  notes?: string;
+  isActive: boolean;
 }
 
 export interface Creator {
@@ -58,6 +98,14 @@ export interface Creator {
   avatarUrl?: string;
   persona: CreatorPersona;
   scenarioId?: string;
+  npcCategory?: NpcCategory;
+  npcRole?: NpcRole;
+  bio?: string;
+  interestTags?: string[];
+  ageBands?: NpcDialog["ageBand"][];
+  storyRole?: string;
+  aiIdentity?: Record<string, unknown>;
+  isActive?: boolean;
 }
 
 export interface ContentItem {
@@ -66,6 +114,7 @@ export interface ContentItem {
   scenarioId?: string;
   creatorId?: string;
   parentId?: string;
+  npcDialogId?: string;
 
   title?: string;
   body?: string;
