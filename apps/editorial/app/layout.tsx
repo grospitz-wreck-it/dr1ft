@@ -5,7 +5,6 @@ import {
   LayoutGrid,
   MessagesSquare,
   MessageSquare,
-  Route,
   Sparkles,
   Users,
   Library,
@@ -19,7 +18,6 @@ export const metadata: Metadata = {
 const NAV_ITEMS = [
   { href: "/content", label: "Content-Bibliothek", icon: Library },
   { href: "/scenarios", label: "Szenarien", icon: LayoutGrid },
-  { href: "/missions", label: "Missionen & Arcs", icon: Route },
   { href: "/npc-dialogs", label: "NPC-Dialoge", icon: MessagesSquare },
   { href: "/group-chats", label: "Gruppenchats", icon: MessageSquare },
   { href: "/ambient-content", label: "Ambient-Generator", icon: Sparkles },
