@@ -3,6 +3,7 @@ import { supabaseServerClient } from "../../lib/supabaseServerClient";
 import { createScenario, generateScenarioDraft } from "./actions";
 
 const AGE_BANDS = [
+  ["9_11", "9–11", "Kinder / frühe Lernende"],
   ["12_13", "12–13", "Frühe Teenager"],
   ["14_15", "14–15", "Mittlere Teenager"],
   ["16_17", "16–17", "Ältere Jugendliche"],
@@ -55,7 +56,7 @@ export default async function ScenariosPage({
     );
     return {
       key,
-      title: first.title?.replace(/\s*[–-]\s*(12–13|14–15|16–17|18\+).*$/i, "") || first.title,
+      title: first.title?.replace(/\s*[–-]\s*(9–11|12–13|14–15|16–17|18\+).*$/i, "") || first.title,
       description: first.description?.split("\n\nLernziele")[0] || "",
       variants,
       missionCount: familyMissions.length,
@@ -143,14 +144,26 @@ export default async function ScenariosPage({
 
             <div className="space-y-5">
               <div>
-                <label className="block text-xs font-semibold text-slate-600 mb-2">ALTERSVARIANTEN</label>
-                <div className="grid sm:grid-cols-2 gap-2">
+                <div className="flex items-center justify-between mb-2">
+                  <label className="text-xs font-semibold text-slate-600">ALTERSVARIANTEN</label>
+                  <span className="text-[11px] text-slate-400">Mehrere möglich</span>
+                </div>
+                <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-2">
                   {AGE_BANDS.map(([value, label, hint]) => (
-                    <label key={value} className="flex items-start gap-3 rounded-xl border border-slate-200 px-3 py-3 hover:bg-slate-50 cursor-pointer">
-                      <input type="checkbox" name="ageBands" value={value} defaultChecked={value !== "18_plus"} className="mt-1" />
-                      <span>
-                        <span className="block text-sm font-medium text-slate-800">{label}</span>
-                        <span className="block text-[11px] text-slate-400 mt-0.5">{hint}</span>
+                    <label
+                      key={value}
+                      className="flex items-center gap-2 rounded-lg border border-slate-200 bg-white px-2.5 py-2 hover:border-slate-300 hover:bg-slate-50 cursor-pointer transition-colors"
+                    >
+                      <input
+                        type="checkbox"
+                        name="ageBands"
+                        value={value}
+                        defaultChecked={value !== "18_plus"}
+                        className="shrink-0"
+                      />
+                      <span className="min-w-0">
+                        <span className="block text-sm font-medium leading-tight text-slate-800">{label}</span>
+                        <span className="block text-[10px] text-slate-400 mt-0.5 truncate">{hint}</span>
                       </span>
                     </label>
                   ))}
