@@ -1,5 +1,4 @@
-// apps/admin/app/scenarios/[scenarioId]/page.tsx
-
+import { ArrowLeft, CheckCircle2, ChevronRight, FileText, Flag, Route, Sparkles, Users } from "lucide-react";
 import { supabaseServerClient } from "../../../lib/supabaseServerClient";
 import { createContentItem, toggleScenarioActive } from "../actions";
 import { ContentStatusControl } from "./ContentStatusControl";
@@ -8,201 +7,261 @@ interface Props {
   params: { scenarioId: string };
 }
 
+const AGE_LABELS: Record<string, string> = {
+  "12_13": "12–13",
+  "14_15": "14–15",
+  "16_17": "16–17",
+  "18_plus": "18+",
+};
+
+const EVENT_LABELS: Record<string, string> = {
+  PostViewed: "Post angesehen",
+  CommentCreated: "Kommentar geschrieben",
+  NpcReplySelected: "NPC-Antwort gewählt",
+};
+
+const STATUS_LABELS: Record<string, string> = {
+  draft: "Entwurf",
+  in_review: "In Prüfung",
+  approved: "Freigegeben",
+  live: "Aktiv",
+  rejected: "Überarbeiten",
+  archived: "Archiv",
+};
+
 const STATUS_ORDER = ["draft", "in_review", "approved", "live", "rejected", "archived"];
 
 export default async function ScenarioDetailPage({ params }: Props) {
   const supabase = supabaseServerClient();
   const { scenarioId } = params;
 
-  const { data: scenario } = await supabase
-    .from("scenarios")
-    .select("*")
-    .eq("id", scenarioId)
-    .single();
+  const { data: scenario } = await supabase.from("scenarios").select("*").eq("id", scenarioId).single();
 
-  const { data: contentItems } = await supabase
-    .from("content_items")
-    .select("*")
-    .eq("scenario_id", scenarioId)
-    .order("created_at", { ascending: false });
+  if (!scenario) {
+    return <div className="px-6 py-6 text-sm text-slate-500">Szenario nicht gefunden.</div>;
+  }
 
-  const { data: creators } = await supabase
-    .from("creators")
-    .select("id, display_name, creator_role")
-    .or(`scenario_id.eq.${scenarioId},scenario_id.is.null`);
+  const group = scenario.scenario_group || scenario.slug || scenario.id;
+  const [
+    { data: variants },
+    { data: contentItems },
+    { data: creators },
+    { data: competencies },
+    { data: possibleParents },
+    { data: missions },
+    { data: arcs },
+  ] = await Promise.all([
+    supabase.from("scenarios").select("id, title, age_band, age_rating, status, is_active").eq("scenario_group", group).order("age_band"),
+    supabase.from("content_items").select("*").eq("scenario_id", scenarioId).order("created_at", { ascending: false }),
+    supabase.from("creators").select("id, display_name, creator_role").or(`scenario_id.eq.${scenarioId},scenario_id.is.null`),
+    supabase.from("competencies").select("id, title"),
+    supabase.from("content_items").select("id, body, scenario_id").eq("type", "post").or(`scenario_id.eq.${scenarioId},scenario_id.is.null`),
+    supabase.from("missions").select("*").eq("scenario_id", scenarioId).order("created_at"),
+    supabase.from("story_arcs").select("*").eq("scenario_id", scenarioId).order("created_at"),
+  ]);
 
-  const { data: competencies } = await supabase.from("competencies").select("id, title");
+  const arcIds = (arcs ?? []).map((arc) => arc.id);
+  const { data: steps } = arcIds.length
+    ? await supabase.from("story_arc_steps").select("*").in("arc_id", arcIds).order("order_index")
+    : { data: [] };
 
-  const { data: possibleParents } = await supabase
-    .from("content_items")
-    .select("id, body, scenario_id")
-    .eq("type", "post")
-    .or(`scenario_id.eq.${scenarioId},scenario_id.is.null`);
-
+  const missionById = new Map((missions ?? []).map((mission) => [mission.id, mission]));
+  const activeArc = arcs?.[0] ?? null;
+  const activeSteps = (steps ?? []).filter((step) => step.arc_id === activeArc?.id);
   const grouped = STATUS_ORDER.map((status) => ({
     status,
-    items: (contentItems ?? []).filter((c) => c.status === status),
-  }));
+    items: (contentItems ?? []).filter((item) => item.status === status),
+  })).filter((group) => group.items.length > 0);
 
   return (
-    <div className="px-6 py-5 max-w-3xl space-y-6">
-      <div className="flex justify-between items-start">
-        <div>
-          <h1 className="text-lg font-semibold text-slate-900">{scenario?.title}</h1>
-          <p className="text-sm text-slate-500">{scenario?.description}</p>
-        </div>
-        <form>
-          <button
-            formAction={async () => {
-              "use server";
-              await toggleScenarioActive(scenarioId, !scenario?.is_active);
-            }}
-            className="text-sm border border-border rounded-md px-3 py-2 hover:bg-canvas"
-          >
-            {scenario?.is_active ? "Deaktivieren" : "Aktivieren"}
-          </button>
-        </form>
-      </div>
+    <div className="min-h-screen bg-slate-50 px-6 py-6">
+      <div className="max-w-6xl mx-auto space-y-6">
+        <a href="/scenarios" className="inline-flex items-center gap-1.5 text-xs font-medium text-slate-500 hover:text-slate-900">
+          <ArrowLeft className="w-3.5 h-3.5" /> Zurück zu Szenarien
+        </a>
 
-      {grouped.map(
-        (group) =>
-          group.items.length > 0 && (
-            <section key={group.status}>
-              <h2 className="text-sm font-medium text-slate-500 mb-2 capitalize">
-                {group.status} ({group.items.length})
-              </h2>
-              <ul className="space-y-2">
-                {group.items.map((item) => (
-                  <li key={item.id} className="bg-panel border border-border rounded-lg p-3 space-y-2">
-                    <p className="text-sm text-slate-900">{item.body}</p>
-                    <p className="text-xs2 text-slate-400">
-                      {item.type} · Techniken: {(item.manipulation_techniques ?? []).join(", ") || "—"} ·
-                      Schwierigkeit {item.difficulty} · {item.age_rating}
-                    </p>
-                    <ContentStatusControl contentItemId={item.id} status={item.status} />
-                  </li>
-                ))}
-              </ul>
-            </section>
-          )
-      )}
-
-      <section className="bg-panel border border-border rounded-lg p-4 space-y-3">
-        <h2 className="text-sm font-medium text-slate-700">Neues Content-Item</h2>
-        <form action={createContentItem.bind(null, scenarioId)} encType="multipart/form-data" className="space-y-3">
-          <select name="type" className="border border-border rounded-md px-3 py-2 w-full text-sm">
-            <option value="post">Post</option>
-            <option value="comment">Kommentar</option>
-            <option value="dm_message">DM-Nachricht</option>
-            <option value="reflection_prompt">Reflexions-Prompt</option>
-          </select>
-
-          <textarea
-            name="body"
-            placeholder="Inhalt"
-            required
-            className="border border-border rounded-md px-3 py-2 w-full text-sm"
-          />
-
-          <div>
-            <label className="text-xs2 text-slate-500 block mb-1">
-              Bild/Video (optional)
-            </label>
-            <input
-              name="media"
-              type="file"
-              accept="image/*,video/*"
-              className="border border-border rounded-md px-3 py-2 w-full text-sm"
-            />
+        <header className="bg-white border border-slate-200 rounded-2xl p-6 shadow-sm">
+          <div className="flex flex-col xl:flex-row xl:justify-between gap-5">
+            <div>
+              <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-accent">
+                <Sparkles className="w-3.5 h-3.5" /> Szenario
+                <span className="text-slate-300">·</span>
+                {AGE_LABELS[scenario.age_band] ?? scenario.age_rating}
+              </div>
+              <h1 className="text-2xl font-semibold text-slate-900 mt-2">{scenario.title}</h1>
+              <p className="text-sm text-slate-500 mt-2 max-w-3xl">{scenario.description}</p>
+            </div>
+            <form>
+              <button
+                formAction={async () => {
+                  "use server";
+                  await toggleScenarioActive(scenarioId, !scenario.is_active);
+                }}
+                className="rounded-xl border border-slate-200 px-4 py-2.5 text-sm font-medium hover:bg-slate-50"
+              >
+                {scenario.is_active ? "Aktiv" : "Als Entwurf belassen"}
+              </button>
+            </form>
           </div>
 
-          <select name="creatorId" className="border border-border rounded-md px-3 py-2 w-full text-sm">
-            <option value="">Kein Creator (z.B. Reflexions-Prompt)</option>
-            {creators?.map((c) => (
-              <option key={c.id} value={c.id}>
-                {c.display_name} {c.creator_role ? `(${c.creator_role})` : ""}
-              </option>
-            ))}
-          </select>
-
-          <label className="flex items-center gap-2 text-xs2 text-slate-500 border border-border rounded-md px-3 py-2">
-            <input type="checkbox" name="isAmbient" />
-            Ambient-Content (kein Szenario-Bezug — landet im globalen
-            Füllmaterial-Pool, in jedem Feed wiederverwendbar. Darf keine
-            Manipulationstechniken tragen.)
-          </label>
-
-          <select name="parentContentId" className="border border-border rounded-md px-3 py-2 w-full text-sm">
-            <option value="">Kein Bezug (eigenständiger Post)</option>
-            {possibleParents?.map((p) => (
-              <option key={p.id} value={p.id}>
-                Kommentar zu: {p.body.slice(0, 50)}…
-              </option>
-            ))}
-          </select>
-          <p className="text-xs2 text-slate-400 -mt-2">
-            Nur relevant bei Typ "Kommentar" — ordnet ihn einem Post zu,
-            unter dem er im Feed aufklappbar erscheint.
-          </p>
-
-          <div className="flex gap-3">
-            <input
-              name="baseEngagement"
-              type="number"
-              min={0}
-              placeholder="Basis-Likes (z.B. 47)"
-              className="border border-border rounded-md px-3 py-2 text-sm flex-1"
-            />
-            <input
-              name="baseCommentCount"
-              type="number"
-              min={0}
-              placeholder="Basis-Kommentaranzahl"
-              className="border border-border rounded-md px-3 py-2 text-sm flex-1"
-            />
-          </div>
-          <p className="text-xs2 text-slate-400 -mt-2">
-            Sorgt dafür, dass Posts nicht mit 0 Likes/Kommentaren wirken,
-            als hätte sie noch nie jemand gesehen — rein kosmetisch,
-            beeinflusst keine Engine-Logik.
-          </p>
-
-          <input
-            name="manipulationTechniques"
-            placeholder="Manipulationstechniken, kommagetrennt (z.B. false_authority, urgency)"
-            className="border border-border rounded-md px-3 py-2 w-full text-sm"
-          />
-
-          <div className="text-sm">
-            <p className="mb-1 text-slate-500 text-xs2">Ziel-Kompetenzen:</p>
-            {competencies?.map((c) => (
-              <label key={c.id} className="flex items-center gap-2 text-xs mb-1">
-                <input type="checkbox" name="targetCompetencies" value={c.id} />
-                {c.title}
-              </label>
+          <div className="mt-5 pt-4 border-t border-slate-100 flex flex-wrap gap-2">
+            {(variants ?? []).map((variant) => (
+              <a
+                key={variant.id}
+                href={`/scenarios/${variant.id}`}
+                className={`rounded-xl border px-3 py-2 ${variant.id === scenarioId ? "border-accent bg-accent/5" : "border-slate-200 hover:border-accent"}`}
+              >
+                <div className="text-xs font-semibold text-slate-800">{AGE_LABELS[variant.age_band] ?? variant.age_rating}</div>
+                <div className="text-[11px] text-slate-400 mt-0.5">{STATUS_LABELS[variant.status ?? "draft"] ?? "Entwurf"}</div>
+              </a>
             ))}
           </div>
+        </header>
 
-          <div className="flex gap-3">
-            <select name="difficulty" className="border border-border rounded-md px-3 py-2 text-sm">
-              {[1, 2, 3, 4, 5].map((d) => (
-                <option key={d} value={d}>
-                  Schwierigkeit {d}
-                </option>
+        <section className="grid md:grid-cols-4 gap-3">
+          <SummaryCard icon={<Route className="w-4 h-4" />} label="Ablauf" value={activeSteps.length ? `${activeSteps.length} Schritte` : "Noch leer"} />
+          <SummaryCard icon={<Flag className="w-4 h-4" />} label="Missionen" value={`${missions?.length ?? 0}`} />
+          <SummaryCard icon={<FileText className="w-4 h-4" />} label="Inhalte" value={`${contentItems?.length ?? 0}`} />
+          <SummaryCard icon={<Users className="w-4 h-4" />} label="Status" value={scenario.is_active ? "Aktiv" : "Entwurf"} />
+        </section>
+
+        <section className="bg-white border border-slate-200 rounded-2xl p-6 shadow-sm">
+          <SectionHeader icon={<Route className="w-4 h-4" />} title="Ablauf" subtitle="Die Redaktion denkt in Lernschritten. Missionen und Story-Arc liegen technisch darunter." />
+          {activeArc ? (
+            <div className="mt-5">
+              <div className="mb-4">
+                <div className="text-sm font-semibold text-slate-900">{activeArc.title}</div>
+                {activeArc.description && <div className="text-xs text-slate-500 mt-1">{activeArc.description}</div>}
+              </div>
+              {activeSteps.length ? (
+                <ol className="space-y-2">
+                  {activeSteps.map((step, index) => {
+                    const mission = missionById.get(step.mission_id);
+                    if (!mission) return null;
+                    return (
+                      <li key={step.id} className="flex items-center gap-3 rounded-xl border border-slate-200 px-4 py-3">
+                        <span className="w-7 h-7 rounded-full bg-slate-100 flex items-center justify-center text-xs font-semibold text-slate-500">{index + 1}</span>
+                        <div className="flex-1 min-w-0">
+                          <div className="text-sm font-medium text-slate-800">{mission.title}</div>
+                          <div className="text-xs text-slate-500 mt-0.5">{mission.description}</div>
+                        </div>
+                        <span className="text-[11px] rounded-full bg-slate-100 px-2 py-1 text-slate-500">
+                          {EVENT_LABELS[mission.trigger_condition?.event] ?? "Lernaktion"}
+                        </span>
+                      </li>
+                    );
+                  })}
+                </ol>
+              ) : (
+                <div className="rounded-xl border border-dashed border-slate-300 p-6 text-center text-sm text-slate-500">
+                  Noch keine Schritte. Ergänze den Ablauf direkt in diesem Szenario.
+                </div>
+              )}
+            </div>
+          ) : (
+            <div className="mt-5 rounded-xl border border-dashed border-slate-300 p-7 text-center">
+              <p className="text-sm font-medium text-slate-700">Noch kein Ablauf vorhanden</p>
+              <p className="text-xs text-slate-500 mt-1">Bei einem KI-Entwurf wird der erste Ablauf automatisch angelegt.</p>
+            </div>
+          )}
+          <div className="mt-4 flex justify-end">
+            <a href={`/missions/${scenarioId}`} className="inline-flex items-center gap-1.5 text-xs font-semibold text-accent hover:text-accent-hover">
+              Ablauf bearbeiten <ChevronRight className="w-3.5 h-3.5" />
+            </a>
+          </div>
+        </section>
+
+        <section className="bg-white border border-slate-200 rounded-2xl p-6 shadow-sm">
+          <SectionHeader icon={<FileText className="w-4 h-4" />} title="Inhalte" subtitle="Posts, Kommentare, DMs und Reflexionen für diese Altersvariante." />
+
+          {grouped.length > 0 ? (
+            <div className="mt-5 space-y-5">
+              {grouped.map((group) => (
+                <div key={group.status}>
+                  <div className="text-xs font-semibold uppercase tracking-wider text-slate-500 mb-2">{STATUS_LABELS[group.status] ?? group.status} · {group.items.length}</div>
+                  <ul className="space-y-2">
+                    {group.items.map((item) => (
+                      <li key={item.id} className="border border-slate-200 rounded-xl p-3">
+                        <p className="text-sm text-slate-900">{item.body}</p>
+                        <p className="text-xs text-slate-400 mt-1">{item.type} · {item.age_rating} · Schwierigkeit {item.difficulty}</p>
+                        <div className="mt-2"><ContentStatusControl contentItemId={item.id} status={item.status} /></div>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
               ))}
-            </select>
-            <select name="ageRating" className="border border-border rounded-md px-3 py-2 text-sm">
-              <option value="all_ages">Alle Altersgruppen</option>
-              <option value="12_plus">12+</option>
-              <option value="16_plus">16+</option>
-            </select>
-          </div>
+            </div>
+          ) : (
+            <div className="mt-5 rounded-xl border border-dashed border-slate-300 p-7 text-center text-sm text-slate-500">
+              Noch keine Inhalte. Du kannst sie jetzt Schritt für Schritt ergänzen.
+            </div>
+          )}
+        </section>
 
-          <button type="submit" className="bg-accent hover:bg-accent-hover text-white text-sm px-4 py-2 rounded-md">
-            Als Entwurf anlegen
-          </button>
-        </form>
-      </section>
+        <details className="bg-white border border-slate-200 rounded-2xl shadow-sm">
+          <summary className="cursor-pointer px-6 py-4 text-sm font-semibold text-slate-700">Inhalt manuell hinzufügen</summary>
+          <form action={createContentItem.bind(null, scenarioId)} encType="multipart/form-data" className="px-6 pb-6 pt-2 space-y-3">
+            <select name="type" className="border border-slate-200 rounded-xl px-3 py-2 w-full text-sm">
+              <option value="post">Post</option>
+              <option value="comment">Kommentar</option>
+              <option value="dm_message">DM-Nachricht</option>
+              <option value="reflection_prompt">Reflexions-Prompt</option>
+            </select>
+            <textarea name="body" placeholder="Inhalt" required className="border border-slate-200 rounded-xl px-3 py-3 w-full text-sm" />
+            <div>
+              <label className="text-xs text-slate-500 block mb-1">Bild/Video (optional)</label>
+              <input name="media" type="file" accept="image/*,video/*" className="border border-slate-200 rounded-xl px-3 py-2 w-full text-sm" />
+            </div>
+            <select name="creatorId" className="border border-slate-200 rounded-xl px-3 py-2 w-full text-sm">
+              <option value="">Kein Creator</option>
+              {creators?.map((creator) => <option key={creator.id} value={creator.id}>{creator.display_name} {creator.creator_role ? `(${creator.creator_role})` : ""}</option>)}
+            </select>
+            <select name="parentContentId" className="border border-slate-200 rounded-xl px-3 py-2 w-full text-sm">
+              <option value="">Kein Bezug</option>
+              {possibleParents?.map((parent) => <option key={parent.id} value={parent.id}>Kommentar zu: {parent.body.slice(0, 60)}…</option>)}
+            </select>
+            <div className="flex gap-3">
+              <input name="baseEngagement" type="number" min={0} placeholder="Basis-Likes" className="border border-slate-200 rounded-xl px-3 py-2 text-sm flex-1" />
+              <input name="baseCommentCount" type="number" min={0} placeholder="Basis-Kommentare" className="border border-slate-200 rounded-xl px-3 py-2 text-sm flex-1" />
+            </div>
+            <input name="manipulationTechniques" placeholder="Manipulationstechniken, kommagetrennt" className="border border-slate-200 rounded-xl px-3 py-2 w-full text-sm" />
+            <div>
+              <p className="mb-2 text-xs text-slate-500">Ziel-Kompetenzen</p>
+              <div className="grid md:grid-cols-2 gap-1">
+                {competencies?.map((competency) => (
+                  <label key={competency.id} className="flex items-center gap-2 text-xs text-slate-600"><input type="checkbox" name="targetCompetencies" value={competency.id} />{competency.title}</label>
+                ))}
+              </div>
+            </div>
+            <div className="flex gap-3">
+              <select name="difficulty" className="border border-slate-200 rounded-xl px-3 py-2 text-sm"><option value="1">Schwierigkeit 1</option><option value="2">Schwierigkeit 2</option><option value="3">Schwierigkeit 3</option><option value="4">Schwierigkeit 4</option><option value="5">Schwierigkeit 5</option></select>
+              <select name="ageRating" className="border border-slate-200 rounded-xl px-3 py-2 text-sm"><option value="all_ages">Alle Altersgruppen</option><option value="12_plus">12+</option><option value="16_plus">16+</option></select>
+            </div>
+            <button type="submit" className="bg-accent hover:bg-accent-hover text-white text-sm px-4 py-2 rounded-xl">Als Entwurf anlegen</button>
+          </form>
+        </details>
+      </div>
+    </div>
+  );
+}
+
+function SummaryCard({ icon, label, value }: { icon: React.ReactNode; label: string; value: string }) {
+  return (
+    <div className="bg-white border border-slate-200 rounded-xl p-4">
+      <div className="flex items-center gap-2 text-xs text-slate-400">{icon}{label}</div>
+      <div className="text-lg font-semibold text-slate-900 mt-1">{value}</div>
+    </div>
+  );
+}
+
+function SectionHeader({ icon, title, subtitle }: { icon: React.ReactNode; title: string; subtitle: string }) {
+  return (
+    <div className="flex items-start gap-2">
+      <div className="w-8 h-8 rounded-lg bg-slate-100 flex items-center justify-center text-slate-500">{icon}</div>
+      <div>
+        <h2 className="text-sm font-semibold text-slate-900">{title}</h2>
+        <p className="text-xs text-slate-500 mt-0.5">{subtitle}</p>
+      </div>
     </div>
   );
 }
