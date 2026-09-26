@@ -230,6 +230,7 @@ function slugifyScenarioGroup(input: string): string {
  * Freigabe und fachliche Prüfung bleiben bei der Redaktion.
  */
 export async function generateScenarioDraft(formData: FormData) {
+  let createdGroup = "";
   try {
     const supabase = supabaseServerClient();
 
@@ -392,6 +393,7 @@ Gib ausschließlich valides JSON gemäß Schema zurück.`;
     }
 
     const group = slugifyScenarioGroup(topic) || `szenario-${Date.now()}`;
+    createdGroup = group;
 
     for (const variant of variants) {
       const ageBand = String(variant.ageBand);
@@ -494,7 +496,6 @@ Gib ausschließlich valides JSON gemäß Schema zurück.`;
     }
 
     revalidatePath("/scenarios");
-    redirect(`/scenarios?group=${encodeURIComponent(group)}`);
   } catch (error) {
     const message =
       error instanceof Error
@@ -503,6 +504,9 @@ Gib ausschließlich valides JSON gemäß Schema zurück.`;
     console.error("[scenario-generator]", error);
     redirect(`/scenarios?generationError=${encodeURIComponent(message.slice(0, 900))}`);
   }
+
+  revalidatePath("/scenarios");
+  redirect(`/scenarios?group=${encodeURIComponent(createdGroup)}`);
 }
 
 
