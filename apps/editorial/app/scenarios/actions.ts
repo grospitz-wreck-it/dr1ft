@@ -24,6 +24,7 @@ export async function createScenario(formData: FormData) {
   const description = String(formData.get("description") ?? "").trim();
   const ageRating = String(formData.get("ageRating") ?? "12_plus");
   const slugInput = String(formData.get("slug") ?? "").trim();
+  const ageBandInput = String(formData.get("ageBand") ?? "").trim();
 
   if (!title) {
     throw new Error("Titel darf nicht leer sein");
@@ -33,7 +34,15 @@ export async function createScenario(formData: FormData) {
 
   const { data: scenario, error } = await supabase
     .from("scenarios")
-    .insert({ title, description, age_rating: ageRating, slug, is_active: false })
+    .insert({
+      title,
+      description,
+      age_rating: ageRating,
+      age_band: ageBandInput || (ageRating === "16_plus" ? "16_17" : ageRating === "all_ages" ? "all" : "12_13"),
+      scenario_group: slugifyScenarioGroup(title) || slug,
+      slug,
+      is_active: false,
+    })
     .select()
     .single();
 
