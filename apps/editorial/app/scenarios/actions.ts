@@ -230,56 +230,71 @@ function slugifyScenarioGroup(input: string): string {
  * Freigabe und fachliche Prüfung bleiben bei der Redaktion.
  */
 export async function generateScenarioDraft(formData: FormData) {
-  const supabase = supabaseServerClient();
+  try {
+    const supabase = supabaseServerClient();
 
-  const topic = String(formData.get("topic") ?? "").trim();
-  const brief = String(formData.get("brief") ?? "").trim();
-  const selectedAgeBands = formData.getAll("ageBands").map(String).filter((value) => AGE_BANDS.includes(value as (typeof AGE_BANDS)[number]));
-  const duration = String(formData.get("duration") ?? "standard");
-  const tone = String(formData.get("tone") ?? "realistic");
-  const constraints = String(formData.get("constraints") ?? "").trim();
+    const topic = String(formData.get("topic") ?? "").trim();
+    const brief = String(formData.get("brief") ?? "").trim();
+    const selectedAgeBands = formData
+      .getAll("ageBands")
+      .map(String)
+      .filter((value) => AGE_BANDS.includes(value as (typeof AGE_BANDS)[number]));
+    const duration = String(formData.get("duration") ?? "standard");
+    const tone = String(formData.get("tone") ?? "realistic");
+    const constraints = String(formData.get("constraints") ?? "").trim();
 
-  if (!topic) throw new Error("Bitte ein Thema angeben.");
-  if (!selectedAgeBands.length) throw new Error("Bitte mindestens eine Altersvariante auswählen.");
+    if (!topic) throw new Error("Bitte ein Thema angeben.");
+    if (!selectedAgeBands.length) throw new Error("Bitte mindestens eine Altersvariante auswählen.");
 
-  const apiKey = process.env.GEMINI_API_KEY?.trim();
-  if (!apiKey) throw new Error("GEMINI_API_KEY ist zur Laufzeit nicht verfügbar.");
+    const apiKey = process.env.GEMINI_API_KEY?.trim();
+    if (!apiKey) throw new Error("GEMINI_API_KEY ist zur Laufzeit nicht verfügbar.");
 
-  const schema = {
-    type: "object",
-    properties: {
-      variants: {
-        type: "array",
-        items: {
-          type: "object",
-          properties: {
-            ageBand: { type: "string", enum: [...AGE_BANDS] },
-            title: { type: "string" },
-            description: { type: "string" },
-            learningGoals: { type: "array", items: { type: "string" } },
-            arcTitle: { type: "string" },
-            arcDescription: { type: "string" },
-            missions: {
-              type: "array",
-              items: {
-                type: "object",
-                properties: {
-                  title: { type: "string" },
-                  description: { type: "string" },
-                  triggerEvent: { type: "string", enum: ["PostViewed", "CommentCreated", "NpcReplySelected"] },
+    const schema = {
+      type: "object",
+      properties: {
+        variants: {
+          type: "array",
+          items: {
+            type: "object",
+            properties: {
+              ageBand: { type: "string", enum: [...AGE_BANDS] },
+              title: { type: "string" },
+              description: { type: "string" },
+              learningGoals: { type: "array", items: { type: "string" } },
+              arcTitle: { type: "string" },
+              arcDescription: { type: "string" },
+              missions: {
+                type: "array",
+                items: {
+                  type: "object",
+                  properties: {
+                    title: { type: "string" },
+                    description: { type: "string" },
+                    triggerEvent: {
+                      type: "string",
+                      enum: ["PostViewed", "CommentCreated", "NpcReplySelected"],
+                    },
+                  },
+                  required: ["title", "description", "triggerEvent"],
                 },
-                required: ["title", "description", "triggerEvent"],
               },
             },
+            required: [
+              "ageBand",
+              "title",
+              "description",
+              "learningGoals",
+              "arcTitle",
+              "arcDescription",
+              "missions",
+            ],
           },
-          required: ["ageBand", "title", "description", "learningGoals", "arcTitle", "arcDescription", "missions"],
         },
       },
-    },
-    required: ["variants"],
-  };
+      required: ["variants"],
+    };
 
-  const prompt = `Du bist die redaktionelle Szenario-Engine von DR1FT.
+    const prompt = `Du bist die redaktionelle Szenario-Engine von DR1FT.
 
 Erstelle einen pädagogisch sinnvollen Szenario-DRAFT für:
 THEMA: ${topic}
@@ -290,8 +305,8 @@ TON: ${tone}
 BESONDERE VORGABEN: ${constraints || "Keine besonderen Vorgaben."}
 
 WICHTIG:
-- Erstelle für jede ausgewählte Altersgruppe eine eigene Variante desselben Grundthemas.
-- Die Varianten sollen dieselbe Lernidee verfolgen, aber Sprache, Komplexität, Situation und Aufgaben an das Alter anpassen.
+- Erstelle für jede ausgewählte Altersgruppe genau eine eigene Variante desselben Grundthemas.
+- Die Varianten verfolgen dieselbe Lernidee, unterscheiden sich aber bei Sprache, Komplexität, Situation und Aufgaben passend zum Alter.
 - Keine politische Überzeugungsarbeit, keine gezielte Manipulation und keine unnötig schockierenden Inhalte.
 - Das Ergebnis ist ein REDAKTIONELLER DRAFT, keine Veröffentlichung.
 - Jede Variante soll einen klaren Ablauf und 2–4 Missionen vorschlagen.
@@ -301,113 +316,193 @@ WICHTIG:
 
 Gib ausschließlich valides JSON gemäß Schema zurück.`;
 
-  const response = await fetch("https://generativelanguage.googleapis.com/v1beta/interactions", {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      "x-goog-api-key": apiKey,
-    },
-    body: JSON.stringify({
-      model: "gemini-3.5-flash-lite",
-      input: prompt,
-      response_format: { type: "text", mime_type: "application/json", schema },
-    }),
-  });
+    const models = ["gemini-3.5-flash-lite", "gemini-3.6-flash", "gemini-3.5-flash"];
+    let draft: any = null;
+    let lastError = "Unbekannter Gemini-Fehler";
 
-  if (!response.ok) {
-    throw new Error(`Gemini API Fehler: ${await response.text()}`);
-  }
+    for (const model of models) {
+      const response = await fetch(
+        "https://generativelanguage.googleapis.com/v1beta/interactions",
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "x-goog-api-key": apiKey,
+          },
+          body: JSON.stringify({
+            model,
+            input: prompt,
+            response_format: {
+              type: "text",
+              mime_type: "application/json",
+              schema,
+            },
+          }),
+          cache: "no-store",
+        },
+      );
 
-  const data = await response.json();
-  const raw = data.output_text ?? data.output?.find?.((part: any) => part.type === "text")?.text ?? "";
-  let draft: any;
-  try {
-    draft = JSON.parse(raw);
-  } catch {
-    throw new Error("Die KI hat keinen gültigen Szenario-Draft zurückgegeben.");
-  }
+      if (response.ok) {
+        const data = await response.json();
+        const raw =
+          data.output_text ??
+          data.output?.find?.((part: any) => part.type === "text")?.text ??
+          data.steps
+            ?.filter?.((step: any) => step.type === "model_output")
+            ?.flatMap?.((step: any) => step.content ?? [])
+            ?.filter?.((part: any) => part.type === "text")
+            ?.map?.((part: any) => part.text)
+            ?.join?.("") ??
+          "";
 
-  const variants = Array.isArray(draft?.variants) ? draft.variants : [];
-  const group = slugifyScenarioGroup(topic) || `szenario-${Date.now()}`;
+        try {
+          draft = JSON.parse(String(raw).trim());
+        } catch {
+          lastError = `Gemini ${model} lieferte kein gültiges JSON.`;
+          continue;
+        }
 
-  for (const variant of variants) {
-    if (!selectedAgeBands.includes(variant.ageBand)) continue;
+        if (Array.isArray(draft?.variants)) break;
+        draft = null;
+        lastError = `Gemini ${model} lieferte keine Varianten.`;
+        continue;
+      }
 
-    const ageBand = String(variant.ageBand);
-    const ageRating = ageBand === "16_17" || ageBand === "18_plus" ? "16_plus" : ageBand === "all" ? "all_ages" : "12_plus";
-    const variantTitle = String(variant.title || topic).trim();
-    const learningGoals = Array.isArray(variant.learningGoals) ? variant.learningGoals.map(String).filter(Boolean) : [];
+      const errorText = await response.text();
+      lastError = `Gemini ${model} (${response.status}): ${errorText.slice(0, 500)}`;
 
-    const description = [
-      String(variant.description || "").trim(),
-      learningGoals.length ? `\n\nLernziele\n• ${learningGoals.join("\n• ")}` : "",
-    ].filter(Boolean).join("");
+      const retryable =
+        response.status === 429 ||
+        response.status >= 500 ||
+        /high demand|temporar|overload|capacity|unavailable/i.test(errorText);
 
-    const { data: scenario, error: scenarioError } = await supabase
-      .from("scenarios")
-      .insert({
-        title: variantTitle,
-        description,
-        age_rating: ageRating,
-        age_band: ageBand,
-        scenario_group: group,
-        slug: `${group}-${ageBand}-${Date.now().toString(36)}`,
-        is_active: false,
-      })
-      .select("id")
-      .single();
-
-    if (scenarioError || !scenario) {
-      throw new Error(scenarioError?.message ?? "Szenario-Variante konnte nicht angelegt werden.");
+      if (!retryable) break;
     }
 
-    const arcTitle = String(variant.arcTitle || "Ablauf").trim();
-    const { data: arc, error: arcError } = await supabase
-      .from("story_arcs")
-      .insert({
-        scenario_id: scenario.id,
-        slug: `${group}-${ageBand}-ablauf-${Date.now().toString(36)}`,
-        title: arcTitle,
-        description: String(variant.arcDescription || "").trim(),
-        status: "draft",
-      })
-      .select("id")
-      .single();
+    if (!draft?.variants || !Array.isArray(draft.variants)) {
+      throw new Error(`KI-Entwurf konnte nicht erzeugt werden: ${lastError}`);
+    }
 
-    if (arcError || !arc) throw new Error(arcError?.message ?? "Ablauf konnte nicht angelegt werden.");
+    const variants = draft.variants.filter((variant: any) =>
+      selectedAgeBands.includes(String(variant?.ageBand)),
+    );
 
-    const missions = Array.isArray(variant.missions) ? variant.missions.slice(0, 4) : [];
-    for (let index = 0; index < missions.length; index++) {
-      const mission = missions[index];
-      const { data: createdMission, error: missionError } = await supabase
-        .from("missions")
+    if (!variants.length) {
+      throw new Error("Die KI hat keine der ausgewählten Altersgruppen zurückgegeben.");
+    }
+
+    const group = slugifyScenarioGroup(topic) || `szenario-${Date.now()}`;
+
+    for (const variant of variants) {
+      const ageBand = String(variant.ageBand);
+      const ageRating =
+        ageBand === "16_17" || ageBand === "18_plus"
+          ? "16_plus"
+          : "12_plus";
+      const variantTitle = String(variant.title || topic).trim();
+      const learningGoals = Array.isArray(variant.learningGoals)
+        ? variant.learningGoals.map(String).filter(Boolean)
+        : [];
+
+      const description = [
+        String(variant.description || "").trim(),
+        learningGoals.length
+          ? `\\n\\nLernziele\\n• ${learningGoals.join("\\n• ")}`
+          : "",
+      ]
+        .filter(Boolean)
+        .join("");
+
+      const { data: scenario, error: scenarioError } = await supabase
+        .from("scenarios")
+        .insert({
+          title: variantTitle,
+          description,
+          age_rating: ageRating,
+          age_band: ageBand,
+          scenario_group: group,
+          slug: `${group}-${ageBand}-${crypto.randomUUID().slice(0, 8)}`,
+          is_active: false,
+        })
+        .select("id")
+        .single();
+
+      if (scenarioError || !scenario) {
+        throw new Error(
+          scenarioError?.message ?? "Szenario-Variante konnte nicht angelegt werden.",
+        );
+      }
+
+      const arcTitle = String(variant.arcTitle || "Ablauf").trim();
+      const { data: arc, error: arcError } = await supabase
+        .from("story_arcs")
         .insert({
           scenario_id: scenario.id,
-          slug: `${group}-${ageBand}-mission-${index + 1}-${Date.now().toString(36)}`,
-          title: String(mission.title || `Schritt ${index + 1}`).trim(),
-          description: String(mission.description || "").trim(),
-          trigger_condition: { event: String(mission.triggerEvent || "PostViewed"), count: 1 },
-          target_competencies: [],
-          reflection_content_id: null,
+          slug: `${group}-${ageBand}-ablauf-${crypto.randomUUID().slice(0, 8)}`,
+          title: arcTitle,
+          description: String(variant.arcDescription || "").trim(),
           status: "draft",
         })
         .select("id")
         .single();
 
-      if (missionError || !createdMission) throw new Error(missionError?.message ?? "Mission konnte nicht angelegt werden.");
+      if (arcError || !arc) {
+        throw new Error(arcError?.message ?? "Ablauf konnte nicht angelegt werden.");
+      }
 
-      const { error: stepError } = await supabase.from("story_arc_steps").insert({
-        arc_id: arc.id,
-        mission_id: createdMission.id,
-        order_index: index,
-        unlock_delay_hours: 0,
-      });
-      if (stepError) throw new Error(stepError.message);
+      const missions = Array.isArray(variant.missions)
+        ? variant.missions.slice(0, 4)
+        : [];
+
+      for (let index = 0; index < missions.length; index++) {
+        const mission = missions[index];
+        const { data: createdMission, error: missionError } = await supabase
+          .from("missions")
+          .insert({
+            scenario_id: scenario.id,
+            slug: `${group}-${ageBand}-mission-${index + 1}-${crypto.randomUUID().slice(0, 8)}`,
+            title: String(mission.title || `Schritt ${index + 1}`).trim(),
+            description: String(mission.description || "").trim(),
+            trigger_condition: {
+              event: String(mission.triggerEvent || "PostViewed"),
+              count: 1,
+            },
+            target_competencies: [],
+            reflection_content_id: null,
+            status: "draft",
+          })
+          .select("id")
+          .single();
+
+        if (missionError || !createdMission) {
+          throw new Error(
+            missionError?.message ?? "Mission konnte nicht angelegt werden.",
+          );
+        }
+
+        const { error: stepError } = await supabase
+          .from("story_arc_steps")
+          .insert({
+            arc_id: arc.id,
+            mission_id: createdMission.id,
+            order_index: index,
+            unlock_delay_hours: 0,
+          });
+
+        if (stepError) throw new Error(stepError.message);
+      }
     }
-  }
 
-  revalidatePath("/scenarios");
-  redirect(`/scenarios?group=${encodeURIComponent(group)}`);
+    revalidatePath("/scenarios");
+    redirect(`/scenarios?group=${encodeURIComponent(group)}`);
+  } catch (error) {
+    const message =
+      error instanceof Error
+        ? error.message
+        : "Unbekannter Fehler bei der Szenario-Generierung.";
+    console.error("[scenario-generator]", error);
+    redirect(`/scenarios?generationError=${encodeURIComponent(message.slice(0, 900))}`);
+  }
 }
 
 
