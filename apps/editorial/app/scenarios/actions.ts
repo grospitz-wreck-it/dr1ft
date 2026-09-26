@@ -228,6 +228,7 @@ export async function generateScenarioDraft(formData: FormData) {
   const selectedAgeBands = formData.getAll("ageBands").map(String).filter((value) => AGE_BANDS.includes(value as (typeof AGE_BANDS)[number]));
   const duration = String(formData.get("duration") ?? "standard");
   const tone = String(formData.get("tone") ?? "realistic");
+  const constraints = String(formData.get("constraints") ?? "").trim();
 
   if (!topic) throw new Error("Bitte ein Thema angeben.");
   if (!selectedAgeBands.length) throw new Error("Bitte mindestens eine Altersvariante auswählen.");
@@ -277,6 +278,7 @@ BRIEF: ${brief || "Keine weiteren Vorgaben."}
 ALTERSGRUPPEN: ${selectedAgeBands.map((band) => AGE_LABELS[band]).join(", ")}
 UMFANG: ${duration}
 TON: ${tone}
+BESONDERE VORGABEN: ${constraints || "Keine besonderen Vorgaben."}
 
 WICHTIG:
 - Erstelle für jede ausgewählte Altersgruppe eine eigene Variante desselben Grundthemas.
