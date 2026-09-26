@@ -94,7 +94,8 @@ async function callGeminiJson(prompt: string, schema: Record<string, unknown>) {
 }
 
 export async function generateNpcProfiles(formData: FormData) {
-  const category = String(formData.get("category") ?? "citizen");
+  try {
+    const category = String(formData.get("category") ?? "citizen");
   const amount = Math.min(12, Math.max(1, Number(formData.get("amount") ?? 6)));
   const brief = String(formData.get("brief") ?? "").trim();
   const requestedAgeBands = formData
@@ -241,7 +242,12 @@ WICHTIG:
     if (error) throw new Error(`NPC "${npc.displayName}" konnte nicht angelegt werden: ${error.message}`);
   }
 
-  revalidatePath("/npc-dialogs");
+    revalidatePath("/npc-dialogs");
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "NPC-Generierung fehlgeschlagen.";
+    console.error("[npc-generator]", error);
+    redirect(`/npc-dialogs?error=${encodeURIComponent(message.slice(0, 900))}`);
+  }
 }
 
 export async function createNpcProfile(formData: FormData) {
