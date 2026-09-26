@@ -2,7 +2,7 @@
 // apps/admin/app/content/ContentTable.tsx
 
 import { useState, useTransition } from "react";
-import { FileText, MessageSquare, Send, Target, Gamepad2, Lightbulb } from "lucide-react";
+import { FileText, MessageSquare, Send, Target, Gamepad2, Lightbulb, Image as ImageIcon, Video, Sparkles } from "lucide-react";
 import { bulkUpdateStatus } from "./actions";
 
 const STATUS_COLORS: Record<string, string> = {
@@ -92,7 +92,7 @@ export function ContentTable({
             <th className="w-10 px-3 py-2">
               <input type="checkbox" checked={selected.size === rows.length && rows.length > 0} onChange={toggleAll} />
             </th>
-            <th className="w-8 px-1 py-2"></th>
+            <th className="w-20 px-2 py-2">Medium</th>
             <th className="px-2 py-2">Inhalt</th>
             <th className="px-2 py-2 w-36">Szenario</th>
             <th className="px-2 py-2 w-28">Creator</th>
@@ -108,12 +108,45 @@ export function ContentTable({
                 <td className="px-3">
                   <input type="checkbox" checked={selected.has(row.id)} onChange={() => toggle(row.id)} />
                 </td>
-                <td className="px-1 text-slate-400">
-                  <Icon className="w-4 h-4" strokeWidth={1.75} />
-                </td>
                 <td className="px-2">
-                  <a href={hrefWith({ item: row.id })} className="hover:underline block truncate max-w-[420px]">
-                    {row.body}
+                  <a href={hrefWith({ item: row.id })} className="flex items-center gap-2 min-w-0" aria-label={row.media_url ? "Content mit Bild öffnen" : "Content öffnen"}>
+                    {row.media_url ? (
+                      <span className="relative block w-14 h-14 shrink-0 overflow-hidden rounded-lg border border-border bg-canvas">
+                        <img
+                          src={row.media_url}
+                          alt=""
+                          loading="lazy"
+                          className="h-full w-full object-cover"
+                        />
+                        <span className="absolute bottom-1 right-1 rounded bg-black/65 p-0.5 text-white">
+                          <ImageIcon className="h-3 w-3" />
+                        </span>
+                      </span>
+                    ) : (
+                      <span className="flex h-10 w-14 shrink-0 items-center justify-center rounded-lg border border-border bg-canvas text-slate-400">
+                        {row.media_type === "video" ? <Video className="h-4 w-4" /> : <Icon className="h-4 w-4" strokeWidth={1.75} />}
+                      </span>
+                    )}
+                  </a>
+                </td>
+                <td className="px-2 min-w-0">
+                  <a href={hrefWith({ item: row.id })} className="block min-w-0">
+                    <div className="flex items-center gap-2 min-w-0">
+                      <span className="truncate max-w-[440px]">{row.body || "—"}</span>
+                      {row.extra?.generatedBy === "ai" && (
+                        <span className="hidden xl:inline-flex shrink-0 items-center gap-1 rounded-full bg-violet-50 text-violet-700 border border-violet-100 px-2 py-0.5 text-[10px] font-medium">
+                          <Sparkles className="h-3 w-3" />
+                          KI
+                        </span>
+                      )}
+                    </div>
+                    {row.media_url && (
+                      <div className="mt-1 flex items-center gap-1.5 text-[10px] text-slate-400">
+                        <span>Bild</span>
+                        {row.extra?.imageProvider === "cloudflare" && <span>· FLUX</span>}
+                        {row.extra?.imageModel && <span className="hidden 2xl:inline">· {row.extra.imageModel}</span>}
+                      </div>
+                    )}
                   </a>
                 </td>
                 <td className="px-2 text-slate-500 truncate">{row.scenarios?.title ?? "— Ambient —"}</td>

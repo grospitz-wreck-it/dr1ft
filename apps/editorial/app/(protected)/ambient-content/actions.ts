@@ -381,6 +381,7 @@ export async function generateAmbientDrafts(formData: FormData) {
   const { error } = await supabase.from("content_items").insert(rows);
   if (error) throw new Error(error.message);
     revalidatePath("/ambient-content");
+    redirect("/ambient-content");
   } catch (error) {
     const message = error instanceof Error ? error.message : "Unbekannter Fehler bei der Ambient-Generierung.";
     console.error("[ambient-generator]", error);
