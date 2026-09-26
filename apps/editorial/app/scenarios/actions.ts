@@ -409,3 +409,52 @@ Gib ausschließlich valides JSON gemäß Schema zurück.`;
   revalidatePath("/scenarios");
   redirect(`/scenarios?group=${encodeURIComponent(group)}`);
 }
+
+
+export async function updateScenarioBasics(scenarioId: string, formData: FormData) {
+  const supabase = supabaseServerClient();
+  const title = String(formData.get("title") ?? "").trim();
+  const description = String(formData.get("description") ?? "").trim();
+  if (!title) throw new Error("Titel darf nicht leer sein.");
+
+  const { error } = await supabase
+    .from("scenarios")
+    .update({ title, description })
+    .eq("id", scenarioId);
+
+  if (error) throw new Error(error.message);
+  revalidatePath(`/scenarios/${scenarioId}`);
+  revalidatePath("/scenarios");
+}
+
+export async function updateMissionDraft(missionId: string, scenarioId: string, formData: FormData) {
+  const supabase = supabaseServerClient();
+  const title = String(formData.get("title") ?? "").trim();
+  const description = String(formData.get("description") ?? "").trim();
+  if (!title) throw new Error("Missionstitel darf nicht leer sein.");
+
+  const { error } = await supabase
+    .from("missions")
+    .update({ title, description })
+    .eq("id", missionId)
+    .eq("scenario_id", scenarioId);
+
+  if (error) throw new Error(error.message);
+  revalidatePath(`/scenarios/${scenarioId}`);
+}
+
+export async function updateArcDraft(arcId: string, scenarioId: string, formData: FormData) {
+  const supabase = supabaseServerClient();
+  const title = String(formData.get("title") ?? "").trim();
+  const description = String(formData.get("description") ?? "").trim();
+  if (!title) throw new Error("Ablauftitel darf nicht leer sein.");
+
+  const { error } = await supabase
+    .from("story_arcs")
+    .update({ title, description })
+    .eq("id", arcId)
+    .eq("scenario_id", scenarioId);
+
+  if (error) throw new Error(error.message);
+  revalidatePath(`/scenarios/${scenarioId}`);
+}
