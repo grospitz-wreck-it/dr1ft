@@ -194,7 +194,15 @@ WICHTIG:
 
   for (const npc of draft.npcs.slice(0, amount)) {
     const rawHandle = slugify(String(npc.handle || npc.displayName || "npc"));
-    const handle = `@${rawHandle || "npc"}_${crypto.randomUUID().slice(0, 6)}`;
+    const preferredHandle = `@${rawHandle || "npc"}`;
+    const { data: existingHandle } = await supabase
+      .from("creators")
+      .select("id")
+      .eq("handle", preferredHandle)
+      .maybeSingle();
+    const handle = existingHandle
+      ? `@${rawHandle || "npc"}_${crypto.randomUUID().slice(0, 6)}`
+      : preferredHandle;
     const persona = npc.persona ?? {};
 
     const { error } = await supabase.from("creators").insert({
