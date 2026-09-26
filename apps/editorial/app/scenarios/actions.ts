@@ -193,3 +193,208 @@ export async function updateContentItemStatus(
   if (error) throw new Error(error.message);
   revalidatePath("/scenarios", "layout");
 }
+
+
+const AGE_BANDS = ["12_13", "14_15", "16_17", "18_plus"] as const;
+const AGE_LABELS: Record<string, string> = {
+  "12_13": "12–13 Jahre",
+  "14_15": "14–15 Jahre",
+  "16_17": "16–17 Jahre",
+  "18_plus": "18+ Jahre",
+};
+
+function slugifyScenarioGroup(input: string): string {
+  return input
+    .toLowerCase()
+    .trim()
+    .replace(/ä/g, "ae")
+    .replace(/ö/g, "oe")
+    .replace(/ü/g, "ue")
+    .replace(/ß/g, "ss")
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/(^-|-$)/g, "");
+}
+
+/**
+ * Erstellt aus einem kurzen redaktionellen Brief einen vollständigen
+ * Szenario-Draft. Die KI erzeugt bewusst nur redaktionelle Struktur;
+ * Freigabe und fachliche Prüfung bleiben bei der Redaktion.
+ */
+export async function generateScenarioDraft(formData: FormData) {
+  const supabase = supabaseServerClient();
+
+  const topic = String(formData.get("topic") ?? "").trim();
+  const brief = String(formData.get("brief") ?? "").trim();
+  const selectedAgeBands = formData.getAll("ageBands").map(String).filter((value) => AGE_BANDS.includes(value as (typeof AGE_BANDS)[number]));
+  const duration = String(formData.get("duration") ?? "standard");
+  const tone = String(formData.get("tone") ?? "realistic");
+
+  if (!topic) throw new Error("Bitte ein Thema angeben.");
+  if (!selectedAgeBands.length) throw new Error("Bitte mindestens eine Altersvariante auswählen.");
+
+  const apiKey = process.env.GEMINI_API_KEY?.trim();
+  if (!apiKey) throw new Error("GEMINI_API_KEY ist zur Laufzeit nicht verfügbar.");
+
+  const schema = {
+    type: "object",
+    properties: {
+      variants: {
+        type: "array",
+        items: {
+          type: "object",
+          properties: {
+            ageBand: { type: "string", enum: [...AGE_BANDS] },
+            title: { type: "string" },
+            description: { type: "string" },
+            learningGoals: { type: "array", items: { type: "string" } },
+            arcTitle: { type: "string" },
+            arcDescription: { type: "string" },
+            missions: {
+              type: "array",
+              items: {
+                type: "object",
+                properties: {
+                  title: { type: "string" },
+                  description: { type: "string" },
+                  triggerEvent: { type: "string", enum: ["PostViewed", "CommentCreated", "NpcReplySelected"] },
+                },
+                required: ["title", "description", "triggerEvent"],
+              },
+            },
+          },
+          required: ["ageBand", "title", "description", "learningGoals", "arcTitle", "arcDescription", "missions"],
+        },
+      },
+    },
+    required: ["variants"],
+  };
+
+  const prompt = `Du bist die redaktionelle Szenario-Engine von DR1FT.
+
+Erstelle einen pädagogisch sinnvollen Szenario-DRAFT für:
+THEMA: ${topic}
+BRIEF: ${brief || "Keine weiteren Vorgaben."}
+ALTERSGRUPPEN: ${selectedAgeBands.map((band) => AGE_LABELS[band]).join(", ")}
+UMFANG: ${duration}
+TON: ${tone}
+
+WICHTIG:
+- Erstelle für jede ausgewählte Altersgruppe eine eigene Variante desselben Grundthemas.
+- Die Varianten sollen dieselbe Lernidee verfolgen, aber Sprache, Komplexität, Situation und Aufgaben an das Alter anpassen.
+- Keine politische Überzeugungsarbeit, keine gezielte Manipulation und keine unnötig schockierenden Inhalte.
+- Das Ergebnis ist ein REDAKTIONELLER DRAFT, keine Veröffentlichung.
+- Jede Variante soll einen klaren Ablauf und 2–4 Missionen vorschlagen.
+- Missionen sind konkrete Lernhandlungen, keine abstrakten Überschriften.
+- Formuliere so, dass eine Redakteurin oder ein Redakteur direkt weiterarbeiten kann.
+- Keine erfundenen Kompetenz-IDs oder Datenbank-IDs.
+
+Gib ausschließlich valides JSON gemäß Schema zurück.`;
+
+  const response = await fetch("https://generativelanguage.googleapis.com/v1beta/interactions", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      "x-goog-api-key": apiKey,
+    },
+    body: JSON.stringify({
+      model: "gemini-3.5-flash-lite",
+      input: prompt,
+      response_format: { type: "text", mime_type: "application/json", schema },
+    }),
+  });
+
+  if (!response.ok) {
+    throw new Error(`Gemini API Fehler: ${await response.text()}`);
+  }
+
+  const data = await response.json();
+  const raw = data.output_text ?? data.output?.find?.((part: any) => part.type === "text")?.text ?? "";
+  let draft: any;
+  try {
+    draft = JSON.parse(raw);
+  } catch {
+    throw new Error("Die KI hat keinen gültigen Szenario-Draft zurückgegeben.");
+  }
+
+  const variants = Array.isArray(draft?.variants) ? draft.variants : [];
+  const group = slugifyScenarioGroup(topic) || `szenario-${Date.now()}`;
+
+  for (const variant of variants) {
+    if (!selectedAgeBands.includes(variant.ageBand)) continue;
+
+    const ageBand = String(variant.ageBand);
+    const ageRating = ageBand === "16_17" || ageBand === "18_plus" ? "16_plus" : ageBand === "all" ? "all_ages" : "12_plus";
+    const variantTitle = String(variant.title || topic).trim();
+    const learningGoals = Array.isArray(variant.learningGoals) ? variant.learningGoals.map(String).filter(Boolean) : [];
+
+    const description = [
+      String(variant.description || "").trim(),
+      learningGoals.length ? `\n\nLernziele\n• ${learningGoals.join("\n• ")}` : "",
+    ].filter(Boolean).join("");
+
+    const { data: scenario, error: scenarioError } = await supabase
+      .from("scenarios")
+      .insert({
+        title: variantTitle,
+        description,
+        age_rating: ageRating,
+        age_band: ageBand,
+        scenario_group: group,
+        slug: `${group}-${ageBand}-${Date.now().toString(36)}`,
+        is_active: false,
+      })
+      .select("id")
+      .single();
+
+    if (scenarioError || !scenario) {
+      throw new Error(scenarioError?.message ?? "Szenario-Variante konnte nicht angelegt werden.");
+    }
+
+    const arcTitle = String(variant.arcTitle || "Ablauf").trim();
+    const { data: arc, error: arcError } = await supabase
+      .from("story_arcs")
+      .insert({
+        scenario_id: scenario.id,
+        slug: `${group}-${ageBand}-ablauf-${Date.now().toString(36)}`,
+        title: arcTitle,
+        description: String(variant.arcDescription || "").trim(),
+        status: "draft",
+      })
+      .select("id")
+      .single();
+
+    if (arcError || !arc) throw new Error(arcError?.message ?? "Ablauf konnte nicht angelegt werden.");
+
+    const missions = Array.isArray(variant.missions) ? variant.missions.slice(0, 4) : [];
+    for (let index = 0; index < missions.length; index++) {
+      const mission = missions[index];
+      const { data: createdMission, error: missionError } = await supabase
+        .from("missions")
+        .insert({
+          scenario_id: scenario.id,
+          slug: `${group}-${ageBand}-mission-${index + 1}-${Date.now().toString(36)}`,
+          title: String(mission.title || `Schritt ${index + 1}`).trim(),
+          description: String(mission.description || "").trim(),
+          trigger_condition: { event: String(mission.triggerEvent || "PostViewed"), count: 1 },
+          target_competencies: [],
+          reflection_content_id: null,
+          status: "draft",
+        })
+        .select("id")
+        .single();
+
+      if (missionError || !createdMission) throw new Error(missionError?.message ?? "Mission konnte nicht angelegt werden.");
+
+      const { error: stepError } = await supabase.from("story_arc_steps").insert({
+        arc_id: arc.id,
+        mission_id: createdMission.id,
+        order_index: index,
+        unlock_delay_hours: 0,
+      });
+      if (stepError) throw new Error(stepError.message);
+    }
+  }
+
+  revalidatePath("/scenarios");
+  redirect(`/scenarios?group=${encodeURIComponent(group)}`);
+}
