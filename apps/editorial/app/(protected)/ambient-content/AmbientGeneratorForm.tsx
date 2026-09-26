@@ -5,6 +5,7 @@ import type { generateAmbientDrafts } from "./actions";
 
 type Action = typeof generateAmbientDrafts;
 
+// Form intentionally uses a plain Server Action: successful generation redirects and remounts the page, resetting all fields.
 export function AmbientGeneratorForm({
   action,
   children,
