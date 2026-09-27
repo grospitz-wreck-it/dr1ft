@@ -4,6 +4,7 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { supabaseServerClient } from "../../lib/supabaseServerClient";
+import { getDefaultEngagementProfile } from "@dr1ft/engine-core";
 
 function slugify(input: string): string {
   return input
@@ -88,6 +89,7 @@ export async function createContentItem(scenarioId: string, formData: FormData) 
   const parentContentId = String(formData.get("parentContentId") ?? "") || null;
   const baseEngagement = Number(formData.get("baseEngagement") ?? 0);
   const baseCommentCount = Number(formData.get("baseCommentCount") ?? 0);
+  const engagementProfile = getDefaultEngagementProfile(type);
 
   const techniquesRaw = String(formData.get("manipulationTechniques") ?? "");
   const manipulationTechniques = techniquesRaw
@@ -146,6 +148,7 @@ export async function createContentItem(scenarioId: string, formData: FormData) 
     manipulation_techniques: manipulationTechniques,
     target_competencies: competencyIds,
     status: "draft",
+    engagement_profile: engagementProfile,
     extra: {
       ...(baseEngagement > 0 ? { baseEngagement } : {}),
       ...(baseCommentCount > 0 ? { baseCommentCount } : {}),
@@ -285,6 +288,14 @@ const AGE_LABELS: Record<string, string> = {
   "16_17": "16–17 Jahre",
   "18_plus": "18+ Jahre",
 };
+
+function durationToMinutes(value: string): number {
+  if (value === "15") return 15;
+  if (value === "25") return 25;
+  if (value === "35") return 35;
+  const parsed = Number(value);
+  return Number.isFinite(parsed) ? Math.min(90, Math.max(5, Math.round(parsed))) : 25;
+}
 
 function slugifyScenarioGroup(input: string): string {
   return input
@@ -870,6 +881,7 @@ Gib ausschließlich valides JSON gemäß Schema zurück.`;
         manipulation_techniques: [],
         target_competencies: [],
         status: "draft",
+        engagement_profile: getDefaultEngagementProfile(String(item.type)),
         extra: { generatedBy: "scenario-studio-ai" },
       })),
     );
