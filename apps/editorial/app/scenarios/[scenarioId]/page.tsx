@@ -216,7 +216,15 @@ export default async function ScenarioDetailPage({ params, searchParams = {} }: 
           ) : (
             <div className="mt-5 rounded-xl border border-dashed border-slate-300 p-7 text-center">
               <p className="text-sm font-medium text-slate-700">Noch kein Ablauf vorhanden</p>
-              <p className="text-xs text-slate-500 mt-1">Bei einem KI-Entwurf wird der erste Ablauf automatisch angelegt.</p>
+              <p className="text-xs text-slate-500 mt-1">Die KI kann aus der Szenario-Grundlage direkt einen ersten Ablauf mit Missionen erstellen.</p>
+              <form action={optimizeScenarioFlow.bind(null, scenarioId)} className="mt-4">
+                <AiGenerationButton
+                  idleLabel="Ersten Ablauf mit KI erstellen"
+                  pendingLabel="Ablauf wird erstellt …"
+                  className="inline-flex items-center gap-1.5 rounded-lg bg-accent px-3 py-2 text-xs font-semibold text-white hover:bg-accent-hover"
+                  pendingSteps={["Szenario analysieren …", "Ablauf und Missionen entwerfen …", "Entwurf speichern …"]}
+                />
+              </form>
             </div>
           )}
           <div className="mt-4 flex items-center justify-between">
