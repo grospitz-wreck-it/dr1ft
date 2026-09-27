@@ -40,7 +40,7 @@ const ROLE_LABELS: Record<string, string> = {
 export default async function NpcDialogsOverviewPage({
   searchParams = {},
 }: {
-  searchParams?: { error?: string };
+  searchParams?: { error?: string; generated?: string };
 }) {
   const supabase = supabaseServerClient();
 
@@ -78,6 +78,12 @@ export default async function NpcDialogsOverviewPage({
             </p>
           </div>
         </header>
+
+{searchParams.generated && (
+          <div className="rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-800">
+            ✓ {searchParams.generated} NPCs wurden erstellt und in der Bibliothek gespeichert.
+          </div>
+        )}
 
         {searchParams.error && (
           <div className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800">
@@ -154,6 +160,12 @@ export default async function NpcDialogsOverviewPage({
               <AiGenerationButton
                 idleLabel="NPCs generieren"
                 pendingLabel="NPCs werden generiert …"
+                pendingSteps={[
+                  "Gemini wird angefragt …",
+                  "KI erstellt die NPC-Profile …",
+                  "Antwort wird geprüft …",
+                  "NPC-Profile werden gespeichert …",
+                ]}
                 className="w-full inline-flex items-center justify-center gap-2 rounded-xl bg-accent px-4 py-3 text-sm font-semibold text-white hover:bg-accent-hover"
               />
             </div>
