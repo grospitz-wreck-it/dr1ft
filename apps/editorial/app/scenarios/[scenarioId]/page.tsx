@@ -1,11 +1,13 @@
 import type { ReactNode } from "react";
 import { ArrowLeft, CheckCircle2, FileText, Flag, Route, Sparkles, Users } from "lucide-react";
 import { supabaseServerClient } from "../../../lib/supabaseServerClient";
-import { createContentItem, toggleScenarioActive, updateArcDraft, updateMissionDraft, updateScenarioBasics } from "../actions";
+import { createContentItem, generateScenarioContent, optimizeScenarioBasics, optimizeScenarioFlow, toggleScenarioActive, updateArcDraft, updateMissionDraft, updateScenarioBasics } from "../actions";
 import { ContentStatusControl } from "./ContentStatusControl";
+import { AiGenerationButton } from "../../components/AiGenerationButton";
 
 interface Props {
   params: { scenarioId: string };
+  searchParams?: { ai?: string; aiError?: string };
 }
 
 const AGE_LABELS: Record<string, string> = {
@@ -32,7 +34,7 @@ const STATUS_LABELS: Record<string, string> = {
 
 const STATUS_ORDER = ["draft", "in_review", "approved", "live", "rejected", "archived"];
 
-export default async function ScenarioDetailPage({ params }: Props) {
+export default async function ScenarioDetailPage({ params, searchParams = {} }: Props) {
   const supabase = supabaseServerClient();
   const { scenarioId } = params;
 
@@ -91,14 +93,31 @@ export default async function ScenarioDetailPage({ params }: Props) {
               </div>
               <h1 className="text-2xl font-semibold text-slate-900 mt-2">{scenario.title}</h1>
               <p className="text-sm text-slate-500 mt-2 max-w-3xl">{scenario.description}</p>
-              <details className="mt-4">
+              <div className="mt-4 flex flex-wrap items-center gap-2">
+                <details>
+                  <summary className="cursor-pointer text-xs font-semibold text-accent">Szenario-Grundlage bearbeiten</summary>
+                  <form action={updateScenarioBasics.bind(null, scenarioId)} className="mt-3 grid gap-2 max-w-2xl">
+                    <input name="title" defaultValue={scenario.title} className="rounded-xl border border-slate-200 px-3 py-2 text-sm" />
+                    <textarea name="description" defaultValue={scenario.description ?? ""} rows={4} className="rounded-xl border border-slate-200 px-3 py-2 text-sm" />
+                    <button className="justify-self-start rounded-xl bg-slate-900 text-white px-3 py-2 text-xs font-semibold">Änderungen speichern</button>
+                  </form>
+                </details>
+                <form action={optimizeScenarioBasics.bind(null, scenarioId)}>
+                  <AiGenerationButton
+                    idleLabel="Mit KI verbessern"
+                    pendingLabel="Grundlage wird verbessert …"
+                    className="inline-flex items-center gap-1.5 rounded-lg border border-accent/30 bg-accent/5 px-3 py-2 text-xs font-semibold text-accent hover:bg-accent/10"
+                    pendingSteps={["Grundlage analysieren …", "Titel und Beschreibung schärfen …", "Entwurf speichern …"]}
+                  />
+                </form>
+              </div>
                 <summary className="cursor-pointer text-xs font-semibold text-accent">Szenario-Grundlage bearbeiten</summary>
                 <form action={updateScenarioBasics.bind(null, scenarioId)} className="mt-3 grid gap-2 max-w-2xl">
                   <input name="title" defaultValue={scenario.title} className="rounded-xl border border-slate-200 px-3 py-2 text-sm" />
                   <textarea name="description" defaultValue={scenario.description ?? ""} rows={4} className="rounded-xl border border-slate-200 px-3 py-2 text-sm" />
                   <button className="justify-self-start rounded-xl bg-slate-900 text-white px-3 py-2 text-xs font-semibold">Änderungen speichern</button>
                 </form>
-              </details>
+              </div>
             </div>
             <form>
               <button
@@ -127,6 +146,17 @@ export default async function ScenarioDetailPage({ params }: Props) {
           </div>
         </header>
 
+        {(searchParams.ai || searchParams.aiError) && (
+          <section className={`rounded-2xl border px-5 py-4 ${searchParams.aiError ? "border-red-200 bg-red-50" : "border-accent/20 bg-accent/5"}`}>
+            <div className={`text-xs font-semibold uppercase tracking-wider ${searchParams.aiError ? "text-red-700" : "text-accent"}`}>
+              {searchParams.aiError ? "KI-Assistent" : "KI-Assistent abgeschlossen"}
+            </div>
+            <div className={`mt-1 text-sm ${searchParams.aiError ? "text-red-800" : "text-slate-700"} break-words`}>
+              {searchParams.aiError ?? searchParams.ai}
+            </div>
+          </section>
+        )}
+
         <section className="grid md:grid-cols-4 gap-3">
           <SummaryCard icon={<Route className="w-4 h-4" />} label="Ablauf" value={activeSteps.length ? `${activeSteps.length} Schritte` : "Noch leer"} />
           <SummaryCard icon={<Flag className="w-4 h-4" />} label="Missionen" value={`${missions?.length ?? 0}`} />
@@ -138,6 +168,17 @@ export default async function ScenarioDetailPage({ params }: Props) {
           <SectionHeader icon={<Route className="w-4 h-4" />} title="Ablauf" subtitle="Die Redaktion denkt in Lernschritten. Missionen und Story-Arc liegen technisch darunter." />
           {activeArc ? (
             <div className="mt-5">
+              <div className="flex flex-wrap items-center justify-between gap-3 mb-4">
+                <div className="text-xs text-slate-500">Bestehenden Ablauf verbessern oder einen fehlenden Ablauf mit Missionen erzeugen.</div>
+                <form action={optimizeScenarioFlow.bind(null, scenarioId)}>
+                  <AiGenerationButton
+                    idleLabel="Ablauf mit KI optimieren"
+                    pendingLabel="Ablauf wird optimiert …"
+                    className="inline-flex items-center gap-1.5 rounded-lg bg-accent px-3 py-2 text-xs font-semibold text-white hover:bg-accent-hover"
+                    pendingSteps={["Ablauf analysieren …", "Missionen neu strukturieren …", "Entwurf speichern …"]}
+                  />
+                </form>
+              </div>
               <details className="mb-4">
                 <summary className="cursor-pointer text-sm font-semibold text-slate-900">{activeArc.title} bearbeiten</summary>
                 <form action={updateArcDraft.bind(null, activeArc.id, scenarioId)} className="mt-3 grid gap-2 max-w-2xl">
@@ -194,7 +235,17 @@ export default async function ScenarioDetailPage({ params }: Props) {
         </section>
 
         <section className="bg-white border border-slate-200 rounded-2xl p-6 shadow-sm">
-          <SectionHeader icon={<FileText className="w-4 h-4" />} title="Inhalte" subtitle="Posts, Kommentare, DMs und Reflexionen für diese Altersvariante." />
+          <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3">
+            <SectionHeader icon={<FileText className="w-4 h-4" />} title="Inhalte" subtitle="Posts, Kommentare, DMs und Reflexionen für diese Altersvariante." />
+            <form action={generateScenarioContent.bind(null, scenarioId)}>
+              <AiGenerationButton
+                idleLabel="Mit KI ergänzen"
+                pendingLabel="Inhalte werden erzeugt …"
+                className="shrink-0 inline-flex items-center gap-1.5 rounded-lg border border-accent/30 bg-accent/5 px-3 py-2 text-xs font-semibold text-accent hover:bg-accent/10"
+                pendingSteps={["Ablauf auswerten …", "Inhalte formulieren …", "Drafts speichern …"]}
+              />
+            </form>
+          </div>
 
           {grouped.length > 0 ? (
             <div className="mt-5 space-y-5">
