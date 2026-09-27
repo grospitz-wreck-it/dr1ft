@@ -174,10 +174,10 @@ export default async function ScenariosPage({
               <div className="grid sm:grid-cols-2 gap-3">
                 <div>
                   <label className="block text-xs font-semibold text-slate-600 mb-2">UMFANG</label>
-                  <select name="duration" defaultValue="standard" className="w-full rounded-xl border border-slate-200 px-3 py-2.5 text-sm">
-                    <option value="short">Kurz · 5–10 Min.</option>
-                    <option value="standard">Standard · 15–20 Min.</option>
-                    <option value="intensive">Intensiv · 25–35 Min.</option>
+                  <select name="duration" defaultValue="25" className="w-full rounded-xl border border-slate-200 px-3 py-2.5 text-sm">
+                    <option value="15">15 Minuten · kompakt</option>
+                    <option value="25">25 Minuten · normal</option>
+                    <option value="35">35 Minuten · ausführlich</option>
                   </select>
                 </div>
                 <div>
