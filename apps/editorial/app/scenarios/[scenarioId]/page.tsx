@@ -4,6 +4,7 @@ import { supabaseServerClient } from "../../../lib/supabaseServerClient";
 import { createContentItem, generateScenarioContent, optimizeScenarioBasics, optimizeScenarioFlow, toggleScenarioActive, updateArcDraft, updateMissionDraft, updateScenarioBasics } from "../actions";
 import { ContentStatusControl } from "./ContentStatusControl";
 import { AiGenerationButton } from "../../components/AiGenerationButton";
+import { estimateSessionDuration } from "@dr1ft/engine-core";
 
 interface Props {
   params: { scenarioId: string };
@@ -71,6 +72,17 @@ export default async function ScenarioDetailPage({ params, searchParams = {} }: 
   const missionById = new Map((missions ?? []).map((mission) => [mission.id, mission]));
   const activeArc = arcs?.[0] ?? null;
   const activeSteps = (steps ?? []).filter((step) => step.arc_id === activeArc?.id);
+  const durationEstimate = estimateSessionDuration(
+    Number(scenario.target_duration_minutes ?? 25),
+    (contentItems ?? []).map((item) => ({
+      id: item.id,
+      type: item.type,
+      body: item.body,
+      mediaType: item.media_type,
+      engagementProfile: item.engagement_profile,
+    })),
+  );
+
   const grouped = STATUS_ORDER.map((status) => ({
     status,
     items: (contentItems ?? []).filter((item) => item.status === status),
@@ -152,6 +164,33 @@ export default async function ScenarioDetailPage({ params, searchParams = {} }: 
             </div>
           </section>
         )}
+
+        <section className="bg-white border border-slate-200 rounded-2xl p-5 shadow-sm">
+          <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+            <div>
+              <div className="text-xs font-semibold uppercase tracking-wider text-slate-500">Sessiondauer</div>
+              <div className="mt-1 flex items-baseline gap-2">
+                <span className="text-2xl font-semibold text-slate-900">{durationEstimate.expectedMinutes.toFixed(1).replace(".", ",")} Min.</span>
+                <span className="text-xs text-slate-400">erwartet</span>
+              </div>
+              <div className="text-xs text-slate-500 mt-1">Ziel: {scenario.target_duration_minutes ?? 25} Min. · {contentItems?.length ?? 0} Inhalte</div>
+            </div>
+            <div className="min-w-[220px] md:w-72">
+              <div className="flex justify-between text-[11px] text-slate-500 mb-1">
+                <span>Content-Abdeckung</span>
+                <span>{Math.round(durationEstimate.coverage * 100)} %</span>
+              </div>
+              <div className="h-2 rounded-full bg-slate-100 overflow-hidden">
+                <div className="h-full rounded-full bg-accent" style={{ width: Math.min(100, Math.round(durationEstimate.coverage * 100)) + "%" }} />
+              </div>
+              <div className="text-[11px] text-slate-400 mt-1">
+                {durationEstimate.deltaSeconds >= 0
+                  ? "ca. " + Math.round(durationEstimate.deltaSeconds / 60) + " Min. über Ziel"
+                  : "ca. " + Math.ceil(Math.abs(durationEstimate.deltaSeconds) / 60) + " Min. fehlen"}
+              </div>
+            </div>
+          </div>
+        </section>
 
         <section className="grid md:grid-cols-4 gap-3">
           <SummaryCard icon={<Route className="w-4 h-4" />} label="Ablauf" value={activeSteps.length ? `${activeSteps.length} Schritte` : "Noch leer"} />
