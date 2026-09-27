@@ -204,63 +204,88 @@ WICHTIG:
 
   const supabase = supabaseServerClient();
 
-  for (const npc of draft.npcs.slice(0, amount)) {
-    const rawHandle = slugify(String(npc.handle || npc.displayName || "npc"));
-    const preferredHandle = `@${rawHandle || "npc"}`;
-    const { data: existingHandle } = await supabase
-      .from("creators")
-      .select("id")
-      .eq("handle", preferredHandle)
-      .maybeSingle();
-    const handle = existingHandle
-      ? `@${rawHandle || "npc"}_${crypto.randomUUID().slice(0, 6)}`
-      : preferredHandle;
-    const persona = npc.persona ?? {};
+  const npcsToCreate = draft.npcs.slice(0, amount);
 
-    const { error } = await supabase.from("creators").insert({
-      kind: "npc",
-      display_name: String(npc.displayName || "NPC").trim(),
-      handle,
-      bio: String(npc.bio || "").trim(),
-      story_role: String(npc.storyRole || "").trim(),
-      npc_category: category,
-      npc_role: "hybrid",
-      interest_tags: Array.isArray(npc.interestTags)
-        ? npc.interestTags.map(String).filter(Boolean).slice(0, 12)
-        : [],
-      age_bands: Array.isArray(npc.ageBands)
-        ? npc.ageBands
-            .map(String)
-            .filter((v: string) => AGE_BANDS.includes(v as (typeof AGE_BANDS)[number]))
-        : ageBands,
-      persona: {
-        styleNotes: String(persona.styleNotes || ""),
-        rhetoricPatterns: Array.isArray(persona.rhetoricPatterns)
-          ? persona.rhetoricPatterns.map(String)
-          : [],
-        mannerisms: Array.isArray(persona.mannerisms)
-          ? persona.mannerisms.map(String)
-          : [],
-        recurringDetails: Array.isArray(persona.recurringDetails)
-          ? persona.recurringDetails.map(String)
-          : [],
-        worldview: String(persona.worldview || ""),
-        boundaries: Array.isArray(persona.boundaries)
-          ? persona.boundaries.map(String)
-          : [],
-      },
-      ai_identity: {
-        personaVersion: 1,
-        stableHandle: handle,
-        generatedBy: "npc-studio",
-        promptSeed: crypto.randomUUID(),
-      },
-      is_active: true,
-      scenario_id: null,
+    // Resolve all handle collisions in memory so generation needs only
+    // one read + one bulk insert instead of one read/insert pair per NPC.
+    const preferredHandles = npcsToCreate.map((npc: any) => {
+      const rawHandle = slugify(String(npc.handle || npc.displayName || "npc"));
+      return `@${rawHandle || "npc"}`;
     });
 
-    if (error) throw new Error(`NPC "${npc.displayName}" konnte nicht angelegt werden: ${error.message}`);
-  }
+    const { data: existingHandles, error: handleLookupError } = await supabase
+      .from("creators")
+      .select("handle")
+      .in("handle", preferredHandles);
+
+    if (handleLookupError) {
+      throw new Error(`NPC-Handles konnten nicht geprüft werden: ${handleLookupError.message}`);
+    }
+
+    const usedHandles = new Set(
+      (existingHandles ?? []).map((row: any) => String(row.handle)),
+    );
+
+    const rows = npcsToCreate.map((npc: any) => {
+      const rawHandle = slugify(String(npc.handle || npc.displayName || "npc")) || "npc";
+      let handle = `@${rawHandle}`;
+
+      if (usedHandles.has(handle)) {
+        do {
+          handle = `@${rawHandle}_${crypto.randomUUID().slice(0, 6)}`;
+        } while (usedHandles.has(handle));
+      }
+      usedHandles.add(handle);
+
+      const persona = npc.persona ?? {};
+
+      return {
+        kind: "npc",
+        display_name: String(npc.displayName || "NPC").trim(),
+        handle,
+        bio: String(npc.bio || "").trim(),
+        story_role: String(npc.storyRole || "").trim(),
+        npc_category: category,
+        npc_role: "hybrid",
+        interest_tags: Array.isArray(npc.interestTags)
+          ? npc.interestTags.map(String).filter(Boolean).slice(0, 12)
+          : [],
+        age_bands: Array.isArray(npc.ageBands)
+          ? npc.ageBands
+              .map(String)
+              .filter((v: string) => AGE_BANDS.includes(v as (typeof AGE_BANDS)[number]))
+          : ageBands,
+        persona: {
+          styleNotes: String(persona.styleNotes || ""),
+          rhetoricPatterns: Array.isArray(persona.rhetoricPatterns)
+            ? persona.rhetoricPatterns.map(String)
+            : [],
+          mannerisms: Array.isArray(persona.mannerisms)
+            ? persona.mannerisms.map(String)
+            : [],
+          recurringDetails: Array.isArray(persona.recurringDetails)
+            ? persona.recurringDetails.map(String)
+            : [],
+          worldview: String(persona.worldview || ""),
+          boundaries: Array.isArray(persona.boundaries)
+            ? persona.boundaries.map(String)
+            : [],
+        },
+        ai_identity: {
+          personaVersion: 1,
+          stableHandle: handle,
+          generatedBy: "npc-studio",
+          promptSeed: crypto.randomUUID(),
+        },
+        is_active: true,
+        scenario_id: null,
+      };
+    });
+
+    const { error: insertError } = await supabase.from("creators").insert(rows);
+    if (insertError) {
+      throw new Error(`NPCs konnten nicht gespeichert werden: ${insertError.message}`);
+    }
 
     generatedCount = draft.npcs.slice(0, amount).length;
     revalidatePath("/npc-dialogs");
