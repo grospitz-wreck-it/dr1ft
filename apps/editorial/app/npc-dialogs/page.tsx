@@ -201,12 +201,12 @@ export default async function NpcDialogsOverviewPage({
   const dialogCount = new Map<string, number>();
   (dialogs ?? []).forEach((row: any) => dialogCount.set(row.creator_id, (dialogCount.get(row.creator_id) ?? 0) + 1));
 
-  const interestOptions = [...new Set(
+  const interestOptions = Array.from(new Set(
     (interestRows ?? [])
       .flatMap((row: any) => Array.isArray(row.interest_tags) ? row.interest_tags : [])
       .map(String)
       .filter(Boolean),
-  )]
+  ))
     .sort((a, b) => a.localeCompare(b, "de"))
     .slice(0, 40);
 
