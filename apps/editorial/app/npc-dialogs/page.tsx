@@ -7,12 +7,9 @@ import {
   WandSparkles,
   Search,
   SlidersHorizontal,
-  ArrowUpDown,
   ChevronLeft,
   ChevronRight,
   X,
-  CheckCircle2,
-  CircleOff,
 } from "lucide-react";
 import { supabaseServerClient } from "../../lib/supabaseServerClient";
 import { createNpcProfile, generateNpcProfiles } from "./actions";
@@ -134,9 +131,7 @@ export default async function NpcDialogsOverviewPage({
 
   const emptyFilter =
     (storyFilter === "with" && storyIds.length === 0) ||
-    (dialogFilter === "with" && dialogIds.length === 0) ||
-    (storyFilter === "without" && storyIds.length === 0 && false) ||
-    (dialogFilter === "without" && dialogIds.length === 0 && false);
+    (dialogFilter === "with" && dialogIds.length === 0);
 
   let creators: any[] = [];
   let total = 0;
