@@ -24,12 +24,12 @@ export function AiGenerationButton({
       return;
     }
 
-    const timers = pendingSteps.slice(1).map((_, index) =>
-      window.setTimeout(() => setStepIndex(index + 1), (index + 1) * 5000),
-    );
+    const interval = window.setInterval(() => {
+      setStepIndex((current) => (current + 1) % pendingSteps.length);
+    }, 5000);
 
-    return () => timers.forEach(window.clearTimeout);
-  }, [pending, pendingSteps]);
+    return () => window.clearInterval(interval);
+  }, [pending, pendingSteps.length]);
 
   return (
     <button
