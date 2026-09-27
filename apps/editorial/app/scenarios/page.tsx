@@ -1,6 +1,7 @@
 import { BookOpen, ChevronRight, FilePlus2, Sparkles, Users, Route, Clock3 } from "lucide-react";
 import { supabaseServerClient } from "../../lib/supabaseServerClient";
 import { createScenario, generateScenarioDraft } from "./actions";
+import { AiGenerationButton } from "../components/AiGenerationButton";
 
 const AGE_BANDS = [
   ["9_11", "9–11", "Kinder / frühe Lernende"],
@@ -198,9 +199,11 @@ export default async function ScenariosPage({
                 <div className="flex items-center gap-2"><Clock3 className="w-3.5 h-3.5" /> alles als Entwurf</div>
               </div>
 
-              <button type="submit" className="w-full inline-flex items-center justify-center gap-2 rounded-xl bg-accent px-4 py-3 text-sm font-semibold text-white hover:bg-accent-hover">
-                <Sparkles className="w-4 h-4" /> Szenario-Draft erstellen
-              </button>
+              <AiGenerationButton
+                idleLabel="Szenario-Draft erstellen"
+                pendingLabel="Szenario wird erstellt …"
+                className="w-full inline-flex items-center justify-center gap-2 rounded-xl bg-accent px-4 py-3 text-sm font-semibold text-white hover:bg-accent-hover"
+              />
             </div>
           </form>
         </section>
