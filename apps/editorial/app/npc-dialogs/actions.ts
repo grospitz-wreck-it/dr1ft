@@ -348,6 +348,73 @@ export async function createNpcProfile(formData: FormData) {
   redirect(`/npc-dialogs/${data.id}`);
 }
 
+export async function updateNpcProfile(formData: FormData) {
+  const supabase = supabaseServerClient();
+  const creatorId = String(formData.get("creatorId") ?? "");
+  const displayName = String(formData.get("displayName") ?? "").trim();
+  const handleInput = String(formData.get("handle") ?? "").trim();
+  const category = String(formData.get("category") ?? "citizen");
+  const role = String(formData.get("role") ?? "ambient");
+
+  if (!creatorId || !displayName || !handleInput) {
+    throw new Error("NPC, Name und Handle sind erforderlich.");
+  }
+  if (!NPC_CATEGORIES.includes(category as (typeof NPC_CATEGORIES)[number])) {
+    throw new Error("Ungültige NPC-Kategorie.");
+  }
+  if (!["ambient", "story", "hybrid"].includes(role)) {
+    throw new Error("Ungültige NPC-Rolle.");
+  }
+
+  const handle = handleInput.startsWith("@") ? handleInput : `@${handleInput}`;
+  const { data: current } = await supabase
+    .from("creators")
+    .select("persona, ai_identity")
+    .eq("id", creatorId)
+    .eq("kind", "npc")
+    .single();
+
+  const csv = (name: string) =>
+    String(formData.get(name) ?? "").split(",").map((v) => v.trim()).filter(Boolean);
+
+  const ageBands = formData.getAll("ageBands").map(String)
+    .filter((value) => AGE_BANDS.includes(value as (typeof AGE_BANDS)[number]));
+
+  const persona = {
+    ...(current?.persona ?? {}),
+    styleNotes: String(formData.get("styleNotes") ?? "").trim(),
+    rhetoricPatterns: csv("rhetoricPatterns"),
+    mannerisms: csv("mannerisms"),
+    recurringDetails: csv("recurringDetails"),
+    worldview: String(formData.get("worldview") ?? "").trim(),
+    boundaries: csv("boundaries"),
+  };
+
+  const { error } = await supabase.from("creators").update({
+    display_name: displayName,
+    handle,
+    bio: String(formData.get("bio") ?? "").trim(),
+    npc_category: category,
+    npc_role: role,
+    story_role: String(formData.get("storyRole") ?? "").trim(),
+    interest_tags: csv("interests"),
+    age_bands: ageBands,
+    persona,
+    ai_identity: {
+      ...(current?.ai_identity ?? {}),
+      stableHandle: handle,
+      personaVersion: Number(current?.ai_identity?.personaVersion ?? 1) + 1,
+      updatedBy: "npc-studio",
+    },
+    is_active: formData.get("isActive") === "on",
+  }).eq("id", creatorId).eq("kind", "npc");
+
+  if (error) throw new Error(error.message);
+  revalidatePath("/npc-dialogs");
+  revalidatePath(`/npc-dialogs/${creatorId}`);
+  redirect(`/npc-dialogs/${creatorId}`);
+}
+
 export async function createNpcDialog(formData: FormData) {
   const supabase = supabaseServerClient();
   const creatorId = String(formData.get("creatorId") ?? "");
