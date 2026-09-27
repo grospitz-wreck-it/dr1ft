@@ -508,6 +508,7 @@ Gib ausschließlich valides JSON gemäß Schema zurück.`;
           age_rating: ageRating,
           age_band: ageBand,
           scenario_group: group,
+          target_duration_minutes: durationToMinutes(duration),
           slug: `${group}-${ageBand}-${crypto.randomUUID().slice(0, 8)}`,
           is_active: false,
         })
