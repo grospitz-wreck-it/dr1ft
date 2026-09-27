@@ -111,13 +111,6 @@ export default async function ScenarioDetailPage({ params, searchParams = {} }: 
                   />
                 </form>
               </div>
-                <summary className="cursor-pointer text-xs font-semibold text-accent">Szenario-Grundlage bearbeiten</summary>
-                <form action={updateScenarioBasics.bind(null, scenarioId)} className="mt-3 grid gap-2 max-w-2xl">
-                  <input name="title" defaultValue={scenario.title} className="rounded-xl border border-slate-200 px-3 py-2 text-sm" />
-                  <textarea name="description" defaultValue={scenario.description ?? ""} rows={4} className="rounded-xl border border-slate-200 px-3 py-2 text-sm" />
-                  <button className="justify-self-start rounded-xl bg-slate-900 text-white px-3 py-2 text-xs font-semibold">Änderungen speichern</button>
-                </form>
-              </div>
             </div>
             <form>
               <button
