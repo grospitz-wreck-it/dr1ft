@@ -585,6 +585,7 @@ Gib ausschließlich valides JSON gemäß Schema zurück.`;
 
 
 export async function optimizeScenarioBasics(scenarioId: string) {
+  let successMessage = "";
   try {
     const supabase = supabaseServerClient();
     const { data: scenario, error } = await supabase
@@ -631,16 +632,18 @@ Gib ausschließlich valides JSON gemäß Schema zurück.`;
       .eq("id", scenarioId);
 
     if (updateError) throw new Error(updateError.message);
-    revalidatePath(`/scenarios/${scenarioId}`);
-    redirect(`/scenarios/${scenarioId}?ai=Grundlage+optimiert`);
+    successMessage = "Grundlage optimiert";
   } catch (error) {
     const message = error instanceof Error ? error.message : "KI-Optimierung fehlgeschlagen.";
     console.error("[scenario-ai-basics]", error);
     redirect(`/scenarios/${scenarioId}?aiError=${encodeURIComponent(message.slice(0, 900))}`);
   }
+  revalidatePath(`/scenarios/${scenarioId}`);
+  redirect(`/scenarios/${scenarioId}?ai=${encodeURIComponent(successMessage)}`);
 }
 
 export async function optimizeScenarioFlow(scenarioId: string) {
+  let successMessage = "";
   try {
     const supabase = supabaseServerClient();
     const [{ data: scenario }, { data: arcs }] = await Promise.all([
@@ -785,16 +788,18 @@ Gib ausschließlich valides JSON gemäß Schema zurück.`;
       }
     }
 
-    revalidatePath(`/scenarios/${scenarioId}`);
-    redirect(`/scenarios/${scenarioId}?ai=Ablauf+optimiert`);
+    successMessage = "Ablauf optimiert";
   } catch (error) {
     const message = error instanceof Error ? error.message : "KI-Optimierung fehlgeschlagen.";
     console.error("[scenario-ai-flow]", error);
     redirect(`/scenarios/${scenarioId}?aiError=${encodeURIComponent(message.slice(0, 900))}`);
   }
+  revalidatePath(`/scenarios/${scenarioId}`);
+  redirect(`/scenarios/${scenarioId}?ai=${encodeURIComponent(successMessage)}`);
 }
 
 export async function generateScenarioContent(scenarioId: string) {
+  let successMessage = "";
   try {
     const supabase = supabaseServerClient();
     const [{ data: scenario }, { data: arc }, { data: missions }] = await Promise.all([
@@ -870,13 +875,14 @@ Gib ausschließlich valides JSON gemäß Schema zurück.`;
     );
 
     if (error) throw new Error(error.message);
-    revalidatePath(`/scenarios/${scenarioId}`);
-    redirect(`/scenarios/${scenarioId}?ai=Inhalte+ergänzt`);
+    successMessage = "Inhalte ergänzt";
   } catch (error) {
     const message = error instanceof Error ? error.message : "KI-Generierung fehlgeschlagen.";
     console.error("[scenario-ai-content]", error);
     redirect(`/scenarios/${scenarioId}?aiError=${encodeURIComponent(message.slice(0, 900))}`);
   }
+  revalidatePath(`/scenarios/${scenarioId}`);
+  redirect(`/scenarios/${scenarioId}?ai=${encodeURIComponent(successMessage)}`);
 }
 
 export async function updateScenarioBasics(scenarioId: string, formData: FormData) {
