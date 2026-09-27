@@ -126,8 +126,8 @@ export default async function NpcDialogsOverviewPage({
     supabase.from("npc_dialogs").select("id", { count: "exact", head: true }),
   ]);
 
-  const storyIds = [...new Set((storyLinksForFilter ?? []).map((row: any) => row.creator_id))];
-  const dialogIds = [...new Set((dialogsForFilter ?? []).map((row: any) => row.creator_id))];
+  const storyIds = (storyLinksForFilter ?? []).map((row: any) => row.creator_id).filter((id: any, index: number, all: any[]) => all.indexOf(id) === index);
+  const dialogIds = (dialogsForFilter ?? []).map((row: any) => row.creator_id).filter((id: any, index: number, all: any[]) => all.indexOf(id) === index);
 
   const emptyFilter =
     (storyFilter === "with" && storyIds.length === 0) ||
