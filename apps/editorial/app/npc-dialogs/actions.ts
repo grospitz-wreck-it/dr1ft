@@ -39,26 +39,36 @@ async function callGeminiJson(prompt: string, schema: Record<string, unknown>) {
   let lastError = "Unbekannter Gemini-Fehler";
 
   for (const model of models) {
-    const response = await fetch(
-      "https://generativelanguage.googleapis.com/v1beta/interactions",
-      {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "x-goog-api-key": apiKey,
-        },
-        body: JSON.stringify({
-          model,
-          input: prompt,
-          response_format: {
-            type: "text",
-            mime_type: "application/json",
-            schema,
+    let response: Response;
+    try {
+      response = await fetch(
+        "https://generativelanguage.googleapis.com/v1beta/interactions",
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "x-goog-api-key": apiKey,
           },
-        }),
-        cache: "no-store",
-      },
-    );
+          body: JSON.stringify({
+            model,
+            input: prompt,
+            response_format: {
+              type: "text",
+              mime_type: "application/json",
+              schema,
+            },
+          }),
+          cache: "no-store",
+          signal: AbortSignal.timeout(20000),
+        },
+      );
+    } catch (error) {
+      lastError =
+        error instanceof Error && error.name === "TimeoutError"
+          ? `Gemini ${model} antwortet nach 20 Sekunden nicht.`
+          : `Gemini ${model} Netzwerkfehler: ${error instanceof Error ? error.message : "unbekannter Fehler"}`;
+      continue;
+    }
 
     if (response.ok) {
       const data = await response.json();
@@ -251,6 +261,7 @@ WICHTIG:
   }
 
     revalidatePath("/npc-dialogs");
+    redirect(`/npc-dialogs?generated=${encodeURIComponent(String(draft.npcs.slice(0, amount).length))}`);
   } catch (error) {
     const message = error instanceof Error ? error.message : "NPC-Generierung fehlgeschlagen.";
     console.error("[npc-generator]", error);
