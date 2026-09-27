@@ -113,7 +113,7 @@ export default async function NpcDialogsOverviewPage({
     { data: dialogsForFilter },
     { data: interestRows },
     { count: storyCount },
-    { count: dialogCount },
+    { count: totalDialogCount },
   ] = await Promise.all([
     storyFilter
       ? supabase.from("npc_story_links").select("creator_id")
@@ -250,7 +250,7 @@ export default async function NpcDialogsOverviewPage({
               <strong className="text-slate-800">{storyCount ?? 0}</strong> Story-Verknüpfungen
             </span>
             <span className="rounded-lg border border-slate-200 bg-white px-3 py-2">
-              <strong className="text-slate-800">{dialogCount ?? 0}</strong> Dialoge
+              <strong className="text-slate-800">{totalDialogCount ?? 0}</strong> Dialoge
             </span>
           </div>
         </header>
