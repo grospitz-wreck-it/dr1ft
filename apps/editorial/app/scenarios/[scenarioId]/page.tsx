@@ -93,6 +93,9 @@ export default async function ScenarioDetailPage({ params, searchParams = {} }: 
               </div>
               <h1 className="text-2xl font-semibold text-slate-900 mt-2">{scenario.title}</h1>
               <p className="text-sm text-slate-500 mt-2 max-w-3xl">{scenario.description}</p>
+              <div className="mt-3 inline-flex items-center gap-2 rounded-lg bg-accent/5 px-2.5 py-1.5 text-[11px] font-medium text-accent">
+                <Sparkles className="w-3 h-3" /> KI-Assistent für Grundlage, Ablauf und Inhalte aktiv
+              </div>
               <div className="mt-4 flex flex-wrap items-center gap-2">
                 <details>
                   <summary className="cursor-pointer text-xs font-semibold text-accent">Szenario-Grundlage bearbeiten</summary>
