@@ -33,6 +33,8 @@ export interface Scenario {
   description?: string;
   ageRating: AgeRating;
   isActive: boolean;
+  /** Redaktionelles Ziel für die erwartete Sessiondauer in Minuten. */
+  targetDurationMinutes: number;
 }
 
 export interface Competency {
@@ -134,6 +136,14 @@ export interface ContentItem {
   reviewNotes?: string;
 
   extra: Record<string, unknown>;
+  /** Erwartetes Nutzungsverhalten für die Session Duration Engine. */
+  engagementProfile?: {
+    readSeconds?: number;
+    interactionSeconds?: number;
+    scrollProbability?: number;
+    repeatProbability?: number;
+    scrollSeconds?: number;
+  };
 
   createdAt: string;
   updatedAt: string;
