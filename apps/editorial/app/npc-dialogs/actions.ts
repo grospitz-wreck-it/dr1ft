@@ -378,7 +378,7 @@ export async function createNpcMessage(
 
   const { data: dialog } = await supabase
     .from("npc_dialogs")
-    .select("id, scenario_id, root_content_item_id")
+    .select("id, scenario_id, age_band, root_content_item_id")
     .eq("id", dialogId)
     .eq("creator_id", creatorId)
     .single();
@@ -395,7 +395,12 @@ export async function createNpcMessage(
       body,
       extra: {},
       status: "draft",
-      age_rating:\n        dialog.age_band === "9_11"\n          ? "all_ages"\n          : dialog.age_band === "16_17" || dialog.age_band === "18_plus"\n            ? "16_plus"\n            : "12_plus",
+      age_rating:
+        dialog.age_band === "9_11"
+          ? "all_ages"
+          : dialog.age_band === "16_17" || dialog.age_band === "18_plus"
+            ? "16_plus"
+            : "12_plus",
     })
     .select("id")
     .single();
