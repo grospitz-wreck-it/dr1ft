@@ -9,6 +9,7 @@ import {
 } from "lucide-react";
 import { supabaseServerClient } from "../../lib/supabaseServerClient";
 import { createNpcProfile, generateNpcProfiles } from "./actions";
+import { AiGenerationButton } from "../components/AiGenerationButton";
 
 const CATEGORIES = [
   ["student", "Schüler:innen"],
@@ -150,9 +151,11 @@ export default async function NpcDialogsOverviewPage({
                 <div>• Altersbereiche und mögliche Story-Rolle</div>
               </div>
 
-              <button type="submit" className="w-full inline-flex items-center justify-center gap-2 rounded-xl bg-accent px-4 py-3 text-sm font-semibold text-white hover:bg-accent-hover">
-                <Sparkles className="w-4 h-4" /> NPCs generieren
-              </button>
+              <AiGenerationButton
+                idleLabel="NPCs generieren"
+                pendingLabel="NPCs werden generiert …"
+                className="w-full inline-flex items-center justify-center gap-2 rounded-xl bg-accent px-4 py-3 text-sm font-semibold text-white hover:bg-accent-hover"
+              />
             </div>
           </form>
         </section>
