@@ -205,6 +205,79 @@ export async function updateContentItemStatus(
 
 
 const AGE_BANDS = ["9_11", "12_13", "14_15", "16_17", "18_plus"] as const;
+
+async function callGeminiJson(prompt: string, schema: Record<string, unknown>) {
+  const apiKey = process.env.GEMINI_API_KEY?.trim();
+  if (!apiKey) throw new Error("GEMINI_API_KEY ist zur Laufzeit nicht verfügbar.");
+
+  const models = ["gemini-3.5-flash-lite", "gemini-3.6-flash", "gemini-3.5-flash"];
+  let lastError = "Unbekannter Gemini-Fehler";
+
+  for (const model of models) {
+    let response: Response;
+    try {
+      response = await fetch(
+        "https://generativelanguage.googleapis.com/v1beta/interactions",
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "x-goog-api-key": apiKey,
+          },
+          body: JSON.stringify({
+            model,
+            input: prompt,
+            response_format: {
+              type: "text",
+              mime_type: "application/json",
+              schema,
+            },
+          }),
+          cache: "no-store",
+          signal: AbortSignal.timeout(60000),
+        },
+      );
+    } catch (error) {
+      lastError =
+        error instanceof Error && error.name === "TimeoutError"
+          ? `Gemini ${model} antwortet nach 60 Sekunden nicht.`
+          : `Gemini ${model} Netzwerkfehler: ${error instanceof Error ? error.message : "unbekannter Fehler"}`;
+      continue;
+    }
+
+    if (response.ok) {
+      const data = await response.json();
+      const raw =
+        data.output_text ??
+        data.output?.find?.((part: any) => part.type === "text")?.text ??
+        data.steps
+          ?.filter?.((step: any) => step.type === "model_output")
+          ?.flatMap?.((step: any) => step.content ?? [])
+          ?.filter?.((part: any) => part.type === "text")
+          ?.map?.((part: any) => part.text)
+          ?.join?.("") ??
+        "";
+
+      try {
+        return JSON.parse(String(raw).trim());
+      } catch {
+        lastError = `Gemini ${model} lieferte kein gültiges JSON.`;
+        continue;
+      }
+    }
+
+    const errorText = await response.text();
+    lastError = `Gemini ${model} (${response.status}): ${errorText.slice(0, 400)}`;
+    const retryable =
+      response.status === 429 ||
+      response.status >= 500 ||
+      /high demand|temporar|overload|capacity|unavailable/i.test(errorText);
+    if (!retryable) break;
+  }
+
+  throw new Error(`KI-Generierung fehlgeschlagen: ${lastError}`);
+}
+
 const AGE_LABELS: Record<string, string> = {
   "9_11": "9–11 Jahre",
   "12_13": "12–13 Jahre",
@@ -510,6 +583,301 @@ Gib ausschließlich valides JSON gemäß Schema zurück.`;
   redirect(`/scenarios?group=${encodeURIComponent(createdGroup)}`);
 }
 
+
+export async function optimizeScenarioBasics(scenarioId: string) {
+  try {
+    const supabase = supabaseServerClient();
+    const { data: scenario, error } = await supabase
+      .from("scenarios")
+      .select("id, title, description, age_band")
+      .eq("id", scenarioId)
+      .single();
+
+    if (error || !scenario) throw new Error("Szenario konnte nicht geladen werden.");
+
+    const schema = {
+      type: "object",
+      properties: {
+        title: { type: "string" },
+        description: { type: "string" },
+      },
+      required: ["title", "description"],
+    };
+
+    const prompt = `Du bist die redaktionelle KI von DR1FT. Optimiere die Grundbeschreibung eines bestehenden Lern-Szenarios.
+ALTERSVARIANTE: ${AGE_LABELS[scenario.age_band] ?? scenario.age_band}
+AKTUELLER TITEL: ${scenario.title}
+AKTUELLE BESCHREIBUNG:
+${scenario.description || "Keine Beschreibung."}
+
+ZIEL:
+- Formuliere einen präzisen, interessanten Titel.
+- Formuliere eine klare, konkrete Szenariobeschreibung für eine Redaktion.
+- Erhalte die inhaltliche Absicht und füge keine neuen Fakten hinzu, die nicht aus dem vorhandenen Text ableitbar sind.
+- Lernziele, falls bereits enthalten, müssen erhalten bleiben.
+- Keine politische Überzeugungsarbeit.
+- Das Ergebnis bleibt ein redaktioneller DRAFT.
+
+Gib ausschließlich valides JSON gemäß Schema zurück.`;
+
+    const draft = await callGeminiJson(prompt, schema);
+    const title = String(draft?.title || "").trim();
+    const description = String(draft?.description || "").trim();
+    if (!title || !description) throw new Error("Die KI hat keinen brauchbaren Grundlagentext geliefert.");
+
+    const { error: updateError } = await supabase
+      .from("scenarios")
+      .update({ title, description })
+      .eq("id", scenarioId);
+
+    if (updateError) throw new Error(updateError.message);
+    revalidatePath(`/scenarios/${scenarioId}`);
+    redirect(`/scenarios/${scenarioId}?ai=Grundlage+optimiert`);
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "KI-Optimierung fehlgeschlagen.";
+    console.error("[scenario-ai-basics]", error);
+    redirect(`/scenarios/${scenarioId}?aiError=${encodeURIComponent(message.slice(0, 900))}`);
+  }
+}
+
+export async function optimizeScenarioFlow(scenarioId: string) {
+  try {
+    const supabase = supabaseServerClient();
+    const [{ data: scenario }, { data: arcs }] = await Promise.all([
+      supabase.from("scenarios").select("id, title, description, age_band").eq("id", scenarioId).single(),
+      supabase.from("story_arcs").select("id, title, description").eq("scenario_id", scenarioId).order("created_at"),
+    ]);
+
+    if (!scenario) throw new Error("Szenario konnte nicht geladen werden.");
+    const activeArc = arcs?.[0] ?? null;
+
+    const { data: missions } = await supabase
+      .from("missions")
+      .select("id, title, description, trigger_condition")
+      .eq("scenario_id", scenarioId)
+      .order("created_at");
+
+    const schema = {
+      type: "object",
+      properties: {
+        arcTitle: { type: "string" },
+        arcDescription: { type: "string" },
+        missions: {
+          type: "array",
+          items: {
+            type: "object",
+            properties: {
+              title: { type: "string" },
+              description: { type: "string" },
+              triggerEvent: {
+                type: "string",
+                enum: ["PostViewed", "CommentCreated", "NpcReplySelected"],
+              },
+            },
+            required: ["title", "description", "triggerEvent"],
+          },
+        },
+      },
+      required: ["arcTitle", "arcDescription", "missions"],
+    };
+
+    const prompt = `Du bist die redaktionelle KI von DR1FT. Optimiere den Ablauf eines bestehenden Lern-Szenarios.
+ALTERSVARIANTE: ${AGE_LABELS[scenario.age_band] ?? scenario.age_band}
+TITEL: ${scenario.title}
+BESCHREIBUNG:
+${scenario.description || "Keine Beschreibung."}
+
+AKTUELLER ABLAUF:
+${activeArc ? JSON.stringify({ title: activeArc.title, description: activeArc.description }) : "Noch kein Ablauf."}
+
+AKTUELLE MISSIONEN:
+${JSON.stringify((missions ?? []).map((m) => ({ title: m.title, description: m.description, trigger: m.trigger_condition?.event })))}
+
+ZIEL:
+- Erzeuge einen klaren Lernablauf mit 2–4 konkreten Missionen.
+- Missionen müssen echte Lernhandlungen sein.
+- Erhalte die vorhandene inhaltliche Richtung; keine komplett neue Story erfinden.
+- Die Sprache muss zur Altersvariante passen.
+- Wenn bereits Missionen vorhanden sind, verbessere sie statt sie unnötig auszutauschen.
+- Keine Kompetenz-IDs oder Datenbank-IDs.
+- Ergebnis ist ein redaktioneller Draft.
+
+Gib ausschließlich valides JSON gemäß Schema zurück.`;
+
+    const draft = await callGeminiJson(prompt, schema);
+    const missionsDraft = Array.isArray(draft?.missions) ? draft.missions.slice(0, 4) : [];
+    if (!String(draft?.arcTitle || "").trim() || !String(draft?.arcDescription || "").trim() || !missionsDraft.length) {
+      throw new Error("Die KI hat keinen vollständigen Ablauf geliefert.");
+    }
+
+    let arcId = activeArc?.id;
+    if (arcId) {
+      const { error } = await supabase
+        .from("story_arcs")
+        .update({
+          title: String(draft.arcTitle).trim(),
+          description: String(draft.arcDescription).trim(),
+          status: "draft",
+        })
+        .eq("id", arcId)
+        .eq("scenario_id", scenarioId);
+      if (error) throw new Error(error.message);
+    } else {
+      const { data: createdArc, error } = await supabase
+        .from("story_arcs")
+        .insert({
+          scenario_id: scenarioId,
+          slug: `ki-ablauf-${crypto.randomUUID().slice(0, 8)}`,
+          title: String(draft.arcTitle).trim(),
+          description: String(draft.arcDescription).trim(),
+          status: "draft",
+        })
+        .select("id")
+        .single();
+      if (error || !createdArc) throw new Error(error?.message ?? "Ablauf konnte nicht angelegt werden.");
+      arcId = createdArc.id;
+    }
+
+    for (let index = 0; index < missionsDraft.length; index++) {
+      const mission = missionsDraft[index];
+      const title = String(mission.title || `Schritt ${index + 1}`).trim();
+      const description = String(mission.description || "").trim();
+      const triggerEvent = String(mission.triggerEvent || "PostViewed");
+
+      if (missions?.[index]?.id) {
+        const { error } = await supabase
+          .from("missions")
+          .update({
+            title,
+            description,
+            trigger_condition: { event: triggerEvent, count: 1 },
+            status: "draft",
+          })
+          .eq("id", missions[index].id)
+          .eq("scenario_id", scenarioId);
+        if (error) throw new Error(error.message);
+      } else {
+        const { data: createdMission, error } = await supabase
+          .from("missions")
+          .insert({
+            scenario_id: scenarioId,
+            slug: `ki-mission-${index + 1}-${crypto.randomUUID().slice(0, 8)}`,
+            title,
+            description,
+            trigger_condition: { event: triggerEvent, count: 1 },
+            target_competencies: [],
+            reflection_content_id: null,
+            status: "draft",
+          })
+          .select("id")
+          .single();
+        if (error || !createdMission) throw new Error(error?.message ?? "Mission konnte nicht angelegt werden.");
+
+        const { error: stepError } = await supabase
+          .from("story_arc_steps")
+          .insert({
+            arc_id: arcId,
+            mission_id: createdMission.id,
+            order_index: index,
+            unlock_delay_hours: 0,
+          });
+        if (stepError) throw new Error(stepError.message);
+      }
+    }
+
+    revalidatePath(`/scenarios/${scenarioId}`);
+    redirect(`/scenarios/${scenarioId}?ai=Ablauf+optimiert`);
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "KI-Optimierung fehlgeschlagen.";
+    console.error("[scenario-ai-flow]", error);
+    redirect(`/scenarios/${scenarioId}?aiError=${encodeURIComponent(message.slice(0, 900))}`);
+  }
+}
+
+export async function generateScenarioContent(scenarioId: string) {
+  try {
+    const supabase = supabaseServerClient();
+    const [{ data: scenario }, { data: arc }, { data: missions }] = await Promise.all([
+      supabase.from("scenarios").select("id, title, description, age_band").eq("id", scenarioId).single(),
+      supabase.from("story_arcs").select("title, description").eq("scenario_id", scenarioId).order("created_at").limit(1).maybeSingle(),
+      supabase.from("missions").select("title, description").eq("scenario_id", scenarioId).order("created_at"),
+    ]);
+
+    if (!scenario) throw new Error("Szenario konnte nicht geladen werden.");
+
+    const schema = {
+      type: "object",
+      properties: {
+        contents: {
+          type: "array",
+          items: {
+            type: "object",
+            properties: {
+              type: { type: "string", enum: ["post", "comment", "dm_message", "reflection_prompt"] },
+              body: { type: "string" },
+              difficulty: { type: "integer", enum: [1, 2, 3, 4, 5] },
+            },
+            required: ["type", "body", "difficulty"],
+          },
+        },
+      },
+      required: ["contents"],
+    };
+
+    const prompt = `Du bist die redaktionelle KI von DR1FT. Erzeuge erste Inhaltsentwürfe für ein Lern-Szenario.
+ALTERSVARIANTE: ${AGE_LABELS[scenario.age_band] ?? scenario.age_band}
+TITEL: ${scenario.title}
+BESCHREIBUNG:
+${scenario.description || "Keine Beschreibung."}
+ABLAUF:
+${JSON.stringify(arc ?? null)}
+MISSIONEN:
+${JSON.stringify(missions ?? [])}
+
+Erzeuge 4–6 unterschiedliche, kurze Inhalte, die diesen Ablauf konkret machen:
+- mindestens ein Post
+- mindestens ein Kommentar
+- mindestens eine DM-Nachricht
+- mindestens ein Reflexions-Prompt
+- realistisch und altersgerecht
+- keine realen Personen, keine erfundenen Quellen oder angeblichen Fakten
+- keine Kompetenz-IDs und keine Datenbank-IDs
+- alles bleibt Draft
+
+Gib ausschließlich valides JSON gemäß Schema zurück.`;
+
+    const draft = await callGeminiJson(prompt, schema);
+    const contents = Array.isArray(draft?.contents) ? draft.contents.slice(0, 6) : [];
+    if (!contents.length) throw new Error("Die KI hat keine Inhalte geliefert.");
+
+    const ageRating =
+      scenario.age_band === "9_11" ? "all_ages" :
+      scenario.age_band === "16_17" || scenario.age_band === "18_plus" ? "16_plus" :
+      "12_plus";
+
+    const { error } = await supabase.from("content_items").insert(
+      contents.map((item: any) => ({
+        scenario_id: scenarioId,
+        type: String(item.type),
+        body: String(item.body || "").trim(),
+        difficulty: Math.min(5, Math.max(1, Number(item.difficulty || 1))),
+        age_rating: ageRating,
+        manipulation_techniques: [],
+        target_competencies: [],
+        status: "draft",
+        extra: { generatedBy: "scenario-studio-ai" },
+      })),
+    );
+
+    if (error) throw new Error(error.message);
+    revalidatePath(`/scenarios/${scenarioId}`);
+    redirect(`/scenarios/${scenarioId}?ai=Inhalte+ergänzt`);
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "KI-Generierung fehlgeschlagen.";
+    console.error("[scenario-ai-content]", error);
+    redirect(`/scenarios/${scenarioId}?aiError=${encodeURIComponent(message.slice(0, 900))}`);
+  }
+}
 
 export async function updateScenarioBasics(scenarioId: string, formData: FormData) {
   const supabase = supabaseServerClient();
