@@ -1,18 +1,35 @@
 "use client";
 
 import { Loader2, Sparkles } from "lucide-react";
+import { useEffect, useState } from "react";
 import { useFormStatus } from "react-dom";
 
 export function AiGenerationButton({
   idleLabel,
   pendingLabel,
   className = "",
+  pendingSteps = [],
 }: {
   idleLabel: string;
   pendingLabel: string;
   className?: string;
+  pendingSteps?: string[];
 }) {
   const { pending } = useFormStatus();
+  const [stepIndex, setStepIndex] = useState(0);
+
+  useEffect(() => {
+    if (!pending || pendingSteps.length < 2) {
+      setStepIndex(0);
+      return;
+    }
+
+    const timers = pendingSteps.slice(1).map((_, index) =>
+      window.setTimeout(() => setStepIndex(index + 1), (index + 1) * 5000),
+    );
+
+    return () => timers.forEach(window.clearTimeout);
+  }, [pending, pendingSteps]);
 
   return (
     <button
@@ -26,7 +43,7 @@ export function AiGenerationButton({
       ) : (
         <Sparkles className="w-4 h-4" />
       )}
-      {pending ? pendingLabel : idleLabel}
+      <span>{pending ? (pendingSteps[stepIndex] ?? pendingLabel) : idleLabel}</span>
     </button>
   );
 }
