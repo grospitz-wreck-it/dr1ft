@@ -59,13 +59,13 @@ async function callGeminiJson(prompt: string, schema: Record<string, unknown>) {
             },
           }),
           cache: "no-store",
-          signal: AbortSignal.timeout(20000),
+          signal: AbortSignal.timeout(60000),
         },
       );
     } catch (error) {
       lastError =
         error instanceof Error && error.name === "TimeoutError"
-          ? `Gemini ${model} antwortet nach 20 Sekunden nicht.`
+          ? `Gemini ${model} antwortet nach 60 Sekunden nicht.`
           : `Gemini ${model} Netzwerkfehler: ${error instanceof Error ? error.message : "unbekannter Fehler"}`;
       continue;
     }
