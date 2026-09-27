@@ -194,30 +194,77 @@ export default async function NpcDialogTreePage({ params, searchParams = {} }: P
             ))}
           </div>
 
-          <details className="mt-5 border-t border-slate-100 pt-4">
-            <summary className="cursor-pointer text-sm font-semibold text-slate-800">NPC bearbeiten</summary>
-            <form action={updateNpcProfile} className="mt-4 grid lg:grid-cols-2 gap-4">
-              <input type="hidden" name="creatorId" value={creatorId} />
-              <label className="space-y-1"><span className="text-xs font-medium text-slate-600">Name</span><input name="displayName" defaultValue={creator?.display_name ?? ""} required className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm" /></label>
-              <label className="space-y-1"><span className="text-xs font-medium text-slate-600">Handle</span><input name="handle" defaultValue={creator?.handle ?? ""} required className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm" /></label>
-              <label className="space-y-1"><span className="text-xs font-medium text-slate-600">Kategorie</span><select name="category" defaultValue={creator?.npc_category ?? "citizen"} className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm">{Object.entries(CATEGORIES).map(([v,l]) => <option key={v} value={v}>{l}</option>)}</select></label>
-              <label className="space-y-1"><span className="text-xs font-medium text-slate-600">Rolle</span><select name="role" defaultValue={creator?.npc_role ?? "ambient"} className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm"><option value="ambient">Füllmaterial</option><option value="story">Story-NPC</option><option value="hybrid">Hybrid</option></select></label>
-              <label className="lg:col-span-2 space-y-1"><span className="text-xs font-medium text-slate-600">Bio</span><textarea name="bio" defaultValue={creator?.bio ?? ""} rows={3} className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm" /></label>
-              <label className="space-y-1"><span className="text-xs font-medium text-slate-600">Story-Rolle</span><textarea name="storyRole" defaultValue={creator?.story_role ?? ""} rows={3} className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm" /></label>
-              <label className="space-y-1"><span className="text-xs font-medium text-slate-600">Interessen</span><textarea name="interests" defaultValue={(creator?.interest_tags ?? []).join(", ")} rows={3} className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm" /></label>
-              <div className="lg:col-span-2"><div className="text-xs font-medium text-slate-600 mb-2">Altersgruppen</div><div className="flex flex-wrap gap-2">{AGE_BANDS.map(([v,l]) => <label key={v} className="inline-flex items-center gap-2 rounded-lg border border-slate-200 px-3 py-2 text-sm"><input type="checkbox" name="ageBands" value={v} defaultChecked={(creator?.age_bands ?? []).includes(v)} />{l}</label>)}</div></div>
-              <div className="lg:col-span-2 border-t border-slate-100 pt-4"><div className="text-sm font-semibold text-slate-800 mb-3">KI-Persona</div><div className="grid lg:grid-cols-2 gap-4">
-                <label className="space-y-1"><span className="text-xs font-medium text-slate-600">Sprachstil</span><textarea name="styleNotes" defaultValue={persona.styleNotes ?? ""} rows={3} className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm" /></label>
-                <label className="space-y-1"><span className="text-xs font-medium text-slate-600">Grundhaltung</span><textarea name="worldview" defaultValue={persona.worldview ?? ""} rows={3} className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm" /></label>
-                <label className="space-y-1"><span className="text-xs font-medium text-slate-600">Argumentationsmuster</span><textarea name="rhetoricPatterns" defaultValue={(persona.rhetoricPatterns ?? []).join(", ")} rows={3} className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm" /></label>
-                <label className="space-y-1"><span className="text-xs font-medium text-slate-600">Eigenheiten</span><textarea name="mannerisms" defaultValue={(persona.mannerisms ?? []).join(", ")} rows={3} className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm" /></label>
-                <label className="space-y-1"><span className="text-xs font-medium text-slate-600">Wiederkehrende Details</span><textarea name="recurringDetails" defaultValue={(persona.recurringDetails ?? []).join(", ")} rows={3} className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm" /></label>
-                <label className="space-y-1"><span className="text-xs font-medium text-slate-600">Grenzen</span><textarea name="boundaries" defaultValue={(persona.boundaries ?? []).join(", ")} rows={3} className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm" /></label>
-              </div></div>
-              <label className="lg:col-span-2 inline-flex items-center gap-2 text-sm text-slate-700"><input type="checkbox" name="isActive" defaultChecked={creator?.is_active !== false} />NPC aktiv</label>
-              <button className="lg:col-span-2 bg-slate-900 text-white rounded-lg px-4 py-2.5 text-sm font-medium">NPC speichern</button>
-            </form>
-          </details>
+          <div className="mt-5 border-t border-slate-100 pt-5">
+            <div className="flex items-center justify-between gap-3 mb-3">
+              <div>
+                <div className="text-xs uppercase tracking-widest font-semibold text-accent">NPC Studio</div>
+                <h2 className="text-sm font-semibold text-slate-900 mt-1">Figur bearbeiten</h2>
+                <p className="text-xs text-slate-500 mt-1">Identität, Persona und Interessen getrennt pflegen. Änderungen wirken auf die stabile KI-Persona.</p>
+              </div>
+              <span className="text-[11px] rounded-full bg-slate-100 px-2.5 py-1 text-slate-500">Persona v{persona?.personaVersion ?? creator?.ai_identity?.personaVersion ?? 1}</span>
+            </div>
+
+            <div className="grid lg:grid-cols-3 gap-3">
+              <details open className="rounded-xl border border-slate-200 bg-slate-50 p-4">
+                <summary className="cursor-pointer text-sm font-semibold text-slate-800">01 · Identität</summary>
+                <form action={updateNpcProfile} className="mt-4 space-y-3">
+                  <input type="hidden" name="creatorId" value={creatorId} />
+                  <label className="block space-y-1"><span className="text-xs font-medium text-slate-600">Name</span><input name="displayName" defaultValue={creator?.display_name ?? ""} required className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm bg-white" /></label>
+                  <label className="block space-y-1"><span className="text-xs font-medium text-slate-600">Handle</span><input name="handle" defaultValue={creator?.handle ?? ""} required className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm bg-white" /></label>
+                  <label className="block space-y-1"><span className="text-xs font-medium text-slate-600">Kategorie</span><select name="category" defaultValue={creator?.npc_category ?? "citizen"} className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm bg-white">{Object.entries(CATEGORIES).map(([v,l]) => <option key={v} value={v}>{l}</option>)}</select></label>
+                  <label className="block space-y-1"><span className="text-xs font-medium text-slate-600">Rolle</span><select name="role" defaultValue={creator?.npc_role ?? "ambient"} className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm bg-white"><option value="ambient">Füllmaterial</option><option value="story">Story-NPC</option><option value="hybrid">Hybrid</option></select></label>
+                  <label className="block space-y-1"><span className="text-xs font-medium text-slate-600">Bio</span><textarea name="bio" defaultValue={creator?.bio ?? ""} rows={4} className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm bg-white" /></label>
+                  <label className="block space-y-1"><span className="text-xs font-medium text-slate-600">Story-Rolle</span><textarea name="storyRole" defaultValue={creator?.story_role ?? ""} rows={3} className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm bg-white" /></label>
+                  <label className="inline-flex items-center gap-2 text-sm text-slate-700"><input type="checkbox" name="isActive" defaultChecked={creator?.is_active !== false} /> NPC aktiv</label>
+                  <button className="w-full bg-slate-900 text-white rounded-lg px-3 py-2.5 text-sm font-medium">Identität speichern</button>
+                </form>
+              </details>
+
+              <details className="rounded-xl border border-slate-200 bg-slate-50 p-4">
+                <summary className="cursor-pointer text-sm font-semibold text-slate-800">02 · Interessen & Alter</summary>
+                <form action={updateNpcProfile} className="mt-4 space-y-3">
+                  <input type="hidden" name="creatorId" value={creatorId} />
+                  <input type="hidden" name="displayName" value={creator?.display_name ?? ""} />
+                  <input type="hidden" name="handle" value={creator?.handle ?? ""} />
+                  <input type="hidden" name="category" value={creator?.npc_category ?? "citizen"} />
+                  <input type="hidden" name="role" value={creator?.npc_role ?? "ambient"} />
+                  <input type="hidden" name="bio" value={creator?.bio ?? ""} />
+                  <input type="hidden" name="storyRole" value={creator?.story_role ?? ""} />
+                  <input type="hidden" name="styleNotes" value={persona.styleNotes ?? ""} />
+                  <input type="hidden" name="rhetoricPatterns" value={(persona.rhetoricPatterns ?? []).join(", ")} />
+                  <input type="hidden" name="mannerisms" value={(persona.mannerisms ?? []).join(", ")} />
+                  <input type="hidden" name="recurringDetails" value={(persona.recurringDetails ?? []).join(", ")} />
+                  <input type="hidden" name="worldview" value={persona.worldview ?? ""} />
+                  <input type="hidden" name="boundaries" value={(persona.boundaries ?? []).join(", ")} />
+                  <label className="block space-y-1"><span className="text-xs font-medium text-slate-600">Interessen</span><textarea name="interests" defaultValue={(creator?.interest_tags ?? []).join(", ")} rows={6} placeholder="Fußball, TikTok, Gaming, Schule" className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm bg-white" /></label>
+                  <div><div className="text-xs font-medium text-slate-600 mb-2">Altersgruppen</div><div className="flex flex-wrap gap-2">{AGE_BANDS.map(([v,l]) => <label key={v} className="inline-flex items-center gap-2 rounded-lg border border-slate-200 bg-white px-2.5 py-2 text-xs"><input type="checkbox" name="ageBands" value={v} defaultChecked={(creator?.age_bands ?? []).includes(v)} />{l}</label>)}</div></div>
+                  <button className="w-full bg-slate-900 text-white rounded-lg px-3 py-2.5 text-sm font-medium">Interessen speichern</button>
+                </form>
+              </details>
+
+              <details className="rounded-xl border border-slate-200 bg-slate-50 p-4">
+                <summary className="cursor-pointer text-sm font-semibold text-slate-800">03 · KI-Persona</summary>
+                <form action={updateNpcProfile} className="mt-4 space-y-3">
+                  <input type="hidden" name="creatorId" value={creatorId} />
+                  <input type="hidden" name="displayName" value={creator?.display_name ?? ""} />
+                  <input type="hidden" name="handle" value={creator?.handle ?? ""} />
+                  <input type="hidden" name="category" value={creator?.npc_category ?? "citizen"} />
+                  <input type="hidden" name="role" value={creator?.npc_role ?? "ambient"} />
+                  <input type="hidden" name="bio" value={creator?.bio ?? ""} />
+                  <input type="hidden" name="storyRole" value={creator?.story_role ?? ""} />
+                  <input type="hidden" name="interests" value={(creator?.interest_tags ?? []).join(", ")} />
+                  {(creator?.age_bands ?? []).map((band: string) => <input key={band} type="hidden" name="ageBands" value={band} />)}
+                  <label className="block space-y-1"><span className="text-xs font-medium text-slate-600">Sprachstil</span><textarea name="styleNotes" defaultValue={persona.styleNotes ?? ""} rows={5} className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm bg-white" /></label>
+                  <label className="block space-y-1"><span className="text-xs font-medium text-slate-600">Grundhaltung</span><textarea name="worldview" defaultValue={persona.worldview ?? ""} rows={5} className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm bg-white" /></label>
+                  <label className="block space-y-1"><span className="text-xs font-medium text-slate-600">Argumentationsmuster</span><textarea name="rhetoricPatterns" defaultValue={(persona.rhetoricPatterns ?? []).join(", ")} rows={4} className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm bg-white" /></label>
+                  <label className="block space-y-1"><span className="text-xs font-medium text-slate-600">Eigenheiten</span><textarea name="mannerisms" defaultValue={(persona.mannerisms ?? []).join(", ")} rows={4} className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm bg-white" /></label>
+                  <label className="block space-y-1"><span className="text-xs font-medium text-slate-600">Wiederkehrende Details</span><textarea name="recurringDetails" defaultValue={(persona.recurringDetails ?? []).join(", ")} rows={4} className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm bg-white" /></label>
+                  <label className="block space-y-1"><span className="text-xs font-medium text-slate-600">Grenzen</span><textarea name="boundaries" defaultValue={(persona.boundaries ?? []).join(", ")} rows={4} className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm bg-white" /></label>
+                  <button className="w-full bg-slate-900 text-white rounded-lg px-3 py-2.5 text-sm font-medium">Persona speichern</button>
+                </form>
+              </details>
+            </div>
+          </div>
         </header>
 
         <section className="grid xl:grid-cols-[1fr_1fr] gap-5">
