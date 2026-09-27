@@ -4,6 +4,7 @@ import {
   createNpcDialog,
   createNpcMessage,
   linkNpcToStory,
+  updateNpcProfile,
 } from "../actions";
 import { ReplyOptionsEditor } from "./ReplyOptionsEditor";
 import { ConsequenceEditor } from "./ConsequenceEditor";
@@ -192,6 +193,31 @@ export default async function NpcDialogTreePage({ params, searchParams = {} }: P
               <span key={tag} className="text-[11px] rounded-full bg-slate-50 border border-slate-200 px-2 py-1 text-slate-500">{tag}</span>
             ))}
           </div>
+
+          <details className="mt-5 border-t border-slate-100 pt-4">
+            <summary className="cursor-pointer text-sm font-semibold text-slate-800">NPC bearbeiten</summary>
+            <form action={updateNpcProfile} className="mt-4 grid lg:grid-cols-2 gap-4">
+              <input type="hidden" name="creatorId" value={creatorId} />
+              <label className="space-y-1"><span className="text-xs font-medium text-slate-600">Name</span><input name="displayName" defaultValue={creator?.display_name ?? ""} required className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm" /></label>
+              <label className="space-y-1"><span className="text-xs font-medium text-slate-600">Handle</span><input name="handle" defaultValue={creator?.handle ?? ""} required className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm" /></label>
+              <label className="space-y-1"><span className="text-xs font-medium text-slate-600">Kategorie</span><select name="category" defaultValue={creator?.npc_category ?? "citizen"} className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm">{Object.entries(CATEGORIES).map(([v,l]) => <option key={v} value={v}>{l}</option>)}</select></label>
+              <label className="space-y-1"><span className="text-xs font-medium text-slate-600">Rolle</span><select name="role" defaultValue={creator?.npc_role ?? "ambient"} className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm"><option value="ambient">Füllmaterial</option><option value="story">Story-NPC</option><option value="hybrid">Hybrid</option></select></label>
+              <label className="lg:col-span-2 space-y-1"><span className="text-xs font-medium text-slate-600">Bio</span><textarea name="bio" defaultValue={creator?.bio ?? ""} rows={3} className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm" /></label>
+              <label className="space-y-1"><span className="text-xs font-medium text-slate-600">Story-Rolle</span><textarea name="storyRole" defaultValue={creator?.story_role ?? ""} rows={3} className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm" /></label>
+              <label className="space-y-1"><span className="text-xs font-medium text-slate-600">Interessen</span><textarea name="interests" defaultValue={(creator?.interest_tags ?? []).join(", ")} rows={3} className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm" /></label>
+              <div className="lg:col-span-2"><div className="text-xs font-medium text-slate-600 mb-2">Altersgruppen</div><div className="flex flex-wrap gap-2">{AGE_BANDS.map(([v,l]) => <label key={v} className="inline-flex items-center gap-2 rounded-lg border border-slate-200 px-3 py-2 text-sm"><input type="checkbox" name="ageBands" value={v} defaultChecked={(creator?.age_bands ?? []).includes(v)} />{l}</label>)}</div></div>
+              <div className="lg:col-span-2 border-t border-slate-100 pt-4"><div className="text-sm font-semibold text-slate-800 mb-3">KI-Persona</div><div className="grid lg:grid-cols-2 gap-4">
+                <label className="space-y-1"><span className="text-xs font-medium text-slate-600">Sprachstil</span><textarea name="styleNotes" defaultValue={persona.styleNotes ?? ""} rows={3} className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm" /></label>
+                <label className="space-y-1"><span className="text-xs font-medium text-slate-600">Grundhaltung</span><textarea name="worldview" defaultValue={persona.worldview ?? ""} rows={3} className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm" /></label>
+                <label className="space-y-1"><span className="text-xs font-medium text-slate-600">Argumentationsmuster</span><textarea name="rhetoricPatterns" defaultValue={(persona.rhetoricPatterns ?? []).join(", ")} rows={3} className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm" /></label>
+                <label className="space-y-1"><span className="text-xs font-medium text-slate-600">Eigenheiten</span><textarea name="mannerisms" defaultValue={(persona.mannerisms ?? []).join(", ")} rows={3} className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm" /></label>
+                <label className="space-y-1"><span className="text-xs font-medium text-slate-600">Wiederkehrende Details</span><textarea name="recurringDetails" defaultValue={(persona.recurringDetails ?? []).join(", ")} rows={3} className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm" /></label>
+                <label className="space-y-1"><span className="text-xs font-medium text-slate-600">Grenzen</span><textarea name="boundaries" defaultValue={(persona.boundaries ?? []).join(", ")} rows={3} className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm" /></label>
+              </div></div>
+              <label className="lg:col-span-2 inline-flex items-center gap-2 text-sm text-slate-700"><input type="checkbox" name="isActive" defaultChecked={creator?.is_active !== false} />NPC aktiv</label>
+              <button className="lg:col-span-2 bg-slate-900 text-white rounded-lg px-4 py-2.5 text-sm font-medium">NPC speichern</button>
+            </form>
+          </details>
         </header>
 
         <section className="grid xl:grid-cols-[1fr_1fr] gap-5">
