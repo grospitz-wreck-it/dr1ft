@@ -23,7 +23,7 @@ export default async function DmPage({ params, searchParams }: Props) {
     .from("class_instance_scenario_assignments")
     .select("scenario_id")
     .eq("class_instance_id", classInstanceId);
-  const scenarioIds = [...new Set((assignment ?? []).map((a) => a.scenario_id))];
+  const scenarioIds: string[] = Array.from(new Set<string>((assignment ?? []).map((a) => a.scenario_id)));
 
   const { data: creator } = await supabase
     .from("creators")
