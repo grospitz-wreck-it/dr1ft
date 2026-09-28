@@ -29,7 +29,7 @@ export default async function FeedPage() {
   const { data: instanceLikes } = contentIds.length ? await supabase.from("user_interactions").select("content_item_id, user_id").eq("class_instance_id", classInstanceId).eq("interaction_type", "like").in("content_item_id", contentIds) : { data: [] as { content_item_id: string; user_id: string }[] };
   const { data: npcLikes } = contentIds.length ? await supabase.from("npc_social_interactions").select("content_item_id").eq("class_instance_id", classInstanceId).eq("interaction_type", "like").in("content_item_id", contentIds) : { data: [] as { content_item_id: string }[] };
   const { data: classComments } = contentIds.length ? await supabase.from("content_items").select("parent_id").eq("class_instance_id", classInstanceId).eq("type", "comment").eq("status", "live").in("parent_id", contentIds) : { data: [] as { parent_id: string }[] };
-  const likeCounts = new Map<string, number>(); const commentCounts = new Map<string, number>(); const likeUserIds = [...new Set((instanceLikes ?? []).map((like) => like.user_id))];
+  const likeCounts = new Map<string, number>(); const commentCounts = new Map<string, number>(); const likeUserIds: string[] = Array.from(new Set<string>((instanceLikes ?? []).map((like) => like.user_id)));
   for (const like of instanceLikes ?? []) likeCounts.set(like.content_item_id, (likeCounts.get(like.content_item_id) ?? 0) + 1);
   for (const like of npcLikes ?? []) likeCounts.set(like.content_item_id, (likeCounts.get(like.content_item_id) ?? 0) + 1);
   for (const comment of classComments ?? []) if (comment.parent_id) commentCounts.set(comment.parent_id, (commentCounts.get(comment.parent_id) ?? 0) + 1);
