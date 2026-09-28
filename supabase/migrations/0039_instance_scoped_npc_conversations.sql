@@ -14,7 +14,8 @@ create index if not exists idx_user_npc_conversations_instance
 
 -- Remove the old global conversation uniqueness so the same learner can
 -- have independent NPC state in different class instances.
-drop constraint if exists user_npc_conversations_user_id_creator_id_key;
+alter table public.user_npc_conversations
+  drop constraint if exists user_npc_conversations_user_id_creator_id_key;
 
 create unique index if not exists idx_user_npc_conversations_instance_unique
   on public.user_npc_conversations(user_id, creator_id, class_instance_id);
