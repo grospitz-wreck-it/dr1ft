@@ -33,7 +33,7 @@ export default async function CreatorProfilePage({ params }: Props) {
     .from("class_instance_scenario_assignments")
     .select("scenario_id")
     .eq("class_instance_id", classInstanceId);
-  const assignedScenarioIds = [...new Set((assignments ?? []).map((a) => a.scenario_id))];
+  const assignedScenarioIds = Array.from(new Set((assignments ?? []).map((a) => a.scenario_id)));
 
   const { data: creator } = await supabase
     .from("creators")
