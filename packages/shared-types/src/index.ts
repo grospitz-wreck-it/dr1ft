@@ -190,6 +190,6 @@ export type DomainEvent =
   | { type: "CommentCreated"; userId: string; contentItemId: string; body: string }
   | { type: "NpcReplySelected"; userId: string; creatorId: string; contentItemId: string; techniqueTag?: string }
   | { type: "MissionStarted"; userId: string; missionId: string }
-  | { type: "MissionCompleted"; userId: string; missionId: string }
+  | { type: "MissionCompleted"; userId: string; missionId: string; classInstanceId?: string }
   | { type: "CompetencyUpdated"; userId: string; competencyId: string; level: number }
   | { type: "FeedRefreshed"; userId: string };
