@@ -24,7 +24,7 @@ function AuthorRow({ creator }: { creator?: CreatorSummary }) {
   return <Link href={`/creator/${creator.id}`} className="flex items-center gap-2 mb-2 group" onClick={(e) => e.stopPropagation()}><span className="w-6 h-6 rounded-full bg-ink text-paper text-[10px] font-mono flex items-center justify-center shrink-0">{initials(creator.displayName)}</span><span className="text-xs font-medium text-ink group-hover:underline">{creator.displayName}</span><span className="text-xs text-ink/40">{creator.handle}</span></Link>;
 }
 
-export function PostCard({ item, userId, initiallyLiked, onView }: { item: FeedItem; userId: string; initiallyLiked: boolean; onView: () => void }) {
+export function PostCard({ item, userId, classInstanceId, initiallyLiked, onView }: { item: FeedItem; userId: string; classInstanceId: string; initiallyLiked: boolean; onView: () => void }) {
   const supabase = supabaseBrowserClient();
   const ref = useRef<HTMLDivElement>(null);
   const [liked, setLiked] = useState(initiallyLiked);
@@ -51,10 +51,10 @@ export function PostCard({ item, userId, initiallyLiked, onView }: { item: FeedI
   function showFeedback(message: string) { setFeedback(message); window.setTimeout(() => setFeedback(null), 2800); }
 
   async function track(interactionType: "inspect_source" | "inspect_media" | "inspect_context" | "inspect_profile" | "compare_information" | "share" | "report" | "ignore", metadata: Record<string, unknown> = { ui: "generic_card_actions" }) {
-    await recordInteraction(supabase, { userId, contentItemId: item.id, interactionType, metadata });
+    await recordInteraction(supabase, { userId, contentItemId: item.id, interactionType, metadata, classInstanceId });
   }
 
-  function toggleLike() { if (!liked) { setLiked(true); recordInteraction(supabase, { userId, contentItemId: item.id, interactionType: "like" }); } }
+  function toggleLike() { if (!liked) { setLiked(true); recordInteraction(supabase, { userId, contentItemId: item.id, interactionType: "like", classInstanceId }); } }
 
   async function toggleComments() {
     const next = !commentsOpen; setCommentsOpen(next);
