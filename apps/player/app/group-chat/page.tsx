@@ -11,7 +11,7 @@ export default async function GroupChatHubPage() {
   if (!classInstanceId) return <main className="min-h-screen grid place-items-center"><p className="text-[#68738a]">Keine aktive Klasseninstanz.</p></main>;
 
   const { data: assignments } = await supabase.from("class_instance_scenario_assignments").select("scenario_id").eq("class_instance_id", classInstanceId);
-  const scenarioIds = [...new Set((assignments ?? []).map((a) => a.scenario_id))];
+  const scenarioIds: string[] = Array.from(new Set<string>((assignments ?? []).map((a) => a.scenario_id)));
   const emptyId = "00000000-0000-0000-0000-000000000000";
   const { data: chats } = await supabase.from("group_chats").select("id, title, description, scenario_id").eq("status", "live").in("scenario_id", scenarioIds.length ? scenarioIds : [emptyId]);
 
