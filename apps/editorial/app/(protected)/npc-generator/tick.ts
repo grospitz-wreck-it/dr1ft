@@ -30,12 +30,12 @@ export async function runNpcWorldTick(formData: FormData) {
 
   const { data: scenarioAssignments, error: scenarioError } = await supabase.from("class_instance_scenario_assignments").select("scenario_id").eq("class_instance_id", classInstanceId);
   if (scenarioError) throw new Error(scenarioError.message);
-  const scenarioIds = [...new Set((scenarioAssignments ?? []).map((x: any) => x.scenario_id).filter(Boolean))];
+  const scenarioIds: string[] = Array.from(new Set<string>((scenarioAssignments ?? []).map((x: any) => x.scenario_id).filter(Boolean)));
   if (!scenarioIds.length) return { reactions: 0, posts: 0 };
 
   const { data: actorAssignments, error: actorAssignmentError } = await supabase.from("npc_module_assignments").select("actor_id, npc_id").in("scenario_id", scenarioIds).not("actor_id", "is", null).limit(48);
   if (actorAssignmentError) throw new Error(actorAssignmentError.message);
-  const actorIds = [...new Set((actorAssignments ?? []).map((x: any) => x.actor_id).filter(Boolean))];
+  const actorIds: string[] = Array.from(new Set<string>((actorAssignments ?? []).map((x: any) => x.actor_id).filter(Boolean)));
   if (!actorIds.length) return { reactions: 0, posts: 0 };
 
   const { data: actors, error: actorError } = await supabase.from("actor_profiles").select("*").in("id", actorIds).eq("is_active", true);
