@@ -6,3 +6,4 @@ export * from "./npcWorldContext";
 export * from "./realtimeEventBridge";
 export * from "./recordInteraction";
 export * from "./analyticsEngine";
+export * from "./npcEngine";
