@@ -38,8 +38,7 @@ export function CompetencyPanel({ initial }: { initial: CompetencyDisplay[] }) {
         prev.map((c) => (c.id === event.competencyId ? { ...c, level: event.level } : c))
       );
       setJustUpdated(event.competencyId);
-      const t = setTimeout(() => setJustUpdated(null), 1500);
-      return () => clearTimeout(t);
+      window.setTimeout(() => setJustUpdated(null), 1500);
     });
     return unsubscribe;
   }, []);
