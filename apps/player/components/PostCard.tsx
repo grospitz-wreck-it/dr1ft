@@ -67,11 +67,13 @@ function AuthorRow({ creator }: { creator?: CreatorSummary }) {
 export function PostCard({
   item,
   userId,
+  classInstanceId,
   initiallyLiked,
   onView,
 }: {
   item: FeedItem;
   userId: string;
+  classInstanceId: string;
   initiallyLiked: boolean;
   onView: () => void;
 }) {
@@ -120,6 +122,7 @@ export function PostCard({
       userId,
       contentItemId: item.id,
       interactionType,
+      classInstanceId,
       metadata: { ui: "generic_card_actions" },
     });
   }
@@ -131,6 +134,7 @@ export function PostCard({
         userId,
         contentItemId: item.id,
         interactionType: "like",
+        classInstanceId,
       });
     }
   }

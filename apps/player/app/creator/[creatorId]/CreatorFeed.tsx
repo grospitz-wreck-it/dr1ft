@@ -9,10 +9,12 @@ import { supabaseBrowserClient } from "../../../lib/supabaseBrowserClient";
 export function CreatorFeed({
   posts,
   userId,
+  classInstanceId,
   likedContentIds,
 }: {
   posts: FeedItem[];
   userId: string;
+  classInstanceId: string;
   likedContentIds: Set<string>;
 }) {
   const supabase = supabaseBrowserClient();
@@ -28,12 +30,14 @@ export function CreatorFeed({
           key={item.id}
           item={item}
           userId={userId}
+          classInstanceId={classInstanceId}
           initiallyLiked={likedContentIds.has(item.id)}
           onView={() =>
             recordInteraction(supabase, {
               userId,
               contentItemId: item.id,
               interactionType: "view",
+              classInstanceId,
             })
           }
         />

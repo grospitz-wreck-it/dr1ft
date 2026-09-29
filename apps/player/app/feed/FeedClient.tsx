@@ -13,11 +13,13 @@ import { CompetencyPanel, type CompetencyDisplay } from "../../components/Compet
 export function FeedClient({
   initialItems,
   userId,
+  classInstanceId,
   likedContentIds,
   competencyDisplay,
 }: {
   initialItems: FeedItem[];
   userId: string;
+  classInstanceId: string;
   likedContentIds: Set<string>;
   competencyDisplay: CompetencyDisplay[];
 }) {
@@ -60,6 +62,7 @@ export function FeedClient({
       userId,
       contentItemId: item.id,
       interactionType: "view",
+      classInstanceId,
     });
   }
 
@@ -93,6 +96,7 @@ export function FeedClient({
               key={item.id}
               item={item}
               userId={userId}
+              classInstanceId={classInstanceId}
               initiallyLiked={likedContentIds.has(item.id)}
               onView={() => handleView(item)}
             />

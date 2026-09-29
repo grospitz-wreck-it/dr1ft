@@ -3,6 +3,7 @@
 import { selectNextFeedItems, computeAdaptiveSignalRatio, type FeedContext } from "@dr1ft/engine-core";
 import { mapCreatorRow, type FeedItem } from "../../lib/types";
 import { supabaseServerClient } from "../../lib/supabaseServerClient";
+import { getCurrentClassInstanceId } from "../../lib/currentClassInstance";
 import { FeedClient } from "./FeedClient";
 
 export default async function FeedPage() {
@@ -20,24 +21,33 @@ export default async function FeedPage() {
     );
   }
 
-  // Freigeschaltete Szenarien über die Klassen des Nutzers
-  const { data: memberships } = await supabase
-    .from("class_memberships")
-    .select("class_id")
-    .eq("user_id", user.id);
-  const classIds = (memberships ?? []).map((m) => m.class_id);
+  // Der aktuelle Klassenkontext wird zentral aufgelöst.
+  const classInstanceId = await getCurrentClassInstanceId(supabase);
 
+  if (!classInstanceId) {
+    return (
+      <main className="min-h-screen flex items-center justify-center text-ash font-body px-6 text-center">
+        Du bist aktuell keiner DR1FT-Klasse zugeordnet.
+      </main>
+    );
+  }
+
+  // Freigeschaltete Szenarien gehören zur konkreten Klasseninstanz.
   const { data: assignments } = await supabase
-    .from("class_scenario_assignments")
+    .from("class_instance_scenario_assignments")
     .select("scenario_id")
-    .in("class_id", classIds.length ? classIds : ["00000000-0000-0000-0000-000000000000"]);
-  const assignedScenarioIds = Array.from(new Set((assignments ?? []).map((a) => a.scenario_id)));
+    .eq("class_instance_id", classInstanceId);
+
+  const assignedScenarioIds = Array.from(
+    new Set((assignments ?? []).map((a) => a.scenario_id))
+  );
 
   // Kompetenz-Fortschritt
   const { data: competencyProgress } = await supabase
     .from("user_competency_progress")
     .select("*")
-    .eq("user_id", user.id);
+    .eq("user_id", user.id)
+    .eq("class_instance_id", classInstanceId);
 
   // Alle Kompetenzen (für die Anzeige im Panel — auch die, bei denen
   // noch kein Fortschritt existiert, starten sichtbar bei Level 1)
@@ -59,6 +69,7 @@ export default async function FeedPage() {
     .from("user_interactions")
     .select("content_item_id, interaction_type")
     .eq("user_id", user.id)
+    .eq("class_instance_id", classInstanceId)
     .order("created_at", { ascending: false })
     .limit(200);
 
@@ -154,6 +165,7 @@ export default async function FeedPage() {
     <FeedClient
       initialItems={items}
       userId={user.id}
+      classInstanceId={classInstanceId}
       likedContentIds={likedContentIds}
       competencyDisplay={competencyDisplay}
     />
