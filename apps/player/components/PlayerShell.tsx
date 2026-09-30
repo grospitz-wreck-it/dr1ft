@@ -11,7 +11,6 @@ type NavItem = { href: string; label: string; icon: "home" | "message" | "users"
 const NAV: NavItem[] = [
   { href: "/feed", label: "Feed", icon: "home" },
   { href: "/messages", label: "Nachrichten", icon: "message" },
-  { href: "/profile", label: "Profil", icon: "user" },
 ];
 
 function Icon({ name }: { name: NavItem["icon"]; active?: boolean }) {
