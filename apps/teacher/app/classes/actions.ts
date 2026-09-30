@@ -18,7 +18,15 @@ export async function createClass(formData: FormData) {
   if (!user) throw new Error("Nicht authentifiziert");
 
   const name = String(formData.get("name") ?? "").trim();
-  const schoolId = formData.get("schoolId") ? String(formData.get("schoolId")) : null;
+  const { data: schoolMembership } = await supabase
+    .from("school_memberships")
+    .select("school_id")
+    .eq("user_id", user.id)
+    .eq("active", true)
+    .order("created_at", { ascending: true })
+    .limit(1)
+    .maybeSingle();
+  const schoolId = schoolMembership?.school_id ?? null;
   const gradeLevelRaw = formData.get("gradeLevel");
   const gradeLevel = gradeLevelRaw ? Number(gradeLevelRaw) : null;
   if (!name) throw new Error("Klassenname darf nicht leer sein");
@@ -100,5 +108,21 @@ export async function updateScenarioPacing(
     p_pacing_mode: pacingMode,
   });
   if (error) throw new Error(error.message);
+  revalidatePath(`/classes/${classId}`);
+}
+
+
+export async function setClassActive(classId: string, isActive: boolean) {
+  const supabase = supabaseServerClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) throw new Error("Nicht authentifiziert");
+
+  const { error } = await supabase
+    .from("class_instances")
+    .update({ is_active: isActive })
+    .eq("id", classId);
+
+  if (error) throw new Error(error.message);
+  revalidatePath("/classes");
   revalidatePath(`/classes/${classId}`);
 }
