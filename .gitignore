@@ -8,3 +8,4 @@ supabase/.temp/
 .env.local
 .env.*.local
 !.env.example
+
