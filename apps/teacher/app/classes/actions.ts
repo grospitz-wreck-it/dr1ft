@@ -126,3 +126,14 @@ export async function setClassActive(classId: string, isActive: boolean) {
   revalidatePath("/classes");
   revalidatePath(`/classes/${classId}`);
 }
+
+
+export async function changeClassState(classId: string, active: boolean) {
+  const supabase = supabaseServerClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) throw new Error("Nicht authentifiziert");
+  const { error } = await supabase.from("class_instances").update({ is_active: active }).eq("id", classId);
+  if (error) throw new Error(error.message);
+  revalidatePath("/classes");
+  revalidatePath("/classes/" + classId);
+}
