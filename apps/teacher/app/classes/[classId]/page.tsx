@@ -1,152 +1,117 @@
-// apps/teacher/app/classes/[classId]/page.tsx
-
-import { revalidatePath } from "next/cache";
 import { supabaseServerClient } from "../../../lib/supabaseServerClient";
 import { ScenarioToggle } from "./ScenarioToggle";
 import { ResetPasswordButton } from "./ResetPasswordButton";
 import { AddStudentForm } from "./AddStudentForm";
 import { CopyAccessCodeButton } from "./CopyAccessCodeButton";
+import { GenerateReportButton } from "./GenerateReportButton";
+import { setClassActive } from "../actions";
 
-interface Props { params: { classId: string } }
-
-const EVENT_LABELS: Record<string, string> = {
-  PostViewed: "Post ansehen",
-  CommentCreated: "Kommentar schreiben",
-  NpcReplySelected: "NPC-Antwort wählen",
-};
-
-export default async function ClassDetailPage({ params }: Props) {
+export default async function ClassDetailPage({ params }: { params: { classId: string } }) {
   const supabase = supabaseServerClient();
   const { classId } = params;
 
-  const { data: classInfo } = await supabase
-    .from("classes")
-    .select("id, name, access_code, is_active, grade_level")
-    .eq("id", classId)
-    .maybeSingle();
-
-  // Legacy classes created before the instance cutover may not have a class_instance row yet.
-  // Repair that state through the existing ownership-checked RPC before reading instance-scoped data.
   const { data: instance } = await supabase
     .from("class_instances")
-    .select("id")
+    .select("id,name,access_code,is_active,grade_level,school_year,school_id")
     .eq("id", classId)
     .maybeSingle();
 
-  if (classInfo && !instance) {
-    const { data: repairedInstanceId, error: repairError } = await supabase.rpc("create_class_instance_from_class", {
-      p_class_id: classId,
-      p_school_year: "2026/27",
-    });
-    if (!repairError && repairedInstanceId) {
-      revalidatePath("/classes/" + classId);
-    }
-  }
-  const { data: roster } = await supabase
-    .from("class_instance_memberships")
-    .select("user_id, role, joined_at, left_at, user_profiles(display_name)")
-    .eq("class_instance_id", classId)
-    .is("left_at", null);
+  if (!instance) return <div className="max-w-3xl mx-auto px-5 py-10 text-sm text-slate-500">Klasseninstanz nicht gefunden.</div>;
 
-  const students = (roster ?? []).filter((r: any) => r.role === "student");
-  const { data: allScenarios } = await supabase.from("scenarios").select("*");
-  const { data: assignments } = await supabase
-    .from("class_instance_scenario_assignments")
-    .select("scenario_id, pacing_mode")
-    .eq("class_instance_id", classId);
-  const assignedIds = new Set((assignments ?? []).map((a) => a.scenario_id));
-  const pacingByScenario = new Map((assignments ?? []).map((a) => [a.scenario_id, a.pacing_mode]));
-  const assignedScenarioIds = Array.from(assignedIds);
-  const { data: missions } = assignedScenarioIds.length
-    ? await supabase.from("missions").select("*, scenarios(title)").in("scenario_id", assignedScenarioIds).eq("status", "live")
-    : { data: [] };
+  const [{ data: roster }, { data: scenarios }, { data: assignments }, { data: school }] = await Promise.all([
+    supabase.from("class_instance_memberships").select("user_id,role,left_at,user_profiles(display_name,username)").eq("class_instance_id", classId).is("left_at", null),
+    supabase.from("scenarios").select("id,title,age_rating").order("title"),
+    supabase.from("class_instance_scenario_assignments").select("scenario_id,pacing_mode,scenarios(title)").eq("class_instance_id", classId),
+    instance.school_id ? supabase.from("schools").select("id,name,city").eq("id", instance.school_id).maybeSingle() : Promise.resolve({data:null}),
+  ]);
+
+  const students = (roster ?? []).filter((r:any)=>r.role==="student");
+  const activeAssignment = (assignments ?? [])[0] as any;
+  const activeModule = activeAssignment?.scenarios?.title ?? null;
 
   const { data: session } = await supabase.auth.getSession();
   const dashboardRes = await fetch(`${process.env.NEXT_PUBLIC_SUPABASE_URL}/functions/v1/teacher-dashboard`, {
-    method: "POST",
-    headers: { Authorization: `Bearer ${session.session?.access_token}`, "Content-Type": "application/json" },
-    body: JSON.stringify({ classId }),
+    method:"POST",
+    headers:{Authorization:`Bearer ${session.session?.access_token}`,"Content-Type":"application/json"},
+    body:JSON.stringify({classId}),
+    cache:"no-store",
   });
-  const dashboard = await dashboardRes.json();
+  const dashboard = await dashboardRes.json().catch(()=>({}));
 
-  const studentRows = new Map<string, { name: string; competencies: Record<string, number>; completed: number; total: number }>();
-  (dashboard.studentCompetencyProgress ?? []).forEach((row: any) => {
-    if (!studentRows.has(row.user_id)) studentRows.set(row.user_id, { name: row.display_name, competencies: {}, completed: 0, total: 0 });
-    if (row.competency_title) studentRows.get(row.user_id)!.competencies[row.competency_title] = row.level ?? 1;
-  });
-  (dashboard.studentMissionProgress ?? []).forEach((row: any) => {
-    if (!studentRows.has(row.user_id)) studentRows.set(row.user_id, { name: row.display_name, competencies: {}, completed: 0, total: 0 });
-    const entry = studentRows.get(row.user_id)!;
-    entry.completed = Number(row.missions_completed);
-    entry.total = Number(row.missions_total);
-  });
-  const allCompetencyTitles = Array.from(new Set((dashboard.studentCompetencyProgress ?? []).map((r: any) => r.competency_title).filter(Boolean)));
-
-  if (!classInfo) return <div className="px-6 py-5 text-sm text-slate-500">Klasseninstanz nicht gefunden.</div>;
+  const competencyRows = dashboard.studentCompetencyProgress ?? [];
+  const missionRows = dashboard.studentMissionProgress ?? [];
+  const competencyLevels = competencyRows.map((r:any)=>Number(r.level??0)).filter((n:number)=>n>0);
+  const average = competencyLevels.length ? competencyLevels.reduce((a:number,b:number)=>a+b,0)/competencyLevels.length : null;
+  const missionCompleted = missionRows.reduce((n:number,r:any)=>n+Number(r.missions_completed??0),0);
+  const missionTotal = missionRows.reduce((n:number,r:any)=>n+Number(r.missions_total??0),0);
 
   return (
-    <div className="px-6 py-5 max-w-4xl space-y-8">
-      <header className="space-y-4">
-        <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-          <div>
-            <p className="text-xs2 font-medium uppercase tracking-wide text-slate-400">Klasse</p>
-            <h1 className="text-2xl font-semibold text-slate-900">{classInfo.name}</h1>
-            {classInfo.grade_level && <p className="text-sm text-slate-500">Jahrgang {classInfo.grade_level}</p>}
+    <div className="bg-slate-50 min-h-screen px-5 py-7 md:px-8">
+      <div className="max-w-7xl mx-auto space-y-7">
+        <header className="bg-white border border-border rounded-3xl p-6 md:p-7 shadow-sm">
+          <div className="flex flex-col lg:flex-row lg:items-start lg:justify-between gap-5">
+            <div>
+              <a href="/classes" className="text-xs text-slate-400 hover:text-slate-700">← Meine Klassen</a>
+              <div className="flex items-center gap-3 mt-3">
+                <h1 className="text-3xl font-semibold text-slate-900">{instance.name}</h1>
+                <span className={`text-xs px-2.5 py-1 rounded-full ${instance.is_active?"bg-emerald-50 text-emerald-700":"bg-slate-100 text-slate-500"}`}>{instance.is_active?"Aktiv":"Pausiert"}</span>
+              </div>
+              <p className="text-sm text-slate-500 mt-2">Jahrgang {instance.grade_level??"—"} · Schuljahr {instance.school_year} · {school?.name??"Schule nicht zugeordnet"}</p>
+            </div>
+            <div className="flex flex-wrap gap-2">
+              <form action={setClassActive.bind(null,classId,!instance.is_active)}><button className="rounded-xl border border-border bg-white px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50">{instance.is_active?"Klasse pausieren":"Klasse aktivieren"}</button></form>
+              <a href={`/grades/lookup?classId=${classId}`} className="rounded-xl border border-border bg-white px-4 py-2 text-sm font-medium text-slate-700">Jahrgang</a>
+            </div>
           </div>
-          <span className={`text-xs px-2.5 py-1 rounded-full ${classInfo.is_active ? "bg-status-live text-white" : "bg-slate-200 text-slate-600"}`}>{classInfo.is_active ? "aktiv" : "inaktiv"}</span>
-        </div>
-
-        <div className="bg-panel border border-border rounded-lg p-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-          <div>
-            <p className="text-xs2 font-medium uppercase tracking-wide text-slate-400">Schüler-Zugangscode</p>
-            <p className="mt-1 text-2xl font-mono font-semibold tracking-[0.18em] text-slate-900">{classInfo.access_code}</p>
-            <p className="mt-1 text-xs text-slate-500">Mit diesem Code können Schüler:innen selbst beitreten.</p>
+          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4 mt-7">
+            <div className="rounded-2xl bg-slate-50 p-4"><p className="text-xs text-slate-400">Schüler:innen</p><p className="text-2xl font-semibold mt-1">{students.length}</p></div>
+            <div className="rounded-2xl bg-slate-50 p-4"><p className="text-xs text-slate-400">Aktives Modul</p><p className="text-sm font-semibold mt-2">{activeModule??"Keines"}</p></div>
+            <div className="rounded-2xl bg-slate-50 p-4"><p className="text-xs text-slate-400">Ø Kompetenz</p><p className="text-2xl font-semibold mt-1">{average===null?"—":average.toFixed(1)} / 5</p></div>
+            <div className="rounded-2xl bg-slate-50 p-4"><p className="text-xs text-slate-400">Missionen</p><p className="text-2xl font-semibold mt-1">{missionCompleted}/{missionTotal||"—"}</p></div>
           </div>
-          <CopyAccessCodeButton code={classInfo.access_code} />
-        </div>
-      </header>
+        </header>
 
-      <section>
-        <h2 className="text-sm font-medium text-slate-500 uppercase text-xs2 mb-2">Module &amp; Missionen dieser Klasse</h2>
-        <div className="bg-panel border border-border rounded-lg divide-y divide-border">
-          {missions?.map((m: any) => <div key={m.id} className="px-4 py-3 flex justify-between items-start text-sm"><div><p className="font-medium text-slate-900">{m.title}</p><p className="text-xs2 text-slate-400">{m.scenarios?.title}</p></div><span className="text-xs2 text-slate-500">{EVENT_LABELS[m.trigger_condition?.event] ?? m.trigger_condition?.event} × {m.trigger_condition?.count ?? 1}</span></div>)}
-          {(!missions || missions.length === 0) && <p className="px-4 py-3 text-sm text-slate-400">Noch keine Module für die freigeschalteten Szenarien.</p>}
-        </div>
-      </section>
+        <section className="bg-white border border-border rounded-3xl shadow-sm overflow-hidden">
+          <div className="p-6 border-b border-border flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+            <div><h2 className="text-lg font-semibold text-slate-900">Aktives Modul</h2><p className="text-sm text-slate-500 mt-1">Pro Klasse kann immer nur ein Modul aktiv sein.</p></div>
+            <div className="rounded-xl bg-indigo-50 px-3 py-2 text-xs text-indigo-700">{activeModule?"1 Modul aktiv":"Kein Modul aktiv"}</div>
+          </div>
+          <ul className="divide-y divide-border">
+            {(scenarios??[]).map((s:any)=><ScenarioToggle key={s.id} classId={classId} scenarioId={s.id} title={s.title} ageRating={s.age_rating} initiallyAssigned={activeAssignment?.scenario_id===s.id} initialPacingMode={activeAssignment?.pacing_mode??"compact"}/>)}
+            {(!scenarios || scenarios.length===0)&&<li className="p-6 text-sm text-slate-400">Noch keine Module verfügbar.</li>}
+          </ul>
+        </section>
 
-      <section>
-        <h2 className="text-sm font-medium text-slate-500 uppercase text-xs2 mb-2">Wo gibt es Schwierigkeiten</h2>
-        <p className="text-xs2 text-slate-400 mb-2">Missionen mit der niedrigsten Abschlussquote in dieser Klasse — mögliche Curriculum-Stellen, die im Unterricht nachbesprochen werden sollten.</p>
-        <div className="bg-panel border border-border rounded-lg divide-y divide-border">
-          {dashboard.missionBottlenecks?.slice(0, 5).map((row: any) => <div key={row.mission_id} className="px-4 py-3 flex justify-between items-center text-sm"><span className="text-slate-900">{row.mission_title}</span><span className={`text-xs2 px-2 py-0.5 rounded-full text-white ${row.completion_rate < 0.4 ? "bg-status-rejected" : row.completion_rate < 0.7 ? "bg-status-review" : "bg-status-live"}`}>{Math.round(row.completion_rate * 100)}% ({row.completed_count}/{row.student_count})</span></div>)}
-          {(!dashboard.missionBottlenecks || dashboard.missionBottlenecks.length === 0) && <p className="px-4 py-3 text-sm text-slate-400">Noch keine Daten.</p>}
-        </div>
-      </section>
+        <section className="bg-white border border-border rounded-3xl shadow-sm overflow-hidden">
+          <div className="p-6 border-b border-border flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
+            <div><h2 className="text-lg font-semibold text-slate-900">Schüler:innen</h2><p className="text-sm text-slate-500 mt-1">{students.length} aktive Schüler:innen · Reports und Zugangsdaten direkt hier.</p></div>
+            <AddStudentForm classId={classId}/>
+          </div>
+          <div className="divide-y divide-border">
+            {students.map((r:any)=><div key={r.user_id} className="px-6 py-4 flex flex-col sm:flex-row sm:items-center gap-3">
+              <div className="h-10 w-10 rounded-full bg-indigo-50 grid place-items-center text-sm font-semibold text-indigo-700">{(r.user_profiles?.display_name??r.user_profiles?.username??"?").slice(0,1).toUpperCase()}</div>
+              <div className="min-w-0 flex-1"><p className="font-medium text-slate-900">{r.user_profiles?.display_name??"Ohne Anzeigename"}</p><p className="text-sm text-slate-500">@{r.user_profiles?.username??"—"}</p></div>
+              <div className="flex flex-wrap gap-2">
+                <GenerateReportButton classId={classId} studentUserId={r.user_id}/>
+                <ResetPasswordButton studentUserId={r.user_id} classId={classId}/>
+              </div>
+            </div>)}
+            {students.length===0&&<div className="p-8 text-center text-sm text-slate-400">Noch keine Schüler:innen. Lege den ersten Account oben an.</div>}
+          </div>
+        </section>
 
-      <section>
-        <h2 className="text-sm font-medium text-slate-500 uppercase text-xs2 mb-2">Kompetenzentwicklung (Klassendurchschnitt)</h2>
-        <div className="bg-panel border border-border rounded-lg divide-y divide-border">
-          {dashboard.competencyOverview?.map((row: any) => <div key={row.competency_id} className="px-4 py-2 flex justify-between text-sm"><span className="text-slate-700">{row.competency_title}</span><span className="text-slate-500">Ø {row.avg_level} / 5 ({row.student_count} Schüler:innen)</span></div>)}
-        </div>
-      </section>
+        <section className="bg-white border border-border rounded-3xl p-6 shadow-sm">
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+            <div><p className="text-xs font-medium uppercase tracking-wide text-slate-400">Schüler-Zugang</p><p className="text-2xl font-mono font-semibold tracking-[0.18em] mt-1">{instance.access_code}</p><p className="text-sm text-slate-500 mt-1">Mit diesem Code können Schüler:innen der Klasse beitreten.</p></div>
+            <CopyAccessCodeButton code={instance.access_code}/>
+          </div>
+        </section>
 
-      <section>
-        <h2 className="text-sm font-medium text-slate-500 uppercase text-xs2 mb-2">Fortschritt pro Schüler:in</h2>
-        <p className="text-xs2 text-slate-400 mb-2">Nur für dich sichtbar. Zeigt Kompetenz-Level und Missions-Fortschritt — keine Einzelauswertung, welcher Post angeklickt/geliked wurde.</p>
-        <div className="bg-panel border border-border rounded-lg overflow-x-auto"><table className="w-full text-sm"><thead><tr className="border-b border-border text-left text-slate-400 text-xs2 uppercase"><th className="px-4 py-2">Schüler:in</th>{allCompetencyTitles.map((t) => <th key={t as string} className="px-3 py-2">{t as string}</th>)}<th className="px-3 py-2">Missionen</th></tr></thead><tbody>{Array.from(studentRows.values()).map((s, i) => <tr key={i} className="border-b border-border last:border-0"><td className="px-4 py-2 text-slate-900">{s.name}</td>{allCompetencyTitles.map((t) => <td key={t as string} className="px-3 py-2 text-slate-500">{s.competencies[t as string] ?? "—"}/5</td>)}<td className="px-3 py-2 text-slate-500">{s.completed}/{s.total}</td></tr>)}{studentRows.size === 0 && <tr><td colSpan={2 + allCompetencyTitles.length} className="px-4 py-4 text-center text-slate-400">Noch keine Daten.</td></tr>}</tbody></table></div>
-      </section>
-
-      <section>
-        <h2 className="text-sm font-medium text-slate-500 uppercase text-xs2 mb-2">Freigeschaltete Szenarien</h2>
-        <ul className="bg-panel border border-border rounded-lg divide-y divide-border">{allScenarios?.map((s) => <ScenarioToggle key={s.id} classId={classId} scenarioId={s.id} title={s.title} ageRating={s.age_rating} initiallyAssigned={assignedIds.has(s.id)} initialPacingMode={(pacingByScenario.get(s.id) as "compact" | "as_designed") ?? "compact"} />)}</ul>
-      </section>
-
-      <section>
-        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between mb-2"><div><h2 className="text-sm font-medium text-slate-500 uppercase text-xs2">Klassenmitglieder</h2><p className="text-xs2 text-slate-400 mt-1">{students.length} Schüler:in{students.length === 1 ? "" : "nen"}</p></div><AddStudentForm classId={classId} /></div>
-        <ul className="bg-panel border border-border rounded-lg divide-y divide-border">{roster?.map((r: any) => <li key={r.user_id} className="px-4 py-3 text-sm flex items-center justify-between gap-3"><span className="text-slate-700">{r.user_profiles?.display_name ?? "—"} · {r.role}</span>{r.role === "student" && <ResetPasswordButton studentUserId={r.user_id} classId={classId} />}</li>)}{(!roster || roster.length === 0) && <li className="px-4 py-4 text-sm text-slate-400">Noch keine Klassenmitglieder.</li>}</ul>
-      </section>
-
-      <p className="text-xs2 text-slate-400">Jahrgangsweite Auswertung? Falls diese Klasse einen Jahrgang hat: <a href={`/grades/lookup?classId=${classId}`} className="text-accent hover:text-accent-hover">zur Jahrgangs-Übersicht</a></p>
+        <section className="bg-white border border-border rounded-3xl shadow-sm">
+          <div className="p-6 border-b border-border"><h2 className="text-lg font-semibold">Wo gibt es Schwierigkeiten?</h2><p className="text-sm text-slate-500 mt-1">Missionen mit niedriger Abschlussquote in dieser Klasse.</p></div>
+          <div className="divide-y divide-border">{(dashboard.missionBottlenecks??[]).slice(0,5).map((r:any)=><div key={r.mission_id} className="px-6 py-4 flex justify-between gap-4 text-sm"><span>{r.mission_title}</span><span className="font-medium">{Math.round(Number(r.completion_rate??0)*100)} %</span></div>)}{!(dashboard.missionBottlenecks?.length)&&<div className="p-6 text-sm text-slate-400">Noch keine Auswertungsdaten vorhanden.</div>}</div>
+        </section>
+      </div>
     </div>
   );
 }
