@@ -1,73 +1,22 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useMemo, useState, useTransition } from "react";
+import { archiveClass, changeClassState } from "./actions";
 
-type ClassItem = {
-  id: string; name: string; access_code: string; is_active: boolean;
-  grade_level: number | null; school_year: string; student_count: number;
-};
+type ClassItem = { id:string; name:string; access_code:string; is_active:boolean; grade_level:number|null; school_year:string; student_count:number };
 
-export function ClassDashboard({
-  classes,
-  schoolName,
-}: {
-  classes: ClassItem[];
-  schoolName: string | null;
-}) {
-  const [query, setQuery] = useState("");
-  const filtered = useMemo(() => {
-    const q = query.trim().toLowerCase();
-    return q
-      ? classes.filter((c) => `${c.name} ${c.school_year} ${c.grade_level ?? ""}`.toLowerCase().includes(q))
-      : classes;
-  }, [classes, query]);
-  const students = classes.reduce((n, c) => n + c.student_count, 0);
-  const active = classes.filter((c) => c.is_active).length;
-
-  return (
-    <div className="space-y-8">
-      <div className="flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
-        <div>
-          <p className="text-xs uppercase tracking-[0.18em] text-indigo-600 font-semibold">Teacher Workspace</p>
-          <h1 className="text-3xl font-semibold tracking-tight text-slate-900 mt-1">Willkommen bei DR1FT</h1>
-          <p className="text-sm text-slate-500 mt-2">{schoolName ? `Schule: ${schoolName}` : "Deine Klassen und Lernaktivitäten auf einen Blick."}</p>
-        </div>
-        <a href="#new-class" className="rounded-xl bg-accent px-4 py-2.5 text-sm font-medium text-white hover:bg-accent-hover">+ Neue Klasse</a>
-      </div>
-
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
-        <Kpi label="Klassen" value={classes.length} />
-        <Kpi label="Aktive Klassen" value={active} />
-        <Kpi label="Schüler:innen" value={students} />
-        <Kpi label="Schuljahr" value={classes[0]?.school_year ?? "2026/27"} />
-      </div>
-
-      <section>
-        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-3">
-          <div><h2 className="text-lg font-semibold text-slate-900">Meine Klassen</h2><p className="text-sm text-slate-500 mt-1">Öffne eine Klasse, um Schüler:innen, Module und Auswertungen zu verwalten.</p></div>
-          <input value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Klasse suchen …" className="w-full sm:w-72 rounded-xl border border-border bg-white px-3 py-2.5 text-sm shadow-sm outline-none focus:border-accent focus:ring-4 focus:ring-accent/10" />
-        </div>
-        <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
-          {filtered.map((c) => (
-            <a key={c.id} href={`/classes/${c.id}`} className="group rounded-2xl bg-white border border-border p-5 shadow-sm hover:shadow-md hover:-translate-y-0.5 transition">
-              <div className="flex items-start justify-between gap-3">
-                <div><h3 className="font-semibold text-slate-900 group-hover:text-accent">{c.name}</h3><p className="text-sm text-slate-500 mt-1">Jahrgang {c.grade_level ?? "—"} · {c.school_year}</p></div>
-                <span className={`text-xs px-2.5 py-1 rounded-full ${c.is_active ? "bg-emerald-50 text-emerald-700" : "bg-slate-100 text-slate-500"}`}>{c.is_active ? "Aktiv" : "Pausiert"}</span>
-              </div>
-              <div className="grid grid-cols-2 gap-3 mt-6">
-                <div className="rounded-xl bg-slate-50 p-3"><p className="text-xs text-slate-400">Schüler:innen</p><p className="text-xl font-semibold text-slate-900 mt-1">{c.student_count}</p></div>
-                <div className="rounded-xl bg-slate-50 p-3"><p className="text-xs text-slate-400">Zugangscode</p><p className="text-sm font-mono font-semibold text-slate-900 mt-2 tracking-wider">{c.access_code}</p></div>
-              </div>
-              <div className="mt-4 text-sm font-medium text-accent">Klasse öffnen →</div>
-            </a>
-          ))}
-          {!filtered.length && <div className="md:col-span-2 xl:col-span-3 rounded-2xl border border-dashed border-border p-10 text-center text-sm text-slate-400">Noch keine passende Klasse.</div>}
-        </div>
-      </section>
-    </div>
-  );
+export function ClassDashboard({ classes, schoolName }: { classes: ClassItem[]; schoolName: string | null }) {
+  const [query,setQuery]=useState(""); const [pending,startTransition]=useTransition(); const [showArchived,setShowArchived]=useState(false);
+  const active=classes.filter(c=>c.is_active); const visible=classes.filter(c=>showArchived||c.is_active);
+  const filtered=useMemo(()=>{const q=query.trim().toLowerCase(); return q?visible.filter(c=>`${c.name} ${c.school_year} ${c.grade_level??""}`.toLowerCase().includes(q)):visible;},[visible,query]);
+  const students=active.reduce((n,c)=>n+c.student_count,0);
+  return <div className="space-y-8">
+    <div className="flex flex-col gap-5 lg:flex-row lg:items-end lg:justify-between"><div><p className="text-xs uppercase tracking-[0.18em] text-indigo-600 font-semibold">DR1FT Teacher</p><h1 className="text-3xl md:text-4xl font-semibold tracking-tight text-slate-900 mt-2">Dein Unterrichtsbereich</h1><p className="text-sm text-slate-500 mt-2">{schoolName?<>Schule: <span className="font-medium text-slate-700">{schoolName}</span></>:"Deine Klassen, Module und Lernfortschritte an einem Ort."}</p></div><a href="#new-class" className="self-start lg:self-auto rounded-xl bg-accent px-4 py-2.5 text-sm font-medium text-white hover:bg-accent-hover">+ Neue Klasse</a></div>
+    <div className="grid grid-cols-2 lg:grid-cols-4 gap-3"><Kpi label="Aktive Klassen" value={active.length}/><Kpi label="Schüler:innen" value={students}/><Kpi label="Aktive Schuljahre" value={new Set(active.map(c=>c.school_year)).size}/><Kpi label="Klassen gesamt" value={classes.length}/></div>
+    <section className="space-y-4"><div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between"><div><h2 className="text-lg font-semibold text-slate-900">Meine Klassen</h2><p className="text-sm text-slate-500">Öffne eine Klasse für Schüler:innen, Module und Auswertungen.</p></div><button type="button" onClick={()=>setShowArchived(v=>!v)} className="self-start rounded-xl border border-border bg-white px-3 py-2 text-xs font-medium text-slate-600">{showArchived?"Nur aktive":"Archivierte anzeigen"}</button></div>
+      <input value={query} onChange={e=>setQuery(e.target.value)} placeholder="Klasse, Schuljahr oder Jahrgang suchen …" className="w-full rounded-2xl border border-border bg-white px-4 py-3 text-sm shadow-sm outline-none focus:border-accent focus:ring-4 focus:ring-accent/10"/>
+      <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">{filtered.map(c=><div key={c.id} className="rounded-2xl bg-white border border-border p-5 shadow-sm hover:shadow-md transition"><div className="flex items-start justify-between gap-3"><a href={`/classes/${c.id}`} className="min-w-0"><h3 className="font-semibold text-slate-900 hover:text-accent">{c.name}</h3><p className="text-sm text-slate-500 mt-1">Jahrgang {c.grade_level??"—"} · {c.school_year}</p></a><span className={`shrink-0 text-xs px-2.5 py-1 rounded-full ${c.is_active?"bg-emerald-50 text-emerald-700":"bg-slate-100 text-slate-500"}`}>{c.is_active?"Aktiv":"Pausiert"}</span></div><div className="grid grid-cols-2 gap-3 mt-5"><div className="rounded-xl bg-slate-50 p-3"><p className="text-xs text-slate-400">Schüler:innen</p><p className="text-xl font-semibold text-slate-900 mt-1">{c.student_count}</p></div><div className="rounded-xl bg-slate-50 p-3"><p className="text-xs text-slate-400">Zugangscode</p><p className="text-sm font-mono font-semibold text-slate-900 mt-2 tracking-wider">{c.access_code}</p></div></div><div className="mt-5 flex items-center justify-between gap-2"><a href={`/classes/${c.id}`} className="text-sm font-medium text-accent">Klasse öffnen →</a><div className="flex gap-2"><button type="button" disabled={pending} onClick={()=>startTransition(()=>changeClassState(c.id,!c.is_active))} className="text-xs rounded-lg border border-border px-2.5 py-1.5 text-slate-600 hover:bg-slate-50 disabled:opacity-50">{c.is_active?"Pausieren":"Aktivieren"}</button>{!c.is_active&&<button type="button" disabled={pending} onClick={()=>{if(window.confirm("Klasse wirklich archivieren? Sie bleibt für Auswertungen erhalten."))startTransition(()=>archiveClass(c.id));}} className="text-xs rounded-lg px-2.5 py-1.5 text-red-600 hover:bg-red-50">Entfernen</button>}</div></div></div>)}{filtered.length===0&&<div className="md:col-span-2 xl:col-span-3 rounded-2xl border border-dashed border-border p-10 text-center text-sm text-slate-400">Keine passende Klasse gefunden.</div>}</div>
+    </section>
+  </div>;
 }
-
-function Kpi({ label, value }: { label: string; value: string | number }) {
-  return <div className="rounded-2xl bg-white border border-border p-4 shadow-sm"><p className="text-xs uppercase tracking-wide text-slate-400">{label}</p><p className="text-2xl font-semibold text-slate-900 mt-2">{value}</p></div>;
-}
+function Kpi({label,value}:{label:string;value:number}){return <div className="rounded-2xl bg-white border border-border p-4 shadow-sm"><p className="text-xs text-slate-400">{label}</p><p className="text-2xl font-semibold text-slate-900 mt-1">{value}</p></div>}
