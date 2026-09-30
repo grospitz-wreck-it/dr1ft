@@ -11,7 +11,6 @@ type NavItem = { href: string; label: string; icon: "home" | "message" | "users"
 const NAV: NavItem[] = [
   { href: "/feed", label: "Feed", icon: "home" },
   { href: "/messages", label: "Nachrichten", icon: "message" },
-  { href: "/group-chat", label: "Gruppen", icon: "users" },
   { href: "/profile", label: "Profil", icon: "user" },
 ];
 
