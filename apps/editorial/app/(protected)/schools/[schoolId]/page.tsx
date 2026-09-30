@@ -12,7 +12,7 @@ export default async function SchoolDetailPage({ params }: { params: { schoolId:
   if (staff?.role !== "platform_admin") return <div className="p-8"><h1 className="text-lg font-semibold">Kein Zugriff</h1><p className="mt-2 text-sm text-slate-500">Nur Platform-Admins können Schulen verwalten.</p></div>;
 
   const [{ data: school }, { data: members, error: memberError }, { count: classCount }] = await Promise.all([
-    supabase.from("schools").select("id, name, region, email_domain, school_type, student_count, status, plan, funding_type, internal_notes, created_at, updated_at").eq("id", params.schoolId).maybeSingle(),
+    supabase.from("schools").select("id, name, region, email_domain, school_type, street, house_number, postal_code, city, phone, website, student_count, status, plan, funding_type, internal_notes, created_at, updated_at").eq("id", params.schoolId).maybeSingle(),
     supabase.rpc("get_school_member_directory", { p_school_id: params.schoolId }),
     supabase.from("classes").select("id", { count: "exact", head: true }).eq("school_id", params.schoolId),
   ]);
