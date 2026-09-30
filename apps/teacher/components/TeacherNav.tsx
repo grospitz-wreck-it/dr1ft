@@ -19,3 +19,5 @@ export function TeacherNav() {
     <div className="flex items-center gap-2"><div className="hidden lg:block text-right"><p className="text-xs font-medium text-slate-700 truncate max-w-64">{school??"Schule"}</p><p className="text-[11px] text-slate-400 truncate max-w-64">{email??"Lehrkraft"}</p></div><a href="/account" aria-label="Konto und Passwort verwalten" className="rounded-xl border border-border px-3 py-2 text-xs font-medium text-slate-700 hover:bg-slate-50">Konto</a><button type="button" onClick={logout} className="rounded-xl border border-border px-3 py-2 text-xs font-medium text-slate-700 hover:bg-slate-50">Abmelden</button></div>
   </div></header>;
 }
+
+// Trigger Vercel preview deployment for the current teacher workspace.
