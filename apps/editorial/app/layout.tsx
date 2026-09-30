@@ -77,3 +77,5 @@ export default async function RootLayout({ children }: { children: React.ReactNo
     </html>
   );
 }
+
+// Trigger a fresh Vercel build for the monorepo.
