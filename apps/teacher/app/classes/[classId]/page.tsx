@@ -1,5 +1,6 @@
 // apps/teacher/app/classes/[classId]/page.tsx
 
+import { revalidatePath } from "next/cache";
 import { supabaseServerClient } from "../../../lib/supabaseServerClient";
 import { ScenarioToggle } from "./ScenarioToggle";
 import { ResetPasswordButton } from "./ResetPasswordButton";
@@ -24,6 +25,23 @@ export default async function ClassDetailPage({ params }: Props) {
     .eq("id", classId)
     .maybeSingle();
 
+  // Legacy classes created before the instance cutover may not have a class_instance row yet.
+  // Repair that state through the existing ownership-checked RPC before reading instance-scoped data.
+  const { data: instance } = await supabase
+    .from("class_instances")
+    .select("id")
+    .eq("id", classId)
+    .maybeSingle();
+
+  if (classInfo && !instance) {
+    const { data: repairedInstanceId, error: repairError } = await supabase.rpc("create_class_instance_from_class", {
+      p_class_id: classId,
+      p_school_year: "2026/27",
+    });
+    if (!repairError && repairedInstanceId) {
+      revalidatePath("/classes/" + classId);
+    }
+  }
   const { data: roster } = await supabase
     .from("class_instance_memberships")
     .select("user_id, role, joined_at, left_at, user_profiles(display_name)")
