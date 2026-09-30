@@ -1,18 +1,18 @@
 // ============================================================
 // Edge Function: reset-student-password
 //
-// Schüler-Accounts haben keine echte E-Mail (siehe join_class_as_student),
-// daher funktioniert der übliche "Link per Mail"-Passwort-Reset nicht.
-// Stattdessen: Lehrkraft löst hier ein neues Temp-Passwort aus, das
-// einmalig angezeigt wird — Schüler:in sollte es beim nächsten Login
-// über /account selbst ändern (siehe apps/player/app/account).
-//
-// Nutzt den Service-Role-Key (auth.admin.*), da ein normaler Client
-// niemals das Passwort eines fremden Nutzers ändern darf. Deshalb läuft
-// das ausschließlich hier serverseitig, nie im Browser-Code.
+// Schüler-Accounts haben keine echte E-Mail. Deshalb setzt die
+// Lehrkraft hier ein neues temporäres Passwort.
 // ============================================================
 
 import { createClient } from "jsr:@supabase/supabase-js@2";
+
+function json(data: unknown, status = 200) {
+  return new Response(JSON.stringify(data), {
+    status,
+    headers: { "Content-Type": "application/json" },
+  });
+}
 
 function generateTempPassword(): string {
   const alphabet = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
@@ -25,19 +25,16 @@ function generateTempPassword(): string {
 
 Deno.serve(async (req) => {
   const authHeader = req.headers.get("Authorization");
-  if (!authHeader) {
-    return new Response(JSON.stringify({ error: "Nicht authentifiziert" }), { status: 401 });
-  }
+  if (!authHeader) return json({ error: "Nicht authentifiziert" }, 401);
 
-  const { studentUserId, classId } = await req.json();
+  const body = await req.json().catch(() => null);
+  const studentUserId = body?.studentUserId?.trim();
+  const classId = body?.classId?.trim();
+
   if (!studentUserId || !classId) {
-    return new Response(JSON.stringify({ error: "studentUserId oder classId fehlt" }), {
-      status: 400,
-    });
+    return json({ error: "studentUserId oder classId fehlt" }, 400);
   }
 
-  // Anon-Client mit der Session der aufrufenden Lehrkraft — nur für die
-  // Berechtigungsprüfung, NICHT für die eigentliche Passwortänderung.
   const callerClient = createClient(
     Deno.env.get("SUPABASE_URL")!,
     Deno.env.get("SUPABASE_ANON_KEY")!,
@@ -45,35 +42,34 @@ Deno.serve(async (req) => {
   );
 
   const { data: isTeacher, error: authCheckError } = await callerClient.rpc(
-    "is_teacher_of_class",
-    { target_class_id: classId }
+    "is_teacher_of_class_instance",
+    { target_instance_id: classId }
   );
 
   if (authCheckError || !isTeacher) {
-    return new Response(JSON.stringify({ error: "Keine Berechtigung für diese Klasse" }), {
-      status: 403,
-    });
+    return json({ error: "Keine Berechtigung für diese Klasseninstanz" }, 403);
   }
 
-  // Zusätzlich prüfen: ist die Ziel-Person überhaupt Schüler:in DIESER Klasse
-  // (verhindert, dass eine Lehrkraft das Passwort einer beliebigen Person
-  // außerhalb ihrer eigenen Klasse zurücksetzt).
-  const { data: membership } = await callerClient
-    .from("class_memberships")
+  const { data: membership, error: membershipError } = await callerClient
+    .from("class_instance_memberships")
     .select("role")
-    .eq("class_id", classId)
+    .eq("class_instance_id", classId)
     .eq("user_id", studentUserId)
     .eq("role", "student")
+    .is("left_at", null)
     .maybeSingle();
 
+  if (membershipError) {
+    return json({ error: membershipError.message }, 500);
+  }
+
   if (!membership) {
-    return new Response(
-      JSON.stringify({ error: "Person ist keine Schülerin/kein Schüler dieser Klasse" }),
-      { status: 403 }
+    return json(
+      { error: "Person ist keine Schülerin/kein Schüler dieser Klasseninstanz" },
+      403
     );
   }
 
-  // Erst jetzt: Service-Role-Client für die eigentliche Passwort-Änderung.
   const adminClient = createClient(
     Deno.env.get("SUPABASE_URL")!,
     Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
@@ -81,15 +77,14 @@ Deno.serve(async (req) => {
 
   const tempPassword = generateTempPassword();
 
-  const { error: updateError } = await adminClient.auth.admin.updateUserById(studentUserId, {
-    password: tempPassword,
-  });
+  const { error: updateError } = await adminClient.auth.admin.updateUserById(
+    studentUserId,
+    { password: tempPassword }
+  );
 
   if (updateError) {
-    return new Response(JSON.stringify({ error: updateError.message }), { status: 500 });
+    return json({ error: updateError.message }, 500);
   }
 
-  return new Response(JSON.stringify({ tempPassword }), {
-    headers: { "Content-Type": "application/json" },
-  });
+  return json({ tempPassword });
 });
