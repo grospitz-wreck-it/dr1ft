@@ -1,12 +1,13 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useEffect, useState, useTransition } from "react";
 import { toggleScenarioAssignment, updateScenarioPacing } from "../actions";
 
 export function ScenarioToggle({ classId, scenarioId, title, ageRating, initiallyAssigned, initialPacingMode = "compact" }: { classId: string; scenarioId: string; title: string; ageRating: string; initiallyAssigned: boolean; initialPacingMode?: "compact" | "as_designed" }) {
   const [selected, setSelected] = useState(initiallyAssigned);
   const [pacing, setPacing] = useState(initialPacingMode);
   const [pending, startTransition] = useTransition();
+  useEffect(() => { setSelected(initiallyAssigned); setPacing(initialPacingMode); }, [initiallyAssigned, initialPacingMode]);
 
   return <li className={`px-4 py-4 flex flex-col md:flex-row md:items-center justify-between gap-4 ${selected ? "bg-indigo-50/50" : ""}`}>
     <label className="flex items-start gap-3 cursor-pointer min-w-0">
