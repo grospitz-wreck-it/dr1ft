@@ -1,0 +1,17 @@
+import { supabaseServerClient } from "../../../../../lib/supabaseServerClient";
+import { PrintReportButton } from "./PrintReportButton";
+
+export default async function StudentReportPage({params}:{params:{classId:string;studentId:string}}){
+ const supabase=supabaseServerClient();
+ const [{data:ci},{data:profile},{data:{session}}]=await Promise.all([
+  supabase.from("class_instances").select("name,school_year,grade_level").eq("id",params.classId).maybeSingle(),
+  supabase.from("user_profiles").select("display_name,username").eq("id",params.studentId).maybeSingle(),
+  supabase.auth.getSession()
+ ]);
+ const response=await fetch(`${process.env.NEXT_PUBLIC_SUPABASE_URL}/functions/v1/teacher-dashboard`,{method:"POST",headers:{Authorization:`Bearer ${session?.access_token}`,"Content-Type":"application/json"},body:JSON.stringify({classId:params.classId}),cache:"no-store"});
+ const dashboard=await response.json().catch(()=>({}));
+ const competencies=(dashboard.studentCompetencyProgress??[]).filter((r:any)=>r.user_id===params.studentId);
+ const missions=(dashboard.studentMissionProgress??[]).find((r:any)=>r.user_id===params.studentId);
+ const average=competencies.length?competencies.reduce((s:number,r:any)=>s+Number(r.level??0),0)/competencies.length:null;
+ return <main className="min-h-screen bg-slate-50 px-5 py-8 print:bg-white"><div className="max-w-4xl mx-auto space-y-5"><div className="flex justify-between print:hidden"><a href={`/classes/${params.classId}`} className="text-sm text-slate-500">← Zur Klasse</a><PrintReportButton/></div><article className="bg-white border border-border rounded-3xl shadow-sm overflow-hidden print:border-0 print:shadow-none"><header className="p-8 border-b border-border"><p className="text-xs font-semibold uppercase tracking-[0.16em] text-indigo-600">DR1FT · Lernreport</p><h1 className="text-3xl font-semibold text-slate-900 mt-2">{profile?.display_name??"Schüler:in"}</h1><p className="text-sm text-slate-500 mt-1">@{profile?.username??"—"} · {ci?.name??"Klasse"} · Schuljahr {ci?.school_year??"—"}</p></header><section className="grid md:grid-cols-3 border-b border-border"><div className="p-6"><p className="text-xs uppercase text-slate-400">Missionen</p><p className="text-3xl font-semibold mt-2">{missions?.missions_completed??0}/{missions?.missions_total??0}</p></div><div className="p-6 border-t md:border-t-0 md:border-l border-border"><p className="text-xs uppercase text-slate-400">Kompetenzniveau</p><p className="text-3xl font-semibold mt-2">{average===null?"—":average.toFixed(1)}<span className="text-base font-normal text-slate-400"> / 5</span></p></div><div className="p-6 border-t md:border-t-0 md:border-l border-border"><p className="text-xs uppercase text-slate-400">Kompetenzen</p><p className="text-3xl font-semibold mt-2">{competencies.length}</p></div></section><section className="p-8"><h2 className="text-lg font-semibold">Kompetenzentwicklung</h2><div className="mt-4 rounded-2xl border border-border divide-y">{competencies.length?competencies.map((r:any)=><div key={`${r.user_id}-${r.competency_id}`} className="px-5 py-4 flex justify-between"><span>{r.competency_title??"Kompetenz"}</span><strong>{r.level??"—"} / 5</strong></div>):<div className="p-5 text-sm text-slate-400">Noch keine Kompetenzdaten vorhanden.</div>}</div></section><footer className="px-8 py-5 border-t border-border text-xs text-slate-400">Erstellt aus den in DR1FT verfügbaren Lern- und Kompetenzdaten.</footer></article></div></main>
+}
