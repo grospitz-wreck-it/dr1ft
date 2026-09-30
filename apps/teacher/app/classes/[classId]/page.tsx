@@ -2,7 +2,7 @@ import { supabaseServerClient } from "../../../lib/supabaseServerClient";
 import { ScenarioToggle } from "./ScenarioToggle";
 import { CopyAccessCodeButton } from "./CopyAccessCodeButton";
 import { StudentRoster } from "./StudentRoster";
-import { changeClassState as setClassActive } from "../actions";
+import { changeClassState as setClassActive, updateClassDetails } from "../actions";
 
 export default async function ClassDetailPage({params}:{params:{classId:string}}){
  const supabase=supabaseServerClient(); const {classId}=params;
@@ -32,6 +32,16 @@ export default async function ClassDetailPage({params}:{params:{classId:string}}
    </div>
    <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4 mt-7"><Metric label="Schüler:innen" value={students.length}/><Metric label="Aktives Modul" value={activeAssignment?.scenarios?.title??"Keines"}/><Metric label="Ø Kompetenz" value={average===null?"—":`${average.toFixed(1)} / 5`}/><Metric label="Missionen" value={total?`${completed}/${total}`:"—"}/></div>
   </header>
+
+  <section className="bg-white border border-border rounded-3xl p-6 shadow-sm">
+    <div className="mb-4"><h2 className="text-lg font-semibold">Klasse bearbeiten</h2><p className="text-sm text-slate-500 mt-1">Name, Jahrgang und Schuljahr können jederzeit angepasst werden.</p></div>
+    <form action={updateClassDetails.bind(null,classId)} className="grid gap-3 sm:grid-cols-3">
+      <input name="name" defaultValue={instance.name} required className="rounded-xl border border-border px-3 py-2.5 text-sm" />
+      <input name="gradeLevel" type="number" min={1} max={13} defaultValue={instance.grade_level ?? ""} placeholder="Jahrgang" className="rounded-xl border border-border px-3 py-2.5 text-sm" />
+      <input name="schoolYear" defaultValue={instance.school_year} required className="rounded-xl border border-border px-3 py-2.5 text-sm" />
+      <button className="sm:col-span-3 justify-self-start rounded-xl bg-accent px-4 py-2.5 text-sm font-medium text-white hover:bg-accent-hover">Änderungen speichern</button>
+    </form>
+  </section>
 
   <section className="bg-white border border-border rounded-3xl shadow-sm overflow-hidden"><div className="p-6 border-b border-border"><h2 className="text-lg font-semibold">Modul für diese Klasse</h2><p className="text-sm text-slate-500 mt-1">Immer genau ein Modul aktiv. Beim Wechsel wird das bisherige Modul deaktiviert; vorhandene Lernfortschritte bleiben erhalten.</p></div><ul className="divide-y divide-border">{(scenarios??[]).map((s:any)=><ScenarioToggle key={s.id} classId={classId} scenarioId={s.id} title={s.title} ageRating={s.age_rating} initiallyAssigned={activeAssignment?.scenario_id===s.id} initialPacingMode={activeAssignment?.pacing_mode??"compact"}/>)}</ul></section>
 
