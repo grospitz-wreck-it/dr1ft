@@ -174,3 +174,14 @@ export async function updateClassDetails(classId: string, formData: FormData) {
   revalidatePath("/classes");
   revalidatePath("/classes/" + classId);
 }
+
+
+export async function archiveClass(classId: string) {
+  const supabase = supabaseServerClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) throw new Error("Nicht authentifiziert");
+  const { error } = await supabase.from("class_instances").update({ is_active: false }).eq("id", classId);
+  if (error) throw new Error(error.message);
+  revalidatePath("/classes");
+  revalidatePath("/classes/" + classId);
+}
