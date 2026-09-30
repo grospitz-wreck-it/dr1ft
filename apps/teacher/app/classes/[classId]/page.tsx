@@ -4,7 +4,7 @@ import { ResetPasswordButton } from "./ResetPasswordButton";
 import { AddStudentForm } from "./AddStudentForm";
 import { CopyAccessCodeButton } from "./CopyAccessCodeButton";
 import { GenerateReportButton } from "./GenerateReportButton";
-import { setClassActive } from "../actions";
+import { changeClassState as setClassActive } from "../actions";
 
 export default async function ClassDetailPage({ params }: { params: { classId: string } }) {
   const supabase = supabaseServerClient();
