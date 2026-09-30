@@ -8,6 +8,7 @@ import {
   Sparkles,
   Users,
   Library,
+  Building2,
 } from "lucide-react";
 import "./globals.css";
 
@@ -22,6 +23,7 @@ const NAV_ITEMS = [
   { href: "/group-chats", label: "Gruppenchats", icon: MessageSquare },
   { href: "/ambient-content", label: "Ambient-Generator", icon: Sparkles },
   { href: "/staff", label: "Redaktionsteam", icon: Users },
+  { href: "/schools", label: "Schulen", icon: Building2 },
 ];
 
 const PUBLIC_PATHS = ["/login", "/forgot-password", "/reset-password"];
