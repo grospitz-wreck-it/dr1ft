@@ -30,7 +30,11 @@ export default function JoinPage() {
 
     const email = buildSyntheticEmail(username, accessCode);
 
-    const { error: signUpError } = await supabase.auth.signUp({ email, password });
+    const { data: signUpData, error: signUpError } = await supabase.auth.signUp({
+      email,
+      password,
+    });
+
     if (signUpError) {
       setError(
         signUpError.message.includes("already registered")
@@ -39,6 +43,25 @@ export default function JoinPage() {
       );
       setPending(false);
       return;
+    }
+
+    let session = signUpData.session;
+
+    if (!session) {
+      const { data: signInData, error: signInError } = await supabase.auth.signInWithPassword({
+        email,
+        password,
+      });
+
+      if (signInError || !signInData.session) {
+        setError(
+          "Der Account konnte nicht automatisch angemeldet werden. Prüfe Nutzername, Passwort und Klassen-Code."
+        );
+        setPending(false);
+        return;
+      }
+
+      session = signInData.session;
     }
 
     const { error: joinError } = await supabase.rpc("join_class_as_student", {
@@ -94,97 +117,38 @@ export default function JoinPage() {
                 <span className="mb-1.5 block font-mono text-[11px] uppercase tracking-[0.12em] text-ash">
                   Klassen-Code
                 </span>
-                <input
-                  value={accessCode}
-                  onChange={(e) => setAccessCode(e.target.value.toUpperCase())}
-                  placeholder="z. B. AB3CD9"
-                  autoComplete="off"
-                  required
-                  className="touch-target w-full rounded-lg border border-ink-border bg-ink px-3.5 py-3 font-mono text-sm uppercase tracking-[0.16em] text-paper outline-none transition placeholder:text-ash/70 focus:border-marker focus:ring-2 focus:ring-marker/20"
-                />
+                <input value={accessCode} onChange={(e) => setAccessCode(e.target.value.toUpperCase())} placeholder="z. B. AB3CD9" autoComplete="off" required className="touch-target w-full rounded-lg border border-ink-border bg-ink px-3.5 py-3 font-mono text-sm uppercase tracking-[0.16em] text-paper outline-none transition placeholder:text-ash/70 focus:border-marker focus:ring-2 focus:ring-marker/20" />
               </label>
 
               <label className="block">
-                <span className="mb-1.5 block font-mono text-[11px] uppercase tracking-[0.12em] text-ash">
-                  Anzeigename
-                </span>
-                <input
-                  value={displayName}
-                  onChange={(e) => setDisplayName(e.target.value)}
-                  placeholder="z. B. Spitzname"
-                  autoComplete="nickname"
-                  required
-                  className="touch-target w-full rounded-lg border border-ink-border bg-ink px-3.5 py-3 font-body text-sm text-paper outline-none transition placeholder:text-ash/70 focus:border-growth focus:ring-2 focus:ring-growth/20"
-                />
-                <span className="mt-1.5 block font-body text-xs text-ash">
-                  Ein Klarname ist nicht nötig.
-                </span>
+                <span className="mb-1.5 block font-mono text-[11px] uppercase tracking-[0.12em] text-ash">Anzeigename</span>
+                <input value={displayName} onChange={(e) => setDisplayName(e.target.value)} placeholder="z. B. Spitzname" autoComplete="nickname" required className="touch-target w-full rounded-lg border border-ink-border bg-ink px-3.5 py-3 font-body text-sm text-paper outline-none transition placeholder:text-ash/70 focus:border-growth focus:ring-2 focus:ring-growth/20" />
+                <span className="mt-1.5 block font-body text-xs text-ash">Ein Klarname ist nicht nötig.</span>
               </label>
 
               <label className="block">
-                <span className="mb-1.5 block font-mono text-[11px] uppercase tracking-[0.12em] text-ash">
-                  Nutzername
-                </span>
-                <input
-                  value={username}
-                  onChange={(e) => setUsername(e.target.value)}
-                  placeholder="Dein Login-Name"
-                  autoComplete="username"
-                  required
-                  className="touch-target w-full rounded-lg border border-ink-border bg-ink px-3.5 py-3 font-body text-sm text-paper outline-none transition placeholder:text-ash/70 focus:border-growth focus:ring-2 focus:ring-growth/20"
-                />
+                <span className="mb-1.5 block font-mono text-[11px] uppercase tracking-[0.12em] text-ash">Nutzername</span>
+                <input value={username} onChange={(e) => setUsername(e.target.value)} placeholder="Dein Login-Name" autoComplete="username" required className="touch-target w-full rounded-lg border border-ink-border bg-ink px-3.5 py-3 font-body text-sm text-paper outline-none transition placeholder:text-ash/70 focus:border-growth focus:ring-2 focus:ring-growth/20" />
               </label>
 
               <label className="block">
-                <span className="mb-1.5 block font-mono text-[11px] uppercase tracking-[0.12em] text-ash">
-                  Passwort
-                </span>
-                <input
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  type="password"
-                  placeholder="Mindestens 6 Zeichen"
-                  autoComplete="new-password"
-                  minLength={6}
-                  required
-                  className="touch-target w-full rounded-lg border border-ink-border bg-ink px-3.5 py-3 font-body text-sm text-paper outline-none transition placeholder:text-ash/70 focus:border-growth focus:ring-2 focus:ring-growth/20"
-                />
+                <span className="mb-1.5 block font-mono text-[11px] uppercase tracking-[0.12em] text-ash">Passwort</span>
+                <input value={password} onChange={(e) => setPassword(e.target.value)} type="password" placeholder="Mindestens 6 Zeichen" autoComplete="new-password" minLength={6} required className="touch-target w-full rounded-lg border border-ink-border bg-ink px-3.5 py-3 font-body text-sm text-paper outline-none transition placeholder:text-ash/70 focus:border-growth focus:ring-2 focus:ring-growth/20" />
               </label>
             </div>
 
-            {error && (
-              <div
-                role="alert"
-                className="mt-5 rounded-lg border border-red-400/30 bg-red-400/10 px-3.5 py-3 font-body text-sm leading-5 text-red-300"
-              >
-                {error}
-              </div>
-            )}
+            {error && <div role="alert" className="mt-5 rounded-lg border border-red-400/30 bg-red-400/10 px-3.5 py-3 font-body text-sm leading-5 text-red-300">{error}</div>}
 
-            <button
-              type="submit"
-              disabled={pending}
-              className="tap-pulse touch-target mt-6 w-full rounded-lg bg-marker px-4 py-3 font-body text-sm font-semibold text-ink transition hover:brightness-105 focus:outline-none focus:ring-2 focus:ring-marker/50 disabled:cursor-wait disabled:opacity-50"
-            >
+            <button type="submit" disabled={pending} className="tap-pulse touch-target mt-6 w-full rounded-lg bg-marker px-4 py-3 font-body text-sm font-semibold text-ink transition hover:brightness-105 focus:outline-none focus:ring-2 focus:ring-marker/50 disabled:cursor-wait disabled:opacity-50">
               {pending ? "Klasse wird verbunden…" : "Klasse beitreten"}
             </button>
 
             <div className="mt-5 border-t border-ink-border pt-4 text-center">
-              <p className="font-body text-xs text-ash">
-                Schon dabei?{" "}
-                <a
-                  href="/login"
-                  className="font-medium text-paper underline decoration-ink-border underline-offset-4 transition hover:text-marker"
-                >
-                  Zum Login
-                </a>
-              </p>
+              <p className="font-body text-xs text-ash">Schon dabei?{" "}<a href="/login" className="font-medium text-paper underline decoration-ink-border underline-offset-4 transition hover:text-marker">Zum Login</a></p>
             </div>
           </form>
 
-          <p className="mt-5 text-center font-mono text-[10px] uppercase tracking-[0.14em] text-ash/70">
-            Sicherer Klassen-Zugang · Keine E-Mail-Adresse erforderlich
-          </p>
+          <p className="mt-5 text-center font-mono text-[10px] uppercase tracking-[0.14em] text-ash/70">Sicherer Klassen-Zugang · Keine E-Mail-Adresse erforderlich</p>
         </section>
       </div>
     </main>
