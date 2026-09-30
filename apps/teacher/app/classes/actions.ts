@@ -147,3 +147,30 @@ export async function changeClassState(classId: string, active: boolean) {
   revalidatePath("/classes");
   revalidatePath("/classes/" + classId);
 }
+
+
+export async function updateClassDetails(classId: string, formData: FormData) {
+  const supabase = supabaseServerClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) throw new Error("Nicht authentifiziert");
+
+  const name = String(formData.get("name") ?? "").trim();
+  const gradeLevelRaw = String(formData.get("gradeLevel") ?? "").trim();
+  const schoolYear = String(formData.get("schoolYear") ?? "").trim();
+
+  if (!name) throw new Error("Klassenname darf nicht leer sein");
+  const gradeLevel = gradeLevelRaw ? Number(gradeLevelRaw) : null;
+  if (gradeLevel !== null && (!Number.isInteger(gradeLevel) || gradeLevel < 1 || gradeLevel > 13)) {
+    throw new Error("Ungültiger Jahrgang");
+  }
+  if (!schoolYear) throw new Error("Schuljahr darf nicht leer sein");
+
+  const { error } = await supabase
+    .from("class_instances")
+    .update({ name, grade_level: gradeLevel, school_year: schoolYear })
+    .eq("id", classId);
+
+  if (error) throw new Error(error.message);
+  revalidatePath("/classes");
+  revalidatePath("/classes/" + classId);
+}
