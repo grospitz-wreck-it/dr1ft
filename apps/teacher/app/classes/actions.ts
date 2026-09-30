@@ -79,6 +79,16 @@ export async function toggleScenarioAssignment(
   if (!user) throw new Error("Nicht authentifiziert");
 
   if (shouldBeAssigned) {
+    // A class instance may have exactly one active module.
+    // Remove the previous assignment first; progress remains in the
+    // instance-scoped learning tables and is therefore not deleted.
+    const { error: clearError } = await supabase
+      .from("class_instance_scenario_assignments")
+      .delete()
+      .eq("class_instance_id", classId)
+      .neq("scenario_id", scenarioId);
+    if (clearError) throw new Error(clearError.message);
+
     const { error } = await supabase.rpc("upsert_class_instance_scenario_assignment", {
       p_instance_id: classId,
       p_scenario_id: scenarioId,
