@@ -30,6 +30,8 @@ export function PostCard({ item, userId, classInstanceId, initiallyLiked, onView
   const [liked, setLiked] = useState(initiallyLiked);
   const [commentsOpen, setCommentsOpen] = useState(false);
   const [comments, setComments] = useState<FeedItem[] | null>(null);
+  const [commentText, setCommentText] = useState("");
+  const [commentSaving, setCommentSaving] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
   const [feedback, setFeedback] = useState<string | null>(null);
   const [comparison, setComparison] = useState<{ related: FeedItem | null; loading: boolean; selected?: "contradict" | "support"; error?: string } | null>(null);
@@ -56,12 +58,44 @@ export function PostCard({ item, userId, classInstanceId, initiallyLiked, onView
 
   function toggleLike() { if (!liked) { setLiked(true); recordInteraction(supabase, { userId, contentItemId: item.id, interactionType: "like", classInstanceId }); } }
 
+  async function loadComments() {
+    const { data } = await supabase
+      .from("content_items")
+      .select("*, creators(id, display_name, handle, avatar_url)")
+      .eq("parent_id", item.id)
+      .eq("class_instance_id", classInstanceId)
+      .eq("type", "comment")
+      .eq("status", "live")
+      .order("created_at", { ascending: true });
+    setComments((data ?? []).map((row: any) => ({ ...row, creator: mapCreatorRow(row.creators) })));
+  }
+
   async function toggleComments() {
-    const next = !commentsOpen; setCommentsOpen(next);
-    if (next && comments === null) {
-      const { data } = await supabase.from("content_items").select("*, creators(id, display_name, handle, avatar_url)").eq("parent_id", item.id).eq("type", "comment").eq("status", "live").order("created_at", { ascending: true });
-      setComments((data ?? []).map((row: any) => ({ ...row, creator: mapCreatorRow(row.creators) })));
+    const next = !commentsOpen;
+    setCommentsOpen(next);
+    if (next && comments === null) await loadComments();
+  }
+
+  async function submitComment() {
+    const text = commentText.trim();
+    if (!text || commentSaving) return;
+
+    setCommentSaving(true);
+    const response = await fetch(`/api/content/${item.id}/comment`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ body: text }),
+    });
+    const result = await response.json().catch(() => ({}));
+    setCommentSaving(false);
+
+    if (!response.ok) {
+      showFeedback(result.error ?? "Kommentar konnte nicht gespeichert werden.");
+      return;
     }
+
+    setCommentText("");
+    await loadComments();
   }
 
   async function inspectSource() {
@@ -125,7 +159,47 @@ export function PostCard({ item, userId, classInstanceId, initiallyLiked, onView
           {menuOpen && <div className="absolute z-20 right-0 bottom-12 w-60 rounded-xl border border-ink/10 bg-paper shadow-xl p-1.5"><ActionButton icon={<Search/>} label="Quelle ansehen" onClick={inspectSource}/><ActionButton icon={<ImageIcon/>} label="Bild prüfen" onClick={inspectMedia}/><ActionButton icon={<Eye/>} label="Kontext prüfen" onClick={inspectContext}/><ActionButton icon={<UserRound/>} label="Profil ansehen" onClick={inspectProfile}/><ActionButton icon={<Search/>} label="Informationen vergleichen" onClick={compareInformation}/><div className="my-1 border-t border-ink/10"/><ActionButton icon={<Share2/>} label="Teilen" onClick={share}/><ActionButton icon={<Flag/>} label="Melden" onClick={report}/><ActionButton icon={<X/>} label="Ignorieren" onClick={ignore}/></div>}
         </div>
         {feedback && <div className="mt-3 rounded-lg bg-ink/5 px-3 py-2.5 flex items-start gap-2 text-xs leading-relaxed" role="status"><Check className="w-4 h-4 shrink-0 mt-0.5"/><span>{feedback}</span></div>}
-        {commentsOpen && <div className="mt-3 space-y-2">{comments === null && <><CommentSkeleton/><CommentSkeleton/></>}{comments?.length === 0 && <p className="text-xs text-ink/40">Noch keine Kommentare.</p>}{comments?.map((c) => <div key={c.id} className="bg-ink/5 rounded-lg px-3 py-2"><AuthorRow creator={c.creator}/><p className="text-xs">{c.body}</p></div>)}</div>}
+        {commentsOpen && <div className="mt-3 space-y-3">
+          <div className="rounded-xl border border-ink/10 bg-ink/[0.025] p-3">
+            <textarea
+              value={commentText}
+              onChange={(e) => setCommentText(e.target.value.slice(0, 500))}
+              placeholder="Schreib einen Kommentar …"
+              rows={2}
+              maxLength={500}
+              className="w-full resize-none bg-transparent text-sm outline-none placeholder:text-ink/35"
+              aria-label="Kommentar schreiben"
+            />
+            <div className="mt-2 flex items-center justify-between gap-3">
+              <span className="text-[10px] text-ink/35">{commentText.length}/500</span>
+              <button
+                type="button"
+                onClick={submitComment}
+                disabled={!commentText.trim() || commentSaving}
+                className="rounded-xl bg-ink px-3.5 py-2 text-xs font-medium text-paper disabled:opacity-40"
+              >
+                {commentSaving ? "Wird gespeichert …" : "Kommentieren"}
+              </button>
+            </div>
+          </div>
+          <div className="space-y-2">
+            {comments === null && <><CommentSkeleton/><CommentSkeleton/></>}
+            {comments?.length === 0 && <p className="text-xs text-ink/40">Noch keine Kommentare.</p>}
+            {comments?.map((c) => {
+              const commentExtra = (c.extra ?? {}) as Record<string, unknown>;
+              const studentName = typeof commentExtra.displayName === "string" ? commentExtra.displayName : "DR1FT User";
+              const studentUsername = typeof commentExtra.username === "string" ? commentExtra.username : "user";
+              return <div key={c.id} className="bg-ink/5 rounded-lg px-3 py-2">
+                {c.creator ? <AuthorRow creator={c.creator}/> : <div className="flex items-center gap-2 mb-2">
+                  <span className="w-6 h-6 rounded-full bg-ink text-paper text-[10px] font-mono flex items-center justify-center shrink-0">{initials(studentName)}</span>
+                  <span className="text-xs font-medium text-ink">{studentName}</span>
+                  <span className="text-xs text-ink/40">@{studentUsername}</span>
+                </div>}
+                <p className="text-xs">{c.body}</p>
+              </div>;
+            })}
+          </div>
+        </div>}
       </div>
     </article>
 
