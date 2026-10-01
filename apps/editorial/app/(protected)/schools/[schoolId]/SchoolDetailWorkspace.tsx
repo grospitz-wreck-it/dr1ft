@@ -83,7 +83,7 @@ export function SchoolDetailWorkspace({ school: initialSchool, initialMembers, i
       <div className="flex flex-col gap-4 rounded-3xl border border-border bg-panel p-6 shadow-sm sm:flex-row sm:items-center sm:justify-between">
         <div>
           <p className="text-xs font-semibold uppercase tracking-[0.14em] text-accent">Schulbetrieb</p>
-          <h2 className="mt-1 text-xl font-semibold tracking-tight text-slate-900">Klassen</h2>
+          <h2 className="mt-1 text-xl font-semibold tracking-tight text-slate-900">Klassen & Szenarien</h2>
           <p className="mt-2 text-sm leading-6 text-slate-500">Klasseninstanzen, Lehrkräfte und das aktuell zugewiesene DR1FT-Szenario auf einen Blick.</p>
         </div>
         <a href="https://lehrkraft.dr1ft.de/classes" target="_blank" rel="noreferrer" className="inline-flex shrink-0 items-center justify-center rounded-xl bg-slate-950 px-4 py-2.5 text-sm font-medium text-white shadow-sm transition hover:bg-slate-800">Teacher-Dashboard öffnen</a>
