@@ -6,7 +6,8 @@ import { createBrowserClient } from "@supabase/ssr";
 
 type School = { id: string; name: string; region: string | null; email_domain: string | null; school_type: string | null; street: string | null; house_number: string | null; postal_code: string | null; city: string | null; phone: string | null; website: string | null; student_count: number | null; status: string; plan: string; funding_type: string; internal_notes: string | null; created_at: string; updated_at: string };
 type Member = { id: string; user_id: string; email: string | null; display_name: string | null; role: string; active: boolean; created_at: string };
-type Stats = { total: number; teachers: number; admins: number; leads: number; classes: number };\ntype SchoolClass = { id: string; name: string; grade_level: number | null; school_year: string; access_code: string | null; is_active: boolean; created_at: string; teachers: string[]; student_count?: number };
+type Stats = { total: number; teachers: number; admins: number; leads: number; classes: number };
+type SchoolClass = { id: string; name: string; grade_level: number | null; school_year: string; access_code: string | null; is_active: boolean; created_at: string; teachers: string[]; student_count?: number };
 
 function client() { return createBrowserClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!); }
 const ROLE_LABELS: Record<string, string> = { teacher: "Lehrkraft", school_lead: "Schulleitung", school_admin: "Schuladmin" };
