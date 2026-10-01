@@ -25,6 +25,16 @@ export default async function DmPage({ params }: Props) {
     );
   }
 
+  const { data: classInstanceId } = await supabase.rpc("get_current_class_instance_id");
+
+  if (!classInstanceId) {
+    return (
+      <main className="min-h-screen bg-ink flex items-center justify-center">
+        <p className="text-ash text-sm">Keine aktive Klasseninstanz.</p>
+      </main>
+    );
+  }
+
   const { data: creator } = await supabase
     .from("creators")
     .select("id, display_name")
@@ -56,6 +66,7 @@ export default async function DmPage({ params }: Props) {
   const activeMessage = await getActiveNpcMessage(supabase, {
     userId: user.id,
     creatorId,
+    classInstanceId,
     rootMessageId: rootMessage.id,
   });
 
