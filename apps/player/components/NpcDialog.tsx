@@ -16,11 +16,13 @@ export function NpcDialog({
   creatorId,
   creatorName,
   userId,
+  classInstanceId,
 }: {
   initialMessage: ContentItem;
   creatorId: string;
   creatorName: string;
   userId: string;
+  classInstanceId: string;
 }) {
   const supabase = supabaseBrowserClient();
   const [message, setMessage] = useState(initialMessage);
@@ -35,6 +37,7 @@ export function NpcDialog({
     const result = await selectNpcReply(supabase, {
       userId,
       creatorId,
+      classInstanceId,
       chosenOption: option,
     });
     if (result.nextMessage) {
