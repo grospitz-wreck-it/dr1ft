@@ -62,7 +62,7 @@ export default async function SchoolDetailPage({ params }: { params: { schoolId:
     ? await supabase.from("class_instance_scenario_assignments").select("class_instance_id, scenario_id, assigned_at").in("class_instance_id", classIds)
     : { data: [] };
 
-  const scenarioIds = [...new Set((scenarioAssignments ?? []).map((item) => item.scenario_id))];
+  const scenarioIds = Array.from(new Set((scenarioAssignments ?? []).map((item) => item.scenario_id)));
   const { data: scenarios } = scenarioIds.length
     ? await supabase.from("scenarios").select("id, title, description, age_rating, is_active").in("id", scenarioIds)
     : { data: [] };
