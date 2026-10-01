@@ -21,16 +21,20 @@ export default async function MessagesInboxPage() {
     );
   }
 
-  const { data: memberships } = await supabase
-    .from("class_memberships")
-    .select("class_id")
-    .eq("user_id", user.id);
-  const classIds = (memberships ?? []).map((m) => m.class_id);
+  const { data: classInstanceId } = await supabase.rpc("get_current_class_instance_id");
+
+  if (!classInstanceId) {
+    return (
+      <main className="min-h-screen bg-ink flex items-center justify-center">
+        <p className="text-ash text-sm">Keine aktive Klasseninstanz.</p>
+      </main>
+    );
+  }
 
   const { data: assignments } = await supabase
-    .from("class_scenario_assignments")
+    .from("class_instance_scenario_assignments")
     .select("scenario_id")
-    .in("class_id", classIds.length ? classIds : ["00000000-0000-0000-0000-000000000000"]);
+    .eq("class_instance_id", classInstanceId);
   const scenarioIds = Array.from(new Set((assignments ?? []).map((a) => a.scenario_id)));
 
   const { data: npcCreators } = await supabase
@@ -49,7 +53,8 @@ export default async function MessagesInboxPage() {
   const { data: pending } = await supabase
     .from("user_npc_conversations")
     .select("creator_id, pending_resume_at")
-    .eq("user_id", user.id);
+    .eq("user_id", user.id)
+    .eq("class_instance_id", classInstanceId);
   const pendingByCreator = new Map(
     (pending ?? []).map((p) => [p.creator_id, p.pending_resume_at])
   );
