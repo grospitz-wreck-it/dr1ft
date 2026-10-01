@@ -85,6 +85,7 @@ export default async function DmPage({ params }: Props) {
             creatorId={creatorId}
             creatorName={creator.display_name}
             userId={user.id}
+            classInstanceId={classInstanceId}
           />
         ) : (
           <p className="text-ash text-sm">Diese Nachricht ist nicht mehr verfügbar.</p>
