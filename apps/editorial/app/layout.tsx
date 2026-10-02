@@ -10,7 +10,8 @@ import {
   Library,
   Building2,
 } from "lucide-react";
-import "./globals.css";\nimport { supabaseServerClient } from "../lib/supabaseServerClient";
+import { supabaseServerClient } from "../lib/supabaseServerClient";
+import "./globals.css";
 
 export const metadata: Metadata = {
   title: "DR1FT — Redaktion",
@@ -28,21 +29,52 @@ const NAV_ITEMS = [
 
 const PUBLIC_PATHS = ["/login", "/forgot-password", "/reset-password"];
 
-export default async function RootLayout({ children }: { children: React.ReactNode }) {
-  // The middleware is the single source of truth for authentication and
-  // editorial access. The root layout only decides whether the navigation
-  // shell should be rendered.
+export default async function RootLayout({
+  children,
+}: {
+  children: React.ReactNode;
+}) {
   const pathname = headers().get("x-pathname") ?? "";
-  const isSchoolPortalPath = pathname === "/school-admin" || pathname.startsWith("/school-admin/") || Boolean(pathname.match(/^\/schools\/[^/]+$/));\n  const supabase = supabaseServerClient();\n  const { data: { user } } = await supabase.auth.getUser();\n  const { data: platformStaff } = user\n    ? await supabase.from("platform_staff").select("role").eq("user_id", user.id).maybeSingle()\n    : { data: null };\n  const isSchoolUser = isSchoolPortalPath && platformStaff?.role !== "platform_admin";\n  const isPublicAuthPage = PUBLIC_PATHS.some(
+
+  const isPublicAuthPage = PUBLIC_PATHS.some(
     (path) => pathname === path || pathname.startsWith(path + "/")
   );
 
-  if (isPublicAuthPage || isSchoolUser) {
+  if (isPublicAuthPage) {
     return (
       <html lang="de">
         <body>{children}</body>
       </html>
     );
+  }
+
+  const isSchoolPortalPath =
+    pathname === "/school-admin" ||
+    pathname.startsWith("/school-admin/") ||
+    /^\/schools\/[^/]+$/.test(pathname);
+
+  if (isSchoolPortalPath) {
+    const supabase = supabaseServerClient();
+
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
+
+    const { data: staff } = user
+      ? await supabase
+          .from("platform_staff")
+          .select("role")
+          .eq("user_id", user.id)
+          .maybeSingle()
+      : { data: null };
+
+    if (staff?.role !== "platform_admin") {
+      return (
+        <html lang="de">
+          <body className="font-sans">{children}</body>
+        </html>
+      );
+    }
   }
 
   return (
@@ -54,9 +86,11 @@ export default async function RootLayout({ children }: { children: React.ReactNo
               <p className="font-semibold text-sm text-slate-900">DR1FT</p>
               <p className="text-xs2 text-slate-500">Redaktion</p>
             </div>
+
             <ul className="flex-1 py-2">
               {NAV_ITEMS.map((item) => {
                 const Icon = item.icon;
+
                 return (
                   <li key={item.href}>
                     <Link
@@ -71,11 +105,10 @@ export default async function RootLayout({ children }: { children: React.ReactNo
               })}
             </ul>
           </nav>
+
           <div className="flex-1 min-w-0">{children}</div>
         </div>
       </body>
     </html>
   );
 }
-
-// Trigger a fresh Vercel build for the monorepo.
