@@ -45,7 +45,11 @@ export default async function SchoolDetailPage({ params }: { params: { schoolId:
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) redirect("/login");
   const { data: staff } = await supabase.from("platform_staff").select("role").eq("user_id", user.id).maybeSingle();
-  if (staff?.role !== "platform_admin") return <div className="p-8"><h1 className="text-lg font-semibold">Kein Zugriff</h1><p className="mt-2 text-sm text-slate-500">Nur Platform-Admins können Schulen verwalten.</p></div>;
+  const isPlatformAdmin = staff?.role === "platform_admin";
+  const { data: schoolMembership } = !isPlatformAdmin
+    ? await supabase.from("school_memberships").select("school_id, role").eq("user_id", user.id).eq("school_id", params.schoolId).eq("active", true).in("role", ["school_admin", "school_lead"]).maybeSingle()
+    : { data: null };
+  if (!isPlatformAdmin && !schoolMembership) return <div className="p-8"><h1 className="text-lg font-semibold">Kein Zugriff</h1><p className="mt-2 text-sm text-slate-500">Diese Schule ist für dieses Konto nicht freigeschaltet.</p></div>;
 
   const [{ data: school }, { data: members, error: memberError }, { data: instances }] = await Promise.all([
     supabase.from("schools").select("id, name, region, email_domain, school_type, street, house_number, postal_code, city, phone, website, student_count, status, plan, funding_type, internal_notes, created_at, updated_at").eq("id", params.schoolId).maybeSingle(),
