@@ -1,9 +1,6 @@
 "use client";
-// apps/admin/app/login/page.tsx
-// Für Lehrkräfte und Redaktion — normale E-Mail-Anmeldung, da Erwachsene.
 
 import { useState } from "react";
-import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { createBrowserClient } from "@supabase/ssr";
 
@@ -25,7 +22,10 @@ function getSafeNextPath() {
 
 export default function LoginPage() {
   const supabase = supabaseBrowserClient();
-  const router = useRouter();
+  const isSchoolHost =
+    typeof window !== "undefined" &&
+    window.location.hostname.toLowerCase() ===
+      (process.env.NEXT_PUBLIC_SCHOOL_HOST ?? "school.dr1ft.de").toLowerCase();
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -37,16 +37,20 @@ export default function LoginPage() {
     setError(null);
     setPending(true);
 
-    const { error: signInError } = await supabase.auth.signInWithPassword({ email, password });
+    const { error: signInError } = await supabase.auth.signInWithPassword({
+      email,
+      password,
+    });
+
     if (signInError) {
       setError(signInError.message);
       setPending(false);
       return;
     }
 
-    // Do a full navigation so the freshly persisted Supabase auth cookies
-    // are definitely present before the protected server route renders.
-    window.location.assign(getSafeNextPath());
+    window.location.assign(
+      isSchoolHost ? "/school-admin" : getSafeNextPath()
+    );
   }
 
   return (
@@ -55,7 +59,14 @@ export default function LoginPage() {
         onSubmit={handleSubmit}
         className="bg-white border rounded-lg p-6 w-full max-w-sm space-y-4"
       >
-        <h1 className="text-xl font-semibold">Login</h1>
+        <div>
+          <p className="text-xs font-semibold uppercase tracking-[0.14em] text-slate-400">
+            DR1FT
+          </p>
+          <h1 className="mt-1 text-xl font-semibold">
+            {isSchoolHost ? "Schulzugang" : "Login"}
+          </h1>
+        </div>
 
         <input
           type="email"
@@ -92,8 +103,9 @@ export default function LoginPage() {
         </Link>
 
         <p className="text-xs text-gray-500">
-          Zugänge werden ausschließlich von einem platform_admin über
-          /staff vergeben — kein Self-Serve-Signup für die Redaktion.
+          {isSchoolHost
+            ? "Der Zugang wird von der Schule bzw. DR1FT eingerichtet."
+            : "Zugänge werden ausschließlich von einem platform_admin über /staff vergeben — kein Self-Serve-Signup für die Redaktion."}
         </p>
       </form>
     </main>

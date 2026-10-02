@@ -10,7 +10,6 @@ import {
   Library,
   Building2,
 } from "lucide-react";
-import { supabaseServerClient } from "../lib/supabaseServerClient";
 import "./globals.css";
 
 export const metadata: Metadata = {
@@ -34,47 +33,26 @@ export default async function RootLayout({
 }: {
   children: React.ReactNode;
 }) {
-  const pathname = headers().get("x-pathname") ?? "";
+  const requestHeaders = headers();
+  const pathname = requestHeaders.get("x-pathname") ?? "";
+  const host =
+    requestHeaders.get("x-dr1ft-host") ??
+    requestHeaders.get("x-forwarded-host") ??
+    requestHeaders.get("host") ??
+    "";
+  const hostname = host.split(",")[0].trim().split(":")[0].toLowerCase();
+  const schoolHost = (process.env.SCHOOL_HOST ?? "school.dr1ft.de").toLowerCase();
 
   const isPublicAuthPage = PUBLIC_PATHS.some(
     (path) => pathname === path || pathname.startsWith(path + "/")
   );
 
-  if (isPublicAuthPage) {
+  if (isPublicAuthPage || hostname === schoolHost) {
     return (
       <html lang="de">
-        <body>{children}</body>
+        <body className="font-sans">{children}</body>
       </html>
     );
-  }
-
-  const isSchoolPortalPath =
-    pathname === "/school-admin" ||
-    pathname.startsWith("/school-admin/") ||
-    /^\/schools\/[^/]+$/.test(pathname);
-
-  if (isSchoolPortalPath) {
-    const supabase = supabaseServerClient();
-
-    const {
-      data: { user },
-    } = await supabase.auth.getUser();
-
-    const { data: staff } = user
-      ? await supabase
-          .from("platform_staff")
-          .select("role")
-          .eq("user_id", user.id)
-          .maybeSingle()
-      : { data: null };
-
-    if (staff?.role !== "platform_admin") {
-      return (
-        <html lang="de">
-          <body className="font-sans">{children}</body>
-        </html>
-      );
-    }
   }
 
   return (
