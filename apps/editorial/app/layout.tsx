@@ -33,11 +33,11 @@ export default async function RootLayout({ children }: { children: React.ReactNo
   // editorial access. The root layout only decides whether the navigation
   // shell should be rendered.
   const pathname = headers().get("x-pathname") ?? "";
-  const isPublicAuthPage = PUBLIC_PATHS.some(
+  const isSchoolPortalPath = pathname === "/school-admin" || pathname.startsWith("/school-admin/") || pathname.match(/^\/schools\/[^/]+$/);\n  const isPublicAuthPage = PUBLIC_PATHS.some(
     (path) => pathname === path || pathname.startsWith(path + "/")
   );
 
-  if (isPublicAuthPage) {
+  if (isPublicAuthPage || isSchoolPortalPath) {
     return (
       <html lang="de">
         <body>{children}</body>
