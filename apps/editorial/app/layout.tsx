@@ -10,7 +10,7 @@ import {
   Library,
   Building2,
 } from "lucide-react";
-import "./globals.css";
+import "./globals.css";\nimport { supabaseServerClient } from "../lib/supabaseServerClient";
 
 export const metadata: Metadata = {
   title: "DR1FT — Redaktion",
@@ -33,11 +33,11 @@ export default async function RootLayout({ children }: { children: React.ReactNo
   // editorial access. The root layout only decides whether the navigation
   // shell should be rendered.
   const pathname = headers().get("x-pathname") ?? "";
-  const isSchoolPortalPath = pathname === "/school-admin" || pathname.startsWith("/school-admin/") || pathname.match(/^\/schools\/[^/]+$/);\n  const isPublicAuthPage = PUBLIC_PATHS.some(
+  const isSchoolPortalPath = pathname === "/school-admin" || pathname.startsWith("/school-admin/") || Boolean(pathname.match(/^\/schools\/[^/]+$/));\n  const supabase = supabaseServerClient();\n  const { data: { user } } = await supabase.auth.getUser();\n  const { data: platformStaff } = user\n    ? await supabase.from("platform_staff").select("role").eq("user_id", user.id).maybeSingle()\n    : { data: null };\n  const isSchoolUser = isSchoolPortalPath && platformStaff?.role !== "platform_admin";\n  const isPublicAuthPage = PUBLIC_PATHS.some(
     (path) => pathname === path || pathname.startsWith(path + "/")
   );
 
-  if (isPublicAuthPage || isSchoolPortalPath) {
+  if (isPublicAuthPage || isSchoolUser) {
     return (
       <html lang="de">
         <body>{children}</body>
