@@ -130,11 +130,11 @@ export function TeacherNav() {
 
   if (publicRoute) return null;
 
+  const overviewActive = pathname === "/";
   const classesActive =
-    pathname.startsWith("/classes") ||
+    pathname === "/classes" ||
+    pathname.startsWith("/classes/") ||
     pathname.startsWith("/grades");
-
-  const overviewActive = pathname === "/classes";
 
   async function logout() {
     await client().auth.signOut();
@@ -239,7 +239,7 @@ export function TeacherNav() {
             </p>
 
             <NavItem
-              href="/classes"
+              href="/"
               label="Übersicht"
               icon={<LayoutDashboard className="h-4 w-4" />}
               active={overviewActive}

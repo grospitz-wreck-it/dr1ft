@@ -149,6 +149,37 @@ export async function changeClassState(classId: string, active: boolean) {
 }
 
 
+
+export async function updateClassStatus(
+  classId: string,
+  formData: FormData,
+) {
+  const supabase = supabaseServerClient();
+  const { data: { user } } = await supabase.auth.getUser();
+
+  if (!user) throw new Error("Nicht authentifiziert");
+
+  const status = String(formData.get("status") ?? "");
+
+  if (!["active", "paused", "ended"].includes(status)) {
+    throw new Error("Ungültiger Klassenstatus");
+  }
+
+  const { error } = await supabase
+    .from("class_instances")
+    .update({
+      status,
+      is_active: status === "active",
+    })
+    .eq("id", classId);
+
+  if (error) throw new Error(error.message);
+
+  revalidatePath("/classes");
+  revalidatePath(`/classes/${classId}`);
+}
+
+
 export async function updateClassDetails(classId: string, formData: FormData) {
   const supabase = supabaseServerClient();
   const { data: { user } } = await supabase.auth.getUser();
