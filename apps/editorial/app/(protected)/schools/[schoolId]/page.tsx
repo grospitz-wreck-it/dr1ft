@@ -58,7 +58,7 @@ export default async function SchoolDetailPage({ params }: { params: { schoolId:
   if (!isPlatformAdmin && !schoolMembership) return <div className="p-8"><h1 className="text-lg font-semibold">Kein Zugriff</h1><p className="mt-2 text-sm text-slate-500">Diese Schule ist für dieses Konto nicht freigeschaltet.</p></div>;
 
   const [{ data: school }, { data: members, error: memberError }, { data: instances }] = await Promise.all([
-    supabase.from("schools").select("id, name, region, email_domain, school_type, street, house_number, postal_code, city, phone, website, student_count, status, plan, funding_type, internal_notes, created_at, updated_at").eq("id", params.schoolId).maybeSingle(),
+    supabase.from("schools").select("id, name, region, email_domain, school_type, street, house_number, postal_code, city, phone, website, student_count, status, plan, funding_type, internal_notes, school_image_path, school_image_position_x, school_image_position_y, school_image_zoom, created_at, updated_at").eq("id", params.schoolId).maybeSingle(),
     supabase.rpc("get_school_member_directory", { p_school_id: params.schoolId }),
     supabase.from("class_instances").select("id, name, grade_level, school_year, access_code, is_active, created_at").eq("school_id", params.schoolId).order("school_year", { ascending: false }).order("name"),
   ]);
