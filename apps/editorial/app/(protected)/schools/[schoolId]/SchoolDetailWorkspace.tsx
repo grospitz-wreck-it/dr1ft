@@ -587,7 +587,7 @@ export function SchoolDetailWorkspace({ school: initialSchool, initialMembers, i
     </section>
 
     {message && <div className="mt-5 rounded-xl border border-border bg-panel px-4 py-3 text-sm text-slate-700">{message}</div>}
-    {school.school_image_path && (
+    {school.school_image_path && imageEditorOpen && (
       <section className="mt-6 overflow-hidden rounded-2xl border border-border bg-panel">
         <div className="border-b border-border px-6 py-4">
           <p className="text-xs font-semibold uppercase tracking-[0.14em] text-accent">
