@@ -24,33 +24,144 @@ export default async function ClassDetailPage({params}:{params:{classId:string}}
  const average=levels.length?levels.reduce((a:number,b:number)=>a+b,0)/levels.length:null;
  const completed=missionRows.reduce((n:number,r:any)=>n+Number(r.missions_completed??0),0);
  const total=missionRows.reduce((n:number,r:any)=>n+Number(r.missions_total??0),0);
- return <div className="min-h-screen bg-slate-50 px-5 py-7 md:px-8"><div className="max-w-7xl mx-auto space-y-7">
-  <header className="bg-white border border-border rounded-3xl p-6 md:p-7 shadow-sm">
-   <div className="flex flex-col lg:flex-row lg:items-start lg:justify-between gap-5">
-    <div><a href="/classes" className="text-xs text-slate-400 hover:text-slate-700">← Meine Klassen</a><div className="flex items-center gap-3 mt-3"><h1 className="text-3xl font-semibold text-slate-900">{instance.name}</h1><span className={`text-xs px-2.5 py-1 rounded-full ${instance.is_active?"bg-emerald-50 text-emerald-700":"bg-slate-100 text-slate-500"}`}>{instance.is_active?"Aktiv":"Pausiert"}</span></div><p className="text-sm text-slate-500 mt-2">Jahrgang {instance.grade_level??"—"} · Schuljahr {instance.school_year} · {school?.name??"Schule nicht zugeordnet"}</p></div>
-    <div className="flex flex-wrap gap-2"><form action={setClassActive.bind(null,classId,!instance.is_active)}><button className="rounded-xl border border-border bg-white px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50">{instance.is_active?"Klasse pausieren":"Klasse aktivieren"}</button></form><a href={`/grades/lookup?classId=${classId}`} className="rounded-xl border border-border bg-white px-4 py-2 text-sm font-medium text-slate-700">Jahrgang</a></div>
-   </div>
-   <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4 mt-7"><Metric label="Schüler:innen" value={students.length}/><Metric label="Aktives Modul" value={activeAssignment?.scenarios?.title??"Keines"}/><Metric label="Ø Kompetenz" value={average===null?"—":`${average.toFixed(1)} / 5`}/><Metric label="Missionen" value={total?`${completed}/${total}`:"—"}/></div>
-  </header>
+ return (
+  <main className="min-h-screen bg-canvas">
+    <div className="mx-auto w-full max-w-7xl px-6 pb-12 pt-8 lg:px-8">
+      <a href="/classes" className="inline-flex items-center text-sm text-slate-500 transition hover:text-slate-900">
+        ← Meine Klassen
+      </a>
 
-  <section className="bg-white border border-border rounded-3xl p-6 shadow-sm">
-    <div className="mb-4"><h2 className="text-lg font-semibold">Klasse bearbeiten</h2><p className="text-sm text-slate-500 mt-1">Name, Jahrgang und Schuljahr können jederzeit angepasst werden.</p></div>
-    <form action={updateClassDetails.bind(null,classId)} className="grid gap-3 sm:grid-cols-3">
-      <input name="name" defaultValue={instance.name} required className="rounded-xl border border-border px-3 py-2.5 text-sm" />
-      <input name="gradeLevel" type="number" min={1} max={13} defaultValue={instance.grade_level ?? ""} placeholder="Jahrgang" className="rounded-xl border border-border px-3 py-2.5 text-sm" />
-      <input name="schoolYear" defaultValue={instance.school_year} required className="rounded-xl border border-border px-3 py-2.5 text-sm" />
-      <button className="sm:col-span-3 justify-self-start rounded-xl bg-accent px-4 py-2.5 text-sm font-medium text-white hover:bg-accent-hover">Änderungen speichern</button>
-    </form>
-  </section>
+      <section className="group relative mt-4 overflow-hidden rounded-[2rem] bg-slate-950 text-white shadow-xl">
+        <div className="absolute inset-0 bg-[radial-gradient(circle_at_85%_15%,rgba(99,102,241,.35),transparent_38%),radial-gradient(circle_at_15%_85%,rgba(168,85,247,.22),transparent_34%)]" />
+        <div className="absolute inset-0 bg-gradient-to-t from-slate-950/90 via-slate-950/20 to-slate-950/30" />
+        <div className="relative min-h-[240px] p-6 sm:p-8">
+          <div className="flex min-h-[200px] flex-col justify-between">
+            <div className="flex items-center justify-between gap-4">
+              <p className="text-xs font-semibold uppercase tracking-[0.18em] text-white/45">DR1FT Teacher</p>
+              <div className="flex flex-wrap items-center gap-2">
+                <span className={`rounded-full px-3 py-1.5 text-[11px] font-semibold ${instance.is_active ? "bg-emerald-400/20 text-emerald-100" : "bg-white/10 text-white/65"}`}>
+                  {instance.is_active ? "Aktiv" : "Pausiert"}
+                </span>
+                <form action={setClassActive.bind(null, classId, !instance.is_active)}>
+                  <button className="rounded-lg border border-white/15 bg-white/5 px-3 py-2 text-xs font-medium text-white transition hover:bg-white/10">
+                    {instance.is_active ? "Pausieren" : "Aktivieren"}
+                  </button>
+                </form>
+              </div>
+            </div>
 
-  <section className="bg-white border border-border rounded-3xl shadow-sm overflow-hidden"><div className="p-6 border-b border-border"><h2 className="text-lg font-semibold">Modul für diese Klasse</h2><p className="text-sm text-slate-500 mt-1">Immer genau ein Modul aktiv. Beim Wechsel wird das bisherige Modul deaktiviert; vorhandene Lernfortschritte bleiben erhalten.</p></div><ul className="divide-y divide-border">{(scenarios??[]).map((s:any)=><ScenarioToggle key={s.id} classId={classId} scenarioId={s.id} title={s.title} ageRating={s.age_rating} initiallyAssigned={activeAssignment?.scenario_id===s.id} initialPacingMode={activeAssignment?.pacing_mode??"compact"}/>)}</ul></section>
+            <div>
+              <h1 className="text-4xl font-semibold tracking-tight sm:text-5xl">{instance.name}</h1>
+            </div>
+          </div>
+        </div>
+      </section>
 
-  <StudentRoster classId={classId} initialStudents={students}/>
+      <section className="mt-6 overflow-hidden rounded-2xl border border-border bg-white">
+        <div className="grid divide-y divide-border sm:grid-cols-2 sm:divide-x sm:divide-y-0 lg:grid-cols-4">
+          <Metric label="Schüler:innen" value={students.length} />
+          <Metric label="Aktives Modul" value={activeAssignment?.scenarios?.title ?? "Keines"} />
+          <Metric label="Ø Kompetenz" value={average === null ? "—" : `${average.toFixed(1)} / 5`} />
+          <Metric label="Missionen" value={total ? `${completed}/${total}` : "—"} />
+        </div>
+      </section>
 
-  <section className="bg-white border border-border rounded-3xl shadow-sm overflow-hidden"><div className="p-6 border-b border-border"><h2 className="text-lg font-semibold">Klassenanalyse</h2><p className="text-sm text-slate-500 mt-1">Kompetenzen und Missionen – nur für die Lehrkraft dieser Klasse.</p></div><div className="grid lg:grid-cols-2 gap-px bg-border"><Panel title="Kompetenzentwicklung">{dashboard.competencyOverview?.length?dashboard.competencyOverview.map((r:any)=><div key={r.competency_id} className="bg-white px-5 py-3 flex justify-between text-sm"><span>{r.competency_title}</span><span className="text-slate-500">Ø {r.avg_level} / 5</span></div>):<div className="bg-white p-5 text-sm text-slate-400">Noch keine Daten.</div>}</Panel><Panel title="Wo gibt es Schwierigkeiten">{dashboard.missionBottlenecks?.slice(0,5).length?dashboard.missionBottlenecks.slice(0,5).map((r:any)=><div key={r.mission_id} className="bg-white px-5 py-3 flex justify-between text-sm"><span>{r.mission_title}</span><span>{Math.round(Number(r.completion_rate??0)*100)} %</span></div>):<div className="bg-white p-5 text-sm text-slate-400">Noch keine Daten.</div>}</Panel></div></section>
+      <section className="mt-6 rounded-2xl border border-border bg-white">
+        <div className="border-b border-border px-6 py-5">
+          <p className="text-xs font-semibold uppercase tracking-[0.14em] text-accent">Klassenprofil</p>
+          <h2 className="mt-1.5 text-lg font-semibold text-slate-950">Klasse bearbeiten</h2>
+          <p className="mt-1 text-sm text-slate-500">Name, Jahrgang und Schuljahr können jederzeit angepasst werden.</p>
+        </div>
+        <form action={updateClassDetails.bind(null, classId)} className="grid gap-4 p-6 sm:grid-cols-3">
+          <label className="text-sm font-medium text-slate-700">
+            Klassenname
+            <input name="name" defaultValue={instance.name} required className="mt-1.5 w-full rounded-lg border border-border px-3 py-2.5 text-sm" />
+          </label>
+          <label className="text-sm font-medium text-slate-700">
+            Jahrgang
+            <input name="gradeLevel" type="number" min={1} max={13} defaultValue={instance.grade_level ?? ""} placeholder="Jahrgang" className="mt-1.5 w-full rounded-lg border border-border px-3 py-2.5 text-sm" />
+          </label>
+          <label className="text-sm font-medium text-slate-700">
+            Schuljahr
+            <input name="schoolYear" defaultValue={instance.school_year} required className="mt-1.5 w-full rounded-lg border border-border px-3 py-2.5 text-sm" />
+          </label>
+          <button className="sm:col-span-3 justify-self-start rounded-lg bg-slate-950 px-4 py-2.5 text-sm font-medium text-white transition hover:bg-slate-800">
+            Änderungen speichern
+          </button>
+        </form>
+      </section>
 
-  <section className="bg-white border border-border rounded-3xl p-6 shadow-sm"><div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4"><div><p className="text-xs uppercase tracking-wide text-slate-400">Schüler-Zugangscode</p><p className="text-2xl font-mono font-semibold tracking-[0.18em] mt-1">{instance.access_code}</p><p className="text-sm text-slate-500 mt-1">Mit diesem Code können Schüler:innen der Klasse beitreten.</p></div><CopyAccessCodeButton code={instance.access_code}/></div></section>
- </div></div>;
-}
+      <section className="mt-6 overflow-hidden rounded-2xl border border-border bg-white">
+        <div className="border-b border-border px-6 py-5">
+          <p className="text-xs font-semibold uppercase tracking-[0.14em] text-accent">Lerninhalt</p>
+          <h2 className="mt-1.5 text-lg font-semibold text-slate-950">Modul für diese Klasse</h2>
+          <p className="mt-1 text-sm text-slate-500">Immer genau ein Modul aktiv. Vorhandene Lernfortschritte bleiben beim Wechsel erhalten.</p>
+        </div>
+        <ul className="divide-y divide-border">
+          {(scenarios ?? []).map((s: any) => (
+            <ScenarioToggle
+              key={s.id}
+              classId={classId}
+              scenarioId={s.id}
+              title={s.title}
+              ageRating={s.age_rating}
+              initiallyAssigned={activeAssignment?.scenario_id === s.id}
+              initialPacingMode={activeAssignment?.pacing_mode ?? "compact"}
+            />
+          ))}
+        </ul>
+      </section>
+
+      <section className="mt-6 overflow-hidden rounded-2xl border border-border bg-white">
+        <StudentRoster classId={classId} initialStudents={students} />
+      </section>
+
+      <section className="mt-6 overflow-hidden rounded-2xl border border-border bg-white">
+        <div className="border-b border-border px-6 py-5">
+          <p className="text-xs font-semibold uppercase tracking-[0.14em] text-accent">DR1FT Insights</p>
+          <h2 className="mt-1.5 text-lg font-semibold text-slate-950">Klassenanalyse</h2>
+          <p className="mt-1 text-sm text-slate-500">Kompetenzen und Missionen – nur für die Lehrkraft dieser Klasse.</p>
+        </div>
+        <div className="grid gap-px bg-border lg:grid-cols-2">
+          <Panel title="Kompetenzentwicklung">
+            {dashboard.competencyOverview?.length
+              ? dashboard.competencyOverview.map((r: any) => (
+                  <div key={r.competency_id} className="flex justify-between bg-white px-5 py-3 text-sm">
+                    <span>{r.competency_title}</span>
+                    <span className="text-slate-500">Ø {r.avg_level} / 5</span>
+                  </div>
+                ))
+              : <div className="bg-white p-5 text-sm text-slate-400">Noch keine Daten.</div>}
+          </Panel>
+          <Panel title="Wo gibt es Schwierigkeiten">
+            {dashboard.missionBottlenecks?.slice(0, 5).length
+              ? dashboard.missionBottlenecks.slice(0, 5).map((r: any) => (
+                  <div key={r.mission_id} className="flex justify-between bg-white px-5 py-3 text-sm">
+                    <span>{r.mission_title}</span>
+                    <span>{Math.round(Number(r.completion_rate ?? 0) * 100)} %</span>
+                  </div>
+                ))
+              : <div className="bg-white p-5 text-sm text-slate-400">Noch keine Daten.</div>}
+          </Panel>
+        </div>
+      </section>
+
+      <section className="mt-6 flex flex-col gap-4 rounded-2xl border border-border bg-white px-6 py-5 sm:flex-row sm:items-center sm:justify-between">
+        <div>
+          <p className="text-xs font-semibold uppercase tracking-[0.14em] text-slate-400">Schüler-Zugangscode</p>
+          <p className="mt-1 font-mono text-2xl font-semibold tracking-[0.18em]">{instance.access_code}</p>
+          <p className="mt-1 text-sm text-slate-500">Mit diesem Code können Schüler:innen der Klasse beitreten.</p>
+        </div>
+        <div className="flex flex-wrap gap-2">
+          <CopyAccessCodeButton code={instance.access_code} />
+          <a href={`/grades/lookup?classId=${classId}`} className="rounded-lg border border-border px-3.5 py-2.5 text-sm font-medium text-slate-700 transition hover:bg-canvas">
+            Jahrgang öffnen
+          </a>
+        </div>
+      </section>
+    </div>
+  </main>
+ );
+
 function Metric({label,value}:{label:string;value:string|number}){return <div className="rounded-2xl bg-slate-50 p-4"><p className="text-xs text-slate-400">{label}</p><p className="text-xl font-semibold mt-2 truncate">{value}</p></div>}
 function Panel({title,children}:{title:string;children:React.ReactNode}){return <div><div className="bg-white px-5 py-4 border-b border-border"><h3 className="text-sm font-semibold">{title}</h3></div>{children}</div>}
