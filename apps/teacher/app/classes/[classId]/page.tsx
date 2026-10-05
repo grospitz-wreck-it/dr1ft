@@ -31,7 +31,21 @@ export default async function ClassDetailPage({params}:{params:{classId:string}}
         ← Meine Klassen
       </a>
 
-      <section className="group relative mt-4 overflow-hidden rounded-[2rem] bg-slate-950 text-white shadow-xl">\n        {school?.school_image_path ? (\n          <img\n            src={`${process.env.NEXT_PUBLIC_SUPABASE_URL}/storage/v1/object/public/school-images/${school.school_image_path}`}\n            alt=""\n            className="absolute inset-0 h-full w-full object-cover"\n            style={{\n              objectPosition: `${school.school_image_position_x ?? 50}% ${school.school_image_position_y ?? 50}%`,\n              transform: `scale(${school.school_image_zoom ?? 1})`,\n            }}\n          />\n        ) : (\n          <div className="absolute inset-0 bg-[radial-gradient(circle_at_85%_15%,rgba(99,102,241,.35),transparent_38%),radial-gradient(circle_at_15%_85%,rgba(168,85,247,.22),transparent_34%)]" />\n        )}\n        <div className="absolute inset-0 bg-gradient-to-t from-slate-950/90 via-slate-950/25 to-slate-950/35" />
+      <section className="group relative mt-4 overflow-hidden rounded-[2rem] bg-slate-950 text-white shadow-xl">
+        {school?.school_image_path ? (
+          <img
+            src={`${process.env.NEXT_PUBLIC_SUPABASE_URL}/storage/v1/object/public/school-images/${school.school_image_path}`}
+            alt=""
+            className="absolute inset-0 h-full w-full object-cover"
+            style={{
+              objectPosition: `${school.school_image_position_x ?? 50}% ${school.school_image_position_y ?? 50}%`,
+              transform: `scale(${school.school_image_zoom ?? 1})`,
+            }}
+          />
+        ) : (
+          <div className="absolute inset-0 bg-[radial-gradient(circle_at_85%_15%,rgba(99,102,241,.35),transparent_38%),radial-gradient(circle_at_15%_85%,rgba(168,85,247,.22),transparent_34%)]" />
+        )}
+        <div className="absolute inset-0 bg-gradient-to-t from-slate-950/90 via-slate-950/25 to-slate-950/35" />
         <div className="relative min-h-[240px] p-6 sm:p-8">
           <div className="flex min-h-[200px] flex-col justify-between">
             <div className="flex items-center justify-between gap-4">
