@@ -608,7 +608,6 @@ export function SchoolDetailWorkspace({ school: initialSchool, initialMembers, i
               </div>
             </div>
           )}
-          </div>
 
           <div className="space-y-5">
 
