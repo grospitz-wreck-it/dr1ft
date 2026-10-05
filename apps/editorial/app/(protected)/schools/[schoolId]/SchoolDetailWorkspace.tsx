@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { Building2, MoreHorizontal, Pencil, Plus, Save, UserRound, X } from "lucide-react";
+import { Building2, ChevronDown, LogOut, MoreHorizontal, Pencil, Plus, Save, Settings, UserRound, Users, School as SchoolIcon, BarChart3, LayoutDashboard, X } from "lucide-react";
 import { createBrowserClient } from "@supabase/ssr";
 
 type School = { id: string; name: string; region: string | null; email_domain: string | null; school_type: string | null; street: string | null; house_number: string | null; postal_code: string | null; city: string | null; phone: string | null; website: string | null; student_count: number | null; status: string; plan: string; funding_type: string; internal_notes: string | null; school_image_path: string | null; school_image_position_x: number; school_image_position_y: number; school_image_zoom: number; created_at: string; updated_at: string };
@@ -60,7 +60,10 @@ function regionLabel(value: string | null) {
 
 
 export function SchoolDetailWorkspace({ school: initialSchool, initialMembers, initialClasses, stats }: { school: School; initialMembers: Member[]; initialClasses: SchoolClass[]; stats: Stats }) {
-  const [school, setSchool] = useState(initialSchool); const [members, setMembers] = useState(initialMembers); const [tab, setTab] = useState<"overview" | "classes" | "people" | "insights" | "settings">("overview");
+  const [school, setSchool] = useState(initialSchool);
+  const [members, setMembers] = useState(initialMembers);
+  const [tab, setTab] = useState<"overview" | "classes" | "people" | "insights" | "settings">("overview");
+  const [accountOpen, setAccountOpen] = useState(false);
   const [editing, setEditing] = useState(false);
   const [form, setForm] = useState(initialSchool);
   const [imageUploading, setImageUploading] = useState(false);
@@ -88,8 +91,26 @@ export function SchoolDetailWorkspace({ school: initialSchool, initialMembers, i
 
     try {
       const supabase = client();
+
+      const {
+        data: { session },
+        error: sessionError,
+      } = await supabase.auth.getSession();
+
+      console.log("[DR1FT IMAGE AUTH]", {
+        hasSession: !!session,
+        userId: session?.user?.id ?? null,
+        email: session?.user?.email ?? null,
+        sessionError: sessionError?.message ?? null,
+      });
+
       const extension = file.name.split(".").pop()?.toLowerCase() || "jpg";
       const path = `${school.id}/school-${Date.now()}.${extension}`;
+
+      console.log("[DR1FT IMAGE UPLOAD]", {
+        bucket: "school-images",
+        path,
+      });
 
       const { error: uploadError } = await supabase.storage
         .from("school-images")
@@ -280,6 +301,181 @@ export function SchoolDetailWorkspace({ school: initialSchool, initialMembers, i
   }
 
   return <>
+    <header className="relative z-30 -mx-6 border-b border-border bg-white px-6 lg:-mx-8 lg:px-8">
+      <div className="mx-auto flex h-16 max-w-7xl items-center justify-between gap-4">
+
+        <div className="flex min-w-0 items-center gap-4">
+          <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-slate-950 text-white">
+            <span className="text-[10px] font-bold tracking-[0.08em]">DR1FT</span>
+          </div>
+
+          <div className="hidden h-6 w-px bg-border sm:block" />
+
+          <div className="min-w-0">
+            <p className="truncate text-sm font-semibold text-slate-950">
+              {school.name}
+            </p>
+            <p className="truncate text-[11px] text-slate-400">
+              {regionLabel(school.region)}
+            </p>
+          </div>
+        </div>
+
+        <div className="relative flex items-center gap-2">
+          <button
+            type="button"
+            onClick={() => setAccountOpen((open) => !open)}
+            className="flex items-center gap-3 rounded-xl px-2.5 py-2 transition hover:bg-canvas"
+          >
+            <div className="hidden text-right sm:block">
+              <p className="text-sm font-medium text-slate-800">Administrator</p>
+              <p className="text-[11px] text-slate-400">Schulverwaltung</p>
+            </div>
+
+            <div className="flex h-9 w-9 items-center justify-center rounded-full bg-slate-950 text-xs font-semibold text-white">
+              <UserRound className="h-4 w-4" />
+            </div>
+
+            <ChevronDown className={`hidden h-4 w-4 text-slate-400 transition sm:block ${
+              accountOpen ? "rotate-180" : ""
+            }`} />
+          </button>
+
+          {accountOpen && (
+            <div className="absolute right-0 top-12 w-56 overflow-hidden rounded-2xl border border-border bg-white shadow-xl">
+              <div className="border-b border-border px-4 py-3">
+                <p className="text-sm font-semibold text-slate-900">Schulverwaltung</p>
+                <p className="mt-0.5 text-xs text-slate-400">{school.name}</p>
+              </div>
+
+              <div className="p-1.5">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setAccountOpen(false);
+                    setTab("settings");
+                    setForm(school);
+                    setEditing(true);
+                  }}
+                  className="flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-sm text-slate-700 transition hover:bg-canvas"
+                >
+                  <Settings className="h-4 w-4 text-slate-400" />
+                  Einstellungen
+                </button>
+
+                <button
+                  type="button"
+                  className="flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-sm text-slate-700 transition hover:bg-canvas"
+                >
+                  <MoreHorizontal className="h-4 w-4 text-slate-400" />
+                  Hilfe & Support
+                </button>
+              </div>
+
+              <div className="border-t border-border p-1.5">
+                <button
+                  type="button"
+                  onClick={async () => {
+                    await client().auth.signOut();
+                    window.location.href = "/login";
+                  }}
+                  className="flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium text-red-600 transition hover:bg-red-50"
+                >
+                  <LogOut className="h-4 w-4" />
+                  Abmelden
+                </button>
+              </div>
+            </div>
+          )}
+        </div>
+      </div>
+    </header>
+
+    <div className="relative z-20 mt-5 flex flex-col gap-5 lg:flex-row">
+
+      <aside className="shrink-0 lg:w-52">
+        <nav className="sticky top-5 rounded-2xl border border-border bg-white p-2 shadow-sm">
+
+          <p className="px-3 pb-2 pt-2 text-[10px] font-semibold uppercase tracking-[0.14em] text-slate-400">
+            Schule
+          </p>
+
+          <button
+            type="button"
+            onClick={() => setTab("overview")}
+            className={`flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition ${
+              tab === "overview"
+                ? "bg-slate-950 text-white"
+                : "text-slate-600 hover:bg-canvas"
+            }`}
+          >
+            <LayoutDashboard className="h-4 w-4" />
+            Übersicht
+          </button>
+
+          <button
+            type="button"
+            onClick={() => setTab("classes")}
+            className={`mt-1 flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition ${
+              tab === "classes"
+                ? "bg-slate-950 text-white"
+                : "text-slate-600 hover:bg-canvas"
+            }`}
+          >
+            <SchoolIcon className="h-4 w-4" />
+            Klassen
+            <span className="ml-auto text-[10px] opacity-50">{stats.classes}</span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => setTab("people")}
+            className={`mt-1 flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition ${
+              tab === "people"
+                ? "bg-slate-950 text-white"
+                : "text-slate-600 hover:bg-canvas"
+            }`}
+          >
+            <Users className="h-4 w-4" />
+            Personen
+            <span className="ml-auto text-[10px] opacity-50">{activeMembers.length}</span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => setTab("insights")}
+            className={`mt-1 flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition ${
+              tab === "insights"
+                ? "bg-slate-950 text-white"
+                : "text-slate-600 hover:bg-canvas"
+            }`}
+          >
+            <BarChart3 className="h-4 w-4" />
+            Insights
+          </button>
+
+          <div className="my-2 border-t border-border" />
+
+          <button
+            type="button"
+            onClick={() => {
+              setTab("settings");
+              setForm(school);
+              setEditing(true);
+            }}
+            className={`flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition ${
+              tab === "settings"
+                ? "bg-slate-950 text-white"
+                : "text-slate-600 hover:bg-canvas"
+            }`}
+          >
+            <Settings className="h-4 w-4" />
+            Schulprofil
+          </button>
+        </nav>
+      </aside>
+
+      <main className="min-w-0 flex-1">
     <section className="relative mt-6 overflow-hidden rounded-[2rem] bg-slate-950 text-white shadow-xl">
       {school.school_image_path ? (
         <img
@@ -411,7 +607,6 @@ export function SchoolDetailWorkspace({ school: initialSchool, initialMembers, i
       </div>
     </section>
 
-    <div className="mt-8 flex flex-wrap items-center gap-1 border-b border-border"><button onClick={() => setTab("overview")} className={`rounded-t-xl border-b-2 px-3 pb-3 pt-2 text-sm font-medium transition ${tab === "overview" ? "border-accent bg-accent/5 text-slate-900" : "border-transparent text-slate-500 hover:bg-canvas hover:text-slate-800"}`}>Übersicht</button><button onClick={() => setTab("classes")} className={`rounded-t-xl border-b-2 px-3 pb-3 pt-2 text-sm font-medium transition ${tab === "classes" ? "border-accent bg-accent/5 text-slate-900" : "border-transparent text-slate-500 hover:bg-canvas hover:text-slate-800"}`}>Klassen & Lehrkräfte</button><button onClick={() => setTab("insights")} className={`rounded-t-xl border-b-2 px-3 pb-3 pt-2 text-sm font-medium transition ${tab === "insights" ? "border-accent bg-accent/5 text-slate-900" : "border-transparent text-slate-500 hover:bg-canvas hover:text-slate-800"}`}>Insights</button><button onClick={() => setTab("people")} className={`rounded-t-xl border-b-2 px-3 pb-3 pt-2 text-sm font-medium transition ${tab === "people" ? "border-accent bg-accent/5 text-slate-900" : "border-transparent text-slate-500 hover:bg-canvas hover:text-slate-800"}`}>Personen & Rollen</button><button onClick={() => setTab("settings")} className={`rounded-t-xl border-b-2 px-3 pb-3 pt-2 text-sm font-medium transition ${tab === "settings" ? "border-accent bg-accent/5 text-slate-900" : "border-transparent text-slate-500 hover:bg-canvas hover:text-slate-800"}`}>Schulprofil</button></div>
     {message && <div className="mt-5 rounded-xl border border-border bg-panel px-4 py-3 text-sm text-slate-700">{message}</div>}
     {school.school_image_path && (
       <section className="mt-6 overflow-hidden rounded-[1.5rem] border border-border bg-panel shadow-sm">
@@ -1397,5 +1592,8 @@ export function SchoolDetailWorkspace({ school: initialSchool, initialMembers, i
     </section>}
 
     {showInvite && <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/30 p-4 backdrop-blur-sm"><div className="w-full max-w-lg rounded-3xl border border-border bg-panel p-6 shadow-2xl"><div className="flex items-start justify-between"><div><p className="text-xs font-semibold uppercase tracking-[0.14em] text-accent">{school.name}</p><h2 className="mt-1 text-xl font-semibold">Person einladen</h2></div><button onClick={() => setShowInvite(false)} className="p-2 text-slate-400"><X className="h-4 w-4" /></button></div><p className="mt-3 text-sm text-slate-500">Die E-Mail-Adresse muss zur hinterlegten Schul-Domain passen.</p><form onSubmit={invite} className="mt-6 space-y-4"><label className="block text-sm font-medium">Name<input required value={displayName} onChange={(e) => setDisplayName(e.target.value)} className="mt-1.5 w-full rounded-xl border border-border px-3 py-2.5" /></label><label className="block text-sm font-medium">Schul-E-Mail<input required type="email" value={email} onChange={(e) => setEmail(e.target.value)} className="mt-1.5 w-full rounded-xl border border-border px-3 py-2.5" /></label><label className="block text-sm font-medium">Rolle<select value={role} onChange={(e) => setRole(e.target.value)} className="mt-1.5 w-full rounded-xl border border-border px-3 py-2.5"><option value="teacher">Lehrkraft</option><option value="school_lead">Schulleitung</option><option value="school_admin">Schuladmin</option></select></label><div className="flex justify-end gap-2"><button type="button" onClick={() => setShowInvite(false)} className="rounded-xl border border-border px-4 py-2.5">Abbrechen</button><button disabled={pendingId === "invite"} className="rounded-xl bg-slate-950 px-4 py-2.5 text-sm text-white">{pendingId === "invite" ? "Wird gesendet …" : "Einladung senden"}</button></div></form></div></div>}
+      </main>
+    </div>
+
   </>;
 }
