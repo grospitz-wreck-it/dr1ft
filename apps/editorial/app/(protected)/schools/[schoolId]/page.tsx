@@ -1,52 +1,8 @@
-import Link from "next/link";
-import { headers } from "next/headers";
 import { notFound, redirect } from "next/navigation";
-import { ArrowLeft, Building2 } from "lucide-react";
 import { supabaseServerClient } from "../../../../lib/supabaseServerClient";
 import { SchoolDetailWorkspace } from "./SchoolDetailWorkspace";
 
-const REGION_LABELS: Record<string, string> = {
-  BW: "Baden-Württemberg",
-  BE: "Berlin",
-  BB: "Brandenburg",
-  HB: "Bremen",
-  HH: "Hamburg",
-  HE: "Hessen",
-  MV: "Mecklenburg-Vorpommern",
-  NI: "Niedersachsen",
-  NRW: "Nordrhein-Westfalen",
-  RP: "Rheinland-Pfalz",
-  SL: "Saarland",
-  SN: "Sachsen",
-  ST: "Sachsen-Anhalt",
-  SH: "Schleswig-Holstein",
-  TH: "Thüringen",
-};
-
-const SCHOOL_TYPE_LABELS: Record<string, string> = {
-  grundschule: "Grundschule",
-  hauptschule: "Hauptschule",
-  realschule: "Realschule",
-  gesamtschule: "Gesamtschule",
-  gymnasium: "Gymnasium",
-  berufskolleg: "Berufskolleg",
-  sonstige: "Sonstige",
-};
-
-const PLAN_LABELS: Record<string, string> = {
-  free: "Free",
-  starter: "Starter",
-  school: "School",
-  growth: "Growth",
-  enterprise: "Enterprise",
-};
-
 export default async function SchoolDetailPage({ params }: { params: { schoolId: string } }) {
-  const requestHeaders = headers();
-  const host = (requestHeaders.get("x-dr1ft-host") ?? requestHeaders.get("host") ?? "").split(",")[0].trim().split(":")[0].toLowerCase();
-  const schoolHost = (process.env.SCHOOL_HOST ?? "schule.dr1ft.de").toLowerCase();
-  const isSchoolHost = host === schoolHost;
-
   const supabase = supabaseServerClient();
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) redirect("/login");
@@ -122,5 +78,28 @@ export default async function SchoolDetailPage({ params }: { params: { schoolId:
   const leadCount = activeMembers.filter((member) => member.role === "school_lead").length;
   const activeClasses = schoolClasses.filter((item) => item.is_active).length;
 
-  return <main className="min-h-screen bg-canvas"><div className="mx-auto max-w-7xl px-6 py-8 lg:px-8">{!isSchoolHost && <Link href="/schools" className="inline-flex items-center gap-2 text-sm text-slate-500 hover:text-slate-900"><ArrowLeft className="h-4 w-4" /> Schulen</Link>}<div className="mt-6 flex items-start gap-4"><div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-panel text-slate-500 shadow-sm ring-1 ring-border"><Building2 className="h-6 w-6" /></div><div><div className="flex flex-wrap items-center gap-2"><h1 className="text-3xl font-semibold tracking-tight text-slate-900">{school.name}</h1><span className="rounded-full bg-emerald-50 px-2.5 py-1 text-xs font-medium text-emerald-700">{school.status === "active" ? "Aktiv" : school.status}</span><span className="rounded-full bg-slate-100 px-2.5 py-1 text-xs font-medium text-slate-600">{PLAN_LABELS[school.plan] ?? school.plan}</span></div><p className="mt-1 text-sm text-slate-500">{school.region ? (REGION_LABELS[school.region] ?? school.region) : "Region nicht hinterlegt"}{school.school_type ? ` · ${SCHOOL_TYPE_LABELS[school.school_type] ?? school.school_type}` : ""}</p><p className="mt-1 text-xs text-slate-400">{school.email_domain ? `@${school.email_domain}` : "Keine Schul-Domain hinterlegt"}</p></div></div><section className="mt-8 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">{[["Schüler:innen", school.student_count?.toLocaleString("de-DE") ?? "—"],["Lehrkräfte", String(teacherCount)],["Klassen", String(schoolClasses.length)],["Aktive Klassen", String(activeClasses)]].map(([label,value]) => <div key={String(label)} className="rounded-2xl border border-border bg-panel px-5 py-4 shadow-sm"><p className="text-xs font-medium text-slate-400">{label}</p><p className="mt-1.5 text-2xl font-semibold tracking-tight text-slate-900">{value}</p></div>)}</section>{memberError ? <div className="mt-8 rounded-2xl border border-red-200 bg-red-50 p-5 text-sm text-red-800">Die Personen konnten nicht geladen werden: {memberError.message}</div> : <SchoolDetailWorkspace school={school} initialMembers={members ?? []} initialClasses={schoolClasses} stats={{ total: activeMembers.length, teachers: teacherCount, admins: adminCount, leads: leadCount, classes: schoolClasses.length }} />}</div></main>;
+  return (
+    <main className="min-h-screen bg-canvas">
+      {memberError ? (
+        <div className="mx-auto max-w-7xl px-6 py-8 lg:px-8">
+          <div className="rounded-2xl border border-red-200 bg-red-50 p-5 text-sm text-red-800">
+            Die Personen konnten nicht geladen werden: {memberError.message}
+          </div>
+        </div>
+      ) : (
+        <SchoolDetailWorkspace
+          school={school}
+          initialMembers={members ?? []}
+          initialClasses={schoolClasses}
+          stats={{
+            total: activeMembers.length,
+            teachers: teacherCount,
+            admins: adminCount,
+            leads: leadCount,
+            classes: schoolClasses.length,
+          }}
+        />
+      )}
+    </main>
+  );
 }
