@@ -115,7 +115,6 @@ export function SchoolDetailWorkspace({ school: initialSchool, initialMembers, i
       const { error: uploadError } = await supabase.storage
         .from("school-images")
         .upload(path, file, {
-          upsert: true,
           contentType: file.type,
         });
 
