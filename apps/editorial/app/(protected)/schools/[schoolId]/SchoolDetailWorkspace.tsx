@@ -61,7 +61,7 @@ function regionLabel(value: string | null) {
 
 export function SchoolDetailWorkspace({ school: initialSchool, initialMembers, initialClasses, stats }: { school: School; initialMembers: Member[]; initialClasses: SchoolClass[]; stats: Stats }) {
   const [school, setSchool] = useState(initialSchool); const [members, setMembers] = useState(initialMembers); const [tab, setTab] = useState<"overview" | "classes" | "people" | "insights" | "settings">("overview");
-  const [editing, setEditing] = useState(false); const [form, setForm] = useState(initialSchool); const [showInvite, setShowInvite] = useState(false); const [email, setEmail] = useState(""); const [displayName, setDisplayName] = useState(""); const [role, setRole] = useState("teacher"); const [pendingId, setPendingId] = useState<string | null>(null); const [message, setMessage] = useState<string | null>(null);
+  const [editing, setEditing] = useState(false); const [form, setForm] = useState(initialSchool); const [showInvite, setShowInvite] = useState(false); const [email, setEmail] = useState(""); const [displayName, setDisplayName] = useState(""); const [role, setRole] = useState("teacher"); const [editingMemberId, setEditingMemberId] = useState<string | null>(null); const [editingMemberName, setEditingMemberName] = useState(""); const [pendingId, setPendingId] = useState<string | null>(null); const [message, setMessage] = useState<string | null>(null);
 
   const activeMembers = members.filter((m) => m.active);
   function field<K extends keyof School>(key: K, value: School[K]) { setForm((current) => ({ ...current, [key]: value })); }
@@ -73,72 +73,941 @@ export function SchoolDetailWorkspace({ school: initialSchool, initialMembers, i
   async function setActive(member: Member, active: boolean) { setPendingId(member.id); const { error } = await client().from("school_memberships").update({ active }).eq("id", member.id); if (error) setMessage(error.message); else { setMembers((c) => c.map((m) => m.id === member.id ? { ...m, active } : m)); setMessage(active ? "Person wieder aktiviert." : "Person deaktiviert."); } setPendingId(null); }
   async function remove(member: Member) { if (!window.confirm(`${member.display_name || member.email || "Diese Person"} wirklich aus der Schule entfernen?`)) return; setPendingId(member.id); const { error } = await client().from("school_memberships").delete().eq("id", member.id); if (error) setMessage(error.message); else { setMembers((c) => c.filter((m) => m.id !== member.id)); setMessage("Person aus der Schule entfernt."); } setPendingId(null); }
 
+  async function saveMemberName(member: Member) {
+    const name = editingMemberName.trim();
+    if (!name) {
+      setMessage("Bitte einen Namen eingeben.");
+      return;
+    }
+
+    setPendingId(member.id);
+    setMessage(null);
+
+    const { error } = await client()
+      .from("user_profiles")
+      .update({ display_name: name })
+      .eq("id", member.user_id);
+
+    if (error) {
+      setMessage(error.message);
+    } else {
+      setMembers((current) =>
+        current.map((item) =>
+          item.id === member.id ? { ...item, display_name: name } : item
+        )
+      );
+      setEditingMemberId(null);
+      setEditingMemberName("");
+      setMessage("Name gespeichert.");
+    }
+
+    setPendingId(null);
+  }
+
   return <>
+    <section className="relative mt-6 overflow-hidden rounded-[2rem] border border-slate-200 bg-slate-950 text-white shadow-xl">
+      <div className="absolute inset-0 bg-[radial-gradient(circle_at_15%_20%,rgba(99,102,241,.55),transparent_35%),radial-gradient(circle_at_85%_80%,rgba(168,85,247,.38),transparent_35%)]" />
+      <div className="relative p-6 sm:p-8">
+        <div className="flex flex-col gap-7 lg:flex-row lg:items-end lg:justify-between">
+          <div className="min-w-0">
+            <div className="flex flex-wrap items-center gap-2">
+              <span className="inline-flex items-center gap-2 rounded-full border border-white/15 bg-white/10 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.16em] text-white/80">
+                <Building2 className="h-3.5 w-3.5" />
+                DR1FT School Command Center
+              </span>
+              <span className={`rounded-full px-3 py-1 text-[11px] font-semibold ${school.status === "active" ? "bg-emerald-400/15 text-emerald-200" : "bg-white/10 text-white/70"}`}>
+                {school.status === "active" ? "Aktiv" : school.status}
+              </span>
+            </div>
+
+            <h1 className="mt-5 truncate text-3xl font-semibold tracking-tight sm:text-4xl">
+              {school.name}
+            </h1>
+
+            <p className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-sm text-white/60">
+              <span>{regionLabel(school.region)}</span>
+              <span className="hidden text-white/25 sm:inline">•</span>
+              <span>{TYPE_LABELS[school.school_type ?? ""] ?? school.school_type ?? "Schulform nicht hinterlegt"}</span>
+              {school.email_domain && (
+                <>
+                  <span className="hidden text-white/25 sm:inline">•</span>
+                  <span>@{school.email_domain}</span>
+                </>
+              )}
+            </p>
+          </div>
+
+          <button
+            onClick={() => { setForm(school); setEditing(true); setTab("settings"); }}
+            className="inline-flex shrink-0 items-center justify-center gap-2 rounded-xl border border-white/15 bg-white/10 px-4 py-2.5 text-sm font-medium text-white backdrop-blur transition hover:bg-white/15"
+          >
+            <Pencil className="h-4 w-4" />
+            Schulprofil
+          </button>
+        </div>
+
+        <div className="mt-8 grid grid-cols-2 gap-3 lg:grid-cols-4">
+          <div className="rounded-2xl border border-white/10 bg-white/[0.07] p-4 backdrop-blur">
+            <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-white/45">Schüler:innen</p>
+            <p className="mt-2 text-2xl font-semibold">{school.student_count?.toLocaleString("de-DE") ?? "—"}</p>
+          </div>
+          <div className="rounded-2xl border border-white/10 bg-white/[0.07] p-4 backdrop-blur">
+            <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-white/45">Aktive Personen</p>
+            <p className="mt-2 text-2xl font-semibold">{activeMembers.length}</p>
+          </div>
+          <div className="rounded-2xl border border-white/10 bg-white/[0.07] p-4 backdrop-blur">
+            <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-white/45">Lehrkräfte</p>
+            <p className="mt-2 text-2xl font-semibold">{stats.teachers}</p>
+          </div>
+          <div className="rounded-2xl border border-white/10 bg-white/[0.07] p-4 backdrop-blur">
+            <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-white/45">Klassen</p>
+            <p className="mt-2 text-2xl font-semibold">{stats.classes}</p>
+          </div>
+        </div>
+      </div>
+    </section>
+
     <div className="mt-8 flex flex-wrap items-center gap-1 border-b border-border"><button onClick={() => setTab("overview")} className={`rounded-t-xl border-b-2 px-3 pb-3 pt-2 text-sm font-medium transition ${tab === "overview" ? "border-accent bg-accent/5 text-slate-900" : "border-transparent text-slate-500 hover:bg-canvas hover:text-slate-800"}`}>Übersicht</button><button onClick={() => setTab("classes")} className={`rounded-t-xl border-b-2 px-3 pb-3 pt-2 text-sm font-medium transition ${tab === "classes" ? "border-accent bg-accent/5 text-slate-900" : "border-transparent text-slate-500 hover:bg-canvas hover:text-slate-800"}`}>Klassen & Lehrkräfte</button><button onClick={() => setTab("insights")} className={`rounded-t-xl border-b-2 px-3 pb-3 pt-2 text-sm font-medium transition ${tab === "insights" ? "border-accent bg-accent/5 text-slate-900" : "border-transparent text-slate-500 hover:bg-canvas hover:text-slate-800"}`}>Insights</button><button onClick={() => setTab("people")} className={`rounded-t-xl border-b-2 px-3 pb-3 pt-2 text-sm font-medium transition ${tab === "people" ? "border-accent bg-accent/5 text-slate-900" : "border-transparent text-slate-500 hover:bg-canvas hover:text-slate-800"}`}>Personen & Rollen</button><button onClick={() => setTab("settings")} className={`rounded-t-xl border-b-2 px-3 pb-3 pt-2 text-sm font-medium transition ${tab === "settings" ? "border-accent bg-accent/5 text-slate-900" : "border-transparent text-slate-500 hover:bg-canvas hover:text-slate-800"}`}>Schulprofil</button></div>
     {message && <div className="mt-5 rounded-xl border border-border bg-panel px-4 py-3 text-sm text-slate-700">{message}</div>}
 
     {tab === "overview" && <section className="mt-6 grid gap-5 lg:grid-cols-[1.25fr_.75fr]"><div className="rounded-3xl border border-border bg-panel p-6"><div className="flex items-start gap-3"><div className="flex h-10 w-10 items-center justify-center rounded-xl bg-canvas text-slate-500"><Building2 className="h-5 w-5" /></div><div><h2 className="font-semibold text-slate-900">Schulprofil</h2><p className="mt-1 text-sm text-slate-500">Stammdaten, Schulgröße und aktueller DR1FT-Plan.</p></div></div><dl className="mt-6 grid gap-5 sm:grid-cols-2"><div><dt className="text-xs text-slate-400">Schulform</dt><dd className="mt-1 text-sm font-medium text-slate-800">{TYPE_LABELS[school.school_type ?? ""] ?? school.school_type ?? "Nicht hinterlegt"}</dd></div><div><dt className="text-xs text-slate-400">Region</dt><dd className="mt-1 text-sm font-medium text-slate-800">{regionLabel(school.region)}</dd></div><div><dt className="text-xs text-slate-400">Schul-Domain</dt><dd className="mt-1 text-sm font-medium text-slate-800">{school.email_domain ? `@${school.email_domain}` : "Nicht hinterlegt"}</dd></div><div className="sm:col-span-2"><dt className="text-xs text-slate-400">Anschrift</dt><dd className="mt-1 text-sm font-medium text-slate-800">{[school.street,school.house_number].filter(Boolean).join(" ") || "—"}{school.postal_code || school.city ? ` · ${[school.postal_code,school.city].filter(Boolean).join(" ")}` : ""}</dd></div><div><dt className="text-xs text-slate-400">Förderstatus</dt><dd className="mt-1 text-sm font-medium text-slate-800">{FUNDING_LABELS[school.funding_type] ?? school.funding_type}</dd></div></dl><button onClick={() => { setForm(school); setEditing(true); setTab("settings"); }} className="mt-6 inline-flex items-center gap-2 rounded-xl border border-border px-4 py-2.5 text-sm font-medium text-slate-700 hover:bg-canvas"><Pencil className="h-4 w-4" /> Schulprofil bearbeiten</button></div><div className="rounded-3xl border border-border bg-panel p-6"><p className="text-xs font-semibold uppercase tracking-[0.14em] text-accent">Administration</p><h2 className="mt-2 font-semibold text-slate-900">Zugänge verwalten</h2><p className="mt-2 text-sm leading-6 text-slate-500">Lehrkräfte, Schulleitung und Schuladmins zentral verwalten.</p><button onClick={() => { setTab("people"); setShowInvite(true); }} className="mt-5 inline-flex items-center gap-2 rounded-xl bg-slate-950 px-4 py-2.5 text-sm font-medium text-white"><Plus className="h-4 w-4" /> Person einladen</button></div></section>}
 
-    {tab === "classes" && <section className="mt-6 space-y-4">
-      <div className="flex flex-col gap-4 rounded-3xl border border-border bg-panel p-6 shadow-sm sm:flex-row sm:items-center sm:justify-between">
+    {tab === "classes" && <section className="mt-6 space-y-5">
+      <div className="flex flex-col gap-5 rounded-[1.75rem] border border-border bg-panel p-6 shadow-sm sm:flex-row sm:items-end sm:justify-between">
         <div>
-          <p className="text-xs font-semibold uppercase tracking-[0.14em] text-accent">Schulbetrieb</p>
-          <h2 className="mt-1 text-xl font-semibold tracking-tight text-slate-900">Klassen & Szenarien</h2>
-          <p className="mt-2 text-sm leading-6 text-slate-500">Klasseninstanzen, Lehrkräfte und das aktuell zugewiesene DR1FT-Szenario auf einen Blick.</p>
+          <p className="text-xs font-semibold uppercase tracking-[0.16em] text-accent">Schulbetrieb</p>
+          <h2 className="mt-2 text-2xl font-semibold tracking-tight text-slate-950">Klassen & Lehrkräfte</h2>
+          <p className="mt-2 max-w-2xl text-sm leading-6 text-slate-500">
+            Klasseninstanzen, Besetzung, Schülerzahlen und aktive DR1FT-Szenarien auf einen Blick.
+          </p>
         </div>
-        <a href="https://lehrkraft.dr1ft.de/classes" target="_blank" rel="noreferrer" className="inline-flex shrink-0 items-center justify-center rounded-xl bg-slate-950 px-4 py-2.5 text-sm font-medium text-white shadow-sm transition hover:bg-slate-800">Teacher-Dashboard öffnen</a>
+
+        <a
+          href="https://lehrkraft.dr1ft.de/classes"
+          target="_blank"
+          rel="noreferrer"
+          className="inline-flex shrink-0 items-center justify-center rounded-xl bg-slate-950 px-4 py-2.5 text-sm font-medium text-white shadow-sm transition hover:bg-slate-800"
+        >
+          Teacher-Dashboard öffnen →
+        </a>
       </div>
 
-      <div className="overflow-hidden rounded-3xl border border-border bg-panel shadow-sm">
-        <div className="divide-y divide-border">
-          {initialClasses.map((c) => (
-            <div key={c.id} className="p-5 transition hover:bg-canvas/40 sm:p-6">
-              <div className="flex flex-col gap-5 lg:flex-row lg:items-start lg:justify-between">
-                <div className="min-w-0 lg:w-[27%]">
-                  <div className="flex flex-wrap items-center gap-2">
-                    <h3 className="text-base font-semibold text-slate-900">{c.name}</h3>
-                    <span className={`rounded-full px-2.5 py-1 text-[11px] font-medium ${c.is_active ? "bg-emerald-50 text-emerald-700" : "bg-slate-100 text-slate-500"}`}>{c.is_active ? "Aktiv" : "Pausiert"}</span>
-                  </div>
-                  <p className="mt-1.5 text-sm text-slate-500">{c.grade_level ? `Jahrgang ${c.grade_level}` : "Jahrgang nicht hinterlegt"} · Schuljahr {c.school_year}</p>
-                  <p className="mt-2 text-xs text-slate-400">{c.student_count ?? 0} Schüler:innen{c.access_code ? ` · Zugangscode ${c.access_code}` : ""}</p>
-                </div>
+      <div className="grid gap-4 sm:grid-cols-3">
+        <div className="rounded-2xl border border-border bg-panel p-4">
+          <p className="text-xs font-medium text-slate-400">Klassen gesamt</p>
+          <p className="mt-1 text-2xl font-semibold text-slate-950">{initialClasses.length}</p>
+        </div>
+        <div className="rounded-2xl border border-border bg-panel p-4">
+          <p className="text-xs font-medium text-slate-400">Aktiv</p>
+          <p className="mt-1 text-2xl font-semibold text-slate-950">{initialClasses.filter((c) => c.is_active).length}</p>
+        </div>
+        <div className="rounded-2xl border border-border bg-panel p-4">
+          <p className="text-xs font-medium text-slate-400">Mit Szenario</p>
+          <p className="mt-1 text-2xl font-semibold text-slate-950">{initialClasses.filter((c) => c.scenario).length}</p>
+        </div>
+      </div>
 
-                <div className="min-w-0 flex-1 rounded-2xl bg-canvas p-4">
-                  <div className="flex items-center justify-between gap-3">
-                    <p className="text-xs font-semibold uppercase tracking-[0.12em] text-slate-400">Szenario</p>
-                    {c.scenario && <span className="rounded-full bg-white px-2.5 py-1 text-[11px] font-medium text-slate-500 ring-1 ring-border">{c.scenario.age_rating === "all_ages" ? "Alle Altersstufen" : c.scenario.age_rating === "12_plus" ? "Ab 12" : c.scenario.age_rating === "16_plus" ? "Ab 16" : c.scenario.age_rating}</span>}
+      {initialClasses.length > 0 ? (
+        <div className="grid gap-5 lg:grid-cols-2">
+          {initialClasses.map((c) => (
+            <article
+              key={c.id}
+              className="group overflow-hidden rounded-[1.5rem] border border-border bg-panel shadow-sm transition hover:-translate-y-0.5 hover:shadow-md"
+            >
+              <div className="relative overflow-hidden bg-slate-950 p-5 text-white">
+                <div className="absolute inset-0 bg-[radial-gradient(circle_at_90%_10%,rgba(139,92,246,.38),transparent_40%),radial-gradient(circle_at_10%_100%,rgba(59,130,246,.28),transparent_45%)]" />
+
+                <div className="relative">
+                  <div className="flex items-start justify-between gap-4">
+                    <div className="min-w-0">
+                      <div className="flex flex-wrap items-center gap-2">
+                        <span className="rounded-lg border border-white/10 bg-white/10 px-2.5 py-1 text-[11px] font-semibold uppercase tracking-[0.12em] text-white/70">
+                          {c.school_year}
+                        </span>
+                        <span className={`rounded-full px-2.5 py-1 text-[11px] font-semibold ${
+                          c.is_active
+                            ? "bg-emerald-400/15 text-emerald-200"
+                            : "bg-white/10 text-white/55"
+                        }`}>
+                          {c.is_active ? "Aktiv" : "Pausiert"}
+                        </span>
+                      </div>
+
+                      <h3 className="mt-4 truncate text-xl font-semibold tracking-tight">
+                        {c.name}
+                      </h3>
+
+                      <p className="mt-1 text-sm text-white/55">
+                        {c.grade_level ? `Jahrgang ${c.grade_level}` : "Jahrgang nicht hinterlegt"}
+                      </p>
+                    </div>
+
+                    <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl border border-white/10 bg-white/10 text-sm font-bold text-white">
+                      {c.grade_level ?? "—"}
+                    </div>
                   </div>
-                  {c.scenario ? (
-                    <>
-                      <p className="mt-2 font-semibold text-slate-900">{c.scenario.title}</p>
-                      <p className="mt-1 line-clamp-2 text-sm leading-5 text-slate-500">{c.scenario.description || "Keine Szenariobeschreibung hinterlegt."}</p>
-                    </>
-                  ) : (
-                    <p className="mt-2 text-sm text-slate-500">Noch kein Szenario für diese Klasse zugewiesen.</p>
+
+                  <div className="mt-6 grid grid-cols-2 gap-3">
+                    <div className="rounded-xl border border-white/10 bg-white/[0.07] p-3">
+                      <p className="text-[10px] font-semibold uppercase tracking-[0.12em] text-white/40">Schüler:innen</p>
+                      <p className="mt-1 text-lg font-semibold">{c.student_count ?? 0}</p>
+                    </div>
+                    <div className="rounded-xl border border-white/10 bg-white/[0.07] p-3">
+                      <p className="text-[10px] font-semibold uppercase tracking-[0.12em] text-white/40">Lehrkräfte</p>
+                      <p className="mt-1 text-lg font-semibold">{c.teachers.length}</p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <div className="p-5">
+                <div className="rounded-2xl bg-canvas p-4">
+                  <div className="flex items-center justify-between gap-3">
+                    <div>
+                      <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-accent">Aktives Szenario</p>
+                      <p className="mt-1 text-sm font-semibold text-slate-950">
+                        {c.scenario?.title ?? "Noch kein Szenario"}
+                      </p>
+                    </div>
+
+                    {c.scenario && (
+                      <span className="shrink-0 rounded-full bg-white px-2.5 py-1 text-[10px] font-semibold text-slate-500 ring-1 ring-border">
+                        {c.scenario.age_rating === "all_ages"
+                          ? "Alle Altersstufen"
+                          : c.scenario.age_rating === "12_plus"
+                            ? "Ab 12"
+                            : c.scenario.age_rating === "16_plus"
+                              ? "Ab 16"
+                              : c.scenario.age_rating}
+                      </span>
+                    )}
+                  </div>
+
+                  {c.scenario?.description && (
+                    <p className="mt-2 line-clamp-2 text-xs leading-5 text-slate-500">
+                      {c.scenario.description}
+                    </p>
                   )}
                 </div>
 
-                <div className="lg:w-[23%]">
-                  <p className="text-xs font-semibold uppercase tracking-[0.12em] text-slate-400">Lehrkräfte</p>
-                  <p className="mt-2 text-sm leading-5 text-slate-700">{c.teachers.length ? c.teachers.join(", ") : "Noch keine Lehrkraft zugeordnet"}</p>
+                <div className="mt-4">
+                  <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-slate-400">
+                    Lehrkräfte
+                  </p>
+
+                  <div className="mt-2 flex flex-wrap gap-2">
+                    {c.teachers.length ? (
+                      c.teachers.map((teacher) => (
+                        <span
+                          key={teacher}
+                          className="inline-flex items-center rounded-full border border-border bg-white px-3 py-1.5 text-xs font-medium text-slate-700"
+                        >
+                          {teacher}
+                        </span>
+                      ))
+                    ) : (
+                      <span className="text-sm text-slate-400">
+                        Noch keine Lehrkraft zugeordnet
+                      </span>
+                    )}
+                  </div>
+                </div>
+
+                <div className="mt-5 flex flex-wrap items-center justify-between gap-3 border-t border-border pt-4">
+                  <div className="text-xs text-slate-400">
+                    Klasseninstanz · angelegt {new Date(c.created_at).toLocaleDateString("de-DE")}
+                    {c.access_code && (
+                      <span className="ml-2 rounded-md bg-canvas px-2 py-1 font-mono text-[10px] text-slate-500">
+                        Code {c.access_code}
+                      </span>
+                    )}
+                  </div>
+
+                  <a
+                    href={`https://lehrkraft.dr1ft.de/classes/${c.id}`}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="inline-flex items-center rounded-xl border border-border px-3.5 py-2 text-xs font-medium text-slate-700 transition hover:bg-canvas"
+                  >
+                    Klasse öffnen →
+                  </a>
                 </div>
               </div>
+            </article>
+          ))}
+        </div>
+      ) : (
+        <div className="rounded-[1.5rem] border border-dashed border-border bg-panel p-12 text-center">
+          <Building2 className="mx-auto h-8 w-8 text-slate-300" />
+          <p className="mt-3 text-sm font-medium text-slate-700">Noch keine Klassen angelegt</p>
+          <p className="mt-1 text-sm text-slate-500">
+            Sobald Lehrkräfte Klasseninstanzen erstellen, erscheinen sie hier.
+          </p>
+        </div>
+      )}
+    </section>}
 
-              <div className="mt-5 flex flex-wrap items-center justify-between gap-3 border-t border-border pt-4">
-                <p className="text-xs text-slate-400">Klasseninstanz · angelegt {new Date(c.created_at).toLocaleDateString("de-DE")}</p>
-                <a href={`https://lehrkraft.dr1ft.de/classes/${c.id}`} target="_blank" rel="noreferrer" className="inline-flex items-center rounded-xl border border-border px-3.5 py-2 text-xs font-medium text-slate-700 transition hover:bg-canvas">Klasse im Teacher-Dashboard öffnen →</a>
+    {tab === "insights" && <section className="mt-6 space-y-5">
+      <div className="relative overflow-hidden rounded-[1.75rem] bg-slate-950 p-6 text-white shadow-xl">
+        <div className="absolute inset-0 bg-[radial-gradient(circle_at_90%_10%,rgba(139,92,246,.38),transparent_38%),radial-gradient(circle_at_10%_100%,rgba(59,130,246,.28),transparent_45%)]" />
+        <div className="relative">
+          <p className="text-xs font-semibold uppercase tracking-[0.16em] text-violet-300">DR1FT Insights</p>
+          <div className="mt-2 flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
+            <div>
+              <h2 className="text-2xl font-semibold tracking-tight">Schule im Überblick</h2>
+              <p className="mt-2 max-w-2xl text-sm leading-6 text-white/55">
+                Struktur, Zugänge und Klassen deiner Schule – kompakt zusammengefasst.
+              </p>
+            </div>
+            <span className="rounded-full border border-white/10 bg-white/10 px-3 py-1.5 text-xs font-medium text-white/70">
+              Live aus DR1FT
+            </span>
+          </div>
+
+          <div className="mt-7 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+            <div className="rounded-2xl border border-white/10 bg-white/[0.07] p-4">
+              <p className="text-[10px] font-semibold uppercase tracking-[0.12em] text-white/40">Schüler:innen</p>
+              <p className="mt-1 text-2xl font-semibold">{school.student_count?.toLocaleString("de-DE") ?? "—"}</p>
+            </div>
+            <div className="rounded-2xl border border-white/10 bg-white/[0.07] p-4">
+              <p className="text-[10px] font-semibold uppercase tracking-[0.12em] text-white/40">Klassen</p>
+              <p className="mt-1 text-2xl font-semibold">{stats.classes}</p>
+            </div>
+            <div className="rounded-2xl border border-white/10 bg-white/[0.07] p-4">
+              <p className="text-[10px] font-semibold uppercase tracking-[0.12em] text-white/40">Lehrkräfte</p>
+              <p className="mt-1 text-2xl font-semibold">{stats.teachers}</p>
+            </div>
+            <div className="rounded-2xl border border-white/10 bg-white/[0.07] p-4">
+              <p className="text-[10px] font-semibold uppercase tracking-[0.12em] text-white/40">Administration</p>
+              <p className="mt-1 text-2xl font-semibold">{stats.leads + stats.admins}</p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div className="grid gap-5 lg:grid-cols-2">
+        <div className="rounded-[1.5rem] border border-border bg-panel p-6 shadow-sm">
+          <div className="flex items-start justify-between gap-4">
+            <div>
+              <p className="text-xs font-semibold uppercase tracking-[0.14em] text-accent">Schulstruktur</p>
+              <h3 className="mt-2 text-lg font-semibold text-slate-950">Kapazität & Organisation</h3>
+            </div>
+            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-canvas text-sm font-bold text-slate-600">
+              {stats.classes}
+            </div>
+          </div>
+
+          <div className="mt-6 space-y-5">
+            <div>
+              <div className="flex items-center justify-between text-sm">
+                <span className="text-slate-500">Schüler:innen</span>
+                <strong className="text-slate-900">{school.student_count?.toLocaleString("de-DE") ?? "—"}</strong>
+              </div>
+              <div className="mt-2 h-2 overflow-hidden rounded-full bg-canvas">
+                <div className="h-full w-full rounded-full bg-gradient-to-r from-indigo-500 to-violet-500" />
               </div>
             </div>
-          ))}
-          {initialClasses.length === 0 && <div className="p-12 text-center"><p className="text-sm font-medium text-slate-700">Noch keine Klassen angelegt</p><p className="mt-1 text-sm text-slate-500">Sobald Lehrkräfte eine Klasseninstanz erstellen, erscheint sie hier mit Szenario und Besetzung.</p></div>}
+
+            <div>
+              <div className="flex items-center justify-between text-sm">
+                <span className="text-slate-500">Klassen</span>
+                <strong className="text-slate-900">{stats.classes}</strong>
+              </div>
+              <div className="mt-2 h-2 overflow-hidden rounded-full bg-canvas">
+                <div className={`h-full rounded-full bg-gradient-to-r from-blue-500 to-indigo-500 ${
+                  stats.classes > 0 ? "w-full" : "w-0"
+                }`} />
+              </div>
+            </div>
+
+            <div className="rounded-2xl bg-canvas p-4">
+              <p className="text-xs font-medium text-slate-400">Ø Schüler:innen pro Klasse</p>
+              <p className="mt-1 text-xl font-semibold text-slate-950">
+                {stats.classes > 0 && school.student_count
+                  ? Math.round(school.student_count / stats.classes)
+                  : "—"}
+              </p>
+            </div>
+          </div>
+        </div>
+
+        <div className="rounded-[1.5rem] border border-border bg-panel p-6 shadow-sm">
+          <div>
+            <p className="text-xs font-semibold uppercase tracking-[0.14em] text-accent">Zugänge</p>
+            <h3 className="mt-2 text-lg font-semibold text-slate-950">Team & Berechtigungen</h3>
+          </div>
+
+          <div className="mt-6 space-y-3">
+            <div className="flex items-center justify-between rounded-2xl border border-border bg-canvas p-4">
+              <div>
+                <p className="text-sm font-medium text-slate-900">Lehrkräfte</p>
+                <p className="mt-0.5 text-xs text-slate-400">Unterrichten mit DR1FT</p>
+              </div>
+              <span className="rounded-full bg-slate-950 px-3 py-1.5 text-sm font-semibold text-white">
+                {stats.teachers}
+              </span>
+            </div>
+
+            <div className="flex items-center justify-between rounded-2xl border border-border bg-canvas p-4">
+              <div>
+                <p className="text-sm font-medium text-slate-900">Schulleitung</p>
+                <p className="mt-0.5 text-xs text-slate-400">Leitungszugänge</p>
+              </div>
+              <span className="rounded-full bg-violet-50 px-3 py-1.5 text-sm font-semibold text-violet-700">
+                {stats.leads}
+              </span>
+            </div>
+
+            <div className="flex items-center justify-between rounded-2xl border border-border bg-canvas p-4">
+              <div>
+                <p className="text-sm font-medium text-slate-900">Schuladmins</p>
+                <p className="mt-0.5 text-xs text-slate-400">Administrationszugänge</p>
+              </div>
+              <span className="rounded-full bg-indigo-50 px-3 py-1.5 text-sm font-semibold text-indigo-700">
+                {stats.admins}
+              </span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div className="grid gap-5 lg:grid-cols-[1.1fr_.9fr]">
+        <div className="rounded-[1.5rem] border border-border bg-panel p-6 shadow-sm">
+          <p className="text-xs font-semibold uppercase tracking-[0.14em] text-accent">DR1FT-Betrieb</p>
+          <h3 className="mt-2 text-lg font-semibold text-slate-950">Szenario-Abdeckung</h3>
+          <p className="mt-2 text-sm leading-6 text-slate-500">
+            Wie viele deiner Klassen bereits mit einem DR1FT-Szenario arbeiten.
+          </p>
+
+          <div className="mt-6 flex items-end gap-6">
+            <div className="text-4xl font-semibold tracking-tight text-slate-950">
+              {initialClasses.filter((c) => c.scenario).length}
+              <span className="ml-1 text-lg font-medium text-slate-400">/ {initialClasses.length}</span>
+            </div>
+            <div className="pb-1 text-sm text-slate-500">
+              Klassen mit Szenario
+            </div>
+          </div>
+
+          <div className="mt-5 h-3 overflow-hidden rounded-full bg-canvas">
+            <div
+              className="h-full rounded-full bg-gradient-to-r from-indigo-500 via-violet-500 to-fuchsia-500 transition-all"
+              style={{
+                width: initialClasses.length
+                  ? `${Math.round((initialClasses.filter((c) => c.scenario).length / initialClasses.length) * 100)}%`
+                  : "0%",
+              }}
+            />
+          </div>
+
+          <p className="mt-3 text-xs text-slate-400">
+            {initialClasses.length
+              ? `${Math.round((initialClasses.filter((c) => c.scenario).length / initialClasses.length) * 100)} % der Klassen sind mit einem Szenario ausgestattet.`
+              : "Noch keine Klassen vorhanden."}
+          </p>
+        </div>
+
+        <div className="rounded-[1.5rem] border border-border bg-panel p-6 shadow-sm">
+          <p className="text-xs font-semibold uppercase tracking-[0.14em] text-accent">Status</p>
+          <h3 className="mt-2 text-lg font-semibold text-slate-950">Schulbetrieb</h3>
+
+          <div className="mt-6 flex items-center gap-4 rounded-2xl bg-canvas p-4">
+            <div className={`flex h-12 w-12 items-center justify-center rounded-2xl ${
+              school.status === "active"
+                ? "bg-emerald-100 text-emerald-700"
+                : "bg-slate-200 text-slate-600"
+            }`}>
+              <span className="h-3 w-3 rounded-full bg-current" />
+            </div>
+            <div>
+              <p className="text-sm font-semibold text-slate-900">
+                {school.status === "active" ? "Schule aktiv" : "Schulbetrieb nicht aktiv"}
+              </p>
+              <p className="mt-1 text-xs text-slate-500">
+                Plan: {PLAN_LABELS[school.plan] ?? school.plan}
+              </p>
+            </div>
+          </div>
+
+          <div className="mt-4 rounded-2xl border border-border p-4">
+            <p className="text-xs text-slate-400">Förderstatus</p>
+            <p className="mt-1 text-sm font-semibold text-slate-900">
+              {FUNDING_LABELS[school.funding_type] ?? school.funding_type}
+            </p>
+          </div>
         </div>
       </div>
     </section>}
-    {tab === "insights" && <section className="mt-6 grid gap-5 lg:grid-cols-2"><div className="rounded-3xl border border-border bg-panel p-6"><p className="text-xs font-semibold uppercase tracking-[0.14em] text-accent">Schulgröße</p><h2 className="mt-2 text-xl font-semibold text-slate-900">Kapazität & Struktur</h2><div className="mt-6 grid grid-cols-2 gap-3"><div className="rounded-2xl bg-canvas p-4"><p className="text-xs text-slate-400">Schüler</p><p className="mt-1 text-2xl font-semibold">{school.student_count?.toLocaleString("de-DE") ?? "—"}</p></div><div className="rounded-2xl bg-canvas p-4"><p className="text-xs text-slate-400">Klassen</p><p className="mt-1 text-2xl font-semibold">{stats.classes}</p></div></div></div><div className="rounded-3xl border border-border bg-panel p-6"><p className="text-xs font-semibold uppercase tracking-[0.14em] text-accent">Nutzer</p><h2 className="mt-2 text-xl font-semibold text-slate-900">Zugänge</h2><div className="mt-6 space-y-3"><div className="flex justify-between rounded-xl bg-canvas p-3 text-sm"><span>Lehrkräfte</span><strong>{stats.teachers}</strong></div><div className="flex justify-between rounded-xl bg-canvas p-3 text-sm"><span>Schulleitung</span><strong>{stats.leads}</strong></div><div className="flex justify-between rounded-xl bg-canvas p-3 text-sm"><span>Schuladmins</span><strong>{stats.admins}</strong></div></div></div></section>}
 
-    {tab === "settings" && <section className="mt-6 rounded-3xl border border-border bg-panel p-6"><div className="flex items-start justify-between"><div><p className="text-xs font-semibold uppercase tracking-[0.14em] text-accent">Administration</p><h2 className="mt-1 text-xl font-semibold text-slate-900">Schulprofil</h2><p className="mt-2 text-sm text-slate-500">Diese Angaben steuern Identität, Größe, Status und Plan der Schule.</p></div>{!editing && <button onClick={() => { setForm(school); setEditing(true); }} className="inline-flex items-center gap-2 rounded-xl border border-border px-4 py-2.5 text-sm font-medium"><Pencil className="h-4 w-4" /> Bearbeiten</button>}</div>{editing ? <form onSubmit={saveSchool} className="mt-7 grid gap-5 md:grid-cols-2"><label className="text-sm font-medium">Schulname<input required value={form.name} onChange={(e) => field("name", e.target.value)} className="mt-1.5 w-full rounded-xl border border-border px-3 py-2.5" /></label><label className="text-sm font-medium">Schulform<select value={form.school_type ?? ""} onChange={(e) => field("school_type", e.target.value || null)} className="mt-1.5 w-full rounded-xl border border-border px-3 py-2.5"><option value="">Nicht festgelegt</option>{Object.entries(TYPE_LABELS).map(([k,v]) => <option key={k} value={k}>{v}</option>)}</select></label><label className="text-sm font-medium">Straße<input value={form.street ?? ""} onChange={(e) => field("street", e.target.value)} className="mt-1.5 w-full rounded-xl border border-border px-3 py-2.5" /></label><label className="text-sm font-medium">Hausnummer<input value={form.house_number ?? ""} onChange={(e) => field("house_number", e.target.value)} className="mt-1.5 w-full rounded-xl border border-border px-3 py-2.5" /></label><label className="text-sm font-medium">PLZ<input value={form.postal_code ?? ""} onChange={(e) => field("postal_code", e.target.value)} className="mt-1.5 w-full rounded-xl border border-border px-3 py-2.5" /></label><label className="text-sm font-medium">Ort<input value={form.city ?? ""} onChange={(e) => field("city", e.target.value)} className="mt-1.5 w-full rounded-xl border border-border px-3 py-2.5" /></label><label className="text-sm font-medium">Bundesland<select value={regionLabel(form.region) === "—" ? "" : regionLabel(form.region)} onChange={(e) => field("region", e.target.value || null)} className="mt-1.5 w-full rounded-xl border border-border bg-panel px-3 py-2.5"><option value="">Nicht festgelegt</option>{REGION_OPTIONS.map((region) => <option key={region} value={region}>{region}</option>)}</select></label><label className="text-sm font-medium">Schülerzahl<input type="number" min="0" value={form.student_count ?? ""} onChange={(e) => field("student_count", e.target.value === "" ? null : Number(e.target.value))} className="mt-1.5 w-full rounded-xl border border-border px-3 py-2.5" /></label><label className="text-sm font-medium">Telefon<input value={form.phone ?? ""} onChange={(e) => field("phone", e.target.value)} className="mt-1.5 w-full rounded-xl border border-border px-3 py-2.5" /></label><label className="text-sm font-medium">Website<input value={form.website ?? ""} onChange={(e) => field("website", e.target.value)} className="mt-1.5 w-full rounded-xl border border-border px-3 py-2.5" /></label><label className="text-sm font-medium">Schul-Domain<input value={form.email_domain ?? ""} onChange={(e) => field("email_domain", e.target.value)} className="mt-1.5 w-full rounded-xl border border-border px-3 py-2.5" /></label><label className="text-sm font-medium">Status<select value={form.status} onChange={(e) => field("status", e.target.value)} className="mt-1.5 w-full rounded-xl border border-border px-3 py-2.5"><option value="active">Aktiv</option><option value="inactive">Inaktiv</option><option value="suspended">Gesperrt</option></select></label><label className="text-sm font-medium">Plan<select value={form.plan} onChange={(e) => field("plan", e.target.value)} className="mt-1.5 w-full rounded-xl border border-border px-3 py-2.5">{Object.entries(PLAN_LABELS).map(([k,v]) => <option key={k} value={k}>{v}</option>)}</select></label><label className="text-sm font-medium">Förderstatus<select value={form.funding_type} onChange={(e) => field("funding_type", e.target.value)} className="mt-1.5 w-full rounded-xl border border-border px-3 py-2.5"><option value="none">Keine Förderung</option><option value="sponsored">Sponsored</option><option value="grant">Förderung</option></select></label><label className="text-sm font-medium md:col-span-2">Interne Notiz<textarea value={form.internal_notes ?? ""} onChange={(e) => field("internal_notes", e.target.value)} className="mt-1.5 min-h-24 w-full rounded-xl border border-border px-3 py-2.5" /></label><div className="flex gap-2 md:col-span-2"><button type="button" onClick={() => setEditing(false)} className="rounded-xl border border-border px-4 py-2.5 text-sm">Abbrechen</button><button disabled={pendingId === "school"} className="inline-flex items-center gap-2 rounded-xl bg-slate-950 px-4 py-2.5 text-sm font-medium text-white disabled:opacity-50"><Save className="h-4 w-4" />{pendingId === "school" ? "Speichert …" : "Änderungen speichern"}</button></div></form> : <dl className="mt-7 grid gap-5 md:grid-cols-2"><div><dt className="text-xs text-slate-400">Schulname</dt><dd className="mt-1 font-medium">{school.name}</dd></div><div><dt className="text-xs text-slate-400">Schulform</dt><dd className="mt-1 font-medium">{TYPE_LABELS[school.school_type ?? ""] ?? school.school_type ?? "—"}</dd></div><div><dt className="text-xs text-slate-400">Schülerzahl</dt><dd className="mt-1 font-medium">{school.student_count?.toLocaleString("de-DE") ?? "—"}</dd></div><div><dt className="text-xs text-slate-400">Plan</dt><dd className="mt-1 font-medium">{PLAN_LABELS[school.plan]}</dd></div><div><dt className="text-xs text-slate-400">Förderstatus</dt><dd className="mt-1 font-medium">{FUNDING_LABELS[school.funding_type]}</dd></div></dl>}</section>}
+    {tab === "settings" && <section className="mt-6 space-y-5">
+      <div className="relative overflow-hidden rounded-[1.75rem] bg-slate-950 p-6 text-white shadow-xl">
+        <div className="absolute inset-0 bg-[radial-gradient(circle_at_90%_10%,rgba(139,92,246,.38),transparent_38%),radial-gradient(circle_at_10%_100%,rgba(59,130,246,.28),transparent_45%)]" />
+        <div className="relative flex flex-col gap-5 sm:flex-row sm:items-end sm:justify-between">
+          <div>
+            <p className="text-xs font-semibold uppercase tracking-[0.16em] text-violet-300">Administration</p>
+            <h2 className="mt-2 text-2xl font-semibold tracking-tight">Schulprofil</h2>
+            <p className="mt-2 max-w-2xl text-sm leading-6 text-white/55">
+              Stammdaten, Kontaktdaten und organisatorische Einstellungen deiner Schule.
+            </p>
+          </div>
 
-    {tab === "people" && <section className="mt-6 rounded-3xl border border-border bg-panel overflow-hidden"><div className="flex flex-col gap-3 border-b border-border p-5 sm:flex-row sm:items-center sm:justify-between"><div><h2 className="font-semibold text-slate-900">Personen & Rollen</h2><p className="mt-1 text-sm text-slate-500">{activeMembers.length} aktive Personen in dieser Schule.</p></div><button onClick={() => setShowInvite(true)} className="inline-flex items-center justify-center gap-2 rounded-xl bg-slate-950 px-4 py-2.5 text-sm font-medium text-white"><Plus className="h-4 w-4" /> Person einladen</button></div><div className="divide-y divide-border">{members.map((member) => <div key={member.id} className={`flex flex-col gap-4 p-5 lg:flex-row lg:items-center lg:justify-between ${member.active ? "" : "bg-canvas/60"}`}><div className="flex min-w-0 items-center gap-3"><div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-canvas text-slate-500"><UserRound className="h-4 w-4" /></div><div className="min-w-0"><p className="truncate text-sm font-medium">{member.display_name || "Name nicht hinterlegt"}</p><p className="truncate text-xs text-slate-500">{member.email || member.user_id}</p></div>{!member.active && <span className="rounded-full bg-slate-100 px-2 py-1 text-[11px] text-slate-500">Deaktiviert</span>}</div><div className="flex flex-wrap items-center gap-2"><select disabled={pendingId === member.id} value={member.role} onChange={(e) => changeRole(member, e.target.value)} className="rounded-lg border border-border bg-panel px-3 py-2 text-xs"><option value="teacher">Lehrkraft</option><option value="school_lead">Schulleitung</option><option value="school_admin">Schuladmin</option></select><button disabled={pendingId === member.id} onClick={() => setActive(member, !member.active)} className="rounded-lg border border-border px-3 py-2 text-xs">{member.active ? "Deaktivieren" : "Aktivieren"}</button><button disabled={pendingId === member.id} onClick={() => remove(member)} className="rounded-lg border border-red-200 px-3 py-2 text-xs text-red-600"><MoreHorizontal className="h-4 w-4" /></button></div></div>)}{members.length === 0 && <div className="p-10 text-center text-sm text-slate-500">Noch keine Personen zugeordnet.</div>}</div></section>}
+          {!editing && (
+            <button
+              onClick={() => { setForm(school); setEditing(true); }}
+              className="inline-flex shrink-0 items-center justify-center gap-2 rounded-xl bg-white px-4 py-2.5 text-sm font-medium text-slate-950 shadow-sm transition hover:bg-white/90"
+            >
+              <Pencil className="h-4 w-4" />
+              Profil bearbeiten
+            </button>
+          )}
+        </div>
+
+        {!editing && (
+          <div className="relative mt-7 grid gap-3 sm:grid-cols-3">
+            <div className="rounded-2xl border border-white/10 bg-white/[0.07] p-4">
+              <p className="text-[10px] font-semibold uppercase tracking-[0.12em] text-white/40">Status</p>
+              <div className="mt-2 flex items-center gap-2">
+                <span className={`h-2.5 w-2.5 rounded-full ${
+                  school.status === "active" ? "bg-emerald-400" : "bg-slate-500"
+                }`} />
+                <span className="text-sm font-semibold">
+                  {school.status === "active" ? "Aktiv" : school.status === "suspended" ? "Gesperrt" : "Inaktiv"}
+                </span>
+              </div>
+            </div>
+
+            <div className="rounded-2xl border border-white/10 bg-white/[0.07] p-4">
+              <p className="text-[10px] font-semibold uppercase tracking-[0.12em] text-white/40">DR1FT-Plan</p>
+              <p className="mt-2 text-sm font-semibold">
+                {PLAN_LABELS[school.plan] ?? school.plan}
+              </p>
+            </div>
+
+            <div className="rounded-2xl border border-white/10 bg-white/[0.07] p-4">
+              <p className="text-[10px] font-semibold uppercase tracking-[0.12em] text-white/40">Förderung</p>
+              <p className="mt-2 text-sm font-semibold">
+                {FUNDING_LABELS[school.funding_type] ?? school.funding_type}
+              </p>
+            </div>
+          </div>
+        )}
+      </div>
+
+      {editing ? (
+        <form onSubmit={saveSchool} className="space-y-5">
+          <div className="rounded-[1.5rem] border border-border bg-panel p-6 shadow-sm">
+            <div>
+              <p className="text-xs font-semibold uppercase tracking-[0.14em] text-accent">Identität</p>
+              <h3 className="mt-2 text-lg font-semibold text-slate-950">Grunddaten</h3>
+              <p className="mt-1 text-sm text-slate-500">Wie die Schule innerhalb von DR1FT geführt wird.</p>
+            </div>
+
+            <div className="mt-6 grid gap-5 md:grid-cols-2">
+              <label className="text-sm font-medium text-slate-700">
+                Schulname
+                <input required value={form.name} onChange={(e) => field("name", e.target.value)} className="mt-1.5 w-full rounded-xl border border-border bg-white px-3 py-2.5 outline-none transition focus:border-accent focus:ring-2 focus:ring-accent/10" />
+              </label>
+
+              <label className="text-sm font-medium text-slate-700">
+                Schulform
+                <select value={form.school_type ?? ""} onChange={(e) => field("school_type", e.target.value || null)} className="mt-1.5 w-full rounded-xl border border-border bg-white px-3 py-2.5 outline-none transition focus:border-accent focus:ring-2 focus:ring-accent/10">
+                  <option value="">Nicht festgelegt</option>
+                  {Object.entries(TYPE_LABELS).map(([k,v]) => <option key={k} value={k}>{v}</option>)}
+                </select>
+              </label>
+
+              <label className="text-sm font-medium text-slate-700">
+                Bundesland
+                <select value={regionLabel(form.region) === "—" ? "" : regionLabel(form.region)} onChange={(e) => field("region", e.target.value || null)} className="mt-1.5 w-full rounded-xl border border-border bg-white px-3 py-2.5 outline-none transition focus:border-accent focus:ring-2 focus:ring-accent/10">
+                  <option value="">Nicht festgelegt</option>
+                  {REGION_OPTIONS.map((region) => <option key={region} value={region}>{region}</option>)}
+                </select>
+              </label>
+
+              <label className="text-sm font-medium text-slate-700">
+                Schülerzahl
+                <input type="number" min="0" value={form.student_count ?? ""} onChange={(e) => field("student_count", e.target.value === "" ? null : Number(e.target.value))} className="mt-1.5 w-full rounded-xl border border-border bg-white px-3 py-2.5 outline-none transition focus:border-accent focus:ring-2 focus:ring-accent/10" />
+              </label>
+            </div>
+          </div>
+
+          <div className="rounded-[1.5rem] border border-border bg-panel p-6 shadow-sm">
+            <div>
+              <p className="text-xs font-semibold uppercase tracking-[0.14em] text-accent">Kontakt</p>
+              <h3 className="mt-2 text-lg font-semibold text-slate-950">Adresse & Erreichbarkeit</h3>
+            </div>
+
+            <div className="mt-6 grid gap-5 md:grid-cols-2">
+              <label className="text-sm font-medium text-slate-700">
+                Straße
+                <input value={form.street ?? ""} onChange={(e) => field("street", e.target.value)} className="mt-1.5 w-full rounded-xl border border-border bg-white px-3 py-2.5 outline-none transition focus:border-accent focus:ring-2 focus:ring-accent/10" />
+              </label>
+
+              <label className="text-sm font-medium text-slate-700">
+                Hausnummer
+                <input value={form.house_number ?? ""} onChange={(e) => field("house_number", e.target.value)} className="mt-1.5 w-full rounded-xl border border-border bg-white px-3 py-2.5 outline-none transition focus:border-accent focus:ring-2 focus:ring-accent/10" />
+              </label>
+
+              <label className="text-sm font-medium text-slate-700">
+                PLZ
+                <input value={form.postal_code ?? ""} onChange={(e) => field("postal_code", e.target.value)} className="mt-1.5 w-full rounded-xl border border-border bg-white px-3 py-2.5 outline-none transition focus:border-accent focus:ring-2 focus:ring-accent/10" />
+              </label>
+
+              <label className="text-sm font-medium text-slate-700">
+                Ort
+                <input value={form.city ?? ""} onChange={(e) => field("city", e.target.value)} className="mt-1.5 w-full rounded-xl border border-border bg-white px-3 py-2.5 outline-none transition focus:border-accent focus:ring-2 focus:ring-accent/10" />
+              </label>
+
+              <label className="text-sm font-medium text-slate-700">
+                Telefon
+                <input value={form.phone ?? ""} onChange={(e) => field("phone", e.target.value)} className="mt-1.5 w-full rounded-xl border border-border bg-white px-3 py-2.5 outline-none transition focus:border-accent focus:ring-2 focus:ring-accent/10" />
+              </label>
+
+              <label className="text-sm font-medium text-slate-700">
+                Website
+                <input value={form.website ?? ""} onChange={(e) => field("website", e.target.value)} className="mt-1.5 w-full rounded-xl border border-border bg-white px-3 py-2.5 outline-none transition focus:border-accent focus:ring-2 focus:ring-accent/10" />
+              </label>
+            </div>
+          </div>
+
+          <div className="rounded-[1.5rem] border border-border bg-panel p-6 shadow-sm">
+            <div>
+              <p className="text-xs font-semibold uppercase tracking-[0.14em] text-accent">DR1FT-Konfiguration</p>
+              <h3 className="mt-2 text-lg font-semibold text-slate-950">Zugang & Organisation</h3>
+            </div>
+
+            <div className="mt-6 grid gap-5 md:grid-cols-2">
+              <label className="text-sm font-medium text-slate-700">
+                Schul-Domain
+                <input value={form.email_domain ?? ""} onChange={(e) => field("email_domain", e.target.value)} className="mt-1.5 w-full rounded-xl border border-border bg-white px-3 py-2.5 outline-none transition focus:border-accent focus:ring-2 focus:ring-accent/10" placeholder="schule.de" />
+              </label>
+
+              <label className="text-sm font-medium text-slate-700">
+                Status
+                <select value={form.status} onChange={(e) => field("status", e.target.value)} className="mt-1.5 w-full rounded-xl border border-border bg-white px-3 py-2.5 outline-none transition focus:border-accent focus:ring-2 focus:ring-accent/10">
+                  <option value="active">Aktiv</option>
+                  <option value="inactive">Inaktiv</option>
+                  <option value="suspended">Gesperrt</option>
+                </select>
+              </label>
+
+              <label className="text-sm font-medium text-slate-700">
+                Plan
+                <select value={form.plan} onChange={(e) => field("plan", e.target.value)} className="mt-1.5 w-full rounded-xl border border-border bg-white px-3 py-2.5 outline-none transition focus:border-accent focus:ring-2 focus:ring-accent/10">
+                  {Object.entries(PLAN_LABELS).map(([k,v]) => <option key={k} value={k}>{v}</option>)}
+                </select>
+              </label>
+
+              <label className="text-sm font-medium text-slate-700">
+                Förderstatus
+                <select value={form.funding_type} onChange={(e) => field("funding_type", e.target.value)} className="mt-1.5 w-full rounded-xl border border-border bg-white px-3 py-2.5 outline-none transition focus:border-accent focus:ring-2 focus:ring-accent/10">
+                  <option value="none">Keine Förderung</option>
+                  <option value="sponsored">Sponsored</option>
+                  <option value="grant">Förderung</option>
+                </select>
+              </label>
+
+              <label className="text-sm font-medium md:col-span-2 text-slate-700">
+                Interne Notiz
+                <textarea value={form.internal_notes ?? ""} onChange={(e) => field("internal_notes", e.target.value)} className="mt-1.5 min-h-28 w-full rounded-xl border border-border bg-white px-3 py-2.5 outline-none transition focus:border-accent focus:ring-2 focus:ring-accent/10" placeholder="Nur für die Redaktion / Administration sichtbar …" />
+              </label>
+            </div>
+          </div>
+
+          <div className="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
+            <button
+              type="button"
+              onClick={() => { setForm(school); setEditing(false); }}
+              className="rounded-xl border border-border bg-panel px-4 py-2.5 text-sm font-medium text-slate-600 transition hover:bg-canvas"
+            >
+              Abbrechen
+            </button>
+            <button
+              disabled={pendingId === "school"}
+              className="inline-flex items-center justify-center gap-2 rounded-xl bg-slate-950 px-5 py-2.5 text-sm font-medium text-white shadow-sm transition hover:bg-slate-800 disabled:opacity-50"
+            >
+              <Save className="h-4 w-4" />
+              {pendingId === "school" ? "Speichert …" : "Änderungen speichern"}
+            </button>
+          </div>
+        </form>
+      ) : (
+        <div className="grid gap-5 lg:grid-cols-2">
+          <div className="rounded-[1.5rem] border border-border bg-panel p-6 shadow-sm">
+            <p className="text-xs font-semibold uppercase tracking-[0.14em] text-accent">Identität</p>
+            <h3 className="mt-2 text-lg font-semibold text-slate-950">Schule</h3>
+
+            <dl className="mt-6 space-y-4">
+              <div className="flex items-start justify-between gap-5 border-b border-border pb-4">
+                <dt className="text-sm text-slate-400">Schulname</dt>
+                <dd className="text-right text-sm font-semibold text-slate-900">{school.name}</dd>
+              </div>
+              <div className="flex items-start justify-between gap-5 border-b border-border pb-4">
+                <dt className="text-sm text-slate-400">Schulform</dt>
+                <dd className="text-right text-sm font-semibold text-slate-900">{TYPE_LABELS[school.school_type ?? ""] ?? school.school_type ?? "Nicht hinterlegt"}</dd>
+              </div>
+              <div className="flex items-start justify-between gap-5 border-b border-border pb-4">
+                <dt className="text-sm text-slate-400">Bundesland</dt>
+                <dd className="text-right text-sm font-semibold text-slate-900">{regionLabel(school.region)}</dd>
+              </div>
+              <div className="flex items-start justify-between gap-5">
+                <dt className="text-sm text-slate-400">Schülerzahl</dt>
+                <dd className="text-right text-sm font-semibold text-slate-900">{school.student_count?.toLocaleString("de-DE") ?? "Nicht hinterlegt"}</dd>
+              </div>
+            </dl>
+          </div>
+
+          <div className="rounded-[1.5rem] border border-border bg-panel p-6 shadow-sm">
+            <p className="text-xs font-semibold uppercase tracking-[0.14em] text-accent">Kontakt</p>
+            <h3 className="mt-2 text-lg font-semibold text-slate-950">Adresse & Erreichbarkeit</h3>
+
+            <div className="mt-6 space-y-4">
+              <div className="rounded-2xl bg-canvas p-4">
+                <p className="text-xs text-slate-400">Anschrift</p>
+                <p className="mt-1 text-sm font-semibold text-slate-900">
+                  {[school.street, school.house_number].filter(Boolean).join(" ") || "Nicht hinterlegt"}
+                </p>
+                {(school.postal_code || school.city) && (
+                  <p className="mt-0.5 text-sm text-slate-500">
+                    {[school.postal_code, school.city].filter(Boolean).join(" ")}
+                  </p>
+                )}
+              </div>
+
+              <div className="grid gap-3 sm:grid-cols-2">
+                <div className="rounded-2xl border border-border p-4">
+                  <p className="text-xs text-slate-400">Telefon</p>
+                  <p className="mt-1 truncate text-sm font-medium text-slate-900">{school.phone || "Nicht hinterlegt"}</p>
+                </div>
+                <div className="rounded-2xl border border-border p-4">
+                  <p className="text-xs text-slate-400">Website</p>
+                  <p className="mt-1 truncate text-sm font-medium text-slate-900">{school.website || "Nicht hinterlegt"}</p>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div className="rounded-[1.5rem] border border-border bg-panel p-6 shadow-sm">
+            <p className="text-xs font-semibold uppercase tracking-[0.14em] text-accent">DR1FT</p>
+            <h3 className="mt-2 text-lg font-semibold text-slate-950">Zugang & Organisation</h3>
+
+            <dl className="mt-6 space-y-4">
+              <div className="flex items-start justify-between gap-5 border-b border-border pb-4">
+                <dt className="text-sm text-slate-400">Schul-Domain</dt>
+                <dd className="text-right text-sm font-semibold text-slate-900">{school.email_domain ? `@${school.email_domain}` : "Nicht hinterlegt"}</dd>
+              </div>
+              <div className="flex items-start justify-between gap-5 border-b border-border pb-4">
+                <dt className="text-sm text-slate-400">Plan</dt>
+                <dd className="text-right text-sm font-semibold text-slate-900">{PLAN_LABELS[school.plan] ?? school.plan}</dd>
+              </div>
+              <div className="flex items-start justify-between gap-5">
+                <dt className="text-sm text-slate-400">Förderstatus</dt>
+                <dd className="text-right text-sm font-semibold text-slate-900">{FUNDING_LABELS[school.funding_type] ?? school.funding_type}</dd>
+              </div>
+            </dl>
+          </div>
+
+          <div className="rounded-[1.5rem] border border-border bg-panel p-6 shadow-sm">
+            <p className="text-xs font-semibold uppercase tracking-[0.14em] text-accent">Intern</p>
+            <h3 className="mt-2 text-lg font-semibold text-slate-950">Notizen</h3>
+            <div className="mt-6 rounded-2xl bg-canvas p-4">
+              <p className="whitespace-pre-wrap text-sm leading-6 text-slate-600">
+                {school.internal_notes || "Keine interne Notiz hinterlegt."}
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
+    </section>}
+
+    {tab === "people" && <section className="mt-6 space-y-5">
+      <div className="flex flex-col gap-5 rounded-[1.75rem] border border-border bg-panel p-6 shadow-sm sm:flex-row sm:items-end sm:justify-between">
+        <div>
+          <p className="text-xs font-semibold uppercase tracking-[0.16em] text-accent">Schulteam</p>
+          <h2 className="mt-2 text-2xl font-semibold tracking-tight text-slate-950">Menschen hinter der Schule</h2>
+          <p className="mt-2 max-w-2xl text-sm leading-6 text-slate-500">
+            Verwalte Zugänge, Rollen und Namen deines DR1FT-Schulteams an einem Ort.
+          </p>
+        </div>
+        <button
+          onClick={() => setShowInvite(true)}
+          className="inline-flex shrink-0 items-center justify-center gap-2 rounded-xl bg-slate-950 px-4 py-2.5 text-sm font-medium text-white shadow-sm transition hover:bg-slate-800"
+        >
+          <Plus className="h-4 w-4" />
+          Person einladen
+        </button>
+      </div>
+
+      <div className="grid gap-4 sm:grid-cols-3">
+        <div className="rounded-2xl border border-border bg-panel p-4">
+          <p className="text-xs font-medium text-slate-400">Aktive Personen</p>
+          <p className="mt-1 text-2xl font-semibold text-slate-950">{activeMembers.length}</p>
+        </div>
+        <div className="rounded-2xl border border-border bg-panel p-4">
+          <p className="text-xs font-medium text-slate-400">Lehrkräfte</p>
+          <p className="mt-1 text-2xl font-semibold text-slate-950">{stats.teachers}</p>
+        </div>
+        <div className="rounded-2xl border border-border bg-panel p-4">
+          <p className="text-xs font-medium text-slate-400">Schulleitung & Admin</p>
+          <p className="mt-1 text-2xl font-semibold text-slate-950">{stats.leads + stats.admins}</p>
+        </div>
+      </div>
+
+      <div className="grid gap-4 lg:grid-cols-2">
+        {members.map((member) => {
+          const isEditingName = editingMemberId === member.id;
+          const roleLabel = ROLE_LABELS[member.role] ?? member.role;
+          const initials = (member.display_name || member.email || "?")
+            .split(/\s+/)
+            .filter(Boolean)
+            .slice(0, 2)
+            .map((part) => part[0]?.toUpperCase())
+            .join("");
+
+          return (
+            <article
+              key={member.id}
+              className={`group relative overflow-hidden rounded-[1.5rem] border bg-panel p-5 shadow-sm transition hover:-translate-y-0.5 hover:shadow-md ${
+                member.active ? "border-border" : "border-slate-200 bg-slate-50/70"
+              }`}
+            >
+              <div className="flex items-start gap-4">
+                <div className={`flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl text-sm font-bold ${
+                  member.active
+                    ? "bg-gradient-to-br from-indigo-500 to-violet-600 text-white shadow-lg shadow-indigo-500/20"
+                    : "bg-slate-200 text-slate-500"
+                }`}>
+                  {initials || <UserRound className="h-5 w-5" />}
+                </div>
+
+                <div className="min-w-0 flex-1">
+                  <div className="flex flex-wrap items-center gap-2">
+                    {isEditingName ? (
+                      <input
+                        autoFocus
+                        value={editingMemberName}
+                        onChange={(e) => setEditingMemberName(e.target.value)}
+                        onKeyDown={(e) => {
+                          if (e.key === "Enter") {
+                            e.preventDefault();
+                            void saveMemberName(member);
+                          }
+                          if (e.key === "Escape") {
+                            setEditingMemberId(null);
+                            setEditingMemberName("");
+                          }
+                        }}
+                        className="min-w-0 flex-1 rounded-lg border border-accent bg-white px-2.5 py-1.5 text-sm font-semibold text-slate-900 outline-none ring-2 ring-accent/10"
+                      />
+                    ) : (
+                      <h3 className="truncate text-base font-semibold text-slate-950">
+                        {member.display_name || "Name nicht hinterlegt"}
+                      </h3>
+                    )}
+
+                    <span className={`rounded-full px-2.5 py-1 text-[11px] font-semibold ${
+                      member.role === "school_lead"
+                        ? "bg-violet-50 text-violet-700"
+                        : member.role === "school_admin"
+                          ? "bg-indigo-50 text-indigo-700"
+                          : "bg-slate-100 text-slate-600"
+                    }`}>
+                      {roleLabel}
+                    </span>
+                  </div>
+
+                  <p className="mt-1 truncate text-sm text-slate-500">{member.email || member.user_id}</p>
+
+                  <div className="mt-4 flex flex-wrap items-center gap-2">
+                    {member.active ? (
+                      <span className="inline-flex items-center gap-1.5 rounded-full bg-emerald-50 px-2.5 py-1 text-[11px] font-semibold text-emerald-700">
+                        <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" />
+                        Aktiv
+                      </span>
+                    ) : (
+                      <span className="rounded-full bg-slate-100 px-2.5 py-1 text-[11px] font-semibold text-slate-500">
+                        Deaktiviert
+                      </span>
+                    )}
+                  </div>
+                </div>
+              </div>
+
+              <div className="mt-5 flex flex-wrap items-center gap-2 border-t border-border pt-4">
+                {isEditingName ? (
+                  <>
+                    <button
+                      disabled={pendingId === member.id}
+                      onClick={() => void saveMemberName(member)}
+                      className="rounded-lg bg-slate-950 px-3 py-2 text-xs font-medium text-white disabled:opacity-50"
+                    >
+                      {pendingId === member.id ? "Speichert …" : "Namen speichern"}
+                    </button>
+                    <button
+                      disabled={pendingId === member.id}
+                      onClick={() => {
+                        setEditingMemberId(null);
+                        setEditingMemberName("");
+                      }}
+                      className="rounded-lg border border-border px-3 py-2 text-xs font-medium text-slate-600"
+                    >
+                      Abbrechen
+                    </button>
+                  </>
+                ) : (
+                  <button
+                    disabled={pendingId === member.id}
+                    onClick={() => {
+                      setEditingMemberId(member.id);
+                      setEditingMemberName(member.display_name ?? "");
+                    }}
+                    className="inline-flex items-center gap-1.5 rounded-lg border border-border px-3 py-2 text-xs font-medium text-slate-700 transition hover:bg-canvas"
+                  >
+                    <Pencil className="h-3.5 w-3.5" />
+                    Namen bearbeiten
+                  </button>
+                )}
+
+                <select
+                  disabled={pendingId === member.id}
+                  value={member.role}
+                  onChange={(e) => void changeRole(member, e.target.value)}
+                  className="rounded-lg border border-border bg-panel px-3 py-2 text-xs text-slate-700"
+                >
+                  <option value="teacher">Lehrkraft</option>
+                  <option value="school_lead">Schulleitung</option>
+                  <option value="school_admin">Schuladmin</option>
+                </select>
+
+                <button
+                  disabled={pendingId === member.id}
+                  onClick={() => void setActive(member, !member.active)}
+                  className="rounded-lg border border-border px-3 py-2 text-xs font-medium text-slate-600 transition hover:bg-canvas"
+                >
+                  {member.active ? "Deaktivieren" : "Aktivieren"}
+                </button>
+
+                <button
+                  disabled={pendingId === member.id}
+                  onClick={() => void remove(member)}
+                  className="ml-auto rounded-lg border border-red-200 px-3 py-2 text-xs font-medium text-red-600 transition hover:bg-red-50"
+                >
+                  Entfernen
+                </button>
+              </div>
+            </article>
+          );
+        })}
+      </div>
+
+      {members.length === 0 && (
+        <div className="rounded-[1.5rem] border border-dashed border-border bg-panel p-12 text-center">
+          <UserRound className="mx-auto h-8 w-8 text-slate-300" />
+          <p className="mt-3 text-sm font-medium text-slate-700">Noch keine Personen zugeordnet</p>
+          <p className="mt-1 text-sm text-slate-500">Lade die erste Lehrkraft oder Schulleitung ein.</p>
+        </div>
+      )}
+    </section>}
 
     {showInvite && <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/30 p-4 backdrop-blur-sm"><div className="w-full max-w-lg rounded-3xl border border-border bg-panel p-6 shadow-2xl"><div className="flex items-start justify-between"><div><p className="text-xs font-semibold uppercase tracking-[0.14em] text-accent">{school.name}</p><h2 className="mt-1 text-xl font-semibold">Person einladen</h2></div><button onClick={() => setShowInvite(false)} className="p-2 text-slate-400"><X className="h-4 w-4" /></button></div><p className="mt-3 text-sm text-slate-500">Die E-Mail-Adresse muss zur hinterlegten Schul-Domain passen.</p><form onSubmit={invite} className="mt-6 space-y-4"><label className="block text-sm font-medium">Name<input required value={displayName} onChange={(e) => setDisplayName(e.target.value)} className="mt-1.5 w-full rounded-xl border border-border px-3 py-2.5" /></label><label className="block text-sm font-medium">Schul-E-Mail<input required type="email" value={email} onChange={(e) => setEmail(e.target.value)} className="mt-1.5 w-full rounded-xl border border-border px-3 py-2.5" /></label><label className="block text-sm font-medium">Rolle<select value={role} onChange={(e) => setRole(e.target.value)} className="mt-1.5 w-full rounded-xl border border-border px-3 py-2.5"><option value="teacher">Lehrkraft</option><option value="school_lead">Schulleitung</option><option value="school_admin">Schuladmin</option></select></label><div className="flex justify-end gap-2"><button type="button" onClick={() => setShowInvite(false)} className="rounded-xl border border-border px-4 py-2.5">Abbrechen</button><button disabled={pendingId === "invite"} className="rounded-xl bg-slate-950 px-4 py-2.5 text-sm text-white">{pendingId === "invite" ? "Wird gesendet …" : "Einladung senden"}</button></div></form></div></div>}
   </>;
