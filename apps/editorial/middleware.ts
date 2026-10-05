@@ -2,7 +2,7 @@ import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
 
 const PUBLIC_AUTH_PATHS = ["/login", "/forgot-password", "/reset-password"];
-const SCHOOL_HOST = (process.env.SCHOOL_HOST ?? "school.dr1ft.de").toLowerCase();
+const SCHOOL_HOST = (process.env.SCHOOL_HOST ?? "schule.dr1ft.de").toLowerCase();
 
 function isPublicAuthPath(pathname: string) {
   return PUBLIC_AUTH_PATHS.some(

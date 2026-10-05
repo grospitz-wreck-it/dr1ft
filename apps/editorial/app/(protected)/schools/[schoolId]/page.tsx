@@ -44,7 +44,7 @@ const PLAN_LABELS: Record<string, string> = {
 export default async function SchoolDetailPage({ params }: { params: { schoolId: string } }) {
   const requestHeaders = headers();
   const host = (requestHeaders.get("x-dr1ft-host") ?? requestHeaders.get("host") ?? "").split(",")[0].trim().split(":")[0].toLowerCase();
-  const schoolHost = (process.env.SCHOOL_HOST ?? "school.dr1ft.de").toLowerCase();
+  const schoolHost = (process.env.SCHOOL_HOST ?? "schule.dr1ft.de").toLowerCase();
   const isSchoolHost = host === schoolHost;
 
   const supabase = supabaseServerClient();

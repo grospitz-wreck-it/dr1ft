@@ -25,7 +25,7 @@ export default function LoginPage() {
   const isSchoolHost =
     typeof window !== "undefined" &&
     window.location.hostname.toLowerCase() ===
-      (process.env.NEXT_PUBLIC_SCHOOL_HOST ?? "school.dr1ft.de").toLowerCase();
+      (process.env.NEXT_PUBLIC_SCHOOL_HOST ?? "schule.dr1ft.de").toLowerCase();
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");

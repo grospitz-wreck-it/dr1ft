@@ -41,7 +41,7 @@ export default async function RootLayout({
     requestHeaders.get("host") ??
     "";
   const hostname = host.split(",")[0].trim().split(":")[0].toLowerCase();
-  const schoolHost = (process.env.SCHOOL_HOST ?? "school.dr1ft.de").toLowerCase();
+  const schoolHost = (process.env.SCHOOL_HOST ?? "schule.dr1ft.de").toLowerCase();
 
   const isPublicAuthPage = PUBLIC_PATHS.some(
     (path) => pathname === path || pathname.startsWith(path + "/")
