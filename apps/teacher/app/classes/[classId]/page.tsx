@@ -12,7 +12,7 @@ export default async function ClassDetailPage({params}:{params:{classId:string}}
   supabase.from("class_instance_memberships").select("user_id,role,left_at,user_profiles(display_name,username,avatar_seed)").eq("class_instance_id",classId).is("left_at",null),
   supabase.from("scenarios").select("id,title,age_rating").order("title"),
   supabase.from("class_instance_scenario_assignments").select("scenario_id,pacing_mode,scenarios(title)").eq("class_instance_id",classId),
-  instance.school_id?supabase.from("schools").select("id,name,region").eq("id",instance.school_id).maybeSingle():Promise.resolve({data:null})
+  instance.school_id?supabase.from("schools").select("id,name,region,school_image_path,school_image_position_x,school_image_position_y,school_image_zoom").eq("id",instance.school_id).maybeSingle():Promise.resolve({data:null})
  ]);
  const students=(roster??[]).filter((r:any)=>r.role==="student").map((r:any)=>({user_id:r.user_id,display_name:r.user_profiles?.display_name??null,username:r.user_profiles?.username??null,avatar_seed:r.user_profiles?.avatar_seed??null}));
  const activeAssignment=(assignments??[])[0] as any;
@@ -31,9 +31,7 @@ export default async function ClassDetailPage({params}:{params:{classId:string}}
         ← Meine Klassen
       </a>
 
-      <section className="group relative mt-4 overflow-hidden rounded-[2rem] bg-slate-950 text-white shadow-xl">
-        <div className="absolute inset-0 bg-[radial-gradient(circle_at_85%_15%,rgba(99,102,241,.35),transparent_38%),radial-gradient(circle_at_15%_85%,rgba(168,85,247,.22),transparent_34%)]" />
-        <div className="absolute inset-0 bg-gradient-to-t from-slate-950/90 via-slate-950/20 to-slate-950/30" />
+      <section className="group relative mt-4 overflow-hidden rounded-[2rem] bg-slate-950 text-white shadow-xl">\n        {school?.school_image_path ? (\n          <img\n            src={`${process.env.NEXT_PUBLIC_SUPABASE_URL}/storage/v1/object/public/school-images/${school.school_image_path}`}\n            alt=""\n            className="absolute inset-0 h-full w-full object-cover"\n            style={{\n              objectPosition: `${school.school_image_position_x ?? 50}% ${school.school_image_position_y ?? 50}%`,\n              transform: `scale(${school.school_image_zoom ?? 1})`,\n            }}\n          />\n        ) : (\n          <div className="absolute inset-0 bg-[radial-gradient(circle_at_85%_15%,rgba(99,102,241,.35),transparent_38%),radial-gradient(circle_at_15%_85%,rgba(168,85,247,.22),transparent_34%)]" />\n        )}\n        <div className="absolute inset-0 bg-gradient-to-t from-slate-950/90 via-slate-950/25 to-slate-950/35" />
         <div className="relative min-h-[240px] p-6 sm:p-8">
           <div className="flex min-h-[200px] flex-col justify-between">
             <div className="flex items-center justify-between gap-4">
