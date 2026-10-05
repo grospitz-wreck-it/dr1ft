@@ -121,7 +121,7 @@ export function SchoolDetailWorkspace({ school: initialSchool, initialMembers, i
 
       if (uploadError) throw uploadError;
 
-      const { error: updateError } = await supabase
+      const { data: updatedSchool, error: updateError } = await supabase
         .from("schools")
         .update({
           school_image_path: path,
@@ -130,9 +130,14 @@ export function SchoolDetailWorkspace({ school: initialSchool, initialMembers, i
           school_image_zoom: imageZoom,
           updated_at: new Date().toISOString(),
         })
-        .eq("id", school.id);
+        .eq("id", school.id)
+        .select("school_image_path, school_image_position_x, school_image_position_y, school_image_zoom")
+        .single();
 
       if (updateError) throw updateError;
+      if (!updatedSchool?.school_image_path) {
+        throw new Error("Das Schulbild konnte in der Schule nicht gespeichert werden.");
+      }
 
       const nextSchool = {
         ...school,
@@ -226,7 +231,7 @@ export function SchoolDetailWorkspace({ school: initialSchool, initialMembers, i
     try {
       const supabase = client();
 
-      const { error } = await supabase
+      const { data: updatedSchool, error } = await supabase
         .from("schools")
         .update({
           school_image_position_x: imagePositionX,
@@ -234,9 +239,14 @@ export function SchoolDetailWorkspace({ school: initialSchool, initialMembers, i
           school_image_zoom: imageZoom,
           updated_at: new Date().toISOString(),
         })
-        .eq("id", school.id);
+        .eq("id", school.id)
+        .select("school_image_path, school_image_position_x, school_image_position_y, school_image_zoom")
+        .single();
 
       if (error) throw error;
+      if (!updatedSchool?.school_image_path) {
+        throw new Error("Der Bildausschnitt konnte nicht gespeichert werden.");
+      }
 
       setSchool((current) => ({
         ...current,
