@@ -162,6 +162,7 @@ export default async function ClassDetailPage({params}:{params:{classId:string}}
     </div>
   </main>
  );
+}
 
 function Metric({label,value}:{label:string;value:string|number}){return <div className="rounded-2xl bg-slate-50 p-4"><p className="text-xs text-slate-400">{label}</p><p className="text-xl font-semibold mt-2 truncate">{value}</p></div>}
 function Panel({title,children}:{title:string;children:React.ReactNode}){return <div><div className="bg-white px-5 py-4 border-b border-border"><h3 className="text-sm font-semibold">{title}</h3></div>{children}</div>}
