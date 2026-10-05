@@ -231,7 +231,7 @@ export function TeacherNav() {
         </div>
       </header>
 
-      <div className="fixed left-0 top-16 z-20 hidden h-[calc(100vh-4rem)] w-64 overflow-y-auto bg-canvas px-4 py-6 lg:block">
+      <div className="fixed left-[max(1.5rem,calc((100vw-80rem)/2))] top-16 z-20 hidden h-[calc(100vh-4rem)] w-52 overflow-y-auto bg-canvas py-6 lg:block">
         <aside className="w-full">
           <nav className="sticky top-5 rounded-2xl border border-border bg-white p-2 shadow-sm">
             <p className="px-3 pb-2 pt-2 text-[10px] font-semibold uppercase tracking-[0.14em] text-slate-400">
