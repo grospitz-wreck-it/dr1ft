@@ -67,6 +67,7 @@ export function SchoolDetailWorkspace({ school: initialSchool, initialMembers, i
   const [editing, setEditing] = useState(false);
   const [form, setForm] = useState(initialSchool);
   const [imageUploading, setImageUploading] = useState(false);
+  const [imageEditorOpen, setImageEditorOpen] = useState(false);
   const [imageMessage, setImageMessage] = useState<string | null>(null);
   const [imagePositionX, setImagePositionX] = useState(initialSchool.school_image_position_x ?? 50);
   const [imagePositionY, setImagePositionY] = useState(initialSchool.school_image_position_y ?? 50);
@@ -252,6 +253,7 @@ export function SchoolDetailWorkspace({ school: initialSchool, initialMembers, i
       }));
 
       setImageMessage("Bildposition gespeichert.");
+      setImageEditorOpen(false);
     } catch (error) {
       setImageMessage(
         error instanceof Error ? error.message : "Bildposition konnte nicht gespeichert werden."
@@ -512,7 +514,18 @@ export function SchoolDetailWorkspace({ school: initialSchool, initialMembers, i
               </span>
             </div>
 
-            <div className="flex gap-2">
+            <div className="flex flex-wrap justify-end gap-2">
+              {school.school_image_path && (
+                <button
+                  type="button"
+                  onClick={() => setImageEditorOpen((open) => !open)}
+                  className="inline-flex items-center gap-2 rounded-lg border border-white/15 bg-black/25 px-3 py-2 text-sm font-medium text-white backdrop-blur transition hover:bg-black/35"
+                >
+                  <Pencil className="h-4 w-4" />
+                  {imageEditorOpen ? "Bildausschnitt schließen" : "Bildausschnitt bearbeiten"}
+                </button>
+              )}
+
               <label className="inline-flex cursor-pointer items-center gap-2 rounded-lg border border-white/15 bg-black/25 px-3 py-2 text-sm font-medium text-white backdrop-blur transition hover:bg-black/35">
                 <Plus className="h-4 w-4" />
                 {imageUploading ? "Wird gespeichert…" : "Schulbild ändern"}
@@ -688,7 +701,7 @@ export function SchoolDetailWorkspace({ school: initialSchool, initialMembers, i
               </div>
             </div>
 
-            <div className="flex flex-wrap gap-2 pt-1">
+            <div className="flex flex-wrap items-center justify-between gap-2 border-t border-border pt-4">
               <button
                 type="button"
                 onClick={() => {
@@ -699,6 +712,15 @@ export function SchoolDetailWorkspace({ school: initialSchool, initialMembers, i
                 className="rounded-xl border border-border px-3.5 py-2.5 text-sm font-medium text-slate-700 transition hover:bg-canvas"
               >
                 Zurücksetzen
+              </button>
+
+              <button
+                type="button"
+                onClick={() => setImageEditorOpen(false)}
+                disabled={imageUploading}
+                className="rounded-xl border border-border px-3.5 py-2.5 text-sm font-medium text-slate-700 transition hover:bg-canvas disabled:opacity-50"
+              >
+                Schließen
               </button>
 
               <button
