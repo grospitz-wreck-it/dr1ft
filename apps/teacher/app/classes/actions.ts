@@ -129,7 +129,7 @@ export async function setClassActive(classId: string, isActive: boolean) {
 
   const { error } = await supabase
     .from("class_instances")
-    .update({ is_active: isActive })
+    .update({ is_active: isActive, status: isActive ? "active" : "paused" })
     .eq("id", classId);
 
   if (error) throw new Error(error.message);
@@ -142,7 +142,7 @@ export async function changeClassState(classId: string, active: boolean) {
   const supabase = supabaseServerClient();
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) throw new Error("Nicht authentifiziert");
-  const { error } = await supabase.from("class_instances").update({ is_active: active }).eq("id", classId);
+  const { error } = await supabase.from("class_instances").update({ is_active: active, status: active ? "active" : "ended" }).eq("id", classId);
   if (error) throw new Error(error.message);
   revalidatePath("/classes");
   revalidatePath("/classes/" + classId);
@@ -211,7 +211,7 @@ export async function archiveClass(classId: string) {
   const supabase = supabaseServerClient();
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) throw new Error("Nicht authentifiziert");
-  const { error } = await supabase.from("class_instances").update({ is_active: false }).eq("id", classId);
+  const { error } = await supabase.from("class_instances").update({ is_active: false, status: "ended" }).eq("id", classId);
   if (error) throw new Error(error.message);
   revalidatePath("/classes");
   revalidatePath("/classes/" + classId);
