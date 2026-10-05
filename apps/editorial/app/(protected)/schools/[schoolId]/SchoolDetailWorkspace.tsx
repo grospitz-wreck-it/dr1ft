@@ -300,8 +300,8 @@ export function SchoolDetailWorkspace({ school: initialSchool, initialMembers, i
   }
 
   return <>
-    <header className="relative z-30 -mx-6 border-b border-border bg-white px-6 lg:-mx-8 lg:px-8">
-      <div className="mx-auto flex h-16 max-w-7xl items-center justify-between gap-4">
+    <header className="relative z-30 border-b border-border bg-white">
+      <div className="mx-auto flex h-16 w-full max-w-7xl items-center justify-between gap-4 px-6 lg:px-8">
 
         <div className="flex min-w-0 items-center gap-4">
           <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-slate-950 text-white">
@@ -390,7 +390,7 @@ export function SchoolDetailWorkspace({ school: initialSchool, initialMembers, i
       </div>
     </header>
 
-    <div className="relative z-20 mt-5 flex flex-col gap-5 lg:flex-row">
+    <div className="relative z-20 mx-auto flex w-full max-w-7xl flex-col gap-6 px-6 pb-12 pt-6 lg:flex-row lg:px-8">
 
       <aside className="shrink-0 lg:w-52">
         <nav className="sticky top-5 rounded-2xl border border-border bg-white p-2 shadow-sm">
@@ -475,7 +475,7 @@ export function SchoolDetailWorkspace({ school: initialSchool, initialMembers, i
       </aside>
 
       <main className="min-w-0 flex-1">
-    <section className="relative mt-6 overflow-hidden rounded-[2rem] bg-slate-950 text-white shadow-xl">
+    <section className="relative overflow-hidden rounded-[2rem] bg-slate-950 text-white shadow-xl">
       {school.school_image_path ? (
         <img
           src={`${process.env.NEXT_PUBLIC_SUPABASE_URL}/storage/v1/object/public/school-images/${school.school_image_path}`}
@@ -719,7 +719,7 @@ export function SchoolDetailWorkspace({ school: initialSchool, initialMembers, i
 
 
     {tab === "settings" && editing && (
-      <section className="mt-6 space-y-6">
+      <section className="mt-6 max-w-4xl space-y-6">
         <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
           <div>
             <p className="text-xs font-semibold uppercase tracking-[0.14em] text-accent">
@@ -1127,7 +1127,7 @@ export function SchoolDetailWorkspace({ school: initialSchool, initialMembers, i
     )}
 
     {tab === "classes" && (
-      <section className="mt-6 space-y-6">
+      <section className="mt-6 max-w-4xl space-y-6">
         <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
           <div>
             <p className="text-xs font-semibold uppercase tracking-[0.14em] text-accent">
@@ -1493,7 +1493,7 @@ export function SchoolDetailWorkspace({ school: initialSchool, initialMembers, i
     )}
 
     {tab === "people" && (
-      <section className="mt-6 space-y-6">
+      <section className="mt-6 max-w-4xl space-y-6">
         <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
           <div>
             <p className="text-xs font-semibold uppercase tracking-[0.14em] text-accent">
