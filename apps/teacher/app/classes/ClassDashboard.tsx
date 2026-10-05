@@ -9,6 +9,7 @@ type ClassItem = {
   name: string;
   access_code: string;
   is_active: boolean;
+  status: "active" | "paused" | "ended";
   grade_level: number | null;
   school_year: string;
   school_id: string | null;
@@ -21,8 +22,8 @@ export function ClassDashboard({ classes }: { classes: ClassItem[] }) {
   const [showArchived, setShowArchived] = useState(false);
   const [showCreate, setShowCreate] = useState(false);
 
-  const active = classes.filter((c) => c.is_active);
-  const archived = classes.filter((c) => !c.is_active);
+  const active = classes.filter((c) => c.status === "active");
+  const archived = classes.filter((c) => c.status !== "active");
   const visible = showArchived ? classes : active;
   const studentCount = active.reduce((sum, c) => sum + c.student_count, 0);
 
@@ -108,8 +109,18 @@ export function ClassDashboard({ classes }: { classes: ClassItem[] }) {
                     <div className="min-w-0">
                       <div className="flex flex-wrap items-center gap-2">
                         <h2 className="truncate text-base font-semibold text-slate-950">{c.name}</h2>
-                        <span className={`rounded-full px-2 py-0.5 text-[10px] font-semibold ${c.is_active ? "bg-emerald-50 text-emerald-700" : "bg-slate-100 text-slate-500"}`}>
-                          {c.is_active ? "Aktiv" : "Archiviert"}
+                        <span className={`rounded-full px-2 py-0.5 text-[10px] font-semibold ${
+                          c.status === "active"
+                            ? "bg-emerald-50 text-emerald-700"
+                            : c.status === "paused"
+                              ? "bg-amber-50 text-amber-700"
+                              : "bg-slate-100 text-slate-500"
+                        }`}>
+                          {c.status === "active"
+                            ? "Aktiv"
+                            : c.status === "paused"
+                              ? "Pausiert"
+                              : "Beendet"}
                         </span>
                       </div>
                       <p className="mt-1 text-sm text-slate-500">
@@ -130,7 +141,7 @@ export function ClassDashboard({ classes }: { classes: ClassItem[] }) {
                       Klasse öffnen
                       <ArrowRight className="h-4 w-4" />
                     </a>
-                    {showArchived && !c.is_active && (
+                    {showArchived && c.status !== "active" && (
                       <button
                         type="button"
                         onClick={() => changeClassState(c.id, true)}
