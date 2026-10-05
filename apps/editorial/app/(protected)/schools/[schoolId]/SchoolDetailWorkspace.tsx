@@ -526,7 +526,6 @@ export function SchoolDetailWorkspace({ school: initialSchool, initialMembers, i
               </button>
             )}
           </div>
-          </div>
 
           <div className="max-w-3xl">
             <p className="text-sm font-medium text-white/55">
