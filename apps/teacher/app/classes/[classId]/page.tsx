@@ -217,32 +217,6 @@ export default async function ClassDetailPage({
         />
 
         <section className="mt-6 overflow-hidden rounded-2xl border border-border bg-white">
-            <div className="border-b border-border px-6 py-4">
-              <p className="text-xs font-semibold uppercase tracking-[0.14em] text-accent">
-                Klassenbild
-              </p>
-              <h2 className="mt-1 text-lg font-semibold text-slate-950">
-                Klassenbild bearbeiten
-              </h2>
-              <p className="mt-1 text-sm text-slate-500">
-                Bild, Ausschnitt und Zoom für den Klassen-Header festlegen.
-              </p>
-            </div>
-
-            <div className="p-6">
-              <ClassImageEditor
-                classId={classId}
-                imagePath={instance.class_image_path}
-                imageUrl={classImageUrl}
-                positionX={instance.class_image_position_x ?? 50}
-                positionY={instance.class_image_position_y ?? 50}
-                zoom={instance.class_image_zoom ?? 1}
-              />
-            </div>
-          </section>
-        )}
-
-        <section className="mt-6 overflow-hidden rounded-2xl border border-border bg-white">
           <div className="grid divide-y divide-border sm:grid-cols-2 sm:divide-x sm:divide-y-0 lg:grid-cols-4">
             <Metric label="Schüler:innen" value={students.length} />
             <Metric
