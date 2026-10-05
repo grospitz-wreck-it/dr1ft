@@ -112,9 +112,9 @@ export default async function ClassDetailPage({params}:{params:{classId:string}}
         </ul>
       </section>
 
-      <section className="mt-6 overflow-hidden rounded-2xl border border-border bg-white">
+      <div className="mt-6">
         <StudentRoster classId={classId} initialStudents={students} />
-      </section>
+      </div>
 
       <section className="mt-6 overflow-hidden rounded-2xl border border-border bg-white">
         <div className="border-b border-border px-6 py-5">
