@@ -252,7 +252,7 @@ export function SchoolDetailWorkspace({ school: initialSchool, initialMembers, i
         school_image_zoom: imageZoom,
       }));
 
-      setImageMessage("Bildposition gespeichert.");
+      setImageMessage(null);
       setImageEditorOpen(false);
     } catch (error) {
       setImageMessage(
@@ -477,7 +477,7 @@ export function SchoolDetailWorkspace({ school: initialSchool, initialMembers, i
       </aside>
 
       <main className="min-w-0 flex-1">
-    <section className="relative overflow-hidden rounded-[2rem] bg-slate-950 text-white shadow-xl">
+    <section className="group relative overflow-hidden rounded-[2rem] bg-slate-950 text-white shadow-xl">
       {school.school_image_path ? (
         <img
           src={`${process.env.NEXT_PUBLIC_SUPABASE_URL}/storage/v1/object/public/school-images/${school.school_image_path}`}
@@ -514,46 +514,18 @@ export function SchoolDetailWorkspace({ school: initialSchool, initialMembers, i
               </span>
             </div>
 
-            <div className="flex flex-wrap justify-end gap-2">
-              {school.school_image_path && (
-                <button
-                  type="button"
-                  onClick={() => setImageEditorOpen((open) => !open)}
-                  className="inline-flex items-center gap-2 rounded-lg border border-white/15 bg-black/25 px-3 py-2 text-sm font-medium text-white backdrop-blur transition hover:bg-black/35"
-                >
-                  <Pencil className="h-4 w-4" />
-                  {imageEditorOpen ? "Bildausschnitt schließen" : "Bildausschnitt bearbeiten"}
-                </button>
-              )}
-
-              <label className="inline-flex cursor-pointer items-center gap-2 rounded-lg border border-white/15 bg-black/25 px-3 py-2 text-sm font-medium text-white backdrop-blur transition hover:bg-black/35">
-                <Plus className="h-4 w-4" />
-                {imageUploading ? "Wird gespeichert…" : "Schulbild ändern"}
-                <input
-                  type="file"
-                  accept="image/jpeg,image/png,image/webp"
-                  className="hidden"
-                  disabled={imageUploading}
-                  onChange={(event) => {
-                    const file = event.target.files?.[0];
-                    if (file) void uploadSchoolImage(file);
-                    event.currentTarget.value = "";
-                  }}
-                />
-              </label>
-
-              {school.school_image_path && (
-                <button
-                  type="button"
-                  onClick={() => void deleteSchoolImage()}
-                  disabled={imageUploading}
-                  className="inline-flex items-center gap-2 rounded-lg border border-white/15 bg-black/25 px-3 py-2 text-sm font-medium text-white backdrop-blur transition hover:bg-red-500/20 disabled:opacity-50"
-                >
-                  <X className="h-4 w-4" />
-                  Entfernen
-                </button>
-              )}
-            </div>
+            {school.school_image_path && (
+              <button
+                type="button"
+                aria-label="Schulbild bearbeiten"
+                title="Schulbild bearbeiten"
+                onClick={() => setImageEditorOpen(true)}
+                className="absolute right-6 top-6 z-10 inline-flex h-9 w-9 items-center justify-center rounded-lg border border-white/15 bg-black/30 text-white/0 opacity-0 shadow-lg backdrop-blur transition-all duration-200 group-hover:text-white group-hover:opacity-100 focus-visible:text-white focus-visible:opacity-100 hover:bg-black/45"
+              >
+                <Pencil className="h-4 w-4" />
+              </button>
+            )}
+          </div>
           </div>
 
           <div className="max-w-3xl">
@@ -589,16 +561,46 @@ export function SchoolDetailWorkspace({ school: initialSchool, initialMembers, i
     {message && <div className="mt-5 rounded-xl border border-border bg-panel px-4 py-3 text-sm text-slate-700">{message}</div>}
     {school.school_image_path && imageEditorOpen && (
       <section className="mt-6 overflow-hidden rounded-2xl border border-border bg-panel">
-        <div className="border-b border-border px-6 py-4">
-          <p className="text-xs font-semibold uppercase tracking-[0.14em] text-accent">
-            Schulbild
-          </p>
-          <h2 className="mt-2 text-lg font-semibold text-slate-950">
-            Bildausschnitt anpassen
-          </h2>
-          <p className="mt-1 text-sm leading-6 text-slate-500">
-            Position und Zoom bestimmen, welcher Ausschnitt im Schul-Header angezeigt wird.
-          </p>
+        <div className="flex flex-col gap-4 border-b border-border px-6 py-4 sm:flex-row sm:items-center sm:justify-between">
+          <div>
+            <p className="text-xs font-semibold uppercase tracking-[0.14em] text-accent">
+              Schulbild
+            </p>
+            <h2 className="mt-2 text-lg font-semibold text-slate-950">
+              Bildausschnitt anpassen
+            </h2>
+            <p className="mt-1 text-sm leading-6 text-slate-500">
+              Position und Zoom bestimmen, welcher Ausschnitt im Schul-Header angezeigt wird.
+            </p>
+          </div>
+
+          <div className="flex flex-wrap gap-2">
+            <label className="inline-flex cursor-pointer items-center gap-2 rounded-lg border border-border px-3 py-2 text-sm font-medium text-slate-700 transition hover:bg-canvas">
+              <Plus className="h-4 w-4" />
+              Bild ändern
+              <input
+                type="file"
+                accept="image/jpeg,image/png,image/webp"
+                className="hidden"
+                disabled={imageUploading}
+                onChange={(event) => {
+                  const file = event.target.files?.[0];
+                  if (file) void uploadSchoolImage(file);
+                  event.currentTarget.value = "";
+                }}
+              />
+            </label>
+
+            <button
+              type="button"
+              onClick={() => void deleteSchoolImage()}
+              disabled={imageUploading}
+              className="inline-flex items-center gap-2 rounded-lg border border-border px-3 py-2 text-sm font-medium text-slate-700 transition hover:border-red-200 hover:bg-red-50 hover:text-red-700 disabled:opacity-50"
+            >
+              <X className="h-4 w-4" />
+              Bild entfernen
+            </button>
+          </div>
         </div>
 
         <div className="grid gap-6 p-5 lg:grid-cols-[1.5fr_.75fr]">
