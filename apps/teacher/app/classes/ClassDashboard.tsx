@@ -37,7 +37,7 @@ export function ClassDashboard({ classes }: { classes: ClassItem[] }) {
   }, [visible, query]);
 
   return (
-    <main className="min-h-screen bg-canvas">
+    <main className="min-h-screen bg-canvas lg:pl-64">
       <div className="mx-auto w-full max-w-7xl px-6 pb-12 pt-8 lg:px-8">
         <section className="rounded-[2rem] bg-slate-950 px-6 py-7 text-white shadow-xl sm:px-8">
           <div className="flex flex-col gap-6 sm:flex-row sm:items-end sm:justify-between">
