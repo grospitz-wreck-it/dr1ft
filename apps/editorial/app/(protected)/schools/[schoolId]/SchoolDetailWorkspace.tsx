@@ -495,8 +495,8 @@ export function SchoolDetailWorkspace({ school: initialSchool, initialMembers, i
       <div className="absolute inset-0 bg-gradient-to-r from-slate-950/95 via-slate-950/70 to-slate-950/35" />
       <div className="absolute inset-0 bg-gradient-to-t from-slate-950/90 via-transparent to-slate-950/20" />
 
-      <div className="relative min-h-[300px] p-6 sm:p-8">
-        <div className="flex min-h-[250px] flex-col justify-between">
+      <div className="relative min-h-[240px] p-6 sm:p-8">
+        <div className="flex min-h-[200px] flex-col justify-between">
 
           <div className="flex flex-wrap items-center justify-between gap-3">
             <div className="flex flex-wrap items-center gap-2">
@@ -514,43 +514,21 @@ export function SchoolDetailWorkspace({ school: initialSchool, initialMembers, i
               </span>
             </div>
 
-            {school.school_image_path && (
-              <button
-                type="button"
-                aria-label="Schulbild bearbeiten"
-                title="Schulbild bearbeiten"
-                onClick={() => setImageEditorOpen(true)}
-                className="absolute right-6 top-6 z-10 inline-flex h-9 w-9 items-center justify-center rounded-lg border border-white/15 bg-black/30 text-white/0 opacity-0 shadow-lg backdrop-blur transition-all duration-200 group-hover:text-white group-hover:opacity-100 focus-visible:text-white focus-visible:opacity-100 hover:bg-black/45"
-              >
-                <Pencil className="h-4 w-4" />
-              </button>
-            )}
+            <button
+              type="button"
+              aria-label={school.school_image_path ? "Schulbild bearbeiten" : "Schulbild hinzufügen"}
+              title={school.school_image_path ? "Schulbild bearbeiten" : "Schulbild hinzufügen"}
+              onClick={() => setImageEditorOpen(true)}
+              className="absolute right-6 top-6 z-10 inline-flex h-9 w-9 items-center justify-center rounded-lg border border-white/15 bg-black/30 text-white opacity-0 shadow-lg backdrop-blur transition-all duration-200 group-hover:opacity-100 focus-visible:opacity-100 hover:bg-black/45"
+            >
+              <Pencil className="h-4 w-4" />
+            </button>
           </div>
 
-          <div className="max-w-3xl">
-            <p className="text-sm font-medium text-white/55">
-              {regionLabel(school.region)}
-              {school.school_type && (
-                <>
-                  <span className="mx-2 text-white/25">•</span>
-                  {TYPE_LABELS[school.school_type] ?? school.school_type}
-                </>
-              )}
-            </p>
-
-            <h1 className="mt-2 text-4xl font-semibold tracking-tight sm:text-5xl">
+          <div className="max-w-4xl">
+            <h1 className="text-4xl font-semibold tracking-tight sm:text-5xl">
               {school.name}
             </h1>
-
-            <p className="mt-3 max-w-2xl text-sm leading-6 text-white/60">
-              Schulprofil, Klassen, Lehrkräfte und DR1FT-Zugänge zentral verwalten.
-            </p>
-
-            {imageMessage && (
-              <p className="mt-3 text-xs font-medium text-white/70">
-                {imageMessage}
-              </p>
-            )}
           </div>
 
         </div>
@@ -558,7 +536,7 @@ export function SchoolDetailWorkspace({ school: initialSchool, initialMembers, i
     </section>
 
     {message && <div className="mt-5 rounded-xl border border-border bg-panel px-4 py-3 text-sm text-slate-700">{message}</div>}
-    {school.school_image_path && imageEditorOpen && (
+    {imageEditorOpen && (
       <section className="mt-6 overflow-hidden rounded-2xl border border-border bg-panel">
         <div className="flex flex-col gap-4 border-b border-border px-6 py-4 sm:flex-row sm:items-center sm:justify-between">
           <div>
@@ -604,24 +582,32 @@ export function SchoolDetailWorkspace({ school: initialSchool, initialMembers, i
 
         <div className="grid gap-6 p-5 lg:grid-cols-[1.5fr_.75fr]">
 
-          <div className="overflow-hidden rounded-2xl bg-slate-950">
-            <div className="relative aspect-[16/6] min-h-[220px] overflow-hidden">
-              <img
-                src={`${process.env.NEXT_PUBLIC_SUPABASE_URL}/storage/v1/object/public/school-images/${school.school_image_path}`}
-                alt=""
-                className="absolute inset-0 h-full w-full object-cover"
-                style={{
-                  objectPosition: `${imagePositionX}% ${imagePositionY}%`,
-                  transform: `scale(${imageZoom})`,
-                }}
-              />
-
-              <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-black/45 via-transparent to-black/10" />
-
-              <div className="absolute bottom-4 left-4 rounded-xl border border-white/10 bg-black/35 px-3 py-2 text-xs font-medium text-white backdrop-blur">
-                Vorschau des Schul-Headers
+          {school.school_image_path ? (
+            <div className="overflow-hidden rounded-2xl bg-slate-950">
+              <div className="relative aspect-[16/6] min-h-[220px] overflow-hidden">
+                <img
+                  src={`${process.env.NEXT_PUBLIC_SUPABASE_URL}/storage/v1/object/public/school-images/${school.school_image_path}`}
+                  alt=""
+                  className="absolute inset-0 h-full w-full object-cover"
+                  style={{
+                    objectPosition: `${imagePositionX}% ${imagePositionY}%`,
+                    transform: `scale(${imageZoom})`,
+                  }}
+                />
+                <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-black/45 via-transparent to-black/10" />
+                <div className="absolute bottom-4 left-4 rounded-xl border border-white/10 bg-black/35 px-3 py-2 text-xs font-medium text-white backdrop-blur">
+                  Vorschau des Schul-Headers
+                </div>
               </div>
             </div>
+          ) : (
+            <div className="flex min-h-[220px] items-center justify-center rounded-2xl border border-dashed border-border bg-canvas p-8 text-center">
+              <div>
+                <p className="text-sm font-semibold text-slate-900">Noch kein Schulbild</p>
+                <p className="mt-1 text-sm text-slate-500">Wähle rechts ein Bild aus, um den Header zu gestalten.</p>
+              </div>
+            </div>
+          )}
           </div>
 
           <div className="space-y-5">
