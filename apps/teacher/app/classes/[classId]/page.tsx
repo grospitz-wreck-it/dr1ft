@@ -3,7 +3,7 @@ import { ScenarioToggle } from "./ScenarioToggle";
 import { CopyAccessCodeButton } from "./CopyAccessCodeButton";
 import { StudentRoster } from "./StudentRoster";
 import { updateClassDetails } from "../actions";
-import ClassImageEditor from "./ClassImageEditor";
+import ClassImageWorkspace from "./ClassImageWorkspace";
 import { ClassStatusSelect } from "./ClassStatusSelect";
 
 export default async function ClassDetailPage({
@@ -199,73 +199,24 @@ export default async function ClassDetailPage({
           ← Meine Klassen
         </a>
 
-        <section className="group relative mt-4 overflow-hidden rounded-[2rem] bg-slate-950 text-white shadow-xl">
-          {heroImageUrl ? (
-            <img
-              src={heroImageUrl}
-              alt=""
-              className="absolute inset-0 h-full w-full object-cover"
-              style={{
-                objectPosition: `${heroPositionX}% ${heroPositionY}%`,
-                transform: `scale(${heroZoom})`,
-              }}
-            />
-          ) : (
-            <div className="absolute inset-0 bg-[radial-gradient(circle_at_85%_15%,rgba(99,102,241,.35),transparent_38%),radial-gradient(circle_at_15%_85%,rgba(168,85,247,.22),transparent_34%)]" />
-          )}
+        <ClassImageWorkspace
+          classId={classId}
+          className={instance.name}
+          gradeLevel={instance.grade_level}
+          schoolYear={instance.school_year}
+          heroImageUrl={heroImageUrl}
+          heroPositionX={heroPositionX}
+          heroPositionY={heroPositionY}
+          heroZoom={heroZoom}
+          classImagePath={instance.class_image_path}
+          classImageUrl={classImageUrl}
+          classImagePositionX={instance.class_image_position_x ?? 50}
+          classImagePositionY={instance.class_image_position_y ?? 50}
+          classImageZoom={instance.class_image_zoom ?? 1}
+          canEditClassImage={canEditClassImage}
+        />
 
-          <div className="absolute inset-0 bg-gradient-to-r from-slate-950/90 via-slate-950/55 to-slate-950/20" />
-          <div className="absolute inset-0 bg-gradient-to-t from-slate-950/90 via-transparent to-slate-950/20" />
-
-          <div className="relative min-h-[300px] p-6 sm:p-8">
-            <div className="flex min-h-[250px] flex-col justify-between">
-              <div className="flex items-start justify-between gap-4">
-                <div>
-                  <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-white/45">
-                    DR1FT Teacher
-                  </p>
-
-                  {classImageUrl && (
-                    <p className="mt-2 text-xs text-white/55">
-                      Klassenbild
-                    </p>
-                  )}
-
-                  {!classImageUrl && schoolImageUrl && (
-                    <p className="mt-2 text-xs text-white/55">
-                      Schulbild
-                    </p>
-                  )}
-                </div>
-
-                <ClassStatusSelect
-                  classId={classId}
-                  status={
-                    status === "paused" || status === "ended"
-                      ? status
-                      : "active"
-                  }
-                />
-              </div>
-
-              <div>
-                <h1 className="text-4xl font-semibold tracking-tight sm:text-5xl">
-                  {instance.name}
-                </h1>
-
-                <p className="mt-2 text-sm text-white/55">
-                  {instance.grade_level
-                    ? `Jahrgang ${instance.grade_level}`
-                    : "Jahrgang —"}{" "}
-                  · Schuljahr {instance.school_year}
-                </p>
-              </div>
-            </div>
-          </div>
-        </section>
-
-        {canEditClassImage && (
-          <section className="mt-6 overflow-hidden rounded-2xl border border-border bg-white">
+        <section className="mt-6 overflow-hidden rounded-2xl border border-border bg-white">
             <div className="border-b border-border px-6 py-4">
               <p className="text-xs font-semibold uppercase tracking-[0.14em] text-accent">
                 Klassenbild
@@ -311,17 +262,35 @@ export default async function ClassDetailPage({
 
         <section className="mt-6 rounded-2xl border border-border bg-white">
           <div className="border-b border-border px-6 py-5">
-            <p className="text-xs font-semibold uppercase tracking-[0.14em] text-accent">
-              Klassenprofil
-            </p>
+            <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+              <div>
+                <p className="text-xs font-semibold uppercase tracking-[0.14em] text-accent">
+                  Klassenprofil
+                </p>
 
-            <h2 className="mt-1.5 text-lg font-semibold text-slate-950">
-              Klasse bearbeiten
-            </h2>
+                <h2 className="mt-1.5 text-lg font-semibold text-slate-950">
+                  Klasse bearbeiten
+                </h2>
 
-            <p className="mt-1 text-sm text-slate-500">
-              Name, Jahrgang und Schuljahr können jederzeit angepasst werden.
-            </p>
+                <p className="mt-1 text-sm text-slate-500">
+                  Name, Jahrgang und Schuljahr können jederzeit angepasst werden.
+                </p>
+              </div>
+
+              <div className="shrink-0">
+                <p className="mb-1.5 text-xs font-medium text-slate-400">
+                  Status
+                </p>
+                <ClassStatusSelect
+                  classId={classId}
+                  status={
+                    status === "paused" || status === "ended"
+                      ? status
+                      : "active"
+                  }
+                />
+              </div>
+            </div>
           </div>
 
           <form
