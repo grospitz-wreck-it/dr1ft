@@ -194,6 +194,15 @@ export default async function ScenarioDetailPage({ params, searchParams = {} }: 
             mappings={frameworkMappings ?? []}
             competencyLabels={learningCompetencyLabels}
             objectiveLabels={learningObjectiveLabels}
+            availableObjectives={learningObjectives ?? []}
+            availableCompetencies={competencies ?? []}
+            availableMissions={missions ?? []}
+            objectiveMappings={learningStepObjectiveMappings ?? []}
+            competencyMappings={learningStepCompetencyMappings ?? []}
+            missionMappings={learningStepMissionMappings ?? []}
+            evidenceIndicators={learningEvidenceIndicators ?? []}
+            contentMappings={learningStepContentMappings ?? []}
+            contentItems={contentItems ?? []}
           />
         )}
 
