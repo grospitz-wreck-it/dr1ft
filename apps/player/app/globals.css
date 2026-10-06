@@ -109,6 +109,28 @@ body::after {
   .player-soft-peach { background: #ffedd5; }
   .player-soft-yellow { background: #fef9c3; }
 
+  .player-activity-scroll {
+    scrollbar-width: thin;
+    scrollbar-color: rgba(196, 181, 253, .30) transparent;
+  }
+
+  .player-activity-scroll::-webkit-scrollbar {
+    width: 5px;
+  }
+
+  .player-activity-scroll::-webkit-scrollbar-track {
+    background: transparent;
+  }
+
+  .player-activity-scroll::-webkit-scrollbar-thumb {
+    background: rgba(196, 181, 253, .28);
+    border-radius: 999px;
+  }
+
+  .player-activity-scroll::-webkit-scrollbar-thumb:hover {
+    background: rgba(165, 243, 252, .42);
+  }
+
   main article {
     box-shadow: 0 20px 58px rgba(62,40,104,.10), 0 2px 8px rgba(62,40,104,.04);
   }
