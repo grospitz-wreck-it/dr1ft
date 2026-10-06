@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { generateLearningDesign } from "../../../../../../scenarios/learning-design-actions";
+import { generateLearningDesign } from "../../../../scenarios/learning-design-actions";
 
 export async function POST(
   request: Request,
