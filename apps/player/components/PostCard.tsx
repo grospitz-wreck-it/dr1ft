@@ -24,12 +24,13 @@ function AuthorRow({ creator }: { creator?: CreatorSummary }) {
   return <Link href={`/creator/${creator.id}`} className="flex items-center gap-2 mb-2 group" onClick={(e) => e.stopPropagation()}><span className="w-6 h-6 rounded-full bg-ink text-paper text-[10px] font-mono flex items-center justify-center shrink-0">{initials(creator.displayName)}</span><span className="text-xs font-medium text-ink group-hover:underline">{creator.displayName}</span><span className="text-xs text-ink/40">{creator.handle}</span></Link>;
 }
 
-export function PostCard({ item, userId, classInstanceId, initiallyLiked, onView }: { item: FeedItem; userId: string; classInstanceId: string; initiallyLiked: boolean; onView: () => void }) {
+export function PostCard({ item, userId, classInstanceId, initiallyLiked, commentRefreshVersion, onView }: { item: FeedItem; userId: string; classInstanceId: string; initiallyLiked: boolean; commentRefreshVersion: number; onView: () => void }) {
   const supabase = supabaseBrowserClient();
   const ref = useRef<HTMLDivElement>(null);
   const [liked, setLiked] = useState(initiallyLiked);
   const [commentsOpen, setCommentsOpen] = useState(false);
   const [comments, setComments] = useState<FeedItem[] | null>(null);
+  const [liveCommentCount, setLiveCommentCount] = useState(0);
   const [commentText, setCommentText] = useState("");
   const [commentSaving, setCommentSaving] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
@@ -37,10 +38,40 @@ export function PostCard({ item, userId, classInstanceId, initiallyLiked, onView
   const [comparison, setComparison] = useState<{ related: FeedItem | null; loading: boolean; selected?: "contradict" | "support"; error?: string } | null>(null);
 
   const baseLikeCount = Number((item.extra as any)?.baseEngagement ?? 0);
-  const commentCount = Number((item.extra as any)?.baseCommentCount ?? 0);
+  const commentCount = Number((item.extra as any)?.classCommentCount ?? (item.extra as any)?.baseCommentCount ?? 0);
   const extra = (item.extra ?? {}) as Record<string, unknown>;
+  useEffect(() => {
+    setLiveCommentCount(commentCount);
+  }, [commentCount]);
   const action = (extra.action ?? {}) as Record<string, unknown>;
   const mediaContext = (extra.media_context ?? {}) as Record<string, unknown>;
+
+  useEffect(() => {
+    const onCommentCreated = (event: Event) => {
+      const detail = (event as CustomEvent<{ parentId?: string }>).detail;
+      if (detail?.parentId !== item.id) return;
+      void loadComments();
+    };
+
+    window.addEventListener("dr1ft:comment-created", onCommentCreated);
+    return () => window.removeEventListener("dr1ft:comment-created", onCommentCreated);
+  }, [item.id]);
+
+  useEffect(() => {
+    if (!commentRefreshVersion) return;
+    let cancelled = false;
+    void supabase
+      .from("content_items")
+      .select("id", { count: "exact", head: true })
+      .eq("parent_id", item.id)
+      .eq("class_instance_id", classInstanceId)
+      .eq("type", "comment")
+      .eq("status", "live")
+      .then(({ count }) => {
+        if (!cancelled && typeof count === "number") setLiveCommentCount(count);
+      });
+    return () => { cancelled = true; };
+  }, [commentRefreshVersion, item.id, classInstanceId, supabase]);
 
   useEffect(() => {
     const el = ref.current;
@@ -67,7 +98,9 @@ export function PostCard({ item, userId, classInstanceId, initiallyLiked, onView
       .eq("type", "comment")
       .eq("status", "live")
       .order("created_at", { ascending: true });
-    setComments((data ?? []).map((row: any) => ({ ...row, creator: mapCreatorRow(row.creators) })));
+    const nextComments = (data ?? []).map((row: any) => ({ ...row, creator: mapCreatorRow(row.creators) }));
+    setComments(nextComments);
+    setLiveCommentCount(nextComments.length);
   }
 
   async function toggleComments() {
@@ -146,7 +179,7 @@ export function PostCard({ item, userId, classInstanceId, initiallyLiked, onView
   async function ignore() { await track("ignore"); showFeedback("Beitrag wird für dich ausgeblendet."); setMenuOpen(false); }
 
   return <>
-    <article ref={ref} className="relative bg-paper text-ink rounded-card overflow-visible shadow-sm">
+    <article id={`post-${item.id}`} ref={ref} className="relative bg-paper text-ink rounded-card overflow-visible shadow-sm">
       <div className="p-4 pb-0"><AuthorRow creator={item.creator}/><p className="font-mono text-[11px] text-ink/50 mb-2 uppercase tracking-wide">{item.type}</p></div>
       {item.mediaUrl && item.mediaType === "image" && <img src={item.mediaUrl} alt="" className="w-full max-h-96 object-cover" loading="lazy"/>}
       {item.mediaUrl && item.mediaType === "video" && <video src={item.mediaUrl} controls className="w-full max-h-96 object-cover bg-black"/>}
@@ -154,7 +187,7 @@ export function PostCard({ item, userId, classInstanceId, initiallyLiked, onView
         <p className="font-body text-[15px] leading-relaxed">{item.body}</p>
         <div className="relative flex items-center gap-1 mt-3 pt-3 border-t border-ink/10">
           <button onClick={toggleLike} className={`tap-pulse touch-target flex items-center gap-1.5 px-2 text-sm font-body rounded-lg ${liked ? "text-red-500" : "text-ink/50"}`} aria-label="Gefällt mir"><Heart className="w-5 h-5" fill={liked ? "currentColor" : "none"} strokeWidth={2}/>{baseLikeCount + (liked ? 1 : 0)}</button>
-          <button onClick={toggleComments} className="touch-target flex items-center gap-1.5 px-2 text-sm font-body text-ink/50 rounded-lg" aria-label="Kommentare anzeigen"><MessageCircle className="w-[18px] h-[18px]" strokeWidth={2}/>{comments ? comments.length : commentCount}</button>
+          <button onClick={toggleComments} className="touch-target flex items-center gap-1.5 px-2 text-sm font-body text-ink/50 rounded-lg" aria-label="Kommentare anzeigen"><MessageCircle className="w-[18px] h-[18px]" strokeWidth={2}/>{comments ? comments.length : liveCommentCount}</button>
           <button onClick={() => setMenuOpen((open) => !open)} className="touch-target ml-auto flex items-center gap-1 px-2 text-ink/50 rounded-lg" aria-label="Weitere Aktionen" aria-expanded={menuOpen}><MoreHorizontal className="w-5 h-5"/><span className="text-sm font-body hidden sm:inline">Mehr</span><ChevronDown className="w-3.5 h-3.5"/></button>
           {menuOpen && <div className="absolute z-20 right-0 bottom-12 w-60 rounded-xl border border-ink/10 bg-paper shadow-xl p-1.5"><ActionButton icon={<Search/>} label="Quelle ansehen" onClick={inspectSource}/><ActionButton icon={<ImageIcon/>} label="Bild prüfen" onClick={inspectMedia}/><ActionButton icon={<Eye/>} label="Kontext prüfen" onClick={inspectContext}/><ActionButton icon={<UserRound/>} label="Profil ansehen" onClick={inspectProfile}/><ActionButton icon={<Search/>} label="Informationen vergleichen" onClick={compareInformation}/><div className="my-1 border-t border-ink/10"/><ActionButton icon={<Share2/>} label="Teilen" onClick={share}/><ActionButton icon={<Flag/>} label="Melden" onClick={report}/><ActionButton icon={<X/>} label="Ignorieren" onClick={ignore}/></div>}
         </div>
