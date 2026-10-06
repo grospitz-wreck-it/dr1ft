@@ -115,6 +115,83 @@ function imagePromptFor(item: any, step: any, scenario: any) {
   ].join(" ");
 }
 
+function youtubeEmbedUrl(value: string) {
+  const trimmed = value.trim();
+  const iframe = trimmed.match(/<iframe[^>]+src=["']([^"']+)["']/i)?.[1];
+  const source = iframe || trimmed;
+  try {
+    const url = new URL(source);
+    if (url.hostname.includes("youtube.com")) {
+      const id = url.searchParams.get("v");
+      return id ? "https://www.youtube.com/embed/" + id : source;
+    }
+    if (url.hostname === "youtu.be") return "https://www.youtube.com/embed/" + url.pathname.slice(1);
+    if (url.hostname.includes("vimeo.com")) return "https://player.vimeo.com/video/" + url.pathname.split("/").filter(Boolean).pop();
+    return source;
+  } catch {
+    return null;
+  }
+}
+
+async function updateExistingContentMedia(scenarioId: string, contentItemId: string, input: { format?: string; prompt?: string; url?: string; ai?: boolean }) {
+  const supabase = supabaseServerClient();
+  const { data: item } = await supabase.from("content_items").select("id,body,media_url,media_type,extra").eq("id", contentItemId).eq("scenario_id", scenarioId).single();
+  if (!item) throw new Error("Inhalt nicht gefunden.");
+
+  const format = String(input.format || "photo");
+  const url = String(input.url || "").trim();
+  const prompt = String(input.prompt || "").trim();
+  const extra = { ...((item.extra || {}) as Record<string, unknown>) };
+
+  if (format === "embed") {
+    const embedUrl = youtubeEmbedUrl(url);
+    if (!embedUrl) throw new Error("Bitte eine gültige URL oder einen iframe-Embed-Code angeben.");
+    extra.embed = { url: embedUrl, source: url };
+    const { error } = await supabase.from("content_items").update({ extra, updated_at: new Date().toISOString() }).eq("id", contentItemId).eq("scenario_id", scenarioId);
+    if (error) throw new Error(error.message);
+    revalidatePath("/scenarios/" + scenarioId);
+    return { ok: true };
+  }
+
+  if (format === "video" && url && input.ai === false) {
+    extra.videoUrl = url;
+    const { error } = await supabase.from("content_items").update({ media_url: url, media_type: "video", extra, updated_at: new Date().toISOString() }).eq("id", contentItemId).eq("scenario_id", scenarioId);
+    if (error) throw new Error(error.message);
+    revalidatePath("/scenarios/" + scenarioId);
+    return { ok: true };
+  }
+
+  const scenario = (await supabase.from("scenarios").select("id,title,age_band").eq("id", scenarioId).single()).data;
+  if (!scenario) throw new Error("Szenario nicht gefunden.");
+  const design = (await supabase.from("learning_designs").select("id").eq("scenario_id", scenarioId).order("version", { ascending: false }).limit(1).maybeSingle()).data;
+  const stepId = String(extra.learningStepId || "");
+  const step = stepId ? (await supabase.from("learning_steps").select("id,title,description,activity_config").eq("id", stepId).maybeSingle()).data : null;
+  const basePrompt = [
+    "Erzeuge einen Medienentwurf für DR1FT.",
+    "Format: " + format,
+    "Szenario: " + scenario.title,
+    "Altersgruppe: " + scenario.age_band,
+    "Bestehender Beitrag: " + item.body,
+    "Lernschritt: " + (step?.title || "nicht angegeben"),
+    "Lernkontext: " + (step?.description || ""),
+    "Redaktionswunsch: " + (prompt || "passend zum bestehenden Beitrag"),
+  ].join("\n");
+
+  if (format === "photo" || format === "meme") {
+    const image = await generateImage(basePrompt + (format === "meme" ? " Create a meme-style visual." : " Create a realistic ordinary smartphone photo."), "4:5", scenarioId);
+    const nextExtra = { ...extra, imageGeneration: { status:"generated", provider:image.provider, model:image.model, fullPrompt:basePrompt, aspectRatio:"4:5", generationCount:Number((extra.imageGeneration as any)?.generationCount || 0)+1, editorialReview:"pending", generatedAt:new Date().toISOString() } };
+    const { error } = await supabase.from("content_items").update({ media_url:image.url, media_type:"image", extra:nextExtra, updated_at:new Date().toISOString() }).eq("id",contentItemId).eq("scenario_id",scenarioId);
+    if (error) throw new Error(error.message);
+  } else if (format === "video") {
+    const body = await geminiText(basePrompt + "\nFormuliere einen kurzen Text für einen Video-Post. Erzeuge kein Video.");
+    const nextExtra = { ...extra, videoConcept: body, videoUrl: url || null };
+    const { error } = await supabase.from("content_items").update({ body, media_url:url || null, media_type:url ? "video" : null, extra:nextExtra, updated_at:new Date().toISOString() }).eq("id",contentItemId).eq("scenario_id",scenarioId);
+    if (error) throw new Error(error.message);
+  }
+  revalidatePath("/scenarios/" + scenarioId);
+  return { ok: true };
+}
+
 export async function createLearningContentItem(scenarioId: string, input: { format?: string; prompt?: string; url?: string; ai?: boolean }) {
   const supabase = supabaseServerClient();
   const format = String(input.format || "post");
