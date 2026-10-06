@@ -1,5 +1,5 @@
 import type { ReactNode } from "react";
-import { ArrowLeft, CheckCircle2, FileText, Flag, Route, Sparkles, Users } from "lucide-react";
+import { ArrowLeft, FileText, Flag, Route, Sparkles, Users } from "lucide-react";
 import { supabaseServerClient } from "../../../lib/supabaseServerClient";
 import { createContentItem, generateScenarioContent, optimizeScenarioBasics, toggleScenarioActive, updateScenarioBasics } from "../actions";
 import { ContentStatusControl } from "./ContentStatusControl";
