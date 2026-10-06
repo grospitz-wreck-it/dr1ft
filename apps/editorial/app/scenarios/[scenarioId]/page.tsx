@@ -5,6 +5,7 @@ import { createContentItem, generateScenarioContent, optimizeScenarioBasics, opt
 import { ContentStatusControl } from "./ContentStatusControl";
 import { AiGenerationButton } from "../../components/AiGenerationButton";
 import { LearningDesignStudio } from "./LearningDesignStudio";
+import { regenerateLearningImage, rejectLearningImage } from "../learning-content-actions";
 
 interface Props {
   params: { scenarioId: string };
@@ -263,10 +264,62 @@ export default async function ScenarioDetailPage({ params, searchParams = {} }: 
                   <div className="text-xs font-semibold uppercase tracking-wider text-slate-500 mb-2">{STATUS_LABELS[group.status] ?? group.status} · {group.items.length}</div>
                   <ul className="space-y-2">
                     {group.items.map((item) => (
-                      <li key={item.id} className="border border-slate-200 rounded-xl p-3">
-                        <p className="text-sm text-slate-900">{item.body}</p>
-                        <p className="text-xs text-slate-400 mt-1">{item.type} · {item.age_rating} · Schwierigkeit {item.difficulty}</p>
-                        <div className="mt-2"><ContentStatusControl contentItemId={item.id} status={item.status} /></div>
+                      <li key={item.id} className="border border-slate-200 rounded-xl overflow-hidden">
+                        {item.media_url && item.media_type === "image" && (
+                          <div className="bg-slate-100">
+                            <img src={item.media_url} alt="" className="w-full max-h-[420px] object-cover" />
+                          </div>
+                        )}
+                        <div className="p-3">
+                          <p className="text-sm text-slate-900">{item.body}</p>
+                          <p className="text-xs text-slate-400 mt-1">{item.type} · {item.age_rating} · Schwierigkeit {item.difficulty}</p>
+
+                          {item.media_url && item.media_type === "image" && (
+                            <div className="mt-3 rounded-xl bg-slate-50 border border-slate-200 p-3">
+                              <div className="flex items-center justify-between gap-3">
+                                <div>
+                                  <div className="text-xs font-semibold text-slate-700">Bildredaktion</div>
+                                  <div className="text-[11px] text-slate-500 mt-0.5">
+                                    {item.extra?.imageGeneration?.editorialReview === "rejected"
+                                      ? "Bild abgelehnt · Neugenerierung möglich"
+                                      : "Bild wartet auf redaktionelle Prüfung"}
+                                    {item.extra?.imageGeneration?.generationCount
+                                      ? " · Generation " + item.extra.imageGeneration.generationCount
+                                      : ""}
+                                  </div>
+                                </div>
+                                <div className="text-[10px] text-slate-400">
+                                  {item.extra?.imageGeneration?.provider ?? "AI"}
+                                </div>
+                              </div>
+
+                              <form action={regenerateLearningImage.bind(null, item.id, scenarioId)} className="mt-3 flex flex-col sm:flex-row gap-2">
+                                <input
+                                  name="feedback"
+                                  placeholder="Optional: Was soll beim neuen Bild anders sein?"
+                                  className="flex-1 rounded-lg border border-slate-200 bg-white px-2.5 py-2 text-[11px]"
+                                />
+                                <button type="submit" className="rounded-lg bg-slate-900 text-white px-3 py-2 text-[11px] font-semibold">
+                                  Bild neu generieren
+                                </button>
+                              </form>
+
+                              <form action={rejectLearningImage.bind(null, item.id, scenarioId, String(item.extra?.imageGeneration?.editorialFeedback ?? ""))} className="mt-2">
+                                <input
+                                  name="editorialFeedback"
+                                  placeholder="Bei Ablehnung Feedback eintragen"
+                                  className="w-full rounded-lg border border-slate-200 bg-white px-2.5 py-2 text-[11px]"
+                                  onChange={() => {}}
+                                />
+                                <p className="text-[10px] text-slate-400 mt-1">
+                                  Die Ablehnung wird gespeichert; anschließend kann das Bild mit neuem Feedback erzeugt werden.
+                                </p>
+                              </form>
+                            </div>
+                          )}
+
+                          <div className="mt-2"><ContentStatusControl contentItemId={item.id} status={item.status} /></div>
+                        </div>
                       </li>
                     ))}
                   </ul>
