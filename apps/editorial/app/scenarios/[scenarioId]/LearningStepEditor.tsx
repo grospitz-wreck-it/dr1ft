@@ -35,7 +35,7 @@ type Mapping = {
   source_url: string | null;
 };
 
-type Option = { id: string; title: string };
+type Option = { id: string; title?: string; name?: string };
 
 type EvidenceIndicator = {
   id: string;
