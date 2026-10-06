@@ -24,7 +24,7 @@ function AuthorRow({ creator }: { creator?: CreatorSummary }) {
   return <Link href={`/creator/${creator.id}`} className="flex items-center gap-2 mb-2 group" onClick={(e) => e.stopPropagation()}><span className="w-6 h-6 rounded-full bg-ink text-paper text-[10px] font-mono flex items-center justify-center shrink-0">{initials(creator.displayName)}</span><span className="text-xs font-medium text-ink group-hover:underline">{creator.displayName}</span><span className="text-xs text-ink/40">{creator.handle}</span></Link>;
 }
 
-export function PostCard({ item, userId, classInstanceId, initiallyLiked, commentRefreshVersion, onView }: { item: FeedItem; userId: string; classInstanceId: string; initiallyLiked: boolean; commentRefreshVersion: number; onView: () => void }) {
+export function PostCard({ item, userId, classInstanceId, initiallyLiked, onView }: { item: FeedItem; userId: string; classInstanceId: string; initiallyLiked: boolean; onView: () => void }) {
   const supabase = supabaseBrowserClient();
   const ref = useRef<HTMLDivElement>(null);
   const [liked, setLiked] = useState(initiallyLiked);
@@ -56,22 +56,6 @@ export function PostCard({ item, userId, classInstanceId, initiallyLiked, commen
     window.addEventListener("dr1ft:comment-created", onCommentCreated);
     return () => window.removeEventListener("dr1ft:comment-created", onCommentCreated);
   }, [item.id]);
-
-  useEffect(() => {
-    if (!commentRefreshVersion) return;
-    let cancelled = false;
-    void supabase
-      .from("content_items")
-      .select("id", { count: "exact", head: true })
-      .eq("parent_id", item.id)
-      .eq("class_instance_id", classInstanceId)
-      .eq("type", "comment")
-      .eq("status", "live")
-      .then(({ count }) => {
-        if (!cancelled && typeof count === "number") setLiveCommentCount(count);
-      });
-    return () => { cancelled = true; };
-  }, [commentRefreshVersion, item.id, classInstanceId, supabase]);
 
   useEffect(() => {
     const el = ref.current;
