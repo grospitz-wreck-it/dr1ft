@@ -48,7 +48,7 @@ export function PlayerShell({ children }: { children: React.ReactNode }) {
   const supabase = supabaseBrowserClient();
   const [user, setUser] = useState<{ displayName: string; username: string; avatarSeed: string } | null>(null);
   const [open, setOpen] = useState(false);
-  const [liveActivity, setLiveActivity] = useState<LiveActivity | null>(null);
+  const [liveActivity, setLiveActivity] = useState<LiveActivity[]>([]);
 
   useEffect(() => {
     if (!user) {
