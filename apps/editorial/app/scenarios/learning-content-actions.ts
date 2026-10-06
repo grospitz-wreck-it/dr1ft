@@ -243,7 +243,8 @@ export async function generateLearningContent(scenarioId: string, learningDesign
   return { created, learningDesignId: design.id };
 }
 
-export async function rejectLearningImage(contentItemId: string, scenarioId: string, feedback: string) {
+export async function rejectLearningImage(contentItemId: string, scenarioId: string, formData: FormData) {
+  const feedback = String(formData.get("editorialFeedback") || "").trim();
   const supabase = supabaseServerClient();
   const { data: item, error } = await supabase
     .from("content_items")
@@ -272,7 +273,8 @@ export async function rejectLearningImage(contentItemId: string, scenarioId: str
   revalidatePath("/scenarios/" + scenarioId);
 }
 
-export async function regenerateLearningImage(contentItemId: string, scenarioId: string, feedback?: string) {
+export async function regenerateLearningImage(contentItemId: string, scenarioId: string, formData: FormData) {
+  const feedback = String(formData.get("feedback") || "").trim();
   const supabase = supabaseServerClient();
   const { data: item, error } = await supabase
     .from("content_items")
