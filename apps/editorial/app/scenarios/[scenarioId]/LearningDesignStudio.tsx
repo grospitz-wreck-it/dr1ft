@@ -2,8 +2,8 @@
 
 import { useState, useTransition } from "react";
 import { CheckCircle2, Image as ImageIcon, RefreshCw, Sparkles } from "lucide-react";
-import { generateLearningDesign } from "./learning-design-actions";
-import { generateLearningContent, regenerateLearningImage, rejectLearningImage } from "./learning-content-actions";
+import { generateLearningDesign } from "../learning-design-actions";
+import { generateLearningContent, regenerateLearningImage, rejectLearningImage } from "../learning-content-actions";
 
 type Props = {
   scenarioId: string;
