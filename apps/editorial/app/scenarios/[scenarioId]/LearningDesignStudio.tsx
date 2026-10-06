@@ -2,8 +2,6 @@
 
 import { useState, useTransition } from "react";
 import { CheckCircle2, Image as ImageIcon, Info, RefreshCw, Sparkles } from "lucide-react";
-import { generateLearningDesign } from "../learning-design-actions";
-import { generateLearningContent, regenerateLearningImage, rejectLearningImage } from "../learning-content-actions";
 
 type Props = {
   scenarioId: string;
@@ -42,12 +40,18 @@ export function LearningDesignStudio({ scenarioId, latestDesign }: Props) {
     setMessage("");
     startTransition(async () => {
       try {
-        const result = await generateLearningDesign(scenarioId, {
-          durationMinutes: duration,
-          learningStepCount: stepCount,
-          primaryLearningModel: model,
-          bloomTarget: bloom,
+        const response = await fetch("/api/scenarios/" + scenarioId + "/learning-design", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            durationMinutes: duration,
+            learningStepCount: stepCount,
+            primaryLearningModel: model,
+            bloomTarget: bloom,
+          }),
         });
+        const result = await response.json();
+        if (!response.ok) throw new Error(result.error || "Generierung fehlgeschlagen.");
         setMessage(result.stepCount + " Lernschritte als Draft erzeugt.");
       } catch (error) {
         setMessage(error instanceof Error ? error.message : "Generierung fehlgeschlagen.");
@@ -59,7 +63,13 @@ export function LearningDesignStudio({ scenarioId, latestDesign }: Props) {
     setMessage("");
     startTransition(async () => {
       try {
-        const result = await generateLearningContent(scenarioId, latestDesign?.id);
+        const response = await fetch("/api/scenarios/" + scenarioId + "/learning-content", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ learningDesignId: latestDesign?.id }),
+        });
+        const result = await response.json();
+        if (!response.ok) throw new Error(result.error || "Content-Generierung fehlgeschlagen.");
         setMessage(result.created + " Content-Elemente als Draft erzeugt.");
       } catch (error) {
         setMessage(error instanceof Error ? error.message : "Content-Generierung fehlgeschlagen.");
