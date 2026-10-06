@@ -52,7 +52,7 @@ export async function runLearningDesignQa(designId: string, scenarioId: string):
     .map((step) => "⚠ " + step.title + ": Bloom verlangt " + step.bloom_level + ", die Aktivität wirkt dafür zu niedrigschwellig.");
   warnings.push(...bloomWarnings);
 
-  const uniqueWarnings = [...new Set(warnings)];
+  const uniqueWarnings = Array.from(new Set(warnings));
   const { error: updateError } = await supabase
     .from("learning_designs")
     .update({ alignment_score: score, pedagogical_warnings: uniqueWarnings, updated_at: new Date().toISOString() })
