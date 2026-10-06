@@ -636,10 +636,12 @@ Gib ausschließlich valides JSON gemäß Schema zurück.`;
   } catch (error) {
     const message = error instanceof Error ? error.message : "KI-Optimierung fehlgeschlagen.";
     console.error("[scenario-ai-basics]", error);
+    if (!redirectAfter) throw new Error(message);
     redirect(`/scenarios/${scenarioId}?aiError=${encodeURIComponent(message.slice(0, 900))}`);
   }
   revalidatePath(`/scenarios/${scenarioId}`);
-  redirect(`/scenarios/${scenarioId}?ai=${encodeURIComponent(successMessage)}`);
+  if (redirectAfter) redirect(`/scenarios/${scenarioId}?ai=${encodeURIComponent(successMessage)}`);
+  return { ok: true, message: successMessage };
 }
 
 export async function optimizeScenarioFlow(scenarioId: string) {
@@ -798,7 +800,7 @@ Gib ausschließlich valides JSON gemäß Schema zurück.`;
   redirect(`/scenarios/${scenarioId}?ai=${encodeURIComponent(successMessage)}`);
 }
 
-export async function generateScenarioContent(scenarioId: string) {
+export async function generateScenarioContent(scenarioId: string, redirectAfter = true) {
   let successMessage = "";
   try {
     const supabase = supabaseServerClient();
