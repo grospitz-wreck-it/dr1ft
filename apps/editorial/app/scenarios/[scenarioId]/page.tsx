@@ -234,11 +234,15 @@ export default async function ScenarioDetailPage({ params, searchParams = {} }: 
                             <img src={item.media_url} alt="" className="w-full max-h-[420px] object-cover" />
                           </div>
                         )}
-                        {item.media_url && item.media_type === "video" && (
-                          <div className="bg-black">
-                            <video src={item.media_url} controls className="w-full max-h-[420px]" />
+                        {item.media_url && item.media_type === "video" && videoEmbedUrl(item.media_url) ? (
+                          <div className="aspect-video bg-slate-100">
+                            <iframe src={videoEmbedUrl(item.media_url)!} title="Video" className="w-full h-full" allow="autoplay; encrypted-media; picture-in-picture" allowFullScreen />
                           </div>
-                        )}
+                        ) : item.media_url && item.media_type === "video" ? (
+                          <div className="bg-black">
+                            <video src={item.media_url} controls playsInline preload="metadata" className="w-full max-h-[420px]" />
+                          </div>
+                        ) : null}
                         {item.extra?.embed?.url && (
                           <div className="aspect-video bg-slate-100">
                             <iframe src={item.extra.embed.url} title="Eingebettetes Video" className="w-full h-full" allowFullScreen />
@@ -352,6 +356,27 @@ export default async function ScenarioDetailPage({ params, searchParams = {} }: 
       </div>
     </div>
   );
+}
+
+function videoEmbedUrl(value: string) {
+  try {
+    const url = new URL(value);
+    if (url.hostname.includes("youtube.com")) {
+      const id = url.searchParams.get("v");
+      return id ? "https://www.youtube.com/embed/" + id : null;
+    }
+    if (url.hostname === "youtu.be") {
+      const id = url.pathname.split("/").filter(Boolean)[0];
+      return id ? "https://www.youtube.com/embed/" + id : null;
+    }
+    if (url.hostname.includes("vimeo.com")) {
+      const id = url.pathname.split("/").filter(Boolean).pop();
+      return id ? "https://player.vimeo.com/video/" + id : null;
+    }
+    return null;
+  } catch {
+    return null;
+  }
 }
 
 function SummaryCard({ icon, label, value }: { icon: ReactNode; label: string; value: string }) {
