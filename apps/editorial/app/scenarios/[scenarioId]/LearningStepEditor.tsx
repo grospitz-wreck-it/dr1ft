@@ -68,10 +68,6 @@ export function LearningStepEditor({
     });
   }
 
-  function submit(action: (formData: FormData) => Promise<void>) {
-    startTransition(async () => { await action(new FormData()); });
-  }
-
   return (
     <section className="bg-white border border-slate-200 rounded-2xl p-6 shadow-sm">
       <div className="flex flex-col lg:flex-row lg:items-start lg:justify-between gap-4">
@@ -136,9 +132,8 @@ export function LearningStepEditor({
 
               <div className="lg:col-span-2 flex flex-wrap justify-between gap-2 pt-2">
                 <div className="flex gap-2">
-                  <form />
-                  <button type="button" disabled={busy || index === 0} onClick={() => startTransition(() => moveLearningStep(step.id, scenarioId, "up"))} className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 px-2.5 py-1.5 text-[11px] disabled:opacity-30"><ArrowUp className="w-3 h-3" /> hoch</button>
-                  <button type="button" disabled={busy || index === steps.length - 1} onClick={() => startTransition(() => moveLearningStep(step.id, scenarioId, "down"))} className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 px-2.5 py-1.5 text-[11px] disabled:opacity-30"><ArrowDown className="w-3 h-3" /> runter</button>
+                  <button type="button" disabled={busy || index === 0} onClick={() => startTransition(() => { void moveLearningStep(step.id, scenarioId, "up"); })} className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 px-2.5 py-1.5 text-[11px] disabled:opacity-30"><ArrowUp className="w-3 h-3" /> hoch</button>
+                  <button type="button" disabled={busy || index === steps.length - 1} onClick={() => startTransition(() => { void moveLearningStep(step.id, scenarioId, "down"); })} className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 px-2.5 py-1.5 text-[11px] disabled:opacity-30"><ArrowDown className="w-3 h-3" /> runter</button>
                 </div>
                 <button type="submit" disabled={busy} className="inline-flex items-center gap-1.5 rounded-lg bg-slate-900 text-white px-3 py-2 text-[11px] font-semibold disabled:opacity-50"><Save className="w-3 h-3" /> Lernschritt speichern</button>
               </div>
