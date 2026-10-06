@@ -203,12 +203,12 @@ export function PlayerShell({ children }: { children: React.ReactNode }) {
     <div className="min-h-screen">
       {showShell && <>
         <aside className="player-sidebar fixed z-40 inset-y-0 left-0 w-[286px] p-4 pointer-events-none">
-          <div className="pointer-events-auto w-full rounded-[30px] border border-white/20 bg-[#171027]/95 text-white shadow-[0_24px_80px_rgba(42,20,75,.28)] backdrop-blur-2xl flex flex-col overflow-hidden relative">
+          <div className="pointer-events-auto w-full rounded-panel border border-white/20 bg-shell/95 text-white shadow-shell backdrop-blur-2xl flex flex-col overflow-hidden relative">
             <div className="absolute -top-20 -right-16 w-48 h-48 rounded-full bg-fuchsia-500/25 blur-3xl" />
             <div className="absolute bottom-20 -left-20 w-44 h-44 rounded-full bg-cyan-400/20 blur-3xl" />
             <div className="relative px-6 pt-6 pb-5">
               <Link href="/feed" className="group inline-flex items-center gap-3">
-                <span className="grid place-items-center w-12 h-12 rounded-[17px] bg-gradient-to-br from-fuchsia-500 via-violet-500 to-cyan-400 text-white shadow-[0_10px_28px_rgba(168,85,247,.38)] group-hover:rotate-[-4deg] group-hover:scale-105 transition duration-300"><span className="font-display text-xl font-bold tracking-[-0.08em]">d.</span></span>
+                <span className="grid place-items-center w-12 h-12 rounded-control bg-gradient-to-br from-fuchsia-500 via-violet-500 to-cyan-400 text-white shadow-brand group-hover:rotate-[-4deg] group-hover:scale-105 transition duration-300"><span className="font-display text-xl font-bold tracking-[-0.08em]">d.</span></span>
                 <span><span className="block font-display font-bold text-[23px] tracking-[-0.05em]">DR1FT</span><span className="block text-[10px] uppercase tracking-[0.19em] text-white/45">medienkompetenz</span></span>
               </Link>
             </div>
@@ -222,7 +222,7 @@ export function PlayerShell({ children }: { children: React.ReactNode }) {
                   {active && <span className="absolute right-2 w-1 h-7 rounded-full bg-gradient-to-b from-fuchsia-400 to-cyan-300 shadow-[0_0_14px_rgba(34,211,238,.6)]" />}
                 </Link>; })}
               </nav>
-              <div className="relative mt-7 mx-2 h-[300px] rounded-[22px] border border-white/10 bg-gradient-to-br from-fuchsia-500/15 via-violet-500/15 to-cyan-400/10 overflow-hidden">
+              <div className="relative mt-7 mx-2 h-[300px] rounded-tile border border-white/10 bg-gradient-to-br from-fuchsia-500/15 via-violet-500/15 to-cyan-400/10 overflow-hidden">
                 <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-fuchsia-400/0 via-fuchsia-300/60 to-cyan-300/0" />
                 <div className="relative px-4 pt-4 pb-3 flex items-center justify-between border-b border-white/[.06]">
                   <div className="flex items-center gap-2 min-w-0">
@@ -265,7 +265,7 @@ export function PlayerShell({ children }: { children: React.ReactNode }) {
             </div>
             <div className="relative p-3 mt-auto border-t border-white/[.06]">
               <Link href="/profile" className="flex items-center gap-3 p-3 rounded-2xl hover:bg-white/[.07] transition-colors">
-                <span className="relative rounded-[13px] p-[2px] bg-gradient-to-br from-fuchsia-400 via-violet-400 to-cyan-300"><img src={avatarUrl(user.avatarSeed, 80)} alt="" className="w-10 h-10 rounded-[11px] bg-[#241a3b] object-cover" /></span>
+                <span className="relative rounded-[13px] p-[2px] bg-gradient-to-br from-fuchsia-400 via-violet-400 to-cyan-300"><img src={avatarUrl(user.avatarSeed, 80)} alt="" className="w-10 h-10 rounded-[11px] bg-shell-surface object-cover" /></span>
                 <div className="min-w-0 flex-1"><div className="font-medium text-sm truncate">{user.displayName}</div><div className="text-[11px] text-white/40 truncate">@{user.username}</div></div>
                 <span className="text-white/35">•••</span>
               </Link>
@@ -274,15 +274,15 @@ export function PlayerShell({ children }: { children: React.ReactNode }) {
         </aside>
 
         <div className="lg:hidden fixed z-50 top-3 left-3 right-3 pointer-events-none">
-          <div className="pointer-events-auto h-14 rounded-2xl border border-white/50 bg-[#171027]/90 text-white backdrop-blur-xl shadow-[0_12px_42px_rgba(42,20,75,.25)] flex items-center justify-between px-3">
+          <div className="pointer-events-auto h-14 rounded-2xl border border-white/50 bg-shell/90 text-white backdrop-blur-xl shadow-shell-soft flex items-center justify-between px-3">
             <Link href="/feed" className="flex items-center gap-2.5"><span className="grid place-items-center w-9 h-9 rounded-xl bg-gradient-to-br from-fuchsia-500 via-violet-500 to-cyan-400 font-display font-bold">d.</span><span className="font-display font-bold tracking-[-0.04em]">DR1FT</span></Link>
             <button onClick={() => setOpen((v) => !v)} className="touch-target grid place-items-center rounded-xl hover:bg-white/10" aria-label="Navigation öffnen"><span className="text-lg">{open ? "×" : "☰"}</span></button>
           </div>
-          {open && <div className="mt-2 p-2 rounded-2xl border border-white/20 bg-[#171027]/95 text-white backdrop-blur-xl shadow-xl">{NAV.map((item) => <Link onClick={() => setOpen(false)} key={item.href} href={item.href} className={`flex items-center gap-3 p-3 rounded-xl ${isActive(pathname, item.href) ? "bg-white/10" : ""}`}><Icon name={item.icon}/><span className="text-sm font-medium">{item.label}</span></Link>)}</div>}
+          {open && <div className="mt-2 p-2 rounded-2xl border border-white/20 bg-shell/95 text-white backdrop-blur-xl shadow-xl">{NAV.map((item) => <Link onClick={() => setOpen(false)} key={item.href} href={item.href} className={`flex items-center gap-3 p-3 rounded-xl ${isActive(pathname, item.href) ? "bg-white/10" : ""}`}><Icon name={item.icon}/><span className="text-sm font-medium">{item.label}</span></Link>)}</div>}
         </div>
 
         <nav className="lg:hidden fixed z-40 bottom-3 left-3 right-3 pointer-events-none safe-bottom">
-          <div className="pointer-events-auto mx-auto max-w-md h-[68px] rounded-[24px] border border-white/50 bg-[#171027]/92 text-white backdrop-blur-xl shadow-[0_16px_48px_rgba(42,20,75,.28)] grid grid-cols-4 p-1.5">
+          <div className="pointer-events-auto mx-auto max-w-md h-[68px] rounded-panel border border-white/50 bg-shell/92 text-white backdrop-blur-xl shadow-shell-nav grid grid-cols-4 p-1.5">
             {NAV.map((item) => { const active = isActive(pathname, item.href); return <Link key={item.href} href={item.href} className={`relative rounded-[18px] grid place-items-center transition ${active ? "bg-gradient-to-br from-fuchsia-500/30 to-cyan-400/20 text-white" : "text-white/45"}`}><Icon name={item.icon} active={active}/>{active && <span className="absolute bottom-1 w-1 h-1 rounded-full bg-cyan-300 shadow-[0_0_8px_rgba(103,232,249,.9)]"/>}</Link>; })}
           </div>
         </nav>
