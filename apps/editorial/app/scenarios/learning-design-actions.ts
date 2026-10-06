@@ -7,7 +7,7 @@ import type {
   BloomLevel,
   GeneratedLearningDesign,
   LearningDesignConfig,
-} from "../../../packages/shared-types/src/learning-design";
+} from "../../../../packages/shared-types/src/learning-design";
 
 const AGE_LABELS: Record<string, string> = {
   "9_11": "9–11 Jahre",
