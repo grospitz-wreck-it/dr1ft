@@ -797,7 +797,8 @@ Gib ausschließlich valides JSON gemäß Schema zurück.`;
     redirect(`/scenarios/${scenarioId}?aiError=${encodeURIComponent(message.slice(0, 900))}`);
   }
   revalidatePath(`/scenarios/${scenarioId}`);
-  redirect(`/scenarios/${scenarioId}?ai=${encodeURIComponent(successMessage)}`);
+  if (redirectAfter) redirect(`/scenarios/${scenarioId}?ai=${encodeURIComponent(successMessage)}`);
+  return { ok: true, message: successMessage };
 }
 
 export async function generateScenarioContent(scenarioId: string, redirectAfter = true) {
