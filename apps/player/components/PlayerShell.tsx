@@ -107,7 +107,7 @@ export function PlayerShell({ children }: { children: React.ReactNode }) {
       const [{ data: interactions }, { data: comments }] = await Promise.all([
         supabase
           .from("user_interactions")
-          .select("id, user_id, interaction_type, created_at, user_profiles(display_name)")
+          .select("id, user_id, content_item_id, interaction_type, created_at, user_profiles(display_name)")
           .eq("class_instance_id", classInstanceId)
           .in("interaction_type", ["like", "share"])
           .order("created_at", { ascending: false })
