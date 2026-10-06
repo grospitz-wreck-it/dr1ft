@@ -204,37 +204,37 @@ export function PlayerShell({ children }: { children: React.ReactNode }) {
       {showShell && <>
         <aside className="player-sidebar fixed z-40 inset-y-0 left-0 w-[286px] p-4 pointer-events-none">
           <div className="pointer-events-auto w-full rounded-panel border border-white/20 bg-shell/95 text-white shadow-shell backdrop-blur-2xl flex flex-col overflow-hidden relative">
-            <div className="absolute -top-20 -right-16 w-48 h-48 rounded-full bg-fuchsia-500/25 blur-3xl" />
-            <div className="absolute bottom-20 -left-20 w-44 h-44 rounded-full bg-cyan-400/20 blur-3xl" />
+            <div className="absolute -top-20 -right-16 w-48 h-48 rounded-full bg-social-pink/25 blur-3xl" />
+            <div className="absolute bottom-20 -left-20 w-44 h-44 rounded-full bg-social-blue/20 blur-3xl" />
             <div className="relative px-6 pt-6 pb-5">
               <Link href="/feed" className="group inline-flex items-center gap-3">
-                <span className="grid place-items-center w-12 h-12 rounded-control bg-gradient-to-br from-fuchsia-500 via-violet-500 to-cyan-400 text-white shadow-brand group-hover:rotate-[-4deg] group-hover:scale-105 transition duration-300"><span className="font-display text-xl font-bold tracking-[-0.08em]">d.</span></span>
+                <span className="grid place-items-center w-12 h-12 rounded-control bg-gradient-to-br from-social-pink via-social-violet to-social-blue text-white shadow-brand group-hover:rotate-[-4deg] group-hover:scale-105 transition duration-300"><span className="font-display text-xl font-bold tracking-[-0.08em]">d.</span></span>
                 <span><span className="block font-display font-bold text-[23px] tracking-[-0.05em]">DR1FT</span><span className="block text-[10px] uppercase tracking-[0.19em] text-white/45">medienkompetenz</span></span>
               </Link>
             </div>
             <div className="relative px-3 flex-1">
               <div className="px-3 pb-2 text-[10px] font-semibold uppercase tracking-[0.18em] text-white/30">Dein Space</div>
               <nav className="space-y-1.5">
-                {NAV.map((item) => { const active = isActive(pathname, item.href); return <Link key={item.href} href={item.href} className={`group relative flex items-center gap-3 px-3 py-3 rounded-2xl transition-all duration-200 ${active ? "bg-gradient-to-r from-fuchsia-500/25 via-violet-500/20 to-cyan-400/10 text-white shadow-inner" : "text-white/55 hover:bg-white/[.07] hover:text-white"}`}>
-                  <span className={`grid place-items-center w-9 h-9 rounded-xl transition-all ${active ? "bg-white/10 text-cyan-200" : "bg-white/[.025] group-hover:bg-white/[.08]"}`}><Icon name={item.icon} active={active} /></span>
+                {NAV.map((item) => { const active = isActive(pathname, item.href); return <Link key={item.href} href={item.href} className={`group relative flex items-center gap-3 px-3 py-3 rounded-2xl transition-all duration-200 ${active ? "bg-gradient-to-r from-social-pink/25 via-social-violet/20 to-social-blue/10 text-white shadow-inner" : "text-white/55 hover:bg-white/[.07] hover:text-white"}`}>
+                  <span className={`grid place-items-center w-9 h-9 rounded-xl transition-all ${active ? "bg-white/10 text-social-blue" : "bg-white/[.025] group-hover:bg-white/[.08]"}`}><Icon name={item.icon} active={active} /></span>
                   <span className="font-medium text-sm">{item.label}</span>
-                  {item.label === "Nachrichten" && <span className="ml-auto w-2 h-2 rounded-full bg-pink-400 shadow-[0_0_0_4px_rgba(236,72,153,.10)]" />}
-                  {active && <span className="absolute right-2 w-1 h-7 rounded-full bg-gradient-to-b from-fuchsia-400 to-cyan-300 shadow-[0_0_14px_rgba(34,211,238,.6)]" />}
+                  {item.label === "Nachrichten" && <span className="ml-auto w-2 h-2 rounded-full bg-social-pink shadow-[0_0_0_4px_rgba(236,72,153,.10)]" />}
+                  {active && <span className="absolute right-2 w-1 h-7 rounded-full bg-gradient-to-b from-social-pink to-social-blue shadow-[0_0_14px_rgba(34,211,238,.6)]" />}
                 </Link>; })}
               </nav>
-              <div className="relative mt-7 mx-2 h-[300px] rounded-tile border border-white/10 bg-gradient-to-br from-fuchsia-500/15 via-violet-500/15 to-cyan-400/10 overflow-hidden">
-                <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-fuchsia-400/0 via-fuchsia-300/60 to-cyan-300/0" />
+              <div className="relative mt-7 mx-2 h-[300px] rounded-tile border border-white/10 bg-gradient-to-br from-social-pink/15 via-social-violet/15 to-social-blue/10 overflow-hidden">
+                <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-social-pink/0 via-social-pink/60 to-social-blue/0" />
                 <div className="relative px-4 pt-4 pb-3 flex items-center justify-between border-b border-white/[.06]">
                   <div className="flex items-center gap-2 min-w-0">
-                    <span className="relative grid place-items-center w-7 h-7 rounded-lg bg-white/[.07] text-emerald-300 shrink-0">
-                      <span className="w-2 h-2 rounded-full bg-emerald-300 shadow-[0_0_0_4px_rgba(110,231,183,.10),0_0_12px_rgba(110,231,183,.65)]" />
+                    <span className="relative grid place-items-center w-7 h-7 rounded-lg bg-white/[.07] text-social-mint shrink-0">
+                      <span className="w-2 h-2 rounded-full bg-social-mint shadow-[0_0_0_4px_rgba(110,231,183,.10),0_0_12px_rgba(110,231,183,.65)]" />
                     </span>
                     <div className="min-w-0">
                       <span className="block text-[10px] uppercase tracking-[0.14em] font-semibold text-white/45 truncate">AKTIVITÄT IN DEINER KLASSE</span>
                       <span className="block text-[10px] text-white/25 mt-0.5">{liveActivity.length ? `${liveActivity.length} aktuelle Aktivitäten` : "Noch keine neuen Aktivitäten"}</span>
                     </div>
                   </div>
-                  <span className={`shrink-0 ml-2 inline-flex items-center gap-1.5 rounded-full px-2 py-1 text-[9px] font-semibold uppercase tracking-[0.12em] border ${activityRealtime ? "border-emerald-300/20 bg-emerald-300/10 text-emerald-200" : "border-white/10 bg-white/[.04] text-white/30"}`}>
+                  <span className={`shrink-0 ml-2 inline-flex items-center gap-1.5 rounded-full px-2 py-1 text-[9px] font-semibold uppercase tracking-[0.12em] border ${activityRealtime ? "border-social-mint/20 bg-social-mint/10 text-social-mint" : "border-white/10 bg-white/[.04] text-white/30"}`}>
                     <span className={`w-1.5 h-1.5 rounded-full ${activityRealtime ? "bg-emerald-300 animate-pulse" : "bg-white/25"}`} />
                     {activityRealtime ? "LIVE" : "SYNC"}
                   </span>
