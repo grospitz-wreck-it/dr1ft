@@ -304,12 +304,11 @@ export default async function ScenarioDetailPage({ params, searchParams = {} }: 
                                 </button>
                               </form>
 
-                              <form action={rejectLearningImage.bind(null, item.id, scenarioId, String(item.extra?.imageGeneration?.editorialFeedback ?? ""))} className="mt-2">
+                              <form action={rejectLearningImage.bind(null, item.id, scenarioId)} className="mt-2">
                                 <input
                                   name="editorialFeedback"
                                   placeholder="Bei Ablehnung Feedback eintragen"
                                   className="w-full rounded-lg border border-slate-200 bg-white px-2.5 py-2 text-[11px]"
-                                  onChange={() => {}}
                                 />
                                 <p className="text-[10px] text-slate-400 mt-1">
                                   Die Ablehnung wird gespeichert; anschließend kann das Bild mit neuem Feedback erzeugt werden.
