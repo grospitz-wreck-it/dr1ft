@@ -51,6 +51,43 @@ export function PlayerShell({ children }: { children: React.ReactNode }) {
   const [liveActivity, setLiveActivity] = useState<LiveActivity[]>([]);
 
   useEffect(() => {
+    let mounted = true;
+
+    async function loadProfile(authUser: { id: string; email?: string | null }) {
+      const { data: profile } = await supabase
+        .from("user_profiles")
+        .select("display_name, username, avatar_seed")
+        .eq("id", authUser.id)
+        .maybeSingle();
+      if (!mounted) return;
+      setUser({
+        displayName: profile?.display_name || authUser.email?.split("@")[0] || "DR1FT",
+        username: profile?.username || "drifter",
+        avatarSeed: profile?.avatar_seed || authUser.id,
+      });
+    }
+
+    void (async () => {
+      const { data: { user: authUser } } = await supabase.auth.getUser();
+      if (authUser) await loadProfile(authUser);
+      else if (mounted) setUser(null);
+    })();
+
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      if (!session?.user) {
+        setUser(null);
+        return;
+      }
+      window.setTimeout(() => { void loadProfile(session.user); }, 0);
+    });
+
+    return () => {
+      mounted = false;
+      subscription.unsubscribe();
+    };
+  }, [supabase]);
+
+  useEffect(() => {
     if (!user) {
       setLiveActivity([]);
       return;
