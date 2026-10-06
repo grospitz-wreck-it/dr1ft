@@ -446,8 +446,6 @@ export async function generateLearningDesign(scenarioId: string, rawConfig: Lear
         objectiveIdsForStep.map((id) => ({
           learning_step_id: learningStep.id,
           learning_objective_id: id,
-          role: "primary",
-          weight: 1,
         })),
       );
       if (error) throw new Error(error.message);
@@ -458,8 +456,6 @@ export async function generateLearningDesign(scenarioId: string, rawConfig: Lear
         competencyIdsForStep.map((id) => ({
           learning_step_id: learningStep.id,
           competency_id: id,
-          role: "primary",
-          weight: 1,
         })),
       );
       if (error) throw new Error(error.message);
@@ -493,7 +489,6 @@ export async function generateLearningDesign(scenarioId: string, rawConfig: Lear
     const { error: missionLinkError } = await supabase.from("learning_step_missions").insert({
       learning_step_id: learningStep.id,
       mission_id: mission.id,
-      role: "primary",
     });
     if (missionLinkError) throw new Error(missionLinkError.message);
 
