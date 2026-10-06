@@ -1,7 +1,7 @@
 import type { ReactNode } from "react";
 import { ArrowLeft, CheckCircle2, FileText, Flag, Route, Sparkles, Users } from "lucide-react";
 import { supabaseServerClient } from "../../../lib/supabaseServerClient";
-import { createContentItem, generateScenarioContent, optimizeScenarioBasics, optimizeScenarioFlow, toggleScenarioActive, updateArcDraft, updateMissionDraft, updateScenarioBasics } from "../actions";
+import { createContentItem, generateScenarioContent, optimizeScenarioBasics, toggleScenarioActive, updateScenarioBasics } from "../actions";
 import { ContentStatusControl } from "./ContentStatusControl";
 import { AiGenerationButton } from "../../components/AiGenerationButton";
 import { LearningDesignStudio } from "./LearningDesignStudio";
@@ -20,11 +20,6 @@ const AGE_LABELS: Record<string, string> = {
   "18_plus": "18+",
 };
 
-const EVENT_LABELS: Record<string, string> = {
-  PostViewed: "Post angesehen",
-  CommentCreated: "Kommentar geschrieben",
-  NpcReplySelected: "NPC-Antwort gewählt",
-};
 
 const STATUS_LABELS: Record<string, string> = {
   draft: "Entwurf",
@@ -89,9 +84,6 @@ export default async function ScenarioDetailPage({ params, searchParams = {} }: 
     ? await supabase.from("story_arc_steps").select("*").in("arc_id", arcIds).order("order_index")
     : { data: [] };
 
-  const missionById = new Map((missions ?? []).map((mission) => [mission.id, mission]));
-  const activeArc = arcs?.[0] ?? null;
-  const activeSteps = (steps ?? []).filter((step) => step.arc_id === activeArc?.id);
   const grouped = STATUS_ORDER.map((status) => ({
     status,
     items: (contentItems ?? []).filter((item) => item.status === status),
@@ -115,7 +107,7 @@ export default async function ScenarioDetailPage({ params, searchParams = {} }: 
               <h1 className="text-2xl font-semibold text-slate-900 mt-2">{scenario.title}</h1>
               <p className="text-sm text-slate-500 mt-2 max-w-3xl">{scenario.description}</p>
               <div className="mt-3 inline-flex items-center gap-2 rounded-lg bg-accent/5 px-2.5 py-1.5 text-[11px] font-medium text-accent">
-                <Sparkles className="w-3 h-3" /> KI-Assistent für Grundlage, Ablauf und Inhalte aktiv
+                <Sparkles className="w-3 h-3" /> KI-Assistent für Grundlage, Lernschritt und Inhalte aktiv
               </div>
               <div className="mt-4 flex flex-wrap items-center gap-2">
                 <details>
@@ -188,91 +180,13 @@ export default async function ScenarioDetailPage({ params, searchParams = {} }: 
         )}
 
         <section className="grid md:grid-cols-4 gap-3">
-          <SummaryCard icon={<Route className="w-4 h-4" />} label="Lernschritte" value={activeSteps.length ? `${activeSteps.length} Schritte` : "Noch leer"} />
+          <SummaryCard icon={<Route className="w-4 h-4" />} label="Lernschritte" value={learningSteps?.length ? `${learningSteps.length} Schritte` : "Noch leer"} />
           <SummaryCard icon={<Flag className="w-4 h-4" />} label="Missionen" value={`${missions?.length ?? 0}`} />
           <SummaryCard icon={<FileText className="w-4 h-4" />} label="Inhalte" value={`${contentItems?.length ?? 0}`} />
           <SummaryCard icon={<Users className="w-4 h-4" />} label="Status" value={scenario.is_active ? "Aktiv" : "Entwurf"} />
         </section>
 
-        <section className="bg-white border border-slate-200 rounded-2xl p-6 shadow-sm">
-          <SectionHeader icon={<Route className="w-4 h-4" />} title="Lernschritte" subtitle="Die Redaktion arbeitet mit Lernschritten. Missionen und Story-Arc liegen technisch darunter." />
-          {activeArc ? (
-            <div className="mt-5">
-              <div className="flex flex-wrap items-center justify-between gap-3 mb-4">
-                <div className="text-xs text-slate-500">Bestehenden Ablauf verbessern oder einen fehlenden Ablauf mit Missionen erzeugen.</div>
-                <form action={optimizeScenarioFlow.bind(null, scenarioId)}>
-                  <AiGenerationButton
-                    idleLabel="Ablauf mit KI optimieren"
-                    pendingLabel="Ablauf wird optimiert …"
-                    className="inline-flex items-center gap-1.5 rounded-lg bg-accent px-3 py-2 text-xs font-semibold text-white hover:bg-accent-hover"
-                    pendingSteps={["Ablauf analysieren …", "Missionen neu strukturieren …", "Entwurf speichern …"]}
-                  />
-                </form>
-              </div>
-              <details className="mb-4">
-                <summary className="cursor-pointer text-sm font-semibold text-slate-900">{activeArc.title} bearbeiten</summary>
-                <form action={updateArcDraft.bind(null, activeArc.id, scenarioId)} className="mt-3 grid gap-2 max-w-2xl">
-                  <input name="title" defaultValue={activeArc.title} className="rounded-xl border border-slate-200 px-3 py-2 text-sm" />
-                  <textarea name="description" defaultValue={activeArc.description ?? ""} rows={3} className="rounded-xl border border-slate-200 px-3 py-2 text-sm" />
-                  <button className="justify-self-start rounded-xl bg-slate-900 text-white px-3 py-2 text-xs font-semibold">Ablauf speichern</button>
-                </form>
-              </details>
-              {activeSteps.length ? (
-                <ol className="space-y-2">
-                  {activeSteps.map((step, index) => {
-                    const mission = missionById.get(step.mission_id);
-                    if (!mission) return null;
-                    return (
-                      <li key={step.id} className="flex items-center gap-3 rounded-xl border border-slate-200 px-4 py-3">
-                        <span className="w-7 h-7 rounded-full bg-slate-100 flex items-center justify-center text-xs font-semibold text-slate-500">{index + 1}</span>
-                        <div className="flex-1 min-w-0">
-                          <div className="text-sm font-medium text-slate-800">{mission.title}</div>
-                          <div className="text-xs text-slate-500 mt-0.5">{mission.description}</div>
-                          <details className="mt-2">
-                            <summary className="cursor-pointer text-[11px] font-semibold text-accent">Bearbeiten</summary>
-                            <form action={updateMissionDraft.bind(null, mission.id, scenarioId)} className="mt-2 grid gap-2">
-                              <input name="title" defaultValue={mission.title} className="rounded-lg border border-slate-200 px-2 py-1.5 text-xs" />
-                              <textarea name="description" defaultValue={mission.description ?? ""} rows={2} className="rounded-lg border border-slate-200 px-2 py-1.5 text-xs" />
-                              <button className="justify-self-start rounded-lg bg-slate-900 text-white px-2.5 py-1.5 text-[11px] font-semibold">Speichern</button>
-                            </form>
-                          </details>
-                        </div>
-                        <span className="text-[11px] rounded-full bg-slate-100 px-2 py-1 text-slate-500">
-                          {EVENT_LABELS[mission.trigger_condition?.event] ?? "Lernaktion"}
-                        </span>
-                      </li>
-                    );
-                  })}
-                </ol>
-              ) : (
-                <div className="rounded-xl border border-dashed border-slate-300 p-6 text-center text-sm text-slate-500">
-                  Noch keine Schritte. Ergänze den Ablauf direkt in diesem Szenario.
-                </div>
-              )}
-            </div>
-          ) : (
-            <div className="mt-5 rounded-xl border border-dashed border-slate-300 p-7 text-center">
-              <p className="text-sm font-medium text-slate-700">Noch kein Ablauf vorhanden</p>
-              <p className="text-xs text-slate-500 mt-1">Die KI kann aus der Szenario-Grundlage direkt einen ersten Ablauf mit Missionen erstellen.</p>
-              <form action={optimizeScenarioFlow.bind(null, scenarioId)} className="mt-4">
-                <AiGenerationButton
-                  idleLabel="Ersten Ablauf mit KI erstellen"
-                  pendingLabel="Ablauf wird erstellt …"
-                  className="inline-flex items-center gap-1.5 rounded-lg bg-accent px-3 py-2 text-xs font-semibold text-white hover:bg-accent-hover"
-                  pendingSteps={["Szenario analysieren …", "Ablauf und Missionen entwerfen …", "Entwurf speichern …"]}
-                />
-              </form>
-            </div>
-          )}
-          <div className="mt-4 flex items-center justify-between">
-            <span className="text-[11px] text-slate-400">Missionen und Ablauf bleiben als Entwurf bearbeitbar.</span>
-            <span className="inline-flex items-center gap-1.5 text-xs font-semibold text-slate-500">
-              Redaktioneller Draft <CheckCircle2 className="w-3.5 h-3.5" />
-            </span>
-          </div>
-        </section>
-
-        <section className="bg-white border border-slate-200 rounded-2xl p-6 shadow-sm">
+                <section className="bg-white border border-slate-200 rounded-2xl p-6 shadow-sm">
           <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3">
             <SectionHeader icon={<FileText className="w-4 h-4" />} title="Inhalte" subtitle="Posts, Kommentare, DMs und Reflexionen für diese Altersvariante." />
             <form action={generateScenarioContent.bind(null, scenarioId)}>
@@ -280,7 +194,7 @@ export default async function ScenarioDetailPage({ params, searchParams = {} }: 
                 idleLabel="Mit KI ergänzen"
                 pendingLabel="Inhalte werden erzeugt …"
                 className="shrink-0 inline-flex items-center gap-1.5 rounded-lg border border-accent/30 bg-accent/5 px-3 py-2 text-xs font-semibold text-accent hover:bg-accent/10"
-                pendingSteps={["Ablauf auswerten …", "Inhalte formulieren …", "Drafts speichern …"]}
+                pendingSteps={["Lernschritt auswerten …", "Inhalte formulieren …", "Drafts speichern …"]}
               />
             </form>
           </div>
