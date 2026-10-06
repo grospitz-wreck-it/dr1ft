@@ -221,15 +221,7 @@ export default async function ScenarioDetailPage({ params, searchParams = {} }: 
               pendingLabel="Inhalte werden erzeugt …"
               className="shrink-0 inline-flex items-center gap-1.5 rounded-lg border border-accent/30 bg-accent/5 px-3 py-2 text-xs font-semibold text-accent hover:bg-accent/10"
               pendingSteps={["Lernschritt auswerten …", "Inhalte formulieren …", "Drafts speichern …"]}
-              onClick={async () => {
-                const response = await fetch("/api/scenarios/" + scenarioId + "/content", {
-                  method: "POST",
-                  headers: { "Content-Type": "application/json" },
-                });
-                const result = await response.json().catch(() => ({}));
-                if (!response.ok) throw new Error(result.error || "Content-Generierung fehlgeschlagen.");
-                window.location.reload();
-              }}
+              apiEndpoint={"/api/scenarios/" + scenarioId + "/content"}
             />
           </div>
 
