@@ -154,9 +154,27 @@ export async function updateExistingContentMedia(scenarioId: string, contentItem
   }
 
   if (format === "video" && url && input.ai === false) {
-    extra.videoUrl = url;
-    const { error } = await supabase.from("content_items").update({ media_url: url, media_type: "video", extra, updated_at: new Date().toISOString() }).eq("id", contentItemId).eq("scenario_id", scenarioId);
-    if (error) throw new Error(error.message);
+    const embedUrl = youtubeEmbedUrl(url);
+    if (embedUrl && /(?:youtube\.com|youtu\.be|vimeo\.com)/i.test(url)) {
+      extra.embed = { url: embedUrl, source: url, provider: /vimeo/i.test(url) ? "vimeo" : "youtube" };
+      delete extra.videoUrl;
+      const { error } = await supabase.from("content_items").update({
+        media_url: null,
+        media_type: null,
+        extra,
+        updated_at: new Date().toISOString(),
+      }).eq("id", contentItemId).eq("scenario_id", scenarioId);
+      if (error) throw new Error(error.message);
+    } else {
+      extra.videoUrl = url;
+      const { error } = await supabase.from("content_items").update({
+        media_url: url,
+        media_type: "video",
+        extra,
+        updated_at: new Date().toISOString(),
+      }).eq("id", contentItemId).eq("scenario_id", scenarioId);
+      if (error) throw new Error(error.message);
+    }
     revalidatePath("/scenarios/" + scenarioId);
     return { ok: true };
   }
@@ -246,7 +264,16 @@ export async function createLearningContentItem(scenarioId: string, input: { for
       };
     } else {
       body = await geminiText(prompt + "\nErzeuge nur den eigentlichen Inhalt, keine Erklärung.");
-      if (format === "video" && url) { extra.videoUrl = url; mediaUrl = url; mediaType = "video"; }
+      if (format === "video" && url) {
+        const embedUrl = youtubeEmbedUrl(url);
+        if (embedUrl && /(?:youtube\.com|youtu\.be|vimeo\.com)/i.test(url)) {
+          extra.embed = { url: embedUrl, source: url, provider: /vimeo/i.test(url) ? "vimeo" : "youtube" };
+        } else {
+          extra.videoUrl = url;
+          mediaUrl = url;
+          mediaType = "video";
+        }
+      }
     }
   }
 
