@@ -49,6 +49,7 @@ export function PlayerShell({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<{ displayName: string; username: string; avatarSeed: string } | null>(null);
   const [open, setOpen] = useState(false);
   const [liveActivity, setLiveActivity] = useState<LiveActivity[]>([]);
+  const [activityRealtime, setActivityRealtime] = useState(false);
 
   useEffect(() => {
     let mounted = true;
@@ -154,11 +155,14 @@ export function PlayerShell({ children }: { children: React.ReactNode }) {
       }
 
       activities.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
-      setLiveActivity(activities.slice(0, 5));
+      setLiveActivity(activities.slice(0, 12));
     }
 
     let currentUserId = "";
     let channel: ReturnType<typeof supabase.channel> | null = null;
+    const poll = window.setInterval(() => {
+      if (currentUserId) void loadLiveActivity(currentUserId);
+    }, 5000);
 
     void (async () => {
       const { data: { user: authUser } } = await supabase.auth.getUser();
@@ -174,11 +178,17 @@ export function PlayerShell({ children }: { children: React.ReactNode }) {
         .on("postgres_changes", { event: "INSERT", schema: "public", table: "user_interactions" }, () => {
           void loadLiveActivity(currentUserId);
         })
-        .subscribe();
+        .subscribe((status) => {
+          const connected = status === "SUBSCRIBED";
+          setActivityRealtime(connected);
+          if (!connected && currentUserId) void loadLiveActivity(currentUserId);
+        });
     })();
 
     return () => {
       mounted = false;
+      window.clearInterval(poll);
+      setActivityRealtime(false);
       if (channel) void supabase.removeChannel(channel);
     };
   }, [supabase, user?.displayName]);
@@ -209,23 +219,40 @@ export function PlayerShell({ children }: { children: React.ReactNode }) {
                   {active && <span className="absolute right-2 w-1 h-7 rounded-full bg-gradient-to-b from-fuchsia-400 to-cyan-300 shadow-[0_0_14px_rgba(34,211,238,.6)]" />}
                 </Link>; })}
               </nav>
-              <div className="mt-7 mx-2 rounded-[22px] p-4 bg-gradient-to-br from-fuchsia-500/15 via-violet-500/15 to-cyan-400/10 border border-white/10">
-                <div className="flex items-center gap-2 mb-3">
-                  <span className="w-2 h-2 rounded-full bg-emerald-300 shadow-[0_0_0_4px_rgba(110,231,183,.12),0_0_12px_rgba(110,231,183,.55)]"/>
-                  <span className="text-[10px] uppercase tracking-[0.14em] font-semibold text-white/45">AKTIVITÄT IN DEINER KLASSE</span>
+              <div className="relative mt-7 mx-2 h-[300px] rounded-[22px] border border-white/10 bg-gradient-to-br from-fuchsia-500/15 via-violet-500/15 to-cyan-400/10 overflow-hidden">
+                <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-fuchsia-400/0 via-fuchsia-300/60 to-cyan-300/0" />
+                <div className="relative px-4 pt-4 pb-3 flex items-center justify-between border-b border-white/[.06]">
+                  <div className="flex items-center gap-2 min-w-0">
+                    <span className="relative grid place-items-center w-7 h-7 rounded-lg bg-white/[.07] text-emerald-300 shrink-0">
+                      <span className="w-2 h-2 rounded-full bg-emerald-300 shadow-[0_0_0_4px_rgba(110,231,183,.10),0_0_12px_rgba(110,231,183,.65)]" />
+                    </span>
+                    <div className="min-w-0">
+                      <span className="block text-[10px] uppercase tracking-[0.14em] font-semibold text-white/45 truncate">AKTIVITÄT IN DEINER KLASSE</span>
+                      <span className="block text-[10px] text-white/25 mt-0.5">{liveActivity.length ? `${liveActivity.length} aktuelle Aktivitäten` : "Noch keine neuen Aktivitäten"}</span>
+                    </div>
+                  </div>
+                  <span className={`shrink-0 ml-2 inline-flex items-center gap-1.5 rounded-full px-2 py-1 text-[9px] font-semibold uppercase tracking-[0.12em] border ${activityRealtime ? "border-emerald-300/20 bg-emerald-300/10 text-emerald-200" : "border-white/10 bg-white/[.04] text-white/30"}`}>
+                    <span className={`w-1.5 h-1.5 rounded-full ${activityRealtime ? "bg-emerald-300 animate-pulse" : "bg-white/25"}`} />
+                    {activityRealtime ? "LIVE" : "SYNC"}
+                  </span>
                 </div>
-                {liveActivity.length ? <div className="space-y-2.5">
-                  {liveActivity.map((activity) => {
-                    const Icon = activity.kind === "like" ? Heart : activity.kind === "share" ? Share2 : MessageCircle;
-                    return <div key={activity.id} className="flex items-start gap-2.5">
-                      <span className="mt-0.5 grid place-items-center w-6 h-6 rounded-lg bg-white/[.07] text-cyan-200 shrink-0"><Icon className="w-3.5 h-3.5"/></span>
-                      <div className="min-w-0">
-                        <p className="text-xs leading-4 text-white/85">{activity.text}</p>
-                        <p className="text-[10px] text-white/35 mt-0.5">{formatRelativeTime(activity.createdAt)}</p>
-                      </div>
-                    </div>;
-                  })}
-                </div> : <div className="flex items-center gap-2 text-xs text-white/50"><Sparkles className="w-3.5 h-3.5 text-cyan-200/70"/>Gerade ist es ruhig.</div>}
+                <div className="relative h-[245px] min-h-0 overflow-hidden">
+                  <div className="player-activity-scroll h-full overflow-y-auto px-4 py-3" aria-live="polite">
+                    {liveActivity.length ? <div className="space-y-2.5">
+                      {liveActivity.map((activity) => {
+                        const ActivityIcon = activity.kind === "like" ? Heart : activity.kind === "share" ? Share2 : MessageCircle;
+                        return <div key={activity.id} className="flex items-start gap-2.5 rounded-xl px-1 py-1.5 transition-colors hover:bg-white/[.035]">
+                          <span className="mt-0.5 grid place-items-center w-7 h-7 rounded-lg bg-white/[.07] text-cyan-200 shrink-0"><ActivityIcon className="w-3.5 h-3.5"/></span>
+                          <div className="min-w-0">
+                            <p className="text-xs leading-4 text-white/85">{activity.text}</p>
+                            <p className="text-[10px] text-white/35 mt-0.5">{formatRelativeTime(activity.createdAt)}</p>
+                          </div>
+                        </div>;
+                      })}
+                    </div> : <div className="h-full flex items-center justify-center text-center px-3"><div><Sparkles className="w-4 h-4 mx-auto mb-2 text-cyan-200/60"/><p className="text-xs text-white/50">Gerade ist es ruhig.</p><p className="text-[10px] text-white/25 mt-1">Neue Aktivitäten erscheinen hier live.</p></div></div>}
+                  </div>
+                  <div className="pointer-events-none absolute inset-x-0 bottom-0 h-8 bg-gradient-to-t from-[#2b2148]/45 to-transparent" />
+                </div>
               </div>
             </div>
             <div className="relative p-3 mt-auto border-t border-white/[.06]">
