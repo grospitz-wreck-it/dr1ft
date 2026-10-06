@@ -72,7 +72,14 @@ export default async function ScenarioDetailPage({ params, searchParams = {} }: 
       ])
     : [{ data: [] }, { data: [] }, { data: [] }];
 
-  const learningStepCompetencyIds = [...new Set((learningSteps ?? []).flatMap((step) => Array.isArray(step.competency_ids) ? step.competency_ids : []))];
+  const learningStepCompetencyIds = Array.from(
+    new Set(
+      (learningSteps ?? []).reduce<string[]>((ids, step) => {
+        if (Array.isArray(step.competency_ids)) ids.push(...step.competency_ids);
+        return ids;
+      }, [])
+    )
+  );
   const { data: learningStepCompetencies } = learningStepCompetencyIds.length
     ? await supabase.from("competencies").select("id,title").in("id", learningStepCompetencyIds)
     : { data: [] };
