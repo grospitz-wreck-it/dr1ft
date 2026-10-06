@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
+import { Heart, MessageCircle, Share2, Sparkles } from "lucide-react";
 import { supabaseBrowserClient } from "../lib/supabaseBrowserClient";
 import { avatarUrl } from "../lib/avatar";
 
@@ -36,6 +37,8 @@ function formatRelativeTime(value: string) {
 }
 
 type LiveActivity = {
+  id: string;
+  kind: "like" | "share" | "comment";
   text: string;
   createdAt: string;
 };
@@ -48,80 +51,98 @@ export function PlayerShell({ children }: { children: React.ReactNode }) {
   const [liveActivity, setLiveActivity] = useState<LiveActivity | null>(null);
 
   useEffect(() => {
-    let mounted = true;
-    async function loadProfile(authUser: { id: string; email?: string | null }) {
-      const { data: profile } = await supabase.from("user_profiles").select("display_name, username, avatar_seed").eq("id", authUser.id).maybeSingle();
-      if (!mounted) return;
-      setUser({ displayName: profile?.display_name || authUser.email?.split("@")[0] || "DR1FT", username: profile?.username || "drifter", avatarSeed: profile?.avatar_seed || authUser.id });
-    }
-    (async () => {
-      const { data: { user: authUser } } = await supabase.auth.getUser();
-      if (authUser) await loadProfile(authUser); else if (mounted) setUser(null);
-    })();
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
-      if (!session?.user) { setUser(null); return; }
-      window.setTimeout(() => { void loadProfile(session.user); }, 0);
-    });
-    return () => { mounted = false; subscription.unsubscribe(); };
-  }, [supabase]);
-
-  useEffect(() => {
     if (!user) {
-      setLiveActivity(null);
+      setLiveActivity([]);
       return;
     }
 
     let mounted = true;
-    let interval: number | null = null;
 
-    async function loadLiveActivity() {
+    async function loadLiveActivity(currentUserId: string) {
       const { data: classInstanceId, error: instanceError } = await supabase.rpc("get_current_class_instance_id");
       if (instanceError || !classInstanceId) {
-        if (mounted) setLiveActivity(null);
+        if (mounted) setLiveActivity([]);
         return;
       }
 
-      const { data: comment } = await supabase
-        .from("content_items")
-        .select("created_at, extra")
-        .eq("class_instance_id", classInstanceId)
-        .eq("type", "comment")
-        .eq("status", "live")
-        .not("parent_id", "is", null)
-        .order("created_at", { ascending: false })
-        .limit(1)
-        .maybeSingle();
+      const [{ data: interactions }, { data: comments }] = await Promise.all([
+        supabase
+          .from("user_interactions")
+          .select("id, user_id, interaction_type, created_at, user_profiles(display_name)")
+          .eq("class_instance_id", classInstanceId)
+          .in("interaction_type", ["like", "share"])
+          .order("created_at", { ascending: false })
+          .limit(12),
+        supabase
+          .from("content_items")
+          .select("id, created_at, extra")
+          .eq("class_instance_id", classInstanceId)
+          .eq("type", "comment")
+          .eq("status", "live")
+          .not("parent_id", "is", null)
+          .order("created_at", { ascending: false })
+          .limit(12),
+      ]);
 
       if (!mounted) return;
-      if (!comment) {
-        setLiveActivity(null);
-        return;
+
+      const activities: LiveActivity[] = [];
+
+      for (const row of interactions ?? []) {
+        if (row.user_id === currentUserId) continue;
+        const profile = Array.isArray(row.user_profiles) ? row.user_profiles[0] : row.user_profiles;
+        const name = profile?.display_name || "Jemand aus deiner Klasse";
+        const kind = row.interaction_type === "share" ? "share" : "like";
+        activities.push({
+          id: row.id,
+          kind,
+          text: kind === "share" ? `${name} hat einen Beitrag geteilt.` : `${name} gefällt ein Beitrag.`,
+          createdAt: row.created_at,
+        });
       }
 
-      const extra = (comment.extra ?? {}) as Record<string, unknown>;
-      const createdBy = extra.createdBy;
-      const displayName = typeof extra.displayName === "string" && extra.displayName.trim() ? extra.displayName : "Jemand aus deiner Klasse";
-      const text = createdBy === "student"
-        ? `${displayName} hat gerade kommentiert.`
-        : "Jemand aus deiner Klasse hat gerade reagiert.";
+      for (const row of comments ?? []) {
+        const extra = (row.extra ?? {}) as Record<string, unknown>;
+        const actorId = typeof extra.userId === "string" ? extra.userId : null;
+        if (actorId === currentUserId) continue;
+        const name = typeof extra.displayName === "string" && extra.displayName.trim()
+          ? extra.displayName
+          : "Jemand aus deiner Klasse";
+        activities.push({
+          id: row.id,
+          kind: "comment",
+          text: `${name} hat kommentiert.`,
+          createdAt: row.created_at,
+        });
+      }
 
-      setLiveActivity({ text, createdAt: comment.created_at });
+      activities.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+      setLiveActivity(activities.slice(0, 5));
     }
 
-    void loadLiveActivity();
-    interval = window.setInterval(() => { void loadLiveActivity(); }, 8000);
+    let currentUserId = "";
+    let channel: ReturnType<typeof supabase.channel> | null = null;
 
-    const channel = supabase
-      .channel("player-live-class-activity")
-      .on("postgres_changes", { event: "INSERT", schema: "public", table: "content_items" }, () => {
-        void loadLiveActivity();
-      })
-      .subscribe();
+    void (async () => {
+      const { data: { user: authUser } } = await supabase.auth.getUser();
+      if (!authUser || !mounted) return;
+      currentUserId = authUser.id;
+      void loadLiveActivity(currentUserId);
+
+      channel = supabase
+        .channel("player-live-class-activity")
+        .on("postgres_changes", { event: "INSERT", schema: "public", table: "content_items" }, () => {
+          void loadLiveActivity(currentUserId);
+        })
+        .on("postgres_changes", { event: "INSERT", schema: "public", table: "user_interactions" }, () => {
+          void loadLiveActivity(currentUserId);
+        })
+        .subscribe();
+    })();
 
     return () => {
       mounted = false;
-      if (interval !== null) window.clearInterval(interval);
-      void supabase.removeChannel(channel);
+      if (channel) void supabase.removeChannel(channel);
     };
   }, [supabase, user?.displayName]);
 
@@ -152,13 +173,22 @@ export function PlayerShell({ children }: { children: React.ReactNode }) {
                 </Link>; })}
               </nav>
               <div className="mt-7 mx-2 rounded-[22px] p-4 bg-gradient-to-br from-fuchsia-500/15 via-violet-500/15 to-cyan-400/10 border border-white/10">
-                <div className="flex items-center gap-2 mb-2"><span className="w-2 h-2 rounded-full bg-emerald-300 shadow-[0_0_0_4px_rgba(110,231,183,.12),0_0_12px_rgba(110,231,183,.55)]"/><span className="text-[10px] uppercase tracking-[0.14em] font-semibold text-white/45">LIVE IN DEINER KLASSE</span></div>
-                <p className="font-display font-semibold text-sm leading-snug text-white">
-                  {liveActivity?.text ?? "Gerade ist es ruhig."}
-                </p>
-                <p className="text-[11px] text-white/45 mt-2 leading-4">
-                  {liveActivity ? formatRelativeTime(liveActivity.createdAt) : "Aber das kann sich jederzeit ändern."}
-                </p>
+                <div className="flex items-center gap-2 mb-3">
+                  <span className="w-2 h-2 rounded-full bg-emerald-300 shadow-[0_0_0_4px_rgba(110,231,183,.12),0_0_12px_rgba(110,231,183,.55)]"/>
+                  <span className="text-[10px] uppercase tracking-[0.14em] font-semibold text-white/45">AKTIVITÄT IN DEINER KLASSE</span>
+                </div>
+                {liveActivity.length ? <div className="space-y-2.5">
+                  {liveActivity.map((activity) => {
+                    const Icon = activity.kind === "like" ? Heart : activity.kind === "share" ? Share2 : MessageCircle;
+                    return <div key={activity.id} className="flex items-start gap-2.5">
+                      <span className="mt-0.5 grid place-items-center w-6 h-6 rounded-lg bg-white/[.07] text-cyan-200 shrink-0"><Icon className="w-3.5 h-3.5"/></span>
+                      <div className="min-w-0">
+                        <p className="text-xs leading-4 text-white/85">{activity.text}</p>
+                        <p className="text-[10px] text-white/35 mt-0.5">{formatRelativeTime(activity.createdAt)}</p>
+                      </div>
+                    </div>;
+                  })}
+                </div> : <div className="flex items-center gap-2 text-xs text-white/50"><Sparkles className="w-3.5 h-3.5 text-cyan-200/70"/>Gerade ist es ruhig.</div>}
               </div>
             </div>
             <div className="relative p-3 mt-auto border-t border-white/[.06]">
