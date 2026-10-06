@@ -9,13 +9,16 @@ export function AiGenerationButton({
   pendingLabel,
   className = "",
   pendingSteps = [],
+  onClick,
 }: {
   idleLabel: string;
   pendingLabel: string;
   className?: string;
   pendingSteps?: string[];
 }) {
-  const { pending } = useFormStatus();
+  const { pending: formPending } = useFormStatus();
+  const [actionPending, setActionPending] = useState(false);
+  const pending = onClick ? actionPending : formPending;
   const [stepIndex, setStepIndex] = useState(0);
 
   useEffect(() => {
@@ -33,8 +36,18 @@ export function AiGenerationButton({
 
   return (
     <button
-      type="submit"
+      type={onClick ? "button" : "submit"}
       disabled={pending}
+      onClick={onClick ? async () => {
+        try {
+          setActionPending(true);
+          await onClick();
+        } catch (error) {
+          window.alert(error instanceof Error ? error.message : "KI-Generierung fehlgeschlagen.");
+        } finally {
+          setActionPending(false);
+        }
+      } : undefined}
       aria-busy={pending}
       className={`${className} disabled:cursor-wait disabled:opacity-70`}
     >
