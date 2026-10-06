@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
-import { ArrowUpRight, Check, Palette, Sparkles, Wand2 } from "lucide-react";
+import { ArrowUpRight, Check, LogOut, Palette, Sparkles, Wand2 } from "lucide-react";
 import { supabaseBrowserClient } from "../../lib/supabaseBrowserClient";
 import { avatarUrl } from "../../lib/avatar";
 
@@ -19,6 +19,7 @@ export default function ProfilePage() {
   function toggleInterest(key: string) { setMessage(null); setSelectedInterests((current) => current.includes(key) ? current.filter((value) => value !== key) : current.length < 3 ? [...current, key] : current); }
   async function save() { if (!userId || !displayName.trim() || !username.trim()) return; if (selectedInterests.length !== 3) { setMessage("Wähle bitte genau 3 Interessen aus."); return; } setSaving(true); setMessage(null); const cleanUsername = username.trim().replace(/^@/, "").toLowerCase().replace(/[^a-z0-9_]/g, "").slice(0, 24); if (!cleanUsername) { setSaving(false); setMessage("Der Nutzername enthält keine gültigen Zeichen."); return; } const { error: profileError } = await supabase.from("user_profiles").upsert({ id: userId, display_name: displayName.trim(), username: cleanUsername, avatar_seed: avatarSeed || userId }); if (profileError) { setSaving(false); setMessage(`Profil konnte nicht gespeichert werden: ${profileError.message}`); return; } const { error: preferenceError } = await supabase.from("user_ambient_preferences").upsert({ user_id: userId, interest_keys: selectedInterests, onboarding_completed: true, updated_at: new Date().toISOString() }); setSaving(false); if (preferenceError) { setMessage(`Interessen konnten nicht gespeichert werden: ${preferenceError.message}`); return; } setUsername(cleanUsername); setMessage("Profil gespeichert."); }
   function randomizeAvatar() { setAvatarSeed(`${userId ?? "dr1ft"}-${Math.random().toString(36).slice(2, 10)}`); }
+  async function signOut() { await supabase.auth.signOut(); router.replace("/login"); router.refresh(); }
   if (!userId) return <main className="min-h-screen grid place-items-center text-[#68738a]">Profil wird geladen…</main>;
 
   return <main className="min-h-screen text-[#26324a] max-w-3xl mx-auto">
@@ -35,5 +36,10 @@ export default function ProfilePage() {
     {message && <div className={`mt-4 rounded-2xl border px-4 py-3 text-xs ${message.includes("gespeichert") ? "bg-[#effcf7] border-[#d6f1e5] text-[#218a65]" : "bg-white border-[#e1e5ed] text-[#68738a]"}`}>{message}</div>}
     <button onClick={save} disabled={saving || loadingInterests || selectedInterests.length !== 3} className="mt-4 w-full rounded-2xl py-4 bg-gradient-to-r from-[#24163f] via-[#4a2671] to-[#7b1f73] text-white font-medium text-sm shadow-[0_16px_40px_rgba(74,36,111,.22)] hover:-translate-y-0.5 hover:shadow-[0_20px_48px_rgba(74,36,111,.28)] transition disabled:opacity-50 disabled:hover:translate-y-0">{saving ? "Speichert…" : selectedInterests.length !== 3 ? `Noch ${3 - selectedInterests.length} Interesse${3 - selectedInterests.length === 1 ? "" : "n"} wählen` : "Profil speichern"}</button>
     <button onClick={() => router.push(`/profile/${userId}`)} className="mt-3 w-full flex items-center justify-center gap-2 py-3 text-xs font-medium text-[#7545c7]">Öffentliches Profil ansehen <ArrowUpRight className="w-3.5 h-3.5" /></button>
+    <div className="mt-5 pt-4 border-t border-[#e7e9ef]">
+      <button onClick={signOut} className="mx-auto flex items-center justify-center gap-2 rounded-xl px-3 py-2 text-xs font-medium text-[#8b91a0] hover:text-[#b33b57] hover:bg-[#fff4f6] transition-colors" aria-label="Abmelden">
+        <LogOut className="w-3.5 h-3.5" /> Abmelden
+      </button>
+    </div>
   </main>;
 }
