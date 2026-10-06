@@ -4,6 +4,7 @@ import { supabaseServerClient } from "../../../lib/supabaseServerClient";
 import { createContentItem, generateScenarioContent, optimizeScenarioBasics, optimizeScenarioFlow, toggleScenarioActive, updateArcDraft, updateMissionDraft, updateScenarioBasics } from "../actions";
 import { ContentStatusControl } from "./ContentStatusControl";
 import { AiGenerationButton } from "../../components/AiGenerationButton";
+import { LearningDesignStudio } from "./LearningDesignStudio";
 
 interface Props {
   params: { scenarioId: string };
@@ -53,6 +54,7 @@ export default async function ScenarioDetailPage({ params, searchParams = {} }: 
     { data: possibleParents },
     { data: missions },
     { data: arcs },
+    { data: latestLearningDesign },
   ] = await Promise.all([
     supabase.from("scenarios").select("id, title, age_band, age_rating, status, is_active").eq("scenario_group", group).order("age_band"),
     supabase.from("content_items").select("*").eq("scenario_id", scenarioId).order("created_at", { ascending: false }),
@@ -61,6 +63,7 @@ export default async function ScenarioDetailPage({ params, searchParams = {} }: 
     supabase.from("content_items").select("id, body, scenario_id").eq("type", "post").or(`scenario_id.eq.${scenarioId},scenario_id.is.null`),
     supabase.from("missions").select("*").eq("scenario_id", scenarioId).order("created_at"),
     supabase.from("story_arcs").select("*").eq("scenario_id", scenarioId).order("created_at"),
+    supabase.from("learning_designs").select("id,version,status,title,description,primary_learning_model,bloom_target,pedagogical_warnings").eq("scenario_id", scenarioId).order("version", { ascending: false }).limit(1).maybeSingle(),
   ]);
 
   const arcIds = (arcs ?? []).map((arc) => arc.id);
@@ -152,6 +155,8 @@ export default async function ScenarioDetailPage({ params, searchParams = {} }: 
             </div>
           </section>
         )}
+
+        <LearningDesignStudio scenarioId={scenarioId} latestDesign={latestLearningDesign} />
 
         <section className="grid md:grid-cols-4 gap-3">
           <SummaryCard icon={<Route className="w-4 h-4" />} label="Ablauf" value={activeSteps.length ? `${activeSteps.length} Schritte` : "Noch leer"} />
