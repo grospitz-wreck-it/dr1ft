@@ -215,7 +215,7 @@ export async function createLearningContentItem(scenarioId: string, input: { for
   if (format === "embed") {
     if (!url) throw new Error("Für einen Embed wird eine URL oder ein Embed-Code benötigt.");
     body = userPrompt || "Eingebetteter Inhalt";
-    extra.embedUrl = url;
+    const embedUrl = youtubeEmbedUrl(url);\n    if (!embedUrl) throw new Error("Bitte eine gültige URL oder einen iframe-Embed-Code angeben.");\n    extra.embed = { url: embedUrl, source: url };
   } else if (input.ai !== false) {
     const prompt = [
       "Erzeuge einen redaktionellen Entwurf für DR1FT.",
@@ -244,7 +244,7 @@ export async function createLearningContentItem(scenarioId: string, input: { for
       };
     } else {
       body = await geminiText(prompt + "\nErzeuge nur den eigentlichen Inhalt, keine Erklärung.");
-      if (format === "video" && url) extra.videoUrl = url;
+      if (format === "video" && url) { extra.videoUrl = url; mediaUrl = url; mediaType = "video"; }
     }
   }
 
