@@ -5,6 +5,7 @@ import { createContentItem, generateScenarioContent, optimizeScenarioBasics, opt
 import { ContentStatusControl } from "./ContentStatusControl";
 import { AiGenerationButton } from "../../components/AiGenerationButton";
 import { LearningDesignStudio } from "./LearningDesignStudio";
+import { LearningStepEditor } from "./LearningStepEditor";
 import { regenerateLearningImage, rejectLearningImage } from "../learning-content-actions";
 
 interface Props {
@@ -66,6 +67,22 @@ export default async function ScenarioDetailPage({ params, searchParams = {} }: 
     supabase.from("story_arcs").select("*").eq("scenario_id", scenarioId).order("created_at"),
     supabase.from("learning_designs").select("id,version,status,title,description,primary_learning_model,bloom_target,pedagogical_warnings").eq("scenario_id", scenarioId).order("version", { ascending: false }).limit(1).maybeSingle(),
   ]);
+
+  const learningDesignId = latestLearningDesign?.id ?? null;
+  const [{ data: learningSteps }, { data: frameworkMappings }, { data: learningObjectives }] = learningDesignId
+    ? await Promise.all([
+        supabase.from("learning_steps").select("*").eq("learning_design_id", learningDesignId).order("step_index"),
+        supabase.from("framework_mappings").select("id,framework,dimension_label,rationale,source_title,source_url").eq("learning_design_id", learningDesignId).order("framework"),
+        supabase.from("learning_objectives").select("id,title").eq("learning_design_id", learningDesignId).order("priority"),
+      ])
+    : [{ data: [] }, { data: [] }, { data: [] }];
+
+  const learningStepCompetencyIds = [...new Set((learningSteps ?? []).flatMap((step) => Array.isArray(step.competency_ids) ? step.competency_ids : []))];
+  const { data: learningStepCompetencies } = learningStepCompetencyIds.length
+    ? await supabase.from("competencies").select("id,title").in("id", learningStepCompetencyIds)
+    : { data: [] };
+  const learningObjectiveLabels = Object.fromEntries((learningObjectives ?? []).map((objective) => [objective.id, objective.title]));
+  const learningCompetencyLabels = Object.fromEntries((learningStepCompetencies ?? []).map((competency) => [competency.id, competency.title]));
 
   const arcIds = (arcs ?? []).map((arc) => arc.id);
   const { data: steps } = arcIds.length
@@ -159,15 +176,26 @@ export default async function ScenarioDetailPage({ params, searchParams = {} }: 
 
         <LearningDesignStudio scenarioId={scenarioId} latestDesign={latestLearningDesign} />
 
+        {latestLearningDesign && (
+          <LearningStepEditor
+            scenarioId={scenarioId}
+            designId={latestLearningDesign.id}
+            steps={learningSteps ?? []}
+            mappings={frameworkMappings ?? []}
+            competencyLabels={learningCompetencyLabels}
+            objectiveLabels={learningObjectiveLabels}
+          />
+        )}
+
         <section className="grid md:grid-cols-4 gap-3">
-          <SummaryCard icon={<Route className="w-4 h-4" />} label="Ablauf" value={activeSteps.length ? `${activeSteps.length} Schritte` : "Noch leer"} />
+          <SummaryCard icon={<Route className="w-4 h-4" />} label="Lernschritte" value={activeSteps.length ? `${activeSteps.length} Schritte` : "Noch leer"} />
           <SummaryCard icon={<Flag className="w-4 h-4" />} label="Missionen" value={`${missions?.length ?? 0}`} />
           <SummaryCard icon={<FileText className="w-4 h-4" />} label="Inhalte" value={`${contentItems?.length ?? 0}`} />
           <SummaryCard icon={<Users className="w-4 h-4" />} label="Status" value={scenario.is_active ? "Aktiv" : "Entwurf"} />
         </section>
 
         <section className="bg-white border border-slate-200 rounded-2xl p-6 shadow-sm">
-          <SectionHeader icon={<Route className="w-4 h-4" />} title="Ablauf" subtitle="Die Redaktion denkt in Lernschritten. Missionen und Story-Arc liegen technisch darunter." />
+          <SectionHeader icon={<Route className="w-4 h-4" />} title="Lernschritte" subtitle="Die Redaktion arbeitet mit Lernschritten. Missionen und Story-Arc liegen technisch darunter." />
           {activeArc ? (
             <div className="mt-5">
               <div className="flex flex-wrap items-center justify-between gap-3 mb-4">
