@@ -115,6 +115,77 @@ function imagePromptFor(item: any, step: any, scenario: any) {
   ].join(" ");
 }
 
+export async function createLearningContentItem(scenarioId: string, input: { format?: string; prompt?: string; url?: string; ai?: boolean }) {
+  const supabase = supabaseServerClient();
+  const format = String(input.format || "post");
+  const userPrompt = String(input.prompt || "").trim();
+  const url = String(input.url || "").trim();
+
+  const { data: scenario } = await supabase.from("scenarios").select("id,title,description,age_band,age_rating").eq("id", scenarioId).single();
+  if (!scenario) throw new Error("Szenario nicht gefunden.");
+
+  const { data: design } = await supabase.from("learning_designs").select("id").eq("scenario_id", scenarioId).order("version", { ascending: false }).limit(1).maybeSingle();
+  const { data: step } = design
+    ? await supabase.from("learning_steps").select("id,title,description,activity_type,activity_config,reflection_prompt").eq("learning_design_id", design.id).order("step_index").limit(1).maybeSingle()
+    : { data: null };
+
+  const labels: Record<string,string> = { post:"Textbeitrag", photo:"Foto", meme:"Meme", video:"Video", embed:"Embed", comment:"Kommentar", dm_message:"DM", reflection_prompt:"Reflexionsimpuls" };
+  let body = userPrompt;
+  let mediaUrl: string | null = null;
+  let mediaType: string | null = null;
+  let extra: Record<string, unknown> = { generatedBy: "content-composer-v1", contentFormat: format, learningStepId: step?.id ?? null };
+
+  if (format === "embed") {
+    if (!url) throw new Error("Für einen Embed wird eine URL oder ein Embed-Code benötigt.");
+    body = userPrompt || "Eingebetteter Inhalt";
+    extra.embedUrl = url;
+  } else if (input.ai !== false) {
+    const prompt = [
+      "Erzeuge einen redaktionellen Entwurf für DR1FT.",
+      "Format: " + (labels[format] || format),
+      "Szenario: " + scenario.title,
+      "Altersgruppe: " + scenario.age_band,
+      "Lernschritt: " + (step?.title || "nicht angegeben"),
+      "Lernschritt-Beschreibung: " + (step?.description || ""),
+      "Pädagogischer Zweck: " + (step?.activity_config?.contentPlan ? JSON.stringify(step.activity_config.contentPlan) : "nicht angegeben"),
+      "Zusätzlicher Wunsch der Redaktion: " + (userPrompt || "keiner"),
+      "Erzeuge keinen Meta-Text über Pädagogik. Alles bleibt Draft.",
+    ].join("\n");
+
+    if (format === "photo" || format === "meme") {
+      const image = await generateImage(
+        prompt + (format === "meme" ? " Create a meme-style visual, but do not use copyrighted characters or readable text in the image." : " Create a realistic ordinary smartphone photo."),
+        "4:5",
+        scenarioId,
+      );
+      mediaUrl = image.url;
+      mediaType = "image";
+      body = format === "meme" ? (await geminiText(prompt + "\nGive a short meme caption for the generated image.")) : (userPrompt || "Bild für den Lernschritt");
+      extra.imageGeneration = {
+        status: "generated", provider: image.provider, model: image.model, fullPrompt: prompt,
+        aspectRatio: "4:5", generationCount: 1, editorialReview: "pending", generatedAt: new Date().toISOString(),
+      };
+    } else {
+      body = await geminiText(prompt + "\nErzeuge nur den eigentlichen Inhalt, keine Erklärung.");
+      if (format === "video" && url) extra.videoUrl = url;
+    }
+  }
+
+  const type = format === "comment" ? "comment" : format === "dm_message" ? "dm_message" : format === "reflection_prompt" ? "reflection_prompt" : "post";
+  const { data: contentItem, error } = await supabase.from("content_items").insert({
+    scenario_id: scenarioId, type, body: body || labels[format] || "Entwurf", media_url: mediaUrl, media_type: mediaType,
+    difficulty: 1, age_rating: scenario.age_band === "16_17" || scenario.age_band === "18_plus" ? "16_plus" : "12_plus",
+    manipulation_techniques: [], target_competencies: [], status: "draft", extra,
+  }).select("id").single();
+  if (error || !contentItem) throw new Error(error?.message || "Content konnte nicht gespeichert werden.");
+
+  if (step) {
+    await supabase.from("learning_step_content").insert({ learning_step_id: step.id, content_item_id: contentItem.id, role: format, order_index: 0, required: false });
+  }
+  revalidatePath("/scenarios/" + scenarioId);
+  return { ok: true, id: contentItem.id };
+}
+
 export async function generateLearningContent(scenarioId: string, learningDesignId?: string) {
   const supabase = supabaseServerClient();
 
