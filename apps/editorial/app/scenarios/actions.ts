@@ -636,12 +636,10 @@ Gib ausschließlich valides JSON gemäß Schema zurück.`;
   } catch (error) {
     const message = error instanceof Error ? error.message : "KI-Optimierung fehlgeschlagen.";
     console.error("[scenario-ai-basics]", error);
-    if (!redirectAfter) throw new Error(message);
     redirect(`/scenarios/${scenarioId}?aiError=${encodeURIComponent(message.slice(0, 900))}`);
   }
   revalidatePath(`/scenarios/${scenarioId}`);
-  if (redirectAfter) redirect(`/scenarios/${scenarioId}?ai=${encodeURIComponent(successMessage)}`);
-  return { ok: true, message: successMessage };
+  redirect(`/scenarios/${scenarioId}?ai=${encodeURIComponent(successMessage)}`);
 }
 
 export async function optimizeScenarioFlow(scenarioId: string) {
