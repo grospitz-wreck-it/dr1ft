@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { createLearningContentItem, updateExistingContentMedia } from "../../../scenarios/learning-content-actions";
+import { createLearningContentItem, updateExistingContentMedia } from "../../../../scenarios/learning-content-actions";
 
 export async function POST(request: Request, { params }: { params: { scenarioId: string } }) {
   try {
