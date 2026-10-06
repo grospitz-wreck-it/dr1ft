@@ -41,6 +41,7 @@ type LiveActivity = {
   kind: "like" | "share" | "comment";
   text: string;
   createdAt: string;
+  contentItemId: string;
 };
 
 export function PlayerShell({ children }: { children: React.ReactNode }) {
@@ -136,6 +137,7 @@ export function PlayerShell({ children }: { children: React.ReactNode }) {
           kind,
           text: kind === "share" ? `${name} hat einen Beitrag geteilt.` : `${name} gefällt ein Beitrag.`,
           createdAt: row.created_at,
+          contentItemId: row.content_item_id,
         });
       }
 
@@ -151,6 +153,7 @@ export function PlayerShell({ children }: { children: React.ReactNode }) {
           kind: "comment",
           text: `${name} hat kommentiert.`,
           createdAt: row.created_at,
+          contentItemId: typeof extra.parentContentItemId === "string" ? extra.parentContentItemId : row.id,
         });
       }
 
@@ -241,13 +244,18 @@ export function PlayerShell({ children }: { children: React.ReactNode }) {
                     {liveActivity.length ? <div className="space-y-2.5">
                       {liveActivity.map((activity) => {
                         const ActivityIcon = activity.kind === "like" ? Heart : activity.kind === "share" ? Share2 : MessageCircle;
-                        return <div key={activity.id} className="flex items-start gap-2.5 rounded-xl px-1 py-1.5 transition-colors hover:bg-white/[.035]">
+                        return <Link
+                          key={activity.id}
+                          href={`/feed#post-${activity.contentItemId}`}
+                          className="flex items-start gap-2.5 rounded-xl px-1 py-1.5 transition-colors hover:bg-white/[.055] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-300/40"
+                          title="Beitrag öffnen"
+                        >
                           <span className="mt-0.5 grid place-items-center w-7 h-7 rounded-lg bg-white/[.07] text-cyan-200 shrink-0"><ActivityIcon className="w-3.5 h-3.5"/></span>
                           <div className="min-w-0">
                             <p className="text-xs leading-4 text-white/85">{activity.text}</p>
                             <p className="text-[10px] text-white/35 mt-0.5">{formatRelativeTime(activity.createdAt)}</p>
                           </div>
-                        </div>;
+                        </Link>;
                       })}
                     </div> : <div className="h-full flex items-center justify-center text-center px-3"><div><Sparkles className="w-4 h-4 mx-auto mb-2 text-cyan-200/60"/><p className="text-xs text-white/50">Gerade ist es ruhig.</p><p className="text-[10px] text-white/25 mt-1">Neue Aktivitäten erscheinen hier live.</p></div></div>}
                   </div>
