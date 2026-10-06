@@ -33,6 +33,15 @@ export default {
           DEFAULT: "rgb(23 16 39 / <alpha-value>)",
           surface: "rgb(36 26 59 / <alpha-value>)",
         },
+        social: {
+          purple: "var(--drift-purple)",
+          violet: "var(--drift-violet)",
+          pink: "var(--drift-pink)",
+          blue: "var(--drift-blue)",
+          mint: "var(--drift-mint)",
+          peach: "var(--drift-peach)",
+          yellow: "var(--drift-yellow)",
+        },
       },
       fontFamily: {
         display: ["var(--font-display)", "sans-serif"],
