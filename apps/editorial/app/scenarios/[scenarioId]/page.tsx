@@ -216,14 +216,21 @@ export default async function ScenarioDetailPage({ params, searchParams = {} }: 
                 <section className="bg-white border border-slate-200 rounded-2xl p-6 shadow-sm">
           <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3">
             <SectionHeader icon={<FileText className="w-4 h-4" />} title="Inhalte" subtitle="Posts, Kommentare, DMs und Reflexionen für diese Altersvariante." />
-            <form action={generateScenarioContent.bind(null, scenarioId)}>
-              <AiGenerationButton
-                idleLabel="Mit KI ergänzen"
-                pendingLabel="Inhalte werden erzeugt …"
-                className="shrink-0 inline-flex items-center gap-1.5 rounded-lg border border-accent/30 bg-accent/5 px-3 py-2 text-xs font-semibold text-accent hover:bg-accent/10"
-                pendingSteps={["Lernschritt auswerten …", "Inhalte formulieren …", "Drafts speichern …"]}
-              />
-            </form>
+            <AiGenerationButton
+              idleLabel="Mit KI ergänzen"
+              pendingLabel="Inhalte werden erzeugt …"
+              className="shrink-0 inline-flex items-center gap-1.5 rounded-lg border border-accent/30 bg-accent/5 px-3 py-2 text-xs font-semibold text-accent hover:bg-accent/10"
+              pendingSteps={["Lernschritt auswerten …", "Inhalte formulieren …", "Drafts speichern …"]}
+              onClick={async () => {
+                const response = await fetch("/api/scenarios/" + scenarioId + "/content", {
+                  method: "POST",
+                  headers: { "Content-Type": "application/json" },
+                });
+                const result = await response.json().catch(() => ({}));
+                if (!response.ok) throw new Error(result.error || "Content-Generierung fehlgeschlagen.");
+                window.location.reload();
+              }}
+            />
           </div>
 
           {grouped.length > 0 ? (
