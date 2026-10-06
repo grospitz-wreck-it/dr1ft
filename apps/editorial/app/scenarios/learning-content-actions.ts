@@ -133,7 +133,7 @@ function youtubeEmbedUrl(value: string) {
   }
 }
 
-async function updateExistingContentMedia(scenarioId: string, contentItemId: string, input: { format?: string; prompt?: string; url?: string; ai?: boolean }) {
+export async function updateExistingContentMedia(scenarioId: string, contentItemId: string, input: { format?: string; prompt?: string; url?: string; ai?: boolean }) {
   const supabase = supabaseServerClient();
   const { data: item } = await supabase.from("content_items").select("id,body,media_url,media_type,extra").eq("id", contentItemId).eq("scenario_id", scenarioId).single();
   if (!item) throw new Error("Inhalt nicht gefunden.");
