@@ -49,7 +49,7 @@ async function storeImage(base64: string, mimeType: string, scenarioId: string) 
 
 async function generateImage(prompt: string, aspectRatio: string, scenarioId: string) {
   const workerUrl = process.env.CLOUDFLARE_AMBIENT_IMAGE_URL?.trim();
-  const apiKey = process.env.CLOUDFLARE_AMBIENT_IMAGE_API_KEY?.trim();
+  const apiKey = (process.env.CLOUDFLARE_AMBIENT_IMAGE_API_KEY ?? process.env.AMBIENT_IMAGE_API_KEY)?.trim();
 
   if (workerUrl && apiKey) {
     const response = await fetch(workerUrl, {
@@ -62,15 +62,16 @@ async function generateImage(prompt: string, aspectRatio: string, scenarioId: st
       cache: "no-store",
     });
 
-    if (response.ok) {
-      const data = await response.json();
-      if (typeof data?.image === "string") {
-        return {
-          url: await storeImage(data.image, "image/jpeg", scenarioId),
-          provider: "cloudflare",
-          model: "@cf/black-forest-labs/flux-2-klein-4b",
-        };
-      }
+    const data = await response.json().catch(() => ({}));
+    if (response.ok && typeof data?.image === "string") {
+      return {
+        url: await storeImage(data.image, "image/jpeg", scenarioId),
+        provider: "cloudflare",
+        model: "@cf/black-forest-labs/flux-2-klein-4b",
+      };
+    }
+    if (!response.ok) {
+      throw new Error("Cloudflare Bildgenerierung fehlgeschlagen: " + String(data?.error || data?.detail || response.statusText).slice(0, 500));
     }
   }
 
