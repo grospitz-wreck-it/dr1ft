@@ -360,19 +360,30 @@ export default async function ScenarioDetailPage({ params, searchParams = {} }: 
 
 function videoEmbedUrl(value: string) {
   try {
-    const url = new URL(value);
-    if (url.hostname.includes("youtube.com")) {
+    const url = new URL(value.trim());
+    const host = url.hostname.toLowerCase();
+    const parts = url.pathname.split("/").filter(Boolean);
+
+    if (host === "youtu.be") {
+      const id = parts[0];
+      return id ? "https://www.youtube.com/embed/" + id : null;
+    }
+
+    if (host.includes("youtube.com")) {
+      if (parts[0] === "embed" && parts[1]) return "https://www.youtube.com/embed/" + parts[1];
+      if (parts[0] === "shorts" && parts[1]) return "https://www.youtube.com/embed/" + parts[1];
       const id = url.searchParams.get("v");
       return id ? "https://www.youtube.com/embed/" + id : null;
     }
-    if (url.hostname === "youtu.be") {
-      const id = url.pathname.split("/").filter(Boolean)[0];
-      return id ? "https://www.youtube.com/embed/" + id : null;
+
+    if (host.includes("vimeo.com")) {
+      if (host === "player.vimeo.com" && parts[0] === "video" && parts[1]) {
+        return "https://player.vimeo.com/video/" + parts[1];
+      }
+      const id = parts.pop();
+      return id && /^\d+$/.test(id) ? "https://player.vimeo.com/video/" + id : null;
     }
-    if (url.hostname.includes("vimeo.com")) {
-      const id = url.pathname.split("/").filter(Boolean).pop();
-      return id ? "https://player.vimeo.com/video/" + id : null;
-    }
+
     return null;
   } catch {
     return null;
