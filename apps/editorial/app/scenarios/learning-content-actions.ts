@@ -215,7 +215,9 @@ export async function createLearningContentItem(scenarioId: string, input: { for
   if (format === "embed") {
     if (!url) throw new Error("Für einen Embed wird eine URL oder ein Embed-Code benötigt.");
     body = userPrompt || "Eingebetteter Inhalt";
-    const embedUrl = youtubeEmbedUrl(url);\n    if (!embedUrl) throw new Error("Bitte eine gültige URL oder einen iframe-Embed-Code angeben.");\n    extra.embed = { url: embedUrl, source: url };
+    const embedUrl = youtubeEmbedUrl(url);
+    if (!embedUrl) throw new Error("Bitte eine gültige URL oder einen iframe-Embed-Code angeben.");
+    extra.embed = { url: embedUrl, source: url };
   } else if (input.ai !== false) {
     const prompt = [
       "Erzeuge einen redaktionellen Entwurf für DR1FT.",
