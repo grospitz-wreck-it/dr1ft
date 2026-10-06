@@ -72,6 +72,17 @@ export default async function ScenarioDetailPage({ params, searchParams = {} }: 
       ])
     : [{ data: [] }, { data: [] }, { data: [] }];
 
+  const learningStepIds = (learningSteps ?? []).map((step) => step.id);
+  const [{ data: learningStepObjectiveMappings }, { data: learningStepCompetencyMappings }, { data: learningStepMissionMappings }, { data: learningEvidenceIndicators }, { data: learningStepContentMappings }] = learningStepIds.length
+    ? await Promise.all([
+        supabase.from("learning_step_objectives").select("learning_step_id,learning_objective_id").in("learning_step_id", learningStepIds),
+        supabase.from("learning_step_competencies").select("learning_step_id,competency_id").in("learning_step_id", learningStepIds),
+        supabase.from("learning_step_missions").select("learning_step_id,mission_id").in("learning_step_id", learningStepIds),
+        supabase.from("evidence_indicators").select("*").in("learning_step_id", learningStepIds).order("created_at"),
+        supabase.from("learning_step_content").select("learning_step_id,content_item_id,role,sort_order").in("learning_step_id", learningStepIds).order("sort_order"),
+      ])
+    : [{ data: [] }, { data: [] }, { data: [] }, { data: [] }, { data: [] }];
+
   const learningStepCompetencyIds = Array.from(
     new Set(
       (learningSteps ?? []).reduce<string[]>((ids, step) => {
