@@ -6,6 +6,7 @@ import { ContentStatusControl } from "./ContentStatusControl";
 import { AiGenerationButton } from "../../components/AiGenerationButton";
 import { LearningDesignStudio } from "./LearningDesignStudio";
 import { LearningStepEditor } from "./LearningStepEditor";
+import { ContentComposer } from "./ContentComposer";
 import { regenerateLearningImage, rejectLearningImage } from "../learning-content-actions";
 
 interface Props {
@@ -216,13 +217,7 @@ export default async function ScenarioDetailPage({ params, searchParams = {} }: 
                 <section className="bg-white border border-slate-200 rounded-2xl p-6 shadow-sm">
           <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3">
             <SectionHeader icon={<FileText className="w-4 h-4" />} title="Inhalte" subtitle="Posts, Kommentare, DMs und Reflexionen für diese Altersvariante." />
-            <AiGenerationButton
-              idleLabel="Mit KI ergänzen"
-              pendingLabel="Inhalte werden erzeugt …"
-              className="shrink-0 inline-flex items-center gap-1.5 rounded-lg border border-accent/30 bg-accent/5 px-3 py-2 text-xs font-semibold text-accent hover:bg-accent/10"
-              pendingSteps={["Lernschritt auswerten …", "Inhalte formulieren …", "Drafts speichern …"]}
-              apiEndpoint={"/api/scenarios/" + scenarioId + "/content"}
-            />
+            <ContentComposer scenarioId={scenarioId} />
           </div>
 
           {grouped.length > 0 ? (
