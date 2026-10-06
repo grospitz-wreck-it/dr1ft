@@ -90,6 +90,12 @@ body::after {
 }
 
 @layer components {
+  .player-sidebar { display: none; }
+
+  @media (min-width: 1024px) {
+    .player-sidebar { display: flex !important; }
+  }
+
   .player-surface {
     background: rgba(255,255,255,.76);
     border: 1px solid rgba(255,255,255,.92);
