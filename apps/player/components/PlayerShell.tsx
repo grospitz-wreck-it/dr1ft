@@ -152,7 +152,7 @@ export function PlayerShell({ children }: { children: React.ReactNode }) {
   return (
     <div className="min-h-screen">
       {showShell && <>
-        <aside className="hidden lg:flex fixed z-40 inset-y-0 left-0 w-[286px] p-4 pointer-events-none">
+        <aside className="player-sidebar fixed z-40 inset-y-0 left-0 w-[286px] p-4 pointer-events-none">
           <div className="pointer-events-auto w-full rounded-[30px] border border-white/20 bg-[#171027]/95 text-white shadow-[0_24px_80px_rgba(42,20,75,.28)] backdrop-blur-2xl flex flex-col overflow-hidden relative">
             <div className="absolute -top-20 -right-16 w-48 h-48 rounded-full bg-fuchsia-500/25 blur-3xl" />
             <div className="absolute bottom-20 -left-20 w-44 h-44 rounded-full bg-cyan-400/20 blur-3xl" />
