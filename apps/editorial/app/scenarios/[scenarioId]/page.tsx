@@ -7,6 +7,7 @@ import { AiGenerationButton } from "../../components/AiGenerationButton";
 import { LearningDesignStudio } from "./LearningDesignStudio";
 import { LearningStepEditor } from "./LearningStepEditor";
 import { ContentComposer } from "./ContentComposer";
+import { ContentAttachmentEditor } from "./ContentAttachmentEditor";
 import { regenerateLearningImage, rejectLearningImage } from "../learning-content-actions";
 
 interface Props {
@@ -233,6 +234,16 @@ export default async function ScenarioDetailPage({ params, searchParams = {} }: 
                             <img src={item.media_url} alt="" className="w-full max-h-[420px] object-cover" />
                           </div>
                         )}
+                        {item.media_url && item.media_type === "video" && (
+                          <div className="bg-black">
+                            <video src={item.media_url} controls className="w-full max-h-[420px]" />
+                          </div>
+                        )}
+                        {item.extra?.embed?.url && (
+                          <div className="aspect-video bg-slate-100">
+                            <iframe src={item.extra.embed.url} title="Eingebettetes Video" className="w-full h-full" allowFullScreen />
+                          </div>
+                        )}
                         <div className="p-3">
                           <p className="text-sm text-slate-900">{item.body}</p>
                           <p className="text-xs text-slate-400 mt-1">{item.type} · {item.age_rating} · Schwierigkeit {item.difficulty}</p>
@@ -280,6 +291,7 @@ export default async function ScenarioDetailPage({ params, searchParams = {} }: 
                             </div>
                           )}
 
+                          <ContentAttachmentEditor scenarioId={scenarioId} contentItemId={item.id} />
                           <div className="mt-2"><ContentStatusControl contentItemId={item.id} status={item.status} /></div>
                         </div>
                       </li>
