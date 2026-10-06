@@ -22,6 +22,8 @@
   --drift-mint: #5eead4;
   --drift-peach: #fb923c;
   --drift-yellow: #facc15;
+  --drift-border: #ddd8ec;
+  --drift-growth: #14b8a6;
 }
 
 html { background: var(--drift-bg); }
@@ -68,13 +70,13 @@ body::after {
 
 .bg-ink { background-color: var(--drift-bg) !important; }
 .bg-ink-light { background-color: var(--drift-surface-soft) !important; }
-.border-ink-border { border-color: #ddd8ec !important; }
+.border-ink-border { border-color: var(--drift-border) !important; }
 .text-paper { color: var(--drift-ink) !important; }
 .bg-paper { background-color: var(--drift-surface) !important; }
 .bg-paper\/90 { background-color: rgb(255 255 255 / 0.9) !important; }
 .text-ash { color: var(--drift-ink-soft) !important; }
-.text-growth { color: #14b8a6 !important; }
-.bg-growth { background-color: #14b8a6 !important; }
+.text-growth { color: var(--drift-growth) !important; }
+.bg-growth { background-color: var(--drift-growth) !important; }
 
 ::selection {
   background: #ddd6fe;
