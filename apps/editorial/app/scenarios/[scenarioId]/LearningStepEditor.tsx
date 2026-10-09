@@ -5,6 +5,7 @@ import { ArrowDown, ArrowUp, CheckCircle2, ChevronDown, CircleAlert, Save } from
 import { updateLearningStep, moveLearningStep } from "../learning-step-actions";
 import { updateLearningStepDesign } from "../learning-step-design-actions";
 import { runLearningDesignQa } from "../learning-design-qa-actions";
+import { LearningInteractionCheckEditor } from "./LearningInteractionCheckEditor";
 
 type Step = {
   id: string;
@@ -98,7 +99,7 @@ export function LearningStepEditor({
   missionMappings: StepMapping[];
   evidenceIndicators: EvidenceIndicator[];
   contentMappings: ContentMapping[];
-  contentItems: { id: string; body: string | null }[];
+  contentItems: { id: string; body: string | null; media_url?: string | null; media_type?: string | null; extra?: unknown }[];
 }) {
   const [busy, startTransition] = useTransition();
 
@@ -287,7 +288,7 @@ export function LearningStepEditor({
                   {stepContent.length > 0 && (
                     <div>
                       <div className="text-xs font-semibold text-slate-800">Vorhandene Inhalte</div>
-                      <div className="mt-2 space-y-1">{stepContent.map((link) => { const item = contentItems.find((candidate) => candidate.id === link.content_item_id); return <div key={link.content_item_id} className="rounded-lg bg-white border border-slate-200 px-3 py-2 text-[11px] text-slate-600">{link.role} · {item?.body || link.content_item_id}</div>; })}</div>
+                      <div className="mt-2 space-y-3">{stepContent.map((link) => { const item = contentItems.find((candidate) => candidate.id === link.content_item_id); return <div key={link.content_item_id} className="rounded-lg bg-slate-50 border border-slate-200 p-3"><div className="text-[10px] font-semibold uppercase tracking-wide text-slate-400">{link.role} · {item?.id ?? link.content_item_id}</div>{item ? <LearningInteractionCheckEditor scenarioId={scenarioId} item={item} /> : <p className="mt-1 text-[11px] text-slate-500">Inhalt nicht gefunden.</p>}</div>; })}</div>
                     </div>
                   )}
                   <button type="submit" disabled={busy} className="inline-flex items-center gap-1.5 rounded-lg bg-accent text-white px-3 py-2 text-[11px] font-semibold disabled:opacity-50"><Save className="w-3 h-3" /> Zuordnungen speichern</button>
