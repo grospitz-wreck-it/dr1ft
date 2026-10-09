@@ -120,3 +120,46 @@ export async function updateLearningStepDesign(
 
   revalidatePath("/scenarios/" + scenarioId);
 }
+
+/** Speichert die redaktionell definierten Rückmeldungen für die Prüfaktionen eines Posts. */
+export async function saveContentInteractionChecks(
+  contentItemId: string,
+  scenarioId: string,
+  checks: Record<string, { enabled: boolean; feedback: string }>
+) {
+  const supabase = supabaseServerClient();
+  const { data: item, error: readError } = await supabase
+    .from("content_items")
+    .select("id,extra,scenario_id")
+    .eq("id", contentItemId)
+    .eq("scenario_id", scenarioId)
+    .single();
+
+  if (readError || !item) throw new Error(readError?.message ?? "Beitrag nicht gefunden.");
+
+  const currentExtra =
+    item.extra && typeof item.extra === "object" && !Array.isArray(item.extra)
+      ? item.extra as Record<string, unknown>
+      : {};
+
+  const allowedKeys = ["inspect_source", "inspect_media", "inspect_context", "inspect_profile", "compare_information"];
+  const normalized = Object.fromEntries(
+    allowedKeys.map((key) => {
+      const value = checks[key];
+      return [key, {
+        enabled: Boolean(value?.enabled),
+        feedback: String(value?.feedback ?? "").trim().slice(0, 1200),
+      }];
+    })
+  );
+
+  const { error: updateError } = await supabase
+    .from("content_items")
+    .update({ extra: { ...currentExtra, interaction_checks: normalized }, updated_at: new Date().toISOString() })
+    .eq("id", contentItemId)
+    .eq("scenario_id", scenarioId);
+
+  if (updateError) throw new Error(updateError.message);
+  revalidatePath("/scenarios/" + scenarioId);
+  revalidatePath("/content");
+}
