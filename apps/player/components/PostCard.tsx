@@ -45,6 +45,10 @@ export function PostCard({ item, userId, classInstanceId, initiallyLiked, onView
   }, [commentCount]);
   const action = (extra.action ?? {}) as Record<string, unknown>;
   const mediaContext = (extra.media_context ?? {}) as Record<string, unknown>;
+  const interactionChecks = (extra.interaction_checks ?? {}) as Record<string, { enabled?: boolean; feedback?: string }>;
+  const hasConfiguredChecks = Object.keys(interactionChecks).length > 0;
+  const showCheck = (key: string) => !hasConfiguredChecks || interactionChecks[key]?.enabled === true;
+  const checkFeedback = (key: string) => typeof interactionChecks[key]?.feedback === "string" ? interactionChecks[key].feedback!.trim() : "";
 
   useEffect(() => {
     const onCommentCreated = (event: Event) => {
@@ -117,6 +121,8 @@ export function PostCard({ item, userId, classInstanceId, initiallyLiked, onView
 
   async function inspectSource() {
     await track("inspect_source");
+    const configured = checkFeedback("inspect_source");
+    if (configured) { showFeedback(configured); return; }
     const observations = getStringArray(action.expected_observation);
     if (item.sourceRefs?.length) showFeedback(`Quelle: ${item.sourceRefs[0].label}`);
     else if (observations.includes("no_named_author")) showFeedback("Hier ist keine konkrete Autorin oder kein konkreter Autor genannt.");
@@ -126,6 +132,8 @@ export function PostCard({ item, userId, classInstanceId, initiallyLiked, onView
 
   async function inspectMedia() {
     await track("inspect_media");
+    const configured = checkFeedback("inspect_media");
+    if (configured) { showFeedback(configured); return; }
     if (getString(mediaContext.current_claim)) {
       const detail = [getString(mediaContext.original_date), getString(mediaContext.original_location)].filter(Boolean).join(" · ");
       showFeedback(detail ? `Bildkontext: ${detail}.` : "Das Bild lässt sich hier im Kontext prüfen.");
@@ -134,10 +142,12 @@ export function PostCard({ item, userId, classInstanceId, initiallyLiked, onView
 
   async function inspectContext() {
     await track("inspect_context");
+    const configured = checkFeedback("inspect_context");
+    if (configured) { showFeedback(configured); return; }
     showFeedback(getString(mediaContext.current_claim) ? "Der Kontext dieses Beitrags sollte mit weiteren Informationen abgeglichen werden." : "Für diesen Beitrag sind keine konkreten Kontextdaten hinterlegt. Ob die Aussage stimmt, lässt sich mit diesem Check nicht beurteilen.");
   }
 
-  async function inspectProfile() { await track("inspect_profile"); showFeedback("Für dieses Profil ist keine konkrete Vertrauens- oder Herkunftsbewertung hinterlegt. Prüfe Angaben und frühere Beiträge selbst."); }
+  async function inspectProfile() { await track("inspect_profile"); showFeedback(checkFeedback("inspect_profile") || "Für dieses Profil ist keine konkrete Vertrauens- oder Herkunftsbewertung hinterlegt. Prüfe Angaben und frühere Beiträge selbst."); }
 
   async function compareInformation() {
     await track("compare_information", { ui: "generic_card_actions", phase: "open_comparison" });
@@ -157,6 +167,10 @@ export function PostCard({ item, userId, classInstanceId, initiallyLiked, onView
     setComparison((current) => current ? { ...current, selected: result } : current);
     await track("compare_information", { ui: "comparison_experience", phase: "decision", result, comparedContentItemId: comparison?.related?.id ?? null });
   }
+  const relatedRelation = ((comparison?.related?.extra as Record<string, unknown> | undefined)?.relation ?? {}) as Record<string, unknown>;
+  const relationType = String(relatedRelation.type ?? "");
+  const expectedComparison = ["contradicts"].includes(relationType) ? "contradict" : ["supports", "corroborates"].includes(relationType) ? "support" : null;
+  const comparisonIsCorrect = Boolean(comparison?.selected && expectedComparison && comparison.selected === expectedComparison);
 
   async function share() { await track("share"); showFeedback("Beitrag zum Teilen vorgemerkt."); setMenuOpen(false); }
   async function report() { await track("report"); showFeedback("Deine Meldung wurde aufgenommen."); setMenuOpen(false); }
@@ -173,7 +187,7 @@ export function PostCard({ item, userId, classInstanceId, initiallyLiked, onView
           <button onClick={toggleLike} className={`tap-pulse touch-target flex items-center gap-1.5 px-2 text-sm font-body rounded-lg ${liked ? "text-social-pink" : "text-ink/50"}`} aria-label="Gefällt mir"><Heart className="w-5 h-5" fill={liked ? "currentColor" : "none"} strokeWidth={2}/>{baseLikeCount + (liked ? 1 : 0)}</button>
           <button onClick={toggleComments} className="touch-target flex items-center gap-1.5 px-2 text-sm font-body text-ink/50 rounded-lg" aria-label="Kommentare anzeigen"><MessageCircle className="w-[18px] h-[18px]" strokeWidth={2}/>{comments ? comments.length : liveCommentCount}</button>
           <button onClick={() => setMenuOpen((open) => !open)} className="touch-target ml-auto flex items-center gap-1 px-2 text-ink/50 rounded-lg" aria-label="Weitere Aktionen" aria-expanded={menuOpen}><MoreHorizontal className="w-5 h-5"/><span className="text-sm font-body hidden sm:inline">Mehr</span><ChevronDown className="w-3.5 h-3.5"/></button>
-          {menuOpen && <div className="absolute z-20 right-0 bottom-12 w-60 rounded-xl border border-ink/10 bg-paper shadow-xl p-1.5"><ActionButton icon={<Search/>} label="Quelle ansehen" onClick={inspectSource}/><ActionButton icon={<ImageIcon/>} label="Bild prüfen" onClick={inspectMedia}/><ActionButton icon={<Eye/>} label="Kontext prüfen" onClick={inspectContext}/><ActionButton icon={<UserRound/>} label="Profil ansehen" onClick={inspectProfile}/><ActionButton icon={<Search/>} label="Informationen vergleichen" onClick={compareInformation}/><div className="my-1 border-t border-ink/10"/><ActionButton icon={<Share2/>} label="Teilen" onClick={share}/><ActionButton icon={<Flag/>} label="Melden" onClick={report}/><ActionButton icon={<X/>} label="Ignorieren" onClick={ignore}/></div>}
+          {menuOpen && <div className="absolute z-20 right-0 bottom-12 w-60 rounded-xl border border-ink/10 bg-paper shadow-xl p-1.5">{showCheck("inspect_source") && <ActionButton icon={<Search/>} label="Quelle ansehen" onClick={inspectSource}/ >}{showCheck("inspect_media") && <ActionButton icon={<ImageIcon/>} label="Bild prüfen" onClick={inspectMedia}/ >}{showCheck("inspect_context") && <ActionButton icon={<Eye/>} label="Kontext prüfen" onClick={inspectContext}/ >}{showCheck("inspect_profile") && <ActionButton icon={<UserRound/>} label="Profil ansehen" onClick={inspectProfile}/ >}{showCheck("compare_information") && <ActionButton icon={<Search/>} label="Informationen vergleichen" onClick={compareInformation}/ >}<div className="my-1 border-t border-ink/10"/><ActionButton icon={<Share2/>} label="Teilen" onClick={share}/><ActionButton icon={<Flag/>} label="Melden" onClick={report}/><ActionButton icon={<X/>} label="Ignorieren" onClick={ignore}/></div>}
         </div>
         {feedback && <div className="mt-3 rounded-lg bg-ink/5 px-3 py-2.5 flex items-start gap-2 text-xs leading-relaxed" role="status"><Check className="w-4 h-4 shrink-0 mt-0.5"/><span>{feedback}</span></div>}
         {commentsOpen && <div className="mt-3 space-y-3">
@@ -231,7 +245,7 @@ export function PostCard({ item, userId, classInstanceId, initiallyLiked, onView
             <div className="rounded-xl border border-ink/10 bg-ink/[0.025] p-4"><p className="font-mono text-[10px] uppercase tracking-wider text-ink/40 mb-3">Aussage 2</p><AuthorRow creator={comparison.related.creator}/><p className="text-sm leading-relaxed">{comparison.related.body}</p></div>
           </div>
           <div className="mt-5 border-t border-ink/10 pt-5"><p className="text-sm font-medium mb-3">Wie verhalten sich die beiden Aussagen zueinander?</p><div className="grid grid-cols-1 sm:grid-cols-2 gap-3"><button onClick={() => chooseComparison("contradict")} className={`rounded-xl border px-4 py-3 text-left text-sm transition ${comparison.selected === "contradict" ? "border-ink bg-ink text-paper" : "border-ink/15 hover:bg-ink/5"}`}>Sie widersprechen sich.</button><button onClick={() => chooseComparison("support")} className={`rounded-xl border px-4 py-3 text-left text-sm transition ${comparison.selected === "support" ? "border-ink bg-ink text-paper" : "border-ink/15 hover:bg-ink/5"}`}>Sie stützen dieselbe Aussage.</button></div>
-            {comparison.selected && <div className="mt-4 rounded-xl bg-ink/5 px-4 py-3 text-sm leading-relaxed" role="status">{comparison.selected === "contradict" ? "Genau. Die beiden Aussagen widersprechen sich. Das ist ein wichtiger Befund beim Quellenvergleich." : "Schau noch einmal genau hin: Die beiden Aussagen stehen hier nicht für dieselbe Information."}</div>}
+            {comparison.selected && <div className="mt-4 rounded-xl bg-ink/5 px-4 py-3 text-sm leading-relaxed" role="status">{expectedComparison ? (comparisonIsCorrect ? (checkFeedback("compare_information") || "Richtig eingeordnet. Deine Entscheidung passt zur redaktionell hinterlegten Beziehung zwischen den Aussagen.") : "Das passt nicht zur redaktionell hinterlegten Beziehung. Vergleiche die Aussagen noch einmal und achte darauf, ob sie sich widersprechen oder gegenseitig stützen.") : "Für diese beiden Aussagen ist noch keine geprüfte Vergleichsbeziehung hinterlegt. Eine richtige oder falsche Einordnung kann deshalb nicht bewertet werden."}</div>}
           </div>
         </div>}
       </div>
