@@ -7,8 +7,8 @@ import { supabaseBrowserClient } from "../../lib/supabaseBrowserClient";
 import { PostCard } from "../../components/PostCard";
 import { ReflectionOverlay } from "../../components/ReflectionOverlay";
 
-export function FeedClient({ initialItems, userId, classInstanceId, likedContentIds, competencyDisplay, profile }: {
-  initialItems: FeedItem[]; userId: string; classInstanceId: string; likedContentIds: Set<string>; competencyDisplay: any[];
+export function FeedClient({ initialItems, userId, classInstanceId, likedContentIds, profile }: {
+  initialItems: FeedItem[]; userId: string; classInstanceId: string; likedContentIds: Set<string>;
   profile: { displayName: string; username: string; avatarSeed: string };
 }) {
   const supabase = supabaseBrowserClient();

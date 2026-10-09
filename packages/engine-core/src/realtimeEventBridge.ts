@@ -22,6 +22,7 @@ import { eventBus } from "./eventBus";
 interface DomainEventRow {
   event_type: string;
   user_id: string;
+  class_instance_id: string | null;
   payload: Record<string, unknown>;
 }
 
@@ -32,12 +33,14 @@ function rowToDomainEvent(row: DomainEventRow): DomainEvent | null {
         type: "MissionStarted",
         userId: row.user_id,
         missionId: String(row.payload.missionId),
+        ...(row.class_instance_id ? { classInstanceId: row.class_instance_id } : {}),
       };
     case "MissionCompleted":
       return {
         type: "MissionCompleted",
         userId: row.user_id,
         missionId: String(row.payload.missionId),
+        ...(row.class_instance_id ? { classInstanceId: row.class_instance_id } : {}),
       };
     case "CompetencyUpdated":
       return {
@@ -45,6 +48,7 @@ function rowToDomainEvent(row: DomainEventRow): DomainEvent | null {
         userId: row.user_id,
         competencyId: String(row.payload.competencyId),
         level: Number(row.payload.level),
+        ...(row.class_instance_id ? { classInstanceId: row.class_instance_id } : {}),
       };
     default:
       // Unbekannter Event-Typ (z.B. zukünftige Erweiterung) -> bewusst
