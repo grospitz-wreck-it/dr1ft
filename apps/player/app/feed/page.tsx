@@ -12,6 +12,10 @@ export default async function FeedPage() {
   if (classInstanceError || !classInstanceId) return <main className="min-h-screen flex items-center justify-center text-ash font-body px-6 text-center">Du bist aktuell keiner DR1FT-Klasse zugeordnet.</main>;
   const { data: assignments } = await supabase.from("class_instance_scenario_assignments").select("scenario_id").eq("class_instance_id", classInstanceId);
   const assignedScenarioIds: string[] = Array.from(new Set<string>((assignments ?? []).map((a) => a.scenario_id)));
+  const { data: assignedScenarios } = assignedScenarioIds.length
+    ? await supabase.from("scenarios").select("id, title, description").in("id", assignedScenarioIds).order("created_at", { ascending: true })
+    : { data: [] as { id: string; title: string; description: string | null }[] };
+  const scenarioIntro = assignedScenarios?.[0] ?? null;
   const { data: competencyProgress } = await supabase.from("user_competency_progress").select("*").eq("user_id", user.id).eq("class_instance_id", classInstanceId);
   const { data: allCompetencies } = await supabase.from("competencies").select("id, title");
   const progressByCompetency = new Map((competencyProgress ?? []).map((c) => [c.competency_id, c.level]));
@@ -39,5 +43,5 @@ export default async function FeedPage() {
   const ctx: FeedContext = { userAgeRating: ageRating, competencyProgress: progress, recentlySeenContentIds, recentTechniques, assignedScenarioIds, signalRatio: computeAdaptiveSignalRatio(progress) };
   const items = selectNextFeedItems(mappedPool, ctx, 20) as FeedItem[];
   const likedContentIds = new Set((recentInteractions ?? []).filter((i) => i.interaction_type === "like").map((i) => i.content_item_id));
-  return <FeedClient initialItems={items} userId={user.id} classInstanceId={classInstanceId} likedContentIds={likedContentIds} profile={{ displayName: currentProfile?.display_name ?? "DR1FT User", username: currentProfile?.username ?? "user", avatarSeed: currentProfile?.avatar_seed ?? user.id }} />;
+  return <FeedClient initialItems={items} userId={user.id} classInstanceId={classInstanceId} likedContentIds={likedContentIds} scenarioIntro={scenarioIntro} profile={{ displayName: currentProfile?.display_name ?? "DR1FT User", username: currentProfile?.username ?? "user", avatarSeed: currentProfile?.avatar_seed ?? user.id }} />;
 }
