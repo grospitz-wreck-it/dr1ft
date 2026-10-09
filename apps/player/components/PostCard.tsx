@@ -121,7 +121,7 @@ export function PostCard({ item, userId, classInstanceId, initiallyLiked, onView
     if (item.sourceRefs?.length) showFeedback(`Quelle: ${item.sourceRefs[0].label}`);
     else if (observations.includes("no_named_author")) showFeedback("Hier ist keine konkrete Autorin oder kein konkreter Autor genannt.");
     else if (observations.includes("no_concrete_source")) showFeedback("Hier ist keine konkrete Quelle angegeben.");
-    else showFeedback("Die Quelle sieht glaubwürdig aus.");
+    else showFeedback("Für diesen Beitrag ist keine konkrete Quellenbewertung hinterlegt. Prüfe, ob eine nachvollziehbare Originalquelle angegeben ist.");
   }
 
   async function inspectMedia() {
@@ -129,15 +129,15 @@ export function PostCard({ item, userId, classInstanceId, initiallyLiked, onView
     if (getString(mediaContext.current_claim)) {
       const detail = [getString(mediaContext.original_date), getString(mediaContext.original_location)].filter(Boolean).join(" · ");
       showFeedback(detail ? `Bildkontext: ${detail}.` : "Das Bild lässt sich hier im Kontext prüfen.");
-    } else showFeedback("Das Bild wirkt echt und passt zum Beitrag.");
+    } else showFeedback("Für dieses Bild sind keine überprüfbaren Herkunfts- oder Kontextdaten hinterlegt. Aus dieser Ansicht allein lässt sich seine Echtheit nicht bestätigen.");
   }
 
   async function inspectContext() {
     await track("inspect_context");
-    showFeedback(getString(mediaContext.current_claim) ? "Der Kontext dieses Beitrags sollte mit weiteren Informationen abgeglichen werden." : "Der Kontext passt zu dem, was im Beitrag beschrieben wird.");
+    showFeedback(getString(mediaContext.current_claim) ? "Der Kontext dieses Beitrags sollte mit weiteren Informationen abgeglichen werden." : "Für diesen Beitrag sind keine konkreten Kontextdaten hinterlegt. Ob die Aussage stimmt, lässt sich mit diesem Check nicht beurteilen.");
   }
 
-  async function inspectProfile() { await track("inspect_profile"); showFeedback("Das Profil wirkt auf den ersten Blick unauffällig."); }
+  async function inspectProfile() { await track("inspect_profile"); showFeedback("Für dieses Profil ist keine konkrete Vertrauens- oder Herkunftsbewertung hinterlegt. Prüfe Angaben und frühere Beiträge selbst."); }
 
   async function compareInformation() {
     await track("compare_information", { ui: "generic_card_actions", phase: "open_comparison" });
