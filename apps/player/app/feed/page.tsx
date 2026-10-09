@@ -16,6 +16,13 @@ export default async function FeedPage() {
     ? await supabase.from("scenarios").select("id, title, description").in("id", assignedScenarioIds).order("created_at", { ascending: true })
     : { data: [] as { id: string; title: string; description: string | null }[] };
   const scenarioIntro = assignedScenarios?.[0] ?? null;
+  const { data: scenarioMissions } = scenarioIntro
+    ? await supabase.from("missions").select("id").eq("scenario_id", scenarioIntro.id).eq("status", "live")
+    : { data: [] as { id: string }[] };
+  const scenarioMissionIds = (scenarioMissions ?? []).map((mission) => mission.id);
+  const { data: completedScenarioMissions } = scenarioMissionIds.length
+    ? await supabase.from("user_mission_progress").select("mission_id").eq("user_id", user.id).eq("class_instance_id", classInstanceId).eq("status", "completed").in("mission_id", scenarioMissionIds)
+    : { data: [] as { mission_id: string }[] };
   const { data: competencyProgress } = await supabase.from("user_competency_progress").select("*").eq("user_id", user.id).eq("class_instance_id", classInstanceId);
   const { data: allCompetencies } = await supabase.from("competencies").select("id, title");
   const progressByCompetency = new Map((competencyProgress ?? []).map((c) => [c.competency_id, c.level]));
@@ -43,5 +50,5 @@ export default async function FeedPage() {
   const ctx: FeedContext = { userAgeRating: ageRating, competencyProgress: progress, recentlySeenContentIds, recentTechniques, assignedScenarioIds, signalRatio: computeAdaptiveSignalRatio(progress) };
   const items = selectNextFeedItems(mappedPool, ctx, 20) as FeedItem[];
   const likedContentIds = new Set((recentInteractions ?? []).filter((i) => i.interaction_type === "like").map((i) => i.content_item_id));
-  return <FeedClient initialItems={items} userId={user.id} classInstanceId={classInstanceId} likedContentIds={likedContentIds} scenarioIntro={scenarioIntro} profile={{ displayName: currentProfile?.display_name ?? "DR1FT User", username: currentProfile?.username ?? "user", avatarSeed: currentProfile?.avatar_seed ?? user.id }} />;
+  return <FeedClient initialItems={items} userId={user.id} classInstanceId={classInstanceId} likedContentIds={likedContentIds} scenarioIntro={scenarioIntro} scenarioMissionCount={scenarioMissionIds.length} completedScenarioMissionCount={new Set((completedScenarioMissions ?? []).map((mission) => mission.mission_id)).size} profile={{ displayName: currentProfile?.display_name ?? "DR1FT User", username: currentProfile?.username ?? "user", avatarSeed: currentProfile?.avatar_seed ?? user.id }} />;
 }
