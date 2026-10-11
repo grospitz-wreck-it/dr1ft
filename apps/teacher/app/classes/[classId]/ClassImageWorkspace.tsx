@@ -1,12 +1,14 @@
 "use client";
 
 import { useState } from "react";
-import { Pencil } from "lucide-react";
+import { Pencil, Copy } from "lucide-react";
+import { CopyAccessCodeButton } from "./CopyAccessCodeButton";
 import ClassImageEditor from "./ClassImageEditor";
 
 type Props = {
   classId: string;
   className: string;
+  accessCode: string;
   gradeLevel: number | null;
   schoolYear: string;
   heroImageUrl: string | null;
@@ -24,6 +26,7 @@ type Props = {
 export default function ClassImageWorkspace({
   classId,
   className,
+  accessCode,
   gradeLevel,
   schoolYear,
   heroImageUrl,
