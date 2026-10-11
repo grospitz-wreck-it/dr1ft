@@ -80,32 +80,34 @@ export function TeacherNav() {
 
       if (!user) return;
 
-      const { data: membership } = await supabase
+      const { data: schoolMemberships } = await supabase
         .from("school_memberships")
-        .select("school_id")
+        .select("school_id, created_at")
         .eq("user_id", user.id)
         .eq("active", true)
-        .order("created_at", { ascending: true })
-        .limit(1)
-        .maybeSingle();
-
-      if (membership?.school_id) {
-        const { data: schoolData } = await supabase
-          .from("schools")
-          .select("name, region")
-          .eq("id", membership.school_id)
-          .maybeSingle();
-
-        setSchool(schoolData?.name ?? null);
-        setRegion(schoolData?.region ?? null);
-      }
+        .order("created_at", { ascending: true });
 
       const { data: teacherClasses } = await supabase
         .from("class_instance_memberships")
-        .select("class_instance_id")
+        .select("class_instance_id, class_instances(school_id)")
         .eq("user_id", user.id)
         .eq("role", "teacher")
         .is("left_at", null);
+
+      const schoolIds = Array.from(new Set([
+        ...(schoolMemberships ?? []).map((row) => row.school_id),
+        ...(teacherClasses ?? []).map((row: any) => row.class_instances?.school_id),
+      ].filter(Boolean)));
+
+      if (schoolIds.length) {
+        const { data: schoolData } = await supabase
+          .from("schools")
+          .select("id, name, region")
+          .in("id", schoolIds);
+        const primarySchool = (schoolData ?? []).find((row) => row.id === schoolIds[0]);
+        setSchool(primarySchool?.name ?? null);
+        setRegion(primarySchool?.region ?? null);
+      }
 
       const classIds = Array.from(
         new Set((teacherClasses ?? []).map((row) => row.class_instance_id)),
@@ -148,7 +150,7 @@ export function TeacherNav() {
           <p className="mt-1 text-sm font-semibold text-slate-800">Unterricht gestalten</p>
         </div>
         <div className="relative flex items-center gap-3">
-          <span className="hidden rounded-full border border-slate-200 bg-white px-3 py-1.5 text-[11px] font-medium text-slate-500 sm:inline-flex">Teacher Studio</span>
+          <span className="hidden max-w-[260px] truncate rounded-full border border-slate-200 bg-white px-3 py-1.5 text-[11px] font-medium text-slate-600 sm:inline-flex" title={school ? `${school}${region ? " · " + region : ""}` : "Noch keine Schule zugeordnet"}>{school ? `${school}${region ? " · " + region : ""}` : "Noch keine Schule zugeordnet"}</span>
           <button type="button" onClick={() => setAccountOpen((open) => !open)} className="editorial-avatar" aria-label="Kontomenü öffnen">D</button>
           {accountOpen && (
             <div className="absolute right-0 top-11 z-50 w-56 overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-xl">
