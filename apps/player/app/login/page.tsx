@@ -58,6 +58,12 @@ export default function LoginPage() {
               aria-hidden="true"
               className="dr1ft-login-logo dr1ft-login-logo-emblem"
             />
+            <img
+              src="/branding/drift-logo-transparent-horizontal.webp"
+              alt=""
+              aria-hidden="true"
+              className="dr1ft-login-logo dr1ft-login-logo-one"
+            />
           </div>
           <p className="font-mono text-[10px] font-semibold uppercase tracking-[0.32em] text-white/80 sm:text-xs">
             Dein Space. Deine Stimme.
@@ -179,6 +185,9 @@ export default function LoginPage() {
         }
         .dr1ft-login-logo-emblem {
           clip-path: inset(0 65% 0 0);
+        }
+        .dr1ft-login-logo-one {
+          clip-path: inset(0 29% 0 58%);
         }
         .dr1ft-login-card {
           background: linear-gradient(145deg, rgba(14, 12, 37, .88), rgba(24, 13, 45, .84));
