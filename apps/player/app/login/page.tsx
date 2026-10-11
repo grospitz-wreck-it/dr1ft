@@ -43,49 +43,35 @@ export default function LoginPage() {
       <div className="dr1ft-login-backdrop absolute inset-0 -z-20" aria-hidden="true" />
       <div className="dr1ft-login-overlay absolute inset-0 -z-10" aria-hidden="true" />
 
-      <div className="grid w-full max-w-6xl items-center gap-8 lg:grid-cols-[minmax(0,1.1fr)_minmax(380px,0.8fr)] lg:gap-14 xl:gap-20">
-        <section className="mx-auto flex w-full max-w-xl flex-col items-center text-center lg:items-start lg:text-left">
+      <div className="relative z-10 flex w-full max-w-lg flex-col items-center justify-center gap-5 sm:gap-6">
+        <header className="flex w-full flex-col items-center text-center">
           <img
-            src="/branding/drift-logo-transparent-horizontal.webp"
+            src="/branding/drift-logo-transparent-horizontal-white.webp"
             alt="DR1FT"
-            className="dr1ft-login-logo mb-5 w-36 object-contain drop-shadow-[0_8px_28px_rgba(124,58,237,0.22)] sm:mb-7 sm:w-44 lg:mx-0 lg:w-52"
+            className="dr1ft-login-logo mb-3 w-[min(82vw,27rem)] object-contain drop-shadow-[0_8px_32px_rgba(124,58,237,0.35)] sm:mb-4 sm:w-[min(76vw,31rem)]"
             fetchPriority="high"
           />
-          <p className="mb-3 font-mono text-[10px] font-medium uppercase tracking-[0.34em] text-cyan-200 sm:text-xs">
+          <p className="font-mono text-[10px] font-semibold uppercase tracking-[0.32em] text-white/80 sm:text-xs">
             Dein Space. Deine Stimme.
           </p>
-          <h1 className="max-w-lg font-display text-3xl font-bold leading-tight tracking-tight text-white sm:text-4xl lg:text-5xl">
-            Sei dabei. <span className="dr1ft-login-gradient-text">Bleib du.</span>
-          </h1>
-          <p className="mt-4 max-w-md text-sm leading-6 text-white/75 sm:text-base sm:leading-7">
-            Tausche dich aus, entdecke neue Perspektiven und gestalte deinen digitalen Alltag mit.
-          </p>
-          <div className="mt-6 hidden items-center gap-2 sm:flex lg:mt-8">
-            <span className="h-1.5 w-8 rounded-full bg-fuchsia-400" />
-            <span className="h-1.5 w-5 rounded-full bg-violet-400" />
-            <span className="h-1.5 w-3 rounded-full bg-cyan-300" />
-          </div>
-        </section>
+        </header>
 
-        <section className="mx-auto w-full max-w-md">
+        <section className="mx-auto w-full max-w-[25rem]">
           <form
             onSubmit={handleSubmit}
-            className="dr1ft-login-card space-y-5 rounded-[1.75rem] p-5 sm:p-7 md:p-8"
+            className="dr1ft-login-card space-y-3.5 rounded-[1.5rem] p-4 sm:space-y-4 sm:p-5 md:p-6"
           >
-            <div className="mb-1">
-              <p className="font-mono text-[10px] font-semibold uppercase tracking-[0.28em] text-cyan-200 sm:text-xs">
-                Willkommen zurück
-              </p>
-              <h2 className="mt-2 font-display text-2xl font-bold tracking-tight text-white sm:text-3xl">
-                Einloggen
-              </h2>
-              <p className="mt-2 text-sm leading-6 text-white/60">
-                Melde dich mit deinem Klassencode und deinem Konto an.
+            <div className="mb-1 text-center">
+              <h1 className="font-display text-xl font-bold tracking-tight text-white sm:text-2xl">
+                Willkommen bei DR1FT
+              </h1>
+              <p className="mt-1.5 text-xs leading-5 text-white/65 sm:text-sm">
+                Melde dich mit deinem Klassencode an.
               </p>
             </div>
 
-            <label className="block space-y-2">
-              <span className="text-xs font-semibold text-white/80 sm:text-sm">Klassenzugangscode</span>
+            <label className="block space-y-1.5">
+              <span className="text-xs font-semibold text-white/85">Klassencode</span>
               <input
                 value={accessCode}
                 onChange={(e) => setAccessCode(e.target.value.toUpperCase())}
@@ -93,24 +79,24 @@ export default function LoginPage() {
                 autoCapitalize="characters"
                 autoComplete="off"
                 required
-                className="dr1ft-login-input w-full rounded-xl px-4 py-3.5 text-base outline-none transition sm:py-4"
+                className="dr1ft-login-input w-full rounded-xl px-4 py-3 text-base outline-none transition sm:py-3.5"
               />
             </label>
 
-            <label className="block space-y-2">
-              <span className="text-xs font-semibold text-white/80 sm:text-sm">Nutzername</span>
+            <label className="block space-y-1.5">
+              <span className="text-xs font-semibold text-white/85">Name</span>
               <input
                 value={username}
                 onChange={(e) => setUsername(e.target.value)}
                 placeholder="Dein Nutzername"
                 autoComplete="username"
                 required
-                className="dr1ft-login-input w-full rounded-xl px-4 py-3.5 text-base outline-none transition sm:py-4"
+                className="dr1ft-login-input w-full rounded-xl px-4 py-3 text-base outline-none transition sm:py-3.5"
               />
             </label>
 
-            <label className="block space-y-2">
-              <span className="text-xs font-semibold text-white/80 sm:text-sm">Passwort</span>
+            <label className="block space-y-1.5">
+              <span className="text-xs font-semibold text-white/85">Passwort</span>
               <input
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
@@ -118,7 +104,7 @@ export default function LoginPage() {
                 placeholder="Dein Passwort"
                 autoComplete="current-password"
                 required
-                className="dr1ft-login-input w-full rounded-xl px-4 py-3.5 text-base outline-none transition sm:py-4"
+                className="dr1ft-login-input w-full rounded-xl px-4 py-3 text-base outline-none transition sm:py-3.5"
               />
             </label>
 
@@ -131,86 +117,89 @@ export default function LoginPage() {
             <button
               type="submit"
               disabled={pending}
-              className="dr1ft-login-submit flex min-h-12 w-full items-center justify-center gap-2 rounded-xl px-5 py-3.5 text-sm font-bold text-white transition duration-200 disabled:cursor-wait disabled:opacity-60 sm:min-h-14 sm:text-base"
+              className="dr1ft-login-submit flex min-h-12 w-full items-center justify-center gap-2 rounded-xl px-5 py-3 text-sm font-bold text-white transition duration-200 disabled:cursor-wait disabled:opacity-60 sm:min-h-13 sm:text-base"
             >
-              {pending ? "Du wirst angemeldet …" : "In deinen Space"}
+              {pending ? "Du wirst angemeldet …" : "Anmelden"}
               {!pending && <span aria-hidden="true">→</span>}
             </button>
 
-            <p className="border-t border-white/10 pt-4 text-center text-sm text-white/60">
+            <p className="pt-1 text-center text-xs text-white/50">
               Noch nicht dabei?{" "}
-              <a href="/join" className="font-semibold text-cyan-200 underline decoration-cyan-200/40 underline-offset-4 transition hover:text-white">
+              <a href="/join" className="font-medium text-white/75 underline decoration-white/30 underline-offset-4 transition hover:text-cyan-200">
                 Klasse beitreten
               </a>
             </p>
           </form>
-          <p className="mt-4 text-center text-[11px] tracking-wide text-white/45">
-            Ein sicherer Raum für Austausch und neue Perspektiven.
-          </p>
         </section>
       </div>
       <style jsx>{`
         .dr1ft-login-screen {
-          background: #09091d;
+          background: #08091e;
           isolation: isolate;
+          padding-top: max(1.25rem, env(safe-area-inset-top));
+          padding-bottom: max(1.25rem, env(safe-area-inset-bottom));
         }
         .dr1ft-login-backdrop {
           background-image: url("/branding/dr1ft-login-background.webp");
           background-size: cover;
-          background-position: center;
-          transform: scale(1.015);
+          background-position: 50% 50%;
+          transform: scale(1.06);
+          animation: dr1ft-background-drift 38s ease-in-out infinite alternate;
+          will-change: transform;
         }
         .dr1ft-login-overlay {
           background:
-            linear-gradient(90deg, rgba(7, 7, 25, .76) 0%, rgba(7, 7, 25, .48) 46%, rgba(7, 7, 25, .68) 100%),
-            linear-gradient(0deg, rgba(8, 7, 26, .48), rgba(8, 7, 26, .08));
+            radial-gradient(ellipse at 50% 38%, rgba(10, 8, 32, .16) 0%, rgba(10, 8, 32, .34) 58%, rgba(7, 7, 25, .58) 100%),
+            linear-gradient(180deg, rgba(7, 7, 25, .16), rgba(7, 7, 25, .42));
         }
         .dr1ft-login-logo {
-          max-height: 11rem;
-          filter: drop-shadow(0 8px 28px rgba(124, 58, 237, .16));
-        }
-        .dr1ft-login-gradient-text {
-          background: linear-gradient(100deg, #f472d0 0%, #a78bfa 48%, #67e8f9 100%);
-          -webkit-background-clip: text;
-          background-clip: text;
-          color: transparent;
+          max-height: clamp(5rem, 17vh, 10.5rem);
+          width: min(82vw, 31rem);
+          filter: drop-shadow(0 8px 30px rgba(124, 58, 237, .28));
         }
         .dr1ft-login-card {
-          background: linear-gradient(145deg, rgba(15, 14, 39, .88), rgba(22, 15, 43, .82));
-          border: 1px solid rgba(196, 181, 253, .25);
-          box-shadow: 0 24px 80px rgba(3, 3, 18, .4), inset 0 1px 0 rgba(255, 255, 255, .07);
+          background: linear-gradient(145deg, rgba(14, 12, 37, .88), rgba(24, 13, 45, .84));
+          border: 1px solid rgba(196, 181, 253, .27);
+          box-shadow: 0 22px 70px rgba(3, 3, 18, .34), inset 0 1px 0 rgba(255, 255, 255, .09);
           backdrop-filter: blur(24px);
           -webkit-backdrop-filter: blur(24px);
         }
         .dr1ft-login-input {
           color: #f8f7ff;
-          background: rgba(255, 255, 255, .07);
-          border: 1px solid rgba(196, 181, 253, .22);
+          background: rgba(255, 255, 255, .075);
+          border: 1px solid rgba(196, 181, 253, .25);
           min-height: 3rem;
         }
-        .dr1ft-login-input::placeholder { color: rgba(226, 222, 242, .42); }
+        .dr1ft-login-input::placeholder { color: rgba(226, 222, 242, .44); }
         .dr1ft-login-input:focus {
           border-color: #67e8f9;
-          box-shadow: 0 0 0 3px rgba(103, 232, 249, .13);
-          background: rgba(255, 255, 255, .1);
+          box-shadow: 0 0 0 3px rgba(103, 232, 249, .14);
+          background: rgba(255, 255, 255, .105);
         }
         .dr1ft-login-submit {
-          background: linear-gradient(100deg, #9333ea 0%, #7c3aed 48%, #0891b2 100%);
-          box-shadow: 0 8px 28px rgba(124, 58, 237, .25);
+          background: linear-gradient(100deg, #c026d3 0%, #7c3aed 52%, #0891b2 100%);
+          box-shadow: 0 8px 28px rgba(124, 58, 237, .28);
         }
         .dr1ft-login-submit:hover:not(:disabled) {
-          filter: brightness(1.12);
+          filter: brightness(1.1);
           transform: translateY(-1px);
-          box-shadow: 0 12px 32px rgba(124, 58, 237, .32);
+          box-shadow: 0 12px 32px rgba(124, 58, 237, .34);
         }
-        @media (min-width: 1024px) and (max-height: 760px) {
-          .dr1ft-login-screen { padding-top: 1.25rem; padding-bottom: 1.25rem; }
-          .dr1ft-login-logo { width: 8rem; max-height: 8rem; margin-bottom: 1rem; }
+        @keyframes dr1ft-background-drift {
+          from { transform: scale(1.06) translate3d(-1.1%, 0, 0); }
+          to { transform: scale(1.06) translate3d(1.1%, 0, 0); }
+        }
+        @media (orientation: landscape) and (max-height: 700px) {
+          .dr1ft-login-screen { padding-top: .75rem; padding-bottom: .75rem; }
+          .dr1ft-login-logo { max-height: 4.5rem; margin-bottom: .4rem; }
         }
         @media (max-width: 639px) {
           .dr1ft-login-overlay {
-            background: linear-gradient(180deg, rgba(7, 7, 25, .52), rgba(7, 7, 25, .78));
+            background: linear-gradient(180deg, rgba(7, 7, 25, .18), rgba(7, 7, 25, .5));
           }
+        }
+        @media (prefers-reduced-motion: reduce) {
+          .dr1ft-login-backdrop { animation: none; transform: scale(1.02); }
         }
       `}</style>
     </main>
