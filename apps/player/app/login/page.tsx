@@ -1,7 +1,7 @@
 "use client";
 // apps/player/app/login/page.tsx
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { supabaseBrowserClient } from "../../lib/supabaseBrowserClient";
 
@@ -15,11 +15,26 @@ export default function LoginPage() {
   const supabase = supabaseBrowserClient();
   const router = useRouter();
 
-  const [accessCode, setAccessCode] = useState("");
+  const [checkingSession, setCheckingSession] = useState(true);\n  const [accessCode, setAccessCode] = useState("");
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [pending, setPending] = useState(false);
+
+  useEffect(() => {
+    let active = true;
+    supabase.auth.getUser().then(({ data: { user } }) => {
+      if (!active) return;
+      if (user) {
+        router.replace("/feed");
+        return;
+      }
+      setCheckingSession(false);
+    });
+    return () => {
+      active = false;
+    };
+  }, [router, supabase]);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
