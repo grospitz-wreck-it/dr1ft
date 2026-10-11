@@ -1,6 +1,5 @@
 import { supabaseServerClient } from "../../../lib/supabaseServerClient";
 import { ScenarioToggle } from "./ScenarioToggle";
-import { CopyAccessCodeButton } from "./CopyAccessCodeButton";
 import { StudentRoster } from "./StudentRoster";
 import { updateClassDetails } from "../actions";
 import ClassImageWorkspace from "./ClassImageWorkspace";
@@ -202,6 +201,7 @@ export default async function ClassDetailPage({
         <ClassImageWorkspace
           classId={classId}
           className={instance.name}
+          accessCode={instance.access_code}
           gradeLevel={instance.grade_level}
           schoolYear={instance.school_year}
           heroImageUrl={heroImageUrl}
