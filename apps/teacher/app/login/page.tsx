@@ -43,13 +43,13 @@ export default function LoginPage() {
       <div className="dr1ft-login-overlay absolute inset-0 -z-10" aria-hidden="true" />
       <div className="relative z-10 flex w-full max-w-lg flex-col items-center gap-5 sm:gap-6">
         <header className="flex w-full flex-col items-center text-center">
-          <img src="/branding/drift-logo-appstore-transparent.webp" alt="DR1FT" className="mb-2 h-24 w-24 object-contain drop-shadow-[0_8px_30px_rgba(124,58,237,0.18)]" fetchPriority="high" />
+          <img src="/branding/drift-logo-transparent-vertical.webp" alt="DR1FT" className="mb-2 h-auto w-[min(52vw,12rem)] object-contain drop-shadow-[0_8px_30px_rgba(124,58,237,0.18)]" fetchPriority="high" />
           <p className="font-mono text-[10px] font-semibold uppercase tracking-[0.32em] text-slate-500 sm:text-xs">Lehrkraft Studio</p>
         </header>
         <section className="w-full max-w-[25rem]">
           <form onSubmit={handleSubmit} className="dr1ft-login-card space-y-3.5 rounded-[1.5rem] p-4 sm:space-y-4 sm:p-5 md:p-6">
             <div className="mb-1 text-center">
-              <h1 className="text-xl font-bold tracking-tight text-slate-950 sm:text-2xl">Willkommen zurück</h1>
+              <h1 className="text-xl font-bold tracking-tight text-slate-950 sm:text-2xl">Willkommen</h1>
               <p className="mt-1.5 text-xs leading-5 text-slate-500 sm:text-sm">Melde dich mit deinem DR1FT-Konto an.</p>
             </div>
             <label className="block space-y-1.5">
@@ -64,7 +64,7 @@ export default function LoginPage() {
             <button type="submit" disabled={pending} className="dr1ft-login-submit flex min-h-12 w-full items-center justify-center gap-2 rounded-xl px-5 py-3 text-sm font-bold text-white transition duration-200 disabled:cursor-wait disabled:opacity-60 sm:text-base">
               {pending ? "Du wirst angemeldet …" : "Anmelden"} {!pending && <span aria-hidden="true">→</span>}
             </button>
-            <p className="text-center text-xs text-slate-500">Neu hier? <a href="/signup" className="text-violet-700 underline underline-offset-4 hover:text-violet-900">Account erstellen</a></p>
+            
           </form>
         </section>
       </div>
