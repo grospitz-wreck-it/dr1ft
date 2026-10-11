@@ -40,10 +40,9 @@ export function EditorialDashboard({
   const filtered = interactionEvents.filter((event) => {
     if (scope === "region" && region !== "all" && event.region !== region) return false;
     if (scope === "school" && schoolId !== "all" && event.schoolId !== schoolId) return false;
+    if (scope === "class" && region !== "all" && event.region !== region) return false;
+    if (scope === "class" && schoolId !== "all" && event.schoolId !== schoolId) return false;
     if (scope === "class" && classId !== "all" && event.classId !== classId) return false;
-    if (scope === "region" && region === "all") return true;
-    if (scope === "school" && schoolId === "all") return true;
-    if (scope === "class" && classId === "all") return true;
     return true;
   });
 
