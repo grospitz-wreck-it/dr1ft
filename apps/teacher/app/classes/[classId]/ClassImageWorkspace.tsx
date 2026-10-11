@@ -41,7 +41,7 @@ export default function ClassImageWorkspace({
 
   return (
     <>
-      <section className="group relative mt-4 overflow-hidden rounded-[2rem] bg-slate-950 text-white shadow-xl">
+      <section className="group relative mt-4 aspect-[16/7] min-h-[210px] overflow-hidden rounded-[2rem] bg-slate-950 text-white shadow-xl sm:aspect-[16/4.2]">
         {heroImageUrl ? (
           <img
             src={heroImageUrl}
@@ -59,8 +59,8 @@ export default function ClassImageWorkspace({
         <div className="absolute inset-0 bg-gradient-to-r from-slate-950/45 via-slate-950/20 to-slate-950/5" />
         <div className="absolute inset-0 bg-gradient-to-t from-slate-950/45 via-transparent to-slate-950/5" />
 
-        <div className="relative min-h-[300px] p-6 sm:p-8">
-          <div className="flex min-h-[250px] flex-col justify-between">
+        <div className="relative h-full min-h-[210px] p-6 sm:p-8">
+          <div className="flex h-full min-h-[150px] flex-col justify-between">
             <div className="flex items-start justify-between gap-4">
               <div className="min-w-0">
                 <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-white/70">
