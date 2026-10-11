@@ -418,7 +418,7 @@ export function SchoolDetailWorkspace({ school: initialSchool, initialMembers, i
         <main className="editorial-content">
           <div className="mx-auto max-w-[1440px]">
 
-    <section className="group relative overflow-hidden rounded-[1.75rem] bg-slate-950 text-white shadow-[0_16px_40px_rgba(15,23,42,0.16)] ring-1 ring-black/5">
+    <section className="group relative aspect-[16/7] min-h-[210px] overflow-hidden rounded-[1.75rem] bg-slate-950 text-white shadow-[0_16px_40px_rgba(15,23,42,0.16)] ring-1 ring-black/5 sm:aspect-[16/4.2]">
       {school.school_image_path ? (
         <img
           src={`${process.env.NEXT_PUBLIC_SUPABASE_URL}/storage/v1/object/public/school-images/${school.school_image_path}`}
@@ -436,8 +436,8 @@ export function SchoolDetailWorkspace({ school: initialSchool, initialMembers, i
       <div className="absolute inset-0 bg-gradient-to-r from-slate-950/95 via-slate-950/70 to-slate-950/35" />
       <div className="absolute inset-0 bg-gradient-to-t from-slate-950/90 via-transparent to-slate-950/20" />
 
-      <div className="relative min-h-[210px] p-6 sm:p-7">
-        <div className="flex min-h-[175px] flex-col justify-between">
+      <div className="relative h-full min-h-[180px] p-6 sm:p-7">
+        <div className="flex h-full min-h-[130px] flex-col justify-between">
 
           <div className="flex flex-wrap items-center justify-between gap-3">
             <div className="flex flex-wrap items-center gap-2">
@@ -488,7 +488,7 @@ export function SchoolDetailWorkspace({ school: initialSchool, initialMembers, i
               Bildausschnitt anpassen
             </h2>
             <p className="mt-1 text-sm leading-6 text-slate-500">
-              Position und Zoom bestimmen, welcher Ausschnitt im Schul-Header angezeigt wird.
+              Die Vorschau hat dasselbe Seitenverhältnis wie der Schul-Header. Der gespeicherte Ausschnitt wird dort unverändert übernommen.
             </p>
           </div>
 
@@ -525,7 +525,7 @@ export function SchoolDetailWorkspace({ school: initialSchool, initialMembers, i
 
           {school.school_image_path ? (
             <div className="overflow-hidden rounded-2xl bg-slate-950">
-              <div className="relative aspect-[16/6] min-h-[220px] overflow-hidden">
+              <div className="relative aspect-[16/7] min-h-[210px] overflow-hidden sm:aspect-[16/4.2]">
                 <img
                   src={`${process.env.NEXT_PUBLIC_SUPABASE_URL}/storage/v1/object/public/school-images/${school.school_image_path}`}
                   alt=""
