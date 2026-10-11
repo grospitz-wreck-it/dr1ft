@@ -7,31 +7,27 @@ export default function HomePage() {
     <>
       <SiteNav />
 
-      <section className="relative isolate overflow-hidden min-h-[680px] flex items-center">
-        <picture className="absolute inset-0 -z-20">
-          <source media="(max-width: 767px)" srcSet="/dr1ft-hero-m.webp" />
-          <img
-            src="/dr1ft-hero-w.webp"
-            alt=""
-            className="h-full w-full object-cover object-center"
-          />
-        </picture>
-        <div className="absolute inset-0 -z-10 bg-[linear-gradient(90deg,rgba(5,10,25,.92)_0%,rgba(5,10,25,.68)_38%,rgba(10,8,24,.28)_72%,rgba(10,8,24,.62)_100%)]" />
-        <div className="absolute inset-0 -z-10 bg-[radial-gradient(circle_at_25%_45%,rgba(0,218,255,.24),transparent_38%),radial-gradient(circle_at_78%_45%,rgba(255,55,95,.22),transparent_40%)]" />
+      <section className="relative isolate flex min-h-[680px] items-center overflow-hidden sm:min-h-[720px]">
+        <div className="absolute inset-0 -z-20 overflow-hidden" aria-hidden="true">
+          <img src="/dr1ft-hero-w.webp" alt="" className="dr1ft-hero-image dr1ft-hero-image-a absolute inset-0 h-full w-full object-cover object-[62%_center] md:object-[70%_center]" />
+          <img src="/dr1ft-hero-m.webp" alt="" className="dr1ft-hero-image dr1ft-hero-image-b absolute inset-0 h-full w-full object-cover object-[58%_center] md:object-[70%_center]" />
+        </div>
+        <div className="absolute inset-0 -z-10 bg-[linear-gradient(90deg,rgba(5,10,25,.96)_0%,rgba(5,10,25,.84)_27%,rgba(5,10,25,.48)_48%,rgba(10,8,24,.08)_76%,rgba(10,8,24,.22)_100%)]" />
+        <div className="absolute inset-0 -z-10 bg-[radial-gradient(circle_at_28%_42%,rgba(0,218,255,.15),transparent_38%),linear-gradient(0deg,rgba(5,10,25,.22),transparent_36%)]" />
 
-        <div className="max-w-6xl mx-auto w-full px-6 py-24">
-          <div className="max-w-2xl text-white">
+        <div className="mx-auto w-full max-w-6xl px-6 py-24 sm:py-28">
+          <div className="max-w-xl text-white">
             <p className="inline-flex bg-cyan-300/10 border border-cyan-200/30 text-xs font-medium text-cyan-100 px-3 py-1 rounded-full mb-6 backdrop-blur">
               Medienkompetenz · NRW
             </p>
-            <h1 className="font-display text-4xl sm:text-6xl font-bold tracking-tight leading-[1.02]">
+            <h1 className="font-display text-4xl sm:text-5xl lg:text-6xl font-bold tracking-tight leading-[1.02]">
               Medienkompetenz, die Schüler:innen wirklich erleben.
             </h1>
-            <p className="text-lg sm:text-xl text-slate-200 max-w-xl mt-6 leading-relaxed">
+            <p className="text-base sm:text-lg text-slate-200 max-w-lg mt-5 leading-relaxed">
               DR1FT ist ein simulierter Social-Media-Feed, in dem Schüler:innen
               Manipulation selbst erkennen lernen — statt sie nur erklärt zu bekommen.
             </p>
-            <div className="flex flex-wrap items-center gap-4 mt-9">
+            <div className="flex flex-wrap items-center gap-3 mt-8">
               <Link href="/simulation" className="bg-white text-slate-950 font-semibold px-6 py-3 rounded-lg hover:bg-slate-100 flex items-center gap-2 shadow-lg shadow-cyan-950/20">
                 Simulation ansehen <ArrowRight className="w-4 h-4" />
               </Link>
