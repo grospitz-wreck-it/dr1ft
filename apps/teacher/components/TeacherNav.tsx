@@ -2,12 +2,10 @@
 
 import {
   BarChart3,
-  ChevronDown,
   LayoutDashboard,
   LogOut,
   School,
   Settings,
-  UserRound,
   Users,
 } from "lucide-react";
 import { usePathname, useRouter } from "next/navigation";
@@ -149,78 +147,22 @@ export function TeacherNav() {
           <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-violet-600">DR1FT / LEHRKRÄFTE</p>
           <p className="mt-1 text-sm font-semibold text-slate-800">Unterricht gestalten</p>
         </div>
-        <div className="flex items-center gap-3">
+        <div className="relative flex items-center gap-3">
           <span className="hidden rounded-full border border-slate-200 bg-white px-3 py-1.5 text-[11px] font-medium text-slate-500 sm:inline-flex">Teacher Studio</span>
           <button type="button" onClick={() => setAccountOpen((open) => !open)} className="editorial-avatar" aria-label="Kontomenü öffnen">D</button>
           {accountOpen && (
-            <div className="absolute right-5 top-14 z-50 w-56 overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-xl">
+            <div className="absolute right-0 top-11 z-50 w-56 overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-xl">
               <div className="border-b border-slate-200 px-4 py-3">
                 <p className="text-sm font-semibold text-slate-900">Lehrkraft</p>
                 <p className="mt-0.5 truncate text-xs text-slate-400">{email ?? "Konto"}</p>
-                <p className="mt-1 truncate text-xs text-slate-500">{school ?? "DR1FT"}{region ? ` · ${region}` : ""}</p>
+                <p className="mt-1 truncate text-xs text-slate-500">{school ?? "DR1FT"}{region ? " · " + region : ""}</p>
               </div>
-            <button
-              type="button"
-              onClick={() => setAccountOpen((open) => !open)}
-              className="flex items-center gap-3 rounded-xl px-2.5 py-2 transition hover:bg-canvas"
-            >
-              <div className="hidden text-right sm:block">
-                <p className="text-sm font-medium text-slate-800">
-                  Lehrkraft
-                </p>
-                <p className="text-[11px] text-slate-400">
-                  {email ?? "Konto"}
-                </p>
-              </div>
-
-              <div className="flex h-9 w-9 items-center justify-center rounded-full bg-slate-950 text-xs font-semibold text-white">
-                <UserRound className="h-4 w-4" />
-              </div>
-
-              <ChevronDown
-                className={`hidden h-4 w-4 text-slate-400 transition sm:block ${
-                  accountOpen ? "rotate-180" : ""
-                }`}
-              />
-            </button>
-
-            {false && accountOpen && (
-              <div className="absolute right-0 top-12 z-50 w-56 overflow-hidden rounded-2xl border border-border bg-white shadow-xl">
-                <div className="border-b border-border px-4 py-3">
-                  <p className="text-sm font-semibold text-slate-900">
-                    Lehrkraft
-                  </p>
-                  <p className="mt-0.5 truncate text-xs text-slate-400">
-                    {school ?? "DR1FT"}
-                  </p>
-                </div>
-
-                <div className="p-1.5">
-                  <a
-                    href="/account"
-                    className="flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-sm text-slate-700 transition hover:bg-canvas"
-                  >
-                    <Settings className="h-4 w-4 text-slate-400" />
-                    Einstellungen
-                  </a>
-                </div>
-
-                <div className="border-t border-border p-1.5">
-                  <button
-                    type="button"
-                    onClick={logout}
-                    className="flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium text-red-600 transition hover:bg-red-50"
-                  >
-                    <LogOut className="h-4 w-4" />
-                    Abmelden
-                  </button>
-                </div>
-              </div>
-            )}
-          </div>
+              <div className="p-1.5"><a href="/account" className="flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-sm text-slate-700 transition hover:bg-slate-50"><Settings className="h-4 w-4 text-slate-400" />Einstellungen</a></div>
+              <div className="border-t border-slate-200 p-1.5"><button type="button" onClick={logout} className="flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium text-red-600 transition hover:bg-red-50"><LogOut className="h-4 w-4" />Abmelden</button></div>
+            </div>
+          )}
         </div>
       </header>
-
       <div className="editorial-sidebar fixed left-0 top-0 z-40 hidden h-screen w-[252px] overflow-y-auto lg:block">
         <aside className="flex min-h-full w-full flex-col">
           <a href="/" className="editorial-brand">
