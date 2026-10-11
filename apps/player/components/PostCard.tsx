@@ -51,6 +51,23 @@ export function PostCard({ item, userId, classInstanceId, initiallyLiked, onView
   const checkFeedback = (key: string) => typeof interactionChecks[key]?.feedback === "string" ? interactionChecks[key].feedback!.trim() : "";
 
   useEffect(() => {
+    if (!menuOpen) return;
+    const closeOnOutside = (event: PointerEvent) => {
+      const target = event.target;
+      if (target instanceof Element && !target.closest("[data-post-menu]")) setMenuOpen(false);
+    };
+    const closeOnEscape = (event: KeyboardEvent) => {
+      if (event.key === "Escape") setMenuOpen(false);
+    };
+    document.addEventListener("pointerdown", closeOnOutside);
+    document.addEventListener("keydown", closeOnEscape);
+    return () => {
+      document.removeEventListener("pointerdown", closeOnOutside);
+      document.removeEventListener("keydown", closeOnEscape);
+    };
+  }, [menuOpen]);
+
+  useEffect(() => {
     const onCommentCreated = (event: Event) => {
       const detail = (event as CustomEvent<{ parentId?: string }>).detail;
       if (detail?.parentId !== item.id) return;
@@ -183,7 +200,7 @@ export function PostCard({ item, userId, classInstanceId, initiallyLiked, onView
       {item.mediaUrl && item.mediaType === "video" && <video src={item.mediaUrl} controls className="w-full max-h-96 object-cover bg-black"/>}
       <div className="p-4 pt-3">
         <p className="font-body text-[15px] leading-relaxed">{item.body}</p>
-        <div className="relative flex items-center gap-1 mt-3 pt-3 border-t border-ink/10">
+        <div data-post-menu className="relative flex items-center gap-1 mt-3 pt-3 border-t border-ink/10">
           <button onClick={toggleLike} className={`tap-pulse touch-target flex items-center gap-1.5 px-2 text-sm font-body rounded-lg ${liked ? "text-social-pink" : "text-ink/50"}`} aria-label="Gefällt mir"><Heart className="w-5 h-5" fill={liked ? "currentColor" : "none"} strokeWidth={2}/>{baseLikeCount + (liked ? 1 : 0)}</button>
           <button onClick={toggleComments} className="touch-target flex items-center gap-1.5 px-2 text-sm font-body text-ink/50 rounded-lg" aria-label="Kommentare anzeigen"><MessageCircle className="w-[18px] h-[18px]" strokeWidth={2}/>{comments ? comments.length : liveCommentCount}</button>
           <button onClick={() => setMenuOpen((open) => !open)} className="touch-target ml-auto flex items-center gap-1 px-2 text-ink/50 rounded-lg" aria-label="Weitere Aktionen" aria-expanded={menuOpen}><MoreHorizontal className="w-5 h-5"/><span className="text-sm font-body hidden sm:inline">Mehr</span><ChevronDown className="w-3.5 h-3.5"/></button>
