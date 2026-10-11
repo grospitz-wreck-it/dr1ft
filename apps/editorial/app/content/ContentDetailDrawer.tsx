@@ -8,7 +8,7 @@
 // ein Link ohne diesen Parameter — kein zusätzlicher Client-State nötig.
 
 import { useState, useTransition } from "react";
-import { X, Image as ImageIcon, Sparkles, RefreshCw } from "lucide-react";
+import { X, Image as ImageIcon, Sparkles, RefreshCw, Info } from "lucide-react";
 import { updateContentItemQuick, updateContentItemStatusQuick } from "./actions";
 
 const MANIPULATION_TECHNIQUES = [
@@ -223,7 +223,20 @@ export function ContentDetailDrawer({
                         }
                         className="h-3.5 w-3.5 accent-violet-600"
                       />
-                      {technique.label}
+                      <span>{technique.label}</span>
+                      <span className="group relative ml-0.5 inline-flex shrink-0">
+                        <Info
+                          aria-label={`Erklärung: ${technique.label}`}
+                          tabIndex={0}
+                          className="h-3.5 w-3.5 text-slate-400 outline-none hover:text-violet-600 focus:text-violet-600"
+                        />
+                        <span
+                          role="tooltip"
+                          className="pointer-events-none invisible absolute bottom-full left-1/2 z-[70] mb-2 w-56 -translate-x-1/2 rounded-lg bg-slate-900 px-3 py-2 text-left text-[11px] font-normal leading-4 text-white opacity-0 shadow-xl transition group-hover:visible group-hover:opacity-100 group-focus-within:visible group-focus-within:opacity-100"
+                        >
+                          {technique.description}
+                        </span>
+                      </span>
                     </label>
                   );
                 })}
