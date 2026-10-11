@@ -3,6 +3,7 @@ import Link from "next/link";
 import { headers } from "next/headers";
 import {
   LayoutGrid,
+  Gauge,
   MessagesSquare,
   MessageSquare,
   Sparkles,
@@ -17,6 +18,7 @@ export const metadata: Metadata = {
 };
 
 const NAV_ITEMS = [
+  { href: "/", label: "Dashboard", icon: Gauge },
   { href: "/content", label: "Content-Bibliothek", icon: Library },
   { href: "/scenarios", label: "Szenarien", icon: LayoutGrid },
   { href: "/npc-dialogs", label: "NPC-Dialoge", icon: MessagesSquare },
@@ -60,7 +62,7 @@ export default async function RootLayout({
       <body className="font-sans">
         <div className="min-h-screen flex bg-canvas">
           <aside className="editorial-sidebar sticky top-0 flex h-screen w-[252px] shrink-0 flex-col">
-            <Link href="/scenarios" className="editorial-brand">
+            <Link href="/" className="editorial-brand">
               <span className="editorial-brand-mark">d.</span>
               <span className="min-w-0">
                 <span className="block text-[15px] font-bold tracking-tight text-slate-950">DR1FT</span>
