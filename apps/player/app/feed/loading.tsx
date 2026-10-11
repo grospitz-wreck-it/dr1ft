@@ -19,7 +19,7 @@ export default function FeedLoading() {
         />
       </div>
       <span className="sr-only">DR1FT wird geladen …</span>
-      <style jsx>{`
+      <style>{`
         .dr1ft-feed-loading {
           min-height: max(70vh, 32rem);
           background:
@@ -82,7 +82,7 @@ export default function FeedLoading() {
           .dr1ft-loader-ring,
           .dr1ft-loader-logo { animation: none; }
         }
-      `}</style>
+`}</style>
     </main>
   );
 }
