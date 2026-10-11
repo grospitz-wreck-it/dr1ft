@@ -35,16 +35,22 @@ body {
 /* Hero portraits alternate on a slow, continuous crossfade. */
 .dr1ft-hero-image {
   opacity: 0;
-  animation: dr1ft-hero-crossfade 12s ease-in-out infinite;
+  animation-duration: 12s;
+  animation-timing-function: ease-in-out;
+  animation-iteration-count: infinite;
   will-change: opacity;
 }
-.dr1ft-hero-image-a { animation-delay: 0s; }
-.dr1ft-hero-image-b { animation-delay: -6s; }
+.dr1ft-hero-image-a { animation-name: dr1ft-hero-a; }
+.dr1ft-hero-image-b { animation-name: dr1ft-hero-b; }
 
-@keyframes dr1ft-hero-crossfade {
-  0%, 8% { opacity: 0; }
-  16%, 42% { opacity: 1; }
-  50%, 92% { opacity: 0; }
+@keyframes dr1ft-hero-a {
+  0%, 45% { opacity: 1; }
+  50%, 95% { opacity: 0; }
+  100% { opacity: 1; }
+}
+@keyframes dr1ft-hero-b {
+  0%, 45% { opacity: 0; }
+  50%, 95% { opacity: 1; }
   100% { opacity: 0; }
 }
 
