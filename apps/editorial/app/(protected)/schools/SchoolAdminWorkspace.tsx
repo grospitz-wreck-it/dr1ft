@@ -212,22 +212,22 @@ export function SchoolAdminWorkspace({ initialSchools }: { initialSchools: Schoo
   return (
     <>
       <section className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
-        <div className="rounded-2xl border border-border bg-panel p-5">
+        <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
           <p className="text-xs font-medium text-slate-400">Schulen</p>
           <p className="mt-1 text-2xl font-semibold tracking-tight text-slate-900">{schools.length}</p>
           <p className="mt-1 text-xs text-slate-500">{activeSchools.length} aktiv</p>
         </div>
-        <div className="rounded-2xl border border-border bg-panel p-5">
+        <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
           <p className="text-xs font-medium text-slate-400">Schüler:innen</p>
           <p className="mt-1 text-2xl font-semibold tracking-tight text-slate-900">{totalStudents.toLocaleString("de-DE")}</p>
           <p className="mt-1 text-xs text-slate-500">laut Schulstammdaten</p>
         </div>
-        <div className="rounded-2xl border border-border bg-panel p-5">
+        <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
           <p className="text-xs font-medium text-slate-400">Aktive Personen</p>
           <p className="mt-1 text-2xl font-semibold tracking-tight text-slate-900">{totalMembers}</p>
           <p className="mt-1 text-xs text-slate-500">Lehrkräfte, Leitung und Admins</p>
         </div>
-        <div className="rounded-2xl border border-border bg-panel p-5">
+        <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
           <p className="text-xs font-medium text-slate-400">Förderungen</p>
           <p className="mt-1 text-2xl font-semibold tracking-tight text-slate-900">{schools.filter((school) => school.funding_type !== "none").length}</p>
           <p className="mt-1 text-xs text-slate-500">Sponsored oder Förderung</p>
