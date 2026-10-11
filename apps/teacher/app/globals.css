@@ -146,3 +146,26 @@ body {
   .editorial-topbar { min-height: 58px; padding: 10px 16px; }
   .editorial-content { padding: 16px; }
 }
+
+
+/* Public auth pages must escape the teacher dashboard shell completely. */
+body:has(.dr1ft-login-screen) .editorial-sidebar,
+body:has(.dr1ft-login-screen) .editorial-topbar {
+  display: none !important;
+}
+body:has(.dr1ft-login-screen) .editorial-main {
+  width: 100% !important;
+  min-height: 100svh;
+  margin-left: 0 !important;
+}
+body:has(.dr1ft-login-screen) .editorial-content {
+  width: 100% !important;
+  max-width: none !important;
+  min-height: 100svh;
+  margin: 0 !important;
+  padding: 0 !important;
+}
+body:has(.dr1ft-login-screen) .editorial-content > * {
+  max-width: none !important;
+  margin: 0 !important;
+}
