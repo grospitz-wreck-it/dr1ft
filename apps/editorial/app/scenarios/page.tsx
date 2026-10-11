@@ -91,6 +91,24 @@ export default async function ScenariosPage({
           </a>
         </header>
 
+        <section aria-label="Szenario-Überblick" className="grid gap-3 sm:grid-cols-3">
+          <div className="rounded-2xl border border-slate-200/90 bg-white p-4 shadow-[0_3px_18px_rgba(15,23,42,0.025)] sm:p-5">
+            <div className="flex items-center justify-between gap-3"><span className="text-xs font-semibold text-slate-500">Szenario-Themen</span><span className="grid h-9 w-9 place-items-center rounded-xl bg-violet-50 text-violet-600"><BookOpen className="h-4 w-4" /></span></div>
+            <div className="mt-3 text-2xl font-bold tracking-tight text-slate-950">{families.length}</div>
+            <p className="mt-1 text-xs text-slate-500">Thematische Szenario-Familien</p>
+          </div>
+          <div className="rounded-2xl border border-slate-200/90 bg-white p-4 shadow-[0_3px_18px_rgba(15,23,42,0.025)] sm:p-5">
+            <div className="flex items-center justify-between gap-3"><span className="text-xs font-semibold text-slate-500">Altersvarianten</span><span className="grid h-9 w-9 place-items-center rounded-xl bg-sky-50 text-sky-600"><Users className="h-4 w-4" /></span></div>
+            <div className="mt-3 text-2xl font-bold tracking-tight text-slate-950">{rows.length}</div>
+            <p className="mt-1 text-xs text-slate-500">Versionen für unterschiedliche Zielgruppen</p>
+          </div>
+          <div className="rounded-2xl border border-slate-200/90 bg-white p-4 shadow-[0_3px_18px_rgba(15,23,42,0.025)] sm:p-5">
+            <div className="flex items-center justify-between gap-3"><span className="text-xs font-semibold text-slate-500">Lernmissionen</span><span className="grid h-9 w-9 place-items-center rounded-xl bg-emerald-50 text-emerald-600"><Route className="h-4 w-4" /></span></div>
+            <div className="mt-3 text-2xl font-bold tracking-tight text-slate-950">{(missions ?? []).length}</div>
+            <p className="mt-1 text-xs text-slate-500">Missionen über alle Szenarien</p>
+          </div>
+        </section>
+
         <section id="scenario-studio" className="overflow-hidden rounded-2xl border border-slate-200/90 bg-white shadow-[0_4px_24px_rgba(15,23,42,0.035)]">
           <div className="border-b border-slate-100 px-6 py-5 sm:px-7">
             <div className="flex items-start gap-3">
