@@ -106,15 +106,20 @@ export async function updateContentItemStatusQuick(
 }
 
 
+
 /**
- * Erzeugt eine neue Bildvariante über Gemini Image und speichert sie als
- * neues Asset. Das bestehende Bild wird nicht überschrieben; die neue URL
- * wird erst nach erfolgreicher Generierung und Speicherung aktiviert.
+ * Regenerates a content image using the existing DR1FT Cloudflare FLUX
+ * worker and stores the result in the established ambient-assets bucket.
  */
 export async function regenerateContentImage(id: string, instructions: string) {
   const supabase = supabaseServerClient();
-  const apiKey = process.env.GEMINI_API_KEY?.trim();
-  if (!apiKey) throw new Error("GEMINI_API_KEY ist nicht gesetzt.");
+  const workerUrl = process.env.CLOUDFLARE_AMBIENT_IMAGE_URL?.trim();
+  const apiKey = process.env.CLOUDFLARE_AMBIENT_IMAGE_API_KEY?.trim()
+    || process.env.AMBIENT_IMAGE_API_KEY?.trim();
+
+  if (!workerUrl || !apiKey) {
+    throw new Error("Cloudflare FLUX ist nicht konfiguriert. Bitte CLOUDFLARE_AMBIENT_IMAGE_URL und CLOUDFLARE_AMBIENT_IMAGE_API_KEY in Vercel prüfen.");
+  }
 
   const { data: item, error: itemError } = await supabase
     .from("content_items")
@@ -126,62 +131,50 @@ export async function regenerateContentImage(id: string, instructions: string) {
   if (!item.media_url) throw new Error("Für dieses Content-Piece ist kein Bild hinterlegt.");
 
   const prompt = [
-    "Create a polished, age-appropriate editorial illustration/photo for a German media-literacy learning platform.",
-    "Image content must match this social media post:",
+    "Create an authentic, age-appropriate image for a German media-literacy learning platform.",
+    "The image must visually match this social-media post:",
     String(item.body ?? "").slice(0, 2000),
-    "IMPORTANT TEXT RULE: Do not render any letters, words, captions, logos, UI text, watermarks, signs, labels, or pseudo-writing in the image. Leave any text areas blank. Do not invent text.",
-    "Keep people fictional and non-identifiable. Do not imitate a real person's face.",
+    "Do not render any text, letters, captions, logos, UI text, watermarks, signs, labels, or pseudo-writing. No readable text anywhere. Do not imitate a real person's face.",
     instructions.trim() ? `Additional editorial direction: ${instructions.trim().slice(0, 1000)}` : "",
-    "Generate only the image, without an explanation."
+    "Natural smartphone photography, realistic lighting, candid everyday setting, slightly imperfect framing. Generate only the image."
   ].filter(Boolean).join("\n\n");
 
-  const response = await fetch(
-    "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-image:generateContent",
-    {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "x-goog-api-key": apiKey,
-      },
-      body: JSON.stringify({
-        contents: [{ parts: [{ text: prompt }] }],
-        generationConfig: { responseModalities: ["IMAGE"] },
-      }),
-      cache: "no-store",
-      signal: AbortSignal.timeout(90000),
-    }
-  );
+  const response = await fetch(workerUrl, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      "Authorization": `Bearer ${apiKey}`,
+    },
+    body: JSON.stringify({ prompt, aspectRatio: "4:5", steps: 4 }),
+    cache: "no-store",
+    signal: AbortSignal.timeout(90000),
+  });
 
   if (!response.ok) {
-    const details = await response.text();
-    throw new Error(`Bildgenerierung fehlgeschlagen: ${details.slice(0, 500)}`);
+    throw new Error(`Cloudflare FLUX Fehler (${response.status}): ${(await response.text()).slice(0, 500)}`);
   }
 
   const result = await response.json();
-  const parts = result.candidates?.[0]?.content?.parts ?? [];
-  const imagePart = parts.find((part: any) => part.inlineData?.data);
-  if (!imagePart?.inlineData?.data) {
-    throw new Error("Der Bildgenerator hat keine Bilddatei zurückgegeben.");
-  }
+  const base64 = typeof result?.image === "string" ? result.image : null;
+  if (!base64) throw new Error("Cloudflare FLUX hat kein Bild zurückgegeben.");
 
-  const mimeType = String(imagePart.inlineData.mimeType ?? "image/png");
-  const extension = mimeType === "image/jpeg" ? "jpg" : mimeType === "image/webp" ? "webp" : "png";
-  const bytes = Buffer.from(imagePart.inlineData.data, "base64");
-  const storagePath = `${id}/regenerated-${crypto.randomUUID()}.${extension}`;
-
+  const storagePath = `generated/${new Date().toISOString().slice(0, 10)}/content-${crypto.randomUUID()}.jpg`;
   const { error: uploadError } = await supabase.storage
-    .from("content-media")
-    .upload(storagePath, bytes, { contentType: mimeType, upsert: false });
+    .from("ambient-assets")
+    .upload(storagePath, Buffer.from(base64, "base64"), {
+      contentType: "image/jpeg",
+      upsert: false,
+    });
 
   if (uploadError) throw new Error(`Neues Bild konnte nicht gespeichert werden: ${uploadError.message}`);
 
-  const { data: publicUrl } = supabase.storage.from("content-media").getPublicUrl(storagePath);
+  const { data: publicUrl } = supabase.storage.from("ambient-assets").getPublicUrl(storagePath);
   const previousExtra = item.extra && typeof item.extra === "object" ? item.extra : {};
   const nextExtra = {
     ...previousExtra,
     generatedBy: "ai",
-    imageProvider: "gemini",
-    imageModel: "gemini-2.5-flash-image",
+    imageProvider: "cloudflare",
+    imageModel: "@cf/black-forest-labs/flux-2-klein-4b",
     imageRegeneratedAt: new Date().toISOString(),
     imagePrompt: prompt,
   };
