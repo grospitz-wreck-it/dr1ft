@@ -42,8 +42,7 @@ export async function middleware(request: NextRequest) {
 }
 
 export const config = {
-  // Eigene App/Domain jetzt — schützt alles außer /login und /signup
-  // (Middleware-Matcher können keine Ausnahmen ausdrücken, das passiert
-  // oben im Funktionskörper über die Pfad-Prüfung).
-  matcher: ["/((?!login|signup|_next|favicon.ico).*)"],
+  // Öffentliche Login-Routen und statische Branding-Dateien von Auth ausnehmen.
+  // Alle übrigen Routen bleiben durch die Middleware geschützt.
+  matcher: ["/((?!login|signup|_next|favicon.ico|branding/).*)"],
 };
