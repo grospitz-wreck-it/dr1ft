@@ -34,6 +34,11 @@ export function PostCard({ item, userId, classInstanceId, initiallyLiked, onView
   const [commentText, setCommentText] = useState("");
   const [commentSaving, setCommentSaving] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
+  const [shareOpen, setShareOpen] = useState(false);
+  const [shareLoading, setShareLoading] = useState(false);
+  const [shareSaving, setShareSaving] = useState(false);
+  const [shareRecipients, setShareRecipients] = useState<Array<{ id: string; displayName: string; username: string }>>([]);
+  const [selectedRecipients, setSelectedRecipients] = useState<string[]>([]);
   const [feedback, setFeedback] = useState<string | null>(null);
   const [comparison, setComparison] = useState<{ related: FeedItem | null; loading: boolean; selected?: "contradict" | "support"; error?: string } | null>(null);
 
@@ -189,7 +194,50 @@ export function PostCard({ item, userId, classInstanceId, initiallyLiked, onView
   const expectedComparison = ["contradicts"].includes(relationType) ? "contradict" : ["supports", "corroborates"].includes(relationType) ? "support" : null;
   const comparisonIsCorrect = Boolean(comparison?.selected && expectedComparison && comparison.selected === expectedComparison);
 
-  async function share() { await track("share"); showFeedback("Beitrag zum Teilen vorgemerkt."); setMenuOpen(false); }
+  async function share() {
+    setMenuOpen(false);
+    setShareOpen(true);
+    setShareLoading(true);
+    setSelectedRecipients([]);
+    const { data: interactions } = await supabase
+      .from("user_interactions")
+      .select("user_id")
+      .eq("class_instance_id", classInstanceId)
+      .neq("user_id", userId)
+      .limit(500);
+    const ids = Array.from(new Set((interactions ?? []).map((row) => row.user_id).filter((id): id is string => Boolean(id))));
+    const { data: profiles } = ids.length
+      ? await supabase.from("user_profiles").select("id, display_name, username").in("id", ids).order("display_name")
+      : { data: [] as { id: string; display_name: string | null; username: string | null }[] };
+    setShareRecipients((profiles ?? []).map((profile) => ({
+      id: profile.id,
+      displayName: profile.display_name || profile.username || "DR1FT User",
+      username: profile.username || "user",
+    })));
+    setShareLoading(false);
+  }
+
+  async function sendShare() {
+    if (!selectedRecipients.length || shareSaving) return;
+    setShareSaving(true);
+    try {
+      for (const recipientUserId of selectedRecipients) {
+        await track("share", {
+          source: "post_share_dialog",
+          recipient_user_id: recipientUserId,
+          class_instance_id: classInstanceId,
+          post_title: item.title ?? null,
+          post_excerpt: item.body.slice(0, 180),
+        });
+      }
+      setShareOpen(false);
+      showFeedback(`Beitrag mit ${selectedRecipients.length} Klassenkamerad${selectedRecipients.length === 1 ? "" : "en"} geteilt.`);
+    } catch {
+      showFeedback("Teilen ist gerade nicht möglich. Bitte versuche es erneut.");
+    } finally {
+      setShareSaving(false);
+    }
+  }
   async function report() { await track("report"); showFeedback("Deine Meldung wurde aufgenommen."); setMenuOpen(false); }
   async function ignore() { await track("ignore"); showFeedback("Beitrag wird für dich ausgeblendet."); setMenuOpen(false); }
 
@@ -204,8 +252,29 @@ export function PostCard({ item, userId, classInstanceId, initiallyLiked, onView
           <button onClick={toggleLike} className={`tap-pulse touch-target flex items-center gap-1.5 px-2 text-sm font-body rounded-lg ${liked ? "text-social-pink" : "text-ink/50"}`} aria-label="Gefällt mir"><Heart className="w-5 h-5" fill={liked ? "currentColor" : "none"} strokeWidth={2}/>{baseLikeCount + (liked ? 1 : 0)}</button>
           <button onClick={toggleComments} className="touch-target flex items-center gap-1.5 px-2 text-sm font-body text-ink/50 rounded-lg" aria-label="Kommentare anzeigen"><MessageCircle className="w-[18px] h-[18px]" strokeWidth={2}/>{comments ? comments.length : liveCommentCount}</button>
           <button onClick={() => setMenuOpen((open) => !open)} className="touch-target ml-auto flex items-center gap-1 px-2 text-ink/50 rounded-lg" aria-label="Weitere Aktionen" aria-expanded={menuOpen}><MoreHorizontal className="w-5 h-5"/><span className="text-sm font-body hidden sm:inline">Mehr</span><ChevronDown className="w-3.5 h-3.5"/></button>
-          {menuOpen && <div className="absolute z-20 right-0 bottom-12 w-60 rounded-xl border border-ink/10 bg-paper shadow-xl p-1.5">{showCheck("inspect_source") && <ActionButton icon={<Search/>} label="Quelle ansehen" onClick={inspectSource}/>}{showCheck("inspect_media") && <ActionButton icon={<ImageIcon/>} label="Bild prüfen" onClick={inspectMedia}/>}{showCheck("inspect_context") && <ActionButton icon={<Eye/>} label="Kontext prüfen" onClick={inspectContext}/>}{showCheck("inspect_profile") && <ActionButton icon={<UserRound/>} label="Profil ansehen" onClick={inspectProfile}/>}{showCheck("compare_information") && <ActionButton icon={<Search/>} label="Informationen vergleichen" onClick={compareInformation}/>}<div className="my-1 border-t border-ink/10"/><ActionButton icon={<Share2/>} label="Teilen" onClick={share}/><ActionButton icon={<Flag/>} label="Melden" onClick={report}/><ActionButton icon={<X/>} label="Ignorieren" onClick={ignore}/></div>}
+          {menuOpen && <div className="absolute z-20 right-0 bottom-12 w-60 rounded-xl border border-ink/15 bg-paper text-ink shadow-xl p-1.5 dark-post-menu">{showCheck("inspect_source") && <ActionButton icon={<Search/>} label="Quelle ansehen" onClick={inspectSource}/>}{showCheck("inspect_media") && <ActionButton icon={<ImageIcon/>} label="Bild prüfen" onClick={inspectMedia}/>}{showCheck("inspect_context") && <ActionButton icon={<Eye/>} label="Kontext prüfen" onClick={inspectContext}/>}{showCheck("inspect_profile") && <ActionButton icon={<UserRound/>} label="Profil ansehen" onClick={inspectProfile}/>}{showCheck("compare_information") && <ActionButton icon={<Search/>} label="Informationen vergleichen" onClick={compareInformation}/>}<div className="my-1 border-t border-ink/10"/><ActionButton icon={<Share2/>} label="Teilen" onClick={share}/><ActionButton icon={<Flag/>} label="Melden" onClick={report}/><ActionButton icon={<X/>} label="Ignorieren" onClick={ignore}/></div>}
         </div>
+        {shareOpen && <div className="fixed inset-0 z-[100] flex items-center justify-center bg-slate-950/60 p-4 backdrop-blur-sm" onPointerDown={(event) => { if (event.target === event.currentTarget) setShareOpen(false); }}>
+          <section role="dialog" aria-modal="true" aria-labelledby={`share-title-${item.id}`} className="w-full max-w-md rounded-3xl border border-slate-200 bg-white p-5 text-slate-900 shadow-2xl dark-share-dialog">
+            <div className="flex items-start justify-between gap-4">
+              <div><h2 id={`share-title-${item.id}`} className="text-lg font-semibold">Beitrag teilen</h2><p className="mt-1 text-sm text-slate-500">Nur mit Leuten aus deiner Klasseninstanz.</p></div>
+              <button type="button" onClick={() => setShareOpen(false)} aria-label="Dialog schließen" className="grid h-9 w-9 place-items-center rounded-xl text-slate-500 hover:bg-slate-100"><X className="h-5 w-5"/></button>
+            </div>
+            <div className="mt-4 rounded-2xl bg-slate-50 p-3 text-sm text-slate-600 line-clamp-3">{item.body}</div>
+            <div className="mt-4 max-h-64 space-y-1 overflow-y-auto">
+              {shareLoading && <p className="py-6 text-center text-sm text-slate-500">Klassenkameraden werden geladen …</p>}
+              {!shareLoading && shareRecipients.length === 0 && <p className="py-6 text-center text-sm text-slate-500">Noch keine Klassenkameraden gefunden, mit denen du hier interagieren kannst.</p>}
+              {shareRecipients.map((person) => <label key={person.id} className="flex cursor-pointer items-center gap-3 rounded-xl px-3 py-2.5 hover:bg-violet-50">
+                <input type="checkbox" checked={selectedRecipients.includes(person.id)} onChange={(event) => setSelectedRecipients((current) => event.target.checked ? [...current, person.id] : current.filter((id) => id !== person.id))} className="h-4 w-4 accent-violet-600"/>
+                <span className="min-w-0 flex-1"><span className="block truncate text-sm font-medium">{person.displayName}</span><span className="block truncate text-xs text-slate-500">@{person.username}</span></span>
+              </label>)}
+            </div>
+            <div className="mt-5 flex items-center justify-between gap-3 border-t border-slate-100 pt-4">
+              <span className="text-xs text-slate-500">{selectedRecipients.length} ausgewählt</span>
+              <button type="button" disabled={!selectedRecipients.length || shareSaving || shareLoading} onClick={() => void sendShare()} className="inline-flex items-center gap-2 rounded-xl bg-violet-700 px-4 py-2.5 text-sm font-semibold text-white disabled:opacity-40"><Share2 className="h-4 w-4"/>{shareSaving ? "Wird geteilt …" : "Jetzt teilen"}</button>
+            </div>
+          </section>
+        </div>}
         {feedback && <div className="mt-3 rounded-lg bg-ink/5 px-3 py-2.5 flex items-start gap-2 text-xs leading-relaxed" role="status"><Check className="w-4 h-4 shrink-0 mt-0.5"/><span>{feedback}</span></div>}
         {commentsOpen && <div className="mt-3 space-y-3">
           <div className="rounded-xl border border-ink/10 bg-ink/[0.025] p-3">
