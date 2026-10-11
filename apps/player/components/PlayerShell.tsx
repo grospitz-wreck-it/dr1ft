@@ -233,13 +233,15 @@ export function PlayerShell({ children }: { children: React.ReactNode }) {
             <div className="absolute -top-20 -right-16 w-48 h-48 rounded-full bg-social-pink/25 blur-3xl" />
             <div className="absolute bottom-20 -left-20 w-44 h-44 rounded-full bg-social-blue/20 blur-3xl" />
             <div className="relative px-6 pt-6 pb-5">
-              <Link href="/feed" aria-label="DR1FT – Feed" className="group inline-flex items-center">
+              <Link href="/feed" aria-label="DR1FT – Feed" className="group inline-flex items-center gap-3">
                 <img
                   src="/branding/drift-logo-appstore-transparent.webp"
-                  alt="DR1FT"
-                  className="h-[4.5rem] w-auto max-w-full object-contain transition duration-300 group-hover:scale-[1.03]"
+                  alt=""
+                  aria-hidden="true"
+                  className="h-12 w-12 shrink-0 object-contain transition duration-300 group-hover:scale-[1.03]"
                   fetchPriority="high"
                 />
+                <span className="font-display text-[23px] font-bold tracking-[-0.04em] text-white transition-colors group-hover:text-white/90">DR1FT</span>
               </Link>
             </div>
             <div className="relative px-3 flex-1">
