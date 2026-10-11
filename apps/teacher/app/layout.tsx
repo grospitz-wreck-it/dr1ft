@@ -3,7 +3,7 @@ import "./globals.css";
 import { TeacherNav } from "../components/TeacherNav";
 
 export const metadata: Metadata = {
-  title: "DR1FT — Teacher",
+  title: "DR1FT — Lehrkraft",
 };
 
 export default function RootLayout({
