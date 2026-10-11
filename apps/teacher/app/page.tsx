@@ -26,10 +26,6 @@ export default async function TeacherHomePage() {
     : { data: [] as any[] };
   const schoolsById = new Map((schoolRows ?? []).map((school: any) => [school.id, school]));
   const linkedSchools = Array.from(schoolsById.values());
-  const classSchoolNames = new Map(classes.map((item: any) => [
-    item.id,
-    schoolsById.get(item.school_id)?.name ?? null,
-  ]));
 
   let studentCount = 0;
 
@@ -58,15 +54,15 @@ export default async function TeacherHomePage() {
           <a href="/classes" className="inline-flex items-center justify-center rounded-xl bg-slate-950 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-slate-800">Meine Klassen <span className="ml-2">→</span></a>
         </section>
         <section className="rounded-3xl border border-slate-200 bg-white px-6 py-7 shadow-sm sm:px-8">
-          <p className="text-xs font-semibold uppercase tracking-[0.18em] text-white/45">
+          <p className="text-xs font-semibold uppercase tracking-[0.18em] text-violet-600">
             DEINE ÜBERSICHT
           </p>
 
           <div className="mt-2 flex flex-col gap-6 sm:flex-row sm:items-end sm:justify-between">
             <div>
-              <h1 className="text-4xl font-semibold tracking-tight sm:text-5xl">
+              <h2 className="text-3xl font-semibold tracking-tight text-slate-950 sm:text-4xl">
                 Übersicht
-              </h1>
+              </h2>
               <p className="mt-2 max-w-xl text-sm leading-6 text-slate-500">
                 Deine Klassen, Schüler:innen und Lernfortschritte auf einen Blick.
               </p>
@@ -132,7 +128,7 @@ export default async function TeacherHomePage() {
             </a>
           </article>
 
-          <article className="rounded-2xl border border-border bg-white p-6">
+          <article className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
             <p className="text-xs font-semibold uppercase tracking-[0.14em] text-accent">
               Analyse
             </p>
