@@ -30,3 +30,32 @@ body {
   background: rgba(34, 211, 238, .35);
   color: white;
 }
+
+
+/* Hero portraits alternate on a slow, continuous crossfade. */
+.dr1ft-hero-image {
+  opacity: 0;
+  animation-duration: 12s;
+  animation-timing-function: ease-in-out;
+  animation-iteration-count: infinite;
+  will-change: opacity;
+}
+.dr1ft-hero-image-a { animation-name: dr1ft-hero-a; }
+.dr1ft-hero-image-b { animation-name: dr1ft-hero-b; }
+
+@keyframes dr1ft-hero-a {
+  0%, 45% { opacity: 1; }
+  50%, 95% { opacity: 0; }
+  100% { opacity: 1; }
+}
+@keyframes dr1ft-hero-b {
+  0%, 45% { opacity: 0; }
+  50%, 95% { opacity: 1; }
+  100% { opacity: 0; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .dr1ft-hero-image { animation: none; }
+  .dr1ft-hero-image-a { opacity: 1; }
+  .dr1ft-hero-image-b { opacity: 0; }
+}
