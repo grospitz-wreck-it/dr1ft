@@ -61,7 +61,7 @@ export default function LoginPage() {
         <header className="flex w-full flex-col items-center text-center">
           <img src="/branding/drift-logo-transparent-vertical.webp" alt="DR1FT" className="mb-2 h-auto w-[min(52vw,12rem)] object-contain drop-shadow-[0_8px_30px_rgba(124,58,237,0.18)]" fetchPriority="high" />
           <p className="font-mono text-[10px] font-semibold uppercase tracking-[0.32em] text-slate-500 sm:text-xs">
-            {isSchoolHost ? "Schulverwaltung" : "Content Studio"}
+            {isSchoolHost ? "Schul Studio" : "Content Studio"}
           </p>
         </header>
         <section className="w-full max-w-[25rem]">
