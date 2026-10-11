@@ -340,7 +340,7 @@ export default function ClassImageEditor({
               type="button"
               onClick={() => void save()}
               disabled={saving}
-              className="rounded-xl bg-slate-950 px-4 py-2.5 text-sm font-medium text-white transition hover:bg-slate-800 disabled:opacity-50"
+              className="rounded-xl bg-violet-600 px-4 py-2.5 text-sm font-medium text-white transition hover:bg-violet-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-violet-400 focus-visible:ring-offset-2 disabled:opacity-50"
             >
               {saving ? "Speichert…" : "Bildausschnitt speichern"}
             </button>
