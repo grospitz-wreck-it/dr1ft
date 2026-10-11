@@ -142,6 +142,15 @@ export default async function ClassDetailPage({
     dashboard = await dashboardRes.json().catch(() => ({}));
   }
 
+  const moduleMissionRows = dashboard.missionOverview ?? [];
+  const completedModuleMissions = moduleMissionRows.filter(
+    (row: any) => Number(row.student_count ?? 0) > 0 &&
+      Number(row.completed_count ?? 0) >= Number(row.student_count ?? 0),
+  ).length;
+  const moduleMissionCount = moduleMissionRows.length;
+  const activeModuleCompleted = moduleMissionCount > 0 &&
+    completedModuleMissions === moduleMissionCount;
+
   const competencyRows = dashboard.studentCompetencyProgress ?? [];
   const missionRows = dashboard.studentMissionProgress ?? [];
 
@@ -334,6 +343,8 @@ export default async function ClassDetailPage({
                 scenarioId={scenario.id}
                 title={scenario.title}
                 ageRating={scenario.age_rating}
+                moduleStatus={activeAssignment?.scenario_id === scenario.id ? (activeModuleCompleted ? "Abgeschlossen" : moduleMissionCount ? "In Bearbeitung" : "Noch keine Fortschrittsdaten") : "Nicht zugewiesen"}
+                moduleReport={activeAssignment?.scenario_id === scenario.id ? `${completedModuleMissions} von ${moduleMissionCount} Missionen von allen Schüler:innen abgeschlossen` : undefined}
                 initiallyAssigned={
                   activeAssignment?.scenario_id === scenario.id
                 }
