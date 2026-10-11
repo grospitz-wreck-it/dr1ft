@@ -165,3 +165,30 @@ body {
 
 /* Dichte Tabellenzeilen für große Content-Bibliotheken. */
 .table-row-dense { @apply h-11; }
+
+
+/* Auth pages use the whole viewport, never the dashboard's padded content shell. */
+body:has(.dr1ft-login-screen) {
+  min-height: 100svh;
+  margin: 0;
+}
+body:has(.dr1ft-login-screen) .editorial-sidebar,
+body:has(.dr1ft-login-screen) .editorial-topbar {
+  display: none !important;
+}
+body:has(.dr1ft-login-screen) .editorial-main {
+  width: 100% !important;
+  min-height: 100svh;
+  margin: 0 !important;
+}
+body:has(.dr1ft-login-screen) .editorial-content {
+  width: 100% !important;
+  max-width: none !important;
+  min-height: 100svh;
+  margin: 0 !important;
+  padding: 0 !important;
+}
+body:has(.dr1ft-login-screen) .editorial-content > * {
+  max-width: none !important;
+  margin: 0 !important;
+}
