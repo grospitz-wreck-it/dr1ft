@@ -55,21 +55,44 @@ export function ContentDetailDrawer({
     <>
       <a
         href="/content"
-        className="fixed inset-0 bg-slate-900/20 z-20 lg:hidden"
+        className="fixed inset-0 z-20 bg-slate-950/35 backdrop-blur-[2px] lg:hidden"
         aria-label="Schließen"
       />
-      <aside className="fixed lg:sticky top-0 right-0 h-screen w-full max-w-md bg-panel border-l border-border z-30 overflow-y-auto shadow-xl lg:shadow-none">
-        <div className="flex items-center justify-between px-5 py-4 border-b border-border">
-          <span className="text-xs2 uppercase text-slate-400">{item.type}</span>
-          <a href="/content" className="text-slate-400 hover:text-slate-700">
-            <X className="w-5 h-5" />
-          </a>
+      <aside className="fixed right-0 top-0 z-30 h-screen w-full max-w-md overflow-y-auto border-l border-border bg-panel shadow-2xl lg:sticky lg:shadow-none">
+        <div className="sticky top-0 z-10 border-b border-border bg-panel/95 px-5 py-4 backdrop-blur">
+          <div className="flex items-start justify-between gap-4">
+            <div className="min-w-0">
+              <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-slate-400">Content-Detail</p>
+              <h2 className="mt-1 truncate text-lg font-semibold tracking-tight text-slate-900">{item.type}</h2>
+              <span className="mt-2 inline-flex items-center gap-2 rounded-full border border-border bg-canvas px-2.5 py-1 text-xs font-medium text-slate-600">
+                <span className="h-1.5 w-1.5 rounded-full bg-accent" />
+                {item.status}
+              </span>
+            </div>
+            <a
+              href="/content"
+              className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border border-border bg-white text-slate-500 transition hover:bg-canvas hover:text-slate-900"
+              aria-label="Detail schließen"
+            >
+              <X className="h-4 w-4" />
+            </a>
+          </div>
         </div>
 
-        <div className="p-5 space-y-4">
+        <div className="space-y-6 p-5">
           {item.media_url && (
-            <div className="rounded-xl border border-border bg-canvas overflow-hidden">
-              <div className="aspect-[4/3] bg-slate-100">
+            <section className="overflow-hidden rounded-2xl border border-border bg-white shadow-sm">
+              <div className="flex items-center justify-between border-b border-border px-4 py-3">
+                <div>
+                  <p className="text-sm font-semibold text-slate-800">Medienvorschau</p>
+                  <p className="mt-0.5 text-xs text-slate-500">Verknüpftes Asset</p>
+                </div>
+                <span className="inline-flex items-center gap-1.5 rounded-full bg-canvas px-2.5 py-1 text-xs font-medium text-slate-600">
+                  <ImageIcon className="h-3.5 w-3.5" />
+                  Bild
+                </span>
+              </div>
+              <div className="aspect-[4/3] bg-slate-50">
                 <img
                   src={item.media_url}
                   alt=""
@@ -77,12 +100,9 @@ export function ContentDetailDrawer({
                   loading="eager"
                 />
               </div>
-              <div className="flex items-center justify-between gap-2 px-3 py-2 text-xs text-slate-500">
-                <span className="inline-flex items-center gap-1.5">
-                  <ImageIcon className="h-3.5 w-3.5" />
-                  Bild-Asset
-                </span>
-                <span className="inline-flex items-center gap-1.5">
+              <div className="flex items-center justify-between gap-2 border-t border-border px-4 py-3 text-xs text-slate-500">
+                <span className="font-medium">Quelle</span>
+                <span className="inline-flex items-center gap-1.5 text-right">
                   {item.extra?.imageProvider === "cloudflare" && (
                     <>
                       <Sparkles className="h-3.5 w-3.5" />
@@ -92,66 +112,94 @@ export function ContentDetailDrawer({
                   {item.extra?.imageProvider !== "cloudflare" && (item.extra?.imageProvider ?? "Quelle unbekannt")}
                 </span>
               </div>
-            </div>
+            </section>
           )}
 
-          <div>
-            <label className="text-xs2 text-slate-500 block mb-1">Inhalt</label>
-            <textarea
-              value={body}
-              onChange={(e) => setBody(e.target.value)}
-              rows={4}
-              className="w-full border border-border rounded-md px-3 py-2 text-sm"
-            />
-          </div>
+          <section className="space-y-4">
+            <div>
+              <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-slate-400">Bearbeitung</p>
+              <h3 className="mt-1 text-base font-semibold text-slate-900">Inhalt bearbeiten</h3>
+              <p className="mt-1 text-sm leading-5 text-slate-500">Passe den Inhalt und die zugeordneten Manipulationstechniken an.</p>
+            </div>
 
-          <div>
-            <label className="text-xs2 text-slate-500 block mb-1">Manipulationstechniken (kommagetrennt)</label>
-            <input
-              value={techniques}
-              onChange={(e) => setTechniques(e.target.value)}
-              className="w-full border border-border rounded-md px-3 py-2 text-sm"
-            />
-          </div>
+            <div>
+              <label className="mb-1.5 block text-xs font-semibold text-slate-700">Inhalt</label>
+              <textarea
+                value={body}
+                onChange={(e) => setBody(e.target.value)}
+                rows={5}
+                className="w-full resize-y rounded-xl border border-border bg-white px-3.5 py-3 text-sm leading-6 text-slate-800 outline-none transition placeholder:text-slate-400 focus:border-accent focus:ring-4 focus:ring-violet-500/10"
+              />
+            </div>
 
-          <button
-            onClick={save}
-            disabled={isPending}
-            className="w-full bg-accent hover:bg-accent-hover text-white text-sm py-2 rounded-md disabled:opacity-50"
-          >
-            {isPending ? "Speichert…" : saved ? "Gespeichert ✓" : "Speichern"}
-          </button>
+            <div>
+              <label className="mb-1.5 block text-xs font-semibold text-slate-700">Manipulationstechniken</label>
+              <input
+                value={techniques}
+                onChange={(e) => setTechniques(e.target.value)}
+                placeholder="z. B. Framing, falsche Dichotomie"
+                className="w-full rounded-xl border border-border bg-white px-3.5 py-2.5 text-sm text-slate-800 outline-none transition placeholder:text-slate-400 focus:border-accent focus:ring-4 focus:ring-violet-500/10"
+              />
+              <p className="mt-1.5 text-xs text-slate-400">Mehrere Einträge durch Kommas trennen.</p>
+            </div>
 
-          <div className="pt-4 border-t border-border">
-            <p className="text-xs2 text-slate-500 mb-2">Freigabe-Status: {item.status}</p>
-            <div className="flex flex-wrap gap-2">
+            <button
+              onClick={save}
+              disabled={isPending}
+              className="inline-flex w-full items-center justify-center gap-2 rounded-xl bg-accent px-4 py-3 text-sm font-semibold text-white shadow-sm transition hover:bg-accent-hover disabled:cursor-not-allowed disabled:opacity-50"
+            >
+              {isPending ? "Speichert…" : saved ? "Gespeichert ✓" : "Änderungen speichern"}
+            </button>
+          </section>
+
+          <section className="border-t border-border pt-5">
+            <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-slate-400">Workflow</p>
+            <h3 className="mt-1 text-base font-semibold text-slate-900">Freigabe</h3>
+            <p className="mt-1 text-sm leading-5 text-slate-500">Verändere den Status entsprechend dem nächsten Arbeitsschritt.</p>
+            <div className="mt-4 flex flex-wrap gap-2">
               {transitions.map((t) => (
                 <button
                   key={t.next}
                   onClick={() =>
                     startTransition(() => updateContentItemStatusQuick(item.id, item.status, t.next))
                   }
-                  className="text-xs px-3 py-1.5 rounded-md border border-border hover:bg-canvas"
+                  className="rounded-xl border border-border bg-white px-3 py-2 text-xs font-semibold text-slate-700 transition hover:border-accent/40 hover:bg-canvas"
                 >
                   {t.label}
                 </button>
               ))}
+              {transitions.length === 0 && (
+                <p className="rounded-xl bg-canvas px-3 py-2 text-xs text-slate-500">Für diesen Status ist keine weitere Aktion definiert.</p>
+              )}
             </div>
-          </div>
+          </section>
 
-          <div className="pt-4 border-t border-border text-xs2 text-slate-400 space-y-2">
-            <p>Szenario: {item.scenarios?.title ?? "— Ambient —"}</p>
-            <p>Creator: {item.creators?.display_name ?? "—"}</p>
-            <p>Erstellt: {new Date(item.created_at).toLocaleString("de-DE")}</p>
+          <section className="border-t border-border pt-5">
+            <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-slate-400">Herkunft</p>
+            <h3 className="mt-1 text-base font-semibold text-slate-900">Details</h3>
+            <dl className="mt-4 space-y-3">
+              <div className="flex items-start justify-between gap-4">
+                <dt className="text-xs text-slate-500">Szenario</dt>
+                <dd className="max-w-[65%] text-right text-xs font-medium text-slate-700">{item.scenarios?.title ?? "— Ambient —"}</dd>
+              </div>
+              <div className="flex items-start justify-between gap-4">
+                <dt className="text-xs text-slate-500">Creator</dt>
+                <dd className="max-w-[65%] text-right text-xs font-medium text-slate-700">{item.creators?.display_name ?? "—"}</dd>
+              </div>
+              <div className="flex items-start justify-between gap-4">
+                <dt className="text-xs text-slate-500">Erstellt</dt>
+                <dd className="text-right text-xs font-medium text-slate-700">{new Date(item.created_at).toLocaleString("de-DE")}</dd>
+              </div>
+            </dl>
             {item.media_url && (
-              <div className="flex flex-wrap gap-1.5 pt-1">
-                <span className="rounded-full bg-slate-100 px-2 py-1">Bild</span>
-                {item.extra?.generatedBy === "ai" && <span className="rounded-full bg-violet-50 text-violet-700 px-2 py-1">KI-generiert</span>}
-                {item.extra?.imageProvider === "cloudflare" && <span className="rounded-full bg-slate-100 px-2 py-1">FLUX</span>}
-                {item.extra?.format && <span className="rounded-full bg-slate-100 px-2 py-1">{item.extra.format}</span>}
+              <div className="mt-4 flex flex-wrap gap-1.5 border-t border-border pt-4">
+                <span className="rounded-full bg-slate-100 px-2.5 py-1 text-xs font-medium text-slate-600">Bild</span>
+                {item.extra?.generatedBy === "ai" && <span className="rounded-full bg-violet-50 px-2.5 py-1 text-xs font-medium text-violet-700">KI-generiert</span>}
+                {item.extra?.imageProvider === "cloudflare" && <span className="rounded-full bg-slate-100 px-2.5 py-1 text-xs font-medium text-slate-600">FLUX</span>}
+                {item.extra?.format && <span className="rounded-full bg-slate-100 px-2.5 py-1 text-xs font-medium text-slate-600">{item.extra.format}</span>}
               </div>
             )}
-          </div>
+          </section>
         </div>
       </aside>
     </>
