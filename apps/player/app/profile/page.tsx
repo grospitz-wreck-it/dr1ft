@@ -4,7 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { ArrowUpRight, Check, LogOut, Palette, Sparkles, Wand2 } from "lucide-react";
 import { supabaseBrowserClient } from "../../lib/supabaseBrowserClient";
-import { avatarUrl } from "../../lib/avatar";
+import { avatarUrl, avatarStyleFromSeed, avatarSeedWithStyle, PLAYER_AVATAR_STYLES, type PlayerAvatarStyle } from "../../lib/avatar";
 
 type Interest = { key: string; label: string; emoji: string | null; category: string };
 
@@ -18,7 +18,8 @@ export default function ProfilePage() {
   const groupedInterests = useMemo(() => interests.reduce<Record<string, Interest[]>>((groups, interest) => { (groups[interest.category] ??= []).push(interest); return groups; }, {}), [interests]);
   function toggleInterest(key: string) { setMessage(null); setSelectedInterests((current) => current.includes(key) ? current.filter((value) => value !== key) : current.length < 3 ? [...current, key] : current); }
   async function save() { if (!userId || !displayName.trim() || !username.trim()) return; if (selectedInterests.length !== 3) { setMessage("Wähle bitte genau 3 Interessen aus."); return; } setSaving(true); setMessage(null); const cleanUsername = username.trim().replace(/^@/, "").toLowerCase().replace(/[^a-z0-9_]/g, "").slice(0, 24); if (!cleanUsername) { setSaving(false); setMessage("Der Nutzername enthält keine gültigen Zeichen."); return; } const { error: profileError } = await supabase.from("user_profiles").upsert({ id: userId, display_name: displayName.trim(), username: cleanUsername, avatar_seed: avatarSeed || userId }); if (profileError) { setSaving(false); setMessage(`Profil konnte nicht gespeichert werden: ${profileError.message}`); return; } const { error: preferenceError } = await supabase.from("user_ambient_preferences").upsert({ user_id: userId, interest_keys: selectedInterests, onboarding_completed: true, updated_at: new Date().toISOString() }); setSaving(false); if (preferenceError) { setMessage(`Interessen konnten nicht gespeichert werden: ${preferenceError.message}`); return; } setUsername(cleanUsername); setMessage("Profil gespeichert."); }
-  function randomizeAvatar() { setAvatarSeed(`${userId ?? "dr1ft"}-${Math.random().toString(36).slice(2, 10)}`); }
+  function randomizeAvatar() { setAvatarSeed(avatarSeedWithStyle(`${userId ?? "dr1ft"}-${Math.random().toString(36).slice(2, 10)}`, avatarStyleFromSeed(avatarSeed))); }
+  function chooseAvatarStyle(style: PlayerAvatarStyle) { setAvatarSeed(avatarSeedWithStyle(avatarSeed || userId, style)); }
   async function signOut() { await supabase.auth.signOut(); router.replace("/login"); router.refresh(); }
   if (!userId) return <main className="min-h-screen grid place-items-center text-[#68738a]">Profil wird geladen…</main>;
 
@@ -27,6 +28,21 @@ export default function ProfilePage() {
     <section className="relative overflow-hidden rounded-[32px] bg-gradient-to-br from-[#17142f] via-[#34205e] to-[#7b1f73] text-white p-6 md:p-8 shadow-[0_26px_80px_rgba(74,36,111,.25)]">
       <div className="absolute -right-16 -top-24 w-72 h-72 rounded-full bg-[#ff4fd8]/20 blur-3xl" /><div className="absolute -left-20 -bottom-24 w-64 h-64 rounded-full bg-[#48d9ff]/20 blur-3xl" />
       <div className="relative flex flex-col sm:flex-row items-start sm:items-center gap-6"><div className="relative"><span className="absolute -inset-1 rounded-[30px] bg-gradient-to-br from-[#48d9ff] via-[#8b55e8] to-[#ff4fd8] opacity-80 blur-[2px]" /><img src={avatarUrl(avatarSeed || userId, 220)} alt="" className="relative w-28 h-28 rounded-[27px] bg-[#221a3e] ring-4 ring-white/10 object-cover" /><button onClick={randomizeAvatar} className="absolute -bottom-2 -right-2 grid place-items-center w-9 h-9 rounded-xl bg-white text-[#34205e] shadow-lg hover:scale-105 transition" aria-label="Avatar neu würfeln"><Palette className="w-4 h-4" /></button></div><div><p className="text-[9px] uppercase tracking-[0.2em] text-[#8eeaff] font-semibold">DEIN AUFTRITT</p><h2 className="font-display text-2xl font-bold tracking-[-0.04em] mt-1">{displayName || "Dein Name"}</h2><p className="text-sm text-white/55 mt-1">@{username.replace(/^@/, "") || "drifter"}</p><div className="flex flex-wrap gap-2 mt-4"><span className="rounded-full border border-white/10 bg-white/10 px-2.5 py-1 text-[9px] uppercase tracking-[.12em] text-white/65">PLAYER</span><span className="rounded-full border border-[#65f5bd]/20 bg-[#65f5bd]/10 px-2.5 py-1 text-[9px] font-mono text-[#9dffd7]">ONLINE</span></div></div></div>
+    </section>
+    <section className="mt-4 rounded-[26px] bg-white/90 border border-white p-5 md:p-6 shadow-[0_15px_48px_rgba(38,50,74,.06)]">
+      <div className="flex items-center justify-between gap-3">
+        <div><h2 className="font-display font-semibold">Dein Avatar-Stil</h2><p className="mt-1 text-xs text-[#8d96a7]">Wähle einen Look – dein Charakter bleibt individuell.</p></div>
+        <span className="rounded-full bg-[#efe9ff] px-3 py-1.5 text-[10px] font-semibold text-[#7545c7]">{PLAYER_AVATAR_STYLES.length} Stile</span>
+      </div>
+      <div className="mt-4 grid grid-cols-3 gap-2 sm:grid-cols-4 md:grid-cols-6">
+        {PLAYER_AVATAR_STYLES.map((style) => {
+          const selected = avatarStyleFromSeed(avatarSeed) === style.id;
+          return <button key={style.id} type="button" onClick={() => chooseAvatarStyle(style.id)} aria-pressed={selected} className={`rounded-2xl border p-2 text-center transition ${selected ? "border-[#8b55e8] bg-[#f2edff] ring-2 ring-[#8b55e8]/15" : "border-[#e5e8ef] bg-white hover:border-[#c9b8ee] hover:bg-[#faf8ff]"}`}>
+            <img src={avatarUrl(`${style.id}::${avatarSeed}`, 88)} alt="" className="mx-auto h-14 w-14 rounded-xl bg-[#f4f2fb] object-cover" />
+            <span className={`mt-1 block text-[10px] font-medium ${selected ? "text-[#6540b3]" : "text-[#68738a]"}`}>{style.label}</span>
+          </button>;
+        })}
+      </div>
     </section>
     <section className="mt-4 rounded-[26px] bg-white/90 border border-white p-5 md:p-6 shadow-[0_15px_48px_rgba(38,50,74,.06)]"><div className="flex items-center gap-2 mb-5"><span className="grid place-items-center w-8 h-8 rounded-xl bg-gradient-to-br from-[#e8ddff] to-[#dcf7ff] text-[#7545c7]"><Sparkles className="w-4 h-4" /></span><div><h2 className="font-display font-semibold">Persönliche Daten</h2><p className="text-[11px] text-[#9aa3b5]">Das sehen andere von dir.</p></div></div><div className="grid sm:grid-cols-2 gap-4"><label className="block text-xs font-medium text-[#68738a]">Anzeigename<input value={displayName} onChange={(e) => setDisplayName(e.target.value)} className="mt-1.5 w-full rounded-2xl border border-[#e1e5ed] bg-[#f8f9fc] px-3.5 py-3 text-sm outline-none focus:border-[#8b55e8] focus:ring-4 focus:ring-[#8b55e8]/10" maxLength={40} /></label><label className="block text-xs font-medium text-[#68738a]">Nutzername<input value={username} onChange={(e) => setUsername(e.target.value)} className="mt-1.5 w-full rounded-2xl border border-[#e1e5ed] bg-[#f8f9fc] px-3.5 py-3 text-sm outline-none focus:border-[#8b55e8] focus:ring-4 focus:ring-[#8b55e8]/10" maxLength={24} /><span className="block text-[10px] text-[#a0a8b7] mt-1">@{username.replace(/^@/, "")}</span></label></div></section>
     <section className="relative overflow-hidden mt-4 rounded-[28px] bg-white/90 border border-white p-5 md:p-6 shadow-[0_15px_48px_rgba(38,50,74,.06)]"><div className="absolute -right-12 -top-12 w-40 h-40 rounded-full bg-[#8b55e8]/8 blur-3xl" /><div className="relative flex items-start justify-between gap-4"><div><div className="flex items-center gap-2"><Wand2 className="w-4 h-4 text-[#8b55e8]" /><h2 className="font-display text-xl font-semibold">Dein Feed</h2></div><p className="text-sm text-[#68738a] mt-1">Wähle genau 3 Dinge, die dich wirklich interessieren.</p></div><span className={`shrink-0 rounded-full px-3 py-1.5 text-[11px] font-semibold ${selectedInterests.length === 3 ? "bg-[#65f5bd]/15 text-[#218a65]" : "bg-[#efe9ff] text-[#7545c7]"}`}>{selectedInterests.length}/3</span></div>
