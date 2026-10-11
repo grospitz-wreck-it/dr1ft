@@ -124,5 +124,5 @@ export async function middleware(request: NextRequest) {
 // Public assets must bypass school-host authentication and host-based redirects.
 // Otherwise /branding/* requests are redirected back to the school detail route.
 export const config = {
-  matcher: ["/((?!_next|favicon.ico|branding/|.*\\\\.(?:svg|png|jpg|jpeg|webp|gif|ico|css|js|woff2?)$).*)"],
+  matcher: ["/((?!_next|favicon.ico|branding/).*)"],
 };
