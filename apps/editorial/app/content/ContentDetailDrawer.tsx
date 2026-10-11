@@ -9,7 +9,7 @@
 
 import { useState, useTransition } from "react";
 import { X, Image as ImageIcon, Sparkles, RefreshCw } from "lucide-react";
-import { updateContentItemQuick, updateContentItemStatusQuick } from "./actions";
+import { regenerateContentImage, updateContentItemQuick, updateContentItemStatusQuick } from "./actions";
 
 const MANIPULATION_TECHNIQUES = [
   { value: "framing", label: "Framing", description: "Einordnung durch Wortwahl oder Perspektive" },
@@ -52,6 +52,27 @@ export function ContentDetailDrawer({
   const [body, setBody] = useState(item?.body ?? "");
   const [techniques, setTechniques] = useState<string[]>(item?.manipulation_techniques ?? []);
   const [saved, setSaved] = useState(false);
+  const [imageUrl, setImageUrl] = useState(item?.media_url ?? "");
+  const [imageInstructions, setImageInstructions] = useState("");
+  const [isRegenerating, setIsRegenerating] = useState(false);
+  const [imageError, setImageError] = useState("");
+  const [imageNotice, setImageNotice] = useState("");
+
+  async function regenerateImage() {
+    setIsRegenerating(true);
+    setImageError("");
+    setImageNotice("");
+    try {
+      const result = await regenerateContentImage(item.id, imageInstructions);
+      setImageUrl(result.mediaUrl);
+      setImageInstructions("");
+      setImageNotice("Neue Bildversion erstellt und aktiviert. Das vorherige Asset bleibt gespeichert.");
+    } catch (error) {
+      setImageError(error instanceof Error ? error.message : "Bild konnte nicht neu generiert werden.");
+    } finally {
+      setIsRegenerating(false);
+    }
+  }
 
   if (!item) return null;
 
@@ -97,7 +118,7 @@ export function ContentDetailDrawer({
         </div>
 
         <div className="space-y-6 p-5">
-          {item.media_url && (
+          {imageUrl && (
             <section className="overflow-hidden rounded-2xl border border-border bg-white shadow-sm">
               <div className="flex items-center justify-between border-b border-border px-4 py-3">
                 <div>
@@ -111,7 +132,7 @@ export function ContentDetailDrawer({
               </div>
               <div className="aspect-[4/3] bg-slate-50">
                 <img
-                  src={item.media_url}
+                  src={imageUrl}
                   alt=""
                   className="h-full w-full object-contain"
                   loading="eager"
@@ -128,6 +149,30 @@ export function ContentDetailDrawer({
                   )}
                   {item.extra?.imageProvider !== "cloudflare" && (item.extra?.imageProvider ?? "Quelle unbekannt")}
                 </span>
+              </div>
+              <div className="space-y-3 border-t border-border bg-white p-4">
+                <div>
+                  <p className="text-sm font-semibold text-slate-800">Bild neu generieren</p>
+                  <p className="mt-1 text-xs leading-5 text-slate-500">Erstellt eine neue Variante passend zum Post. Um typische KI-Schriftfehler zu vermeiden, soll das Bild keine Schrift, Logos oder Wasserzeichen enthalten. Das bisherige Asset wird nicht überschrieben.</p>
+                </div>
+                <textarea
+                  value={imageInstructions}
+                  onChange={(e) => setImageInstructions(e.target.value)}
+                  rows={2}
+                  placeholder="Optionale Änderungswünsche, z. B. andere Perspektive oder hellere Stimmung"
+                  className="w-full resize-y rounded-xl border border-border bg-white px-3 py-2.5 text-sm leading-5 text-slate-800 outline-none transition placeholder:text-slate-400 focus:border-accent focus:ring-4 focus:ring-violet-500/10"
+                />
+                <button
+                  type="button"
+                  onClick={regenerateImage}
+                  disabled={isRegenerating}
+                  className="inline-flex w-full items-center justify-center gap-2 rounded-xl border border-violet-200 bg-violet-50 px-4 py-2.5 text-sm font-semibold text-violet-700 transition hover:bg-violet-100 disabled:cursor-not-allowed disabled:opacity-50"
+                >
+                  <RefreshCw className={`h-4 w-4 ${isRegenerating ? "animate-spin" : ""}`} />
+                  {isRegenerating ? "Bild wird generiert…" : "Neue Bildversion erzeugen"}
+                </button>
+                {imageError && <p role="alert" className="rounded-lg bg-red-50 px-3 py-2 text-xs leading-5 text-red-700">{imageError}</p>}
+                {imageNotice && <p role="status" className="rounded-lg bg-emerald-50 px-3 py-2 text-xs leading-5 text-emerald-700">{imageNotice}</p>}
               </div>
             </section>
           )}
