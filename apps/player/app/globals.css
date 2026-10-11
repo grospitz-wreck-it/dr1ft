@@ -248,3 +248,32 @@ body.dark-mode {
 .dark-mode .dark-share-dialog .border-slate-200 { border-color: #403451 !important; }
 .dark-mode .dark-share-dialog label:hover { background: rgba(167,139,250,.12) !important; }
 .dark-mode .dark-share-dialog button[aria-label="Dialog schließen"]:hover { background: #3a2d52 !important; }
+
+
+/* Feed card action row: strong contrast in both themes. */
+.dark-mode main article [data-post-menu] {
+  border-color: var(--drift-border) !important;
+}
+.dark-mode main article [data-post-menu] > button:not([aria-label="Beitrag teilen"]) {
+  color: #c9bfdc !important;
+}
+.dark-mode main article [data-post-menu] > button:not([aria-label="Beitrag teilen"]):hover {
+  background: rgba(167,139,250,.14) !important;
+}
+.dark-mode main article [data-post-menu] > button[aria-label="Beitrag teilen"] {
+  color: #fff !important;
+  background: #7c3aed !important;
+}
+.dark-mode main article [data-post-menu] > button[aria-label="Beitrag teilen"]:hover {
+  background: #6d28d9 !important;
+}
+.dark-mode main article [data-post-menu] > button[aria-label="Gefällt mir"] {
+  color: #c9bfdc !important;
+}
+.dark-mode main article [data-post-menu] > button[aria-label="Gefällt mir"].text-social-pink {
+  color: #fb7185 !important;
+}
+.dark-mode main article [data-post-menu] > button[aria-label="Gefällt mir"] svg,
+.dark-mode main article [data-post-menu] > button[aria-label="Kommentare anzeigen"] svg {
+  flex-shrink: 0;
+}
