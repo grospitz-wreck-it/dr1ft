@@ -312,38 +312,42 @@ export function SchoolDetailWorkspace({ school: initialSchool, initialMembers, i
   }
 
   return <>
-    <header className="relative z-30 border-b border-border bg-white">
-      <div className="mx-auto flex h-16 w-full max-w-7xl items-center justify-between gap-4 px-6 lg:px-8">
+    <header className="sticky top-0 z-30 border-b border-slate-200/80 bg-white/95 backdrop-blur-xl">
+      <div className="mx-auto flex h-[72px] w-full max-w-[1440px] items-center justify-between gap-4 px-5 sm:px-8 lg:px-10">
 
-        <div className="flex min-w-0 items-center gap-4">
-          <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-slate-950 text-white">
-            <span className="text-[10px] font-bold tracking-[0.08em]">DR1FT</span>
+        <div className="flex min-w-0 items-center gap-3.5">
+          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-fuchsia-500 via-violet-500 to-blue-500 text-white shadow-md shadow-violet-200/70">
+            <span className="text-base font-extrabold tracking-[-0.08em]">d.</span>
           </div>
 
-          <div className="hidden h-6 w-px bg-border sm:block" />
+          <div className="hidden h-8 w-px bg-slate-200 sm:block" />
 
           <div className="min-w-0">
-            <p className="truncate text-sm font-semibold text-slate-950">
-              {school.name}
+            <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-violet-600">
+              DR1FT / SCHULE
             </p>
-            <p className="truncate text-[11px] text-slate-400">
-              {regionLabel(school.region)}
+            <p className="mt-0.5 truncate text-sm font-semibold text-slate-800">
+              {school.name}
             </p>
           </div>
         </div>
 
-        <div className="relative flex items-center gap-2">
+        <div className="relative flex items-center gap-3">
+          <span className="hidden rounded-full border border-slate-200 bg-white px-3 py-1.5 text-[11px] font-medium text-slate-500 sm:inline-flex">
+            Schulverwaltung
+          </span>
           <button
             type="button"
             onClick={() => setAccountOpen((open) => !open)}
-            className="flex items-center gap-3 rounded-xl px-2.5 py-2 transition hover:bg-canvas"
+            className="flex items-center gap-2.5 rounded-xl px-2.5 py-2 transition hover:bg-violet-50"
+            aria-label="Kontomenü öffnen"
           >
             <div className="hidden text-right sm:block">
-              <p className="text-sm font-medium text-slate-800">Administrator</p>
-              <p className="text-[11px] text-slate-400">Schulverwaltung</p>
+              <p className="text-sm font-semibold text-slate-800">Administrator</p>
+              <p className="text-[11px] text-slate-400">{regionLabel(school.region)}</p>
             </div>
 
-            <div className="flex h-9 w-9 items-center justify-center rounded-full bg-slate-950 text-xs font-semibold text-white">
+            <div className="flex h-9 w-9 items-center justify-center rounded-full bg-slate-950 text-white ring-4 ring-slate-100">
               <UserRound className="h-4 w-4" />
             </div>
 
