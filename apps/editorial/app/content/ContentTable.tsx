@@ -14,6 +14,15 @@ const STATUS_COLORS: Record<string, string> = {
   archived: "bg-status-archived",
 };
 
+const STATUS_LABELS: Record<string, string> = {
+  draft: "Entwurf",
+  in_review: "In Prüfung",
+  approved: "Freigegeben",
+  live: "Live",
+  rejected: "Abgelehnt",
+  archived: "Archiviert",
+};
+
 const TYPE_ICONS: Record<string, any> = {
   post: FileText,
   comment: MessageSquare,
@@ -152,8 +161,9 @@ export function ContentTable({
                 <td className="px-2 text-slate-500 truncate">{row.scenarios?.title ?? "— Ambient —"}</td>
                 <td className="px-2 text-slate-500 truncate">{row.creators?.display_name ?? "—"}</td>
                 <td className="px-2">
-                  <span className={`inline-flex items-center gap-1 text-xs2 text-white px-2 py-0.5 rounded-full ${STATUS_COLORS[row.status]}`}>
-                    {row.status}
+                  <span className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[11px] font-semibold leading-none text-white shadow-sm ${STATUS_COLORS[row.status] ?? "bg-slate-500"}`}>
+                    <span className="h-1.5 w-1.5 rounded-full bg-white/80" />
+                    {STATUS_LABELS[row.status] ?? row.status}
                   </span>
                 </td>
                 <td className="px-2 text-slate-400 text-xs2">
