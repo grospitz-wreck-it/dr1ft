@@ -49,7 +49,11 @@ export default async function RootLayout({
     (path) => pathname === path || pathname.startsWith(path + "/")
   );
 
-  if (isPublicAuthPage || hostname === schoolHost) {
+  // The school portal renders its own navigation. Keep it outside the editorial shell
+  // so school admins never get two sidebars when arriving via schule.dr1ft.de.
+  const isSchoolDetailPage = pathname.startsWith("/schools/") && pathname !== "/schools";
+
+  if (isPublicAuthPage || hostname === schoolHost || isSchoolDetailPage) {
     return (
       <html lang="de">
         <body className="font-sans">{children}</body>
