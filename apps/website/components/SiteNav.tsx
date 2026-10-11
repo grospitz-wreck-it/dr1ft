@@ -8,8 +8,8 @@ export function SiteNav() {
   return (
     <header className="sticky top-0 z-50 border-b border-white/10 bg-[#080D1D]/90 text-white backdrop-blur-xl">
       <div className="max-w-6xl mx-auto px-6 py-4 flex items-center justify-between gap-6">
-        <Link href="/" className="font-display text-xl font-bold tracking-tight text-white shrink-0">
-          DR1<span className="text-cyan-300">F</span>T
+        <Link href="/" aria-label="DR1FT Startseite" className="shrink-0">
+          <img src="/branding/drift-logo-transparent-horizontal-white.webp" alt="DR1FT" className="h-8 w-auto sm:h-9" />
         </Link>
 
         <nav className="hidden lg:flex items-center gap-7 text-sm text-slate-400">
@@ -19,15 +19,16 @@ export function SiteNav() {
           <Link href="/#produkt" className="hover:text-cyan-300 transition-colors">Produkt</Link>
           <Link href="/simulation" className="hover:text-cyan-300 transition-colors">Simulation</Link>
           <Link href="/preise" className="hover:text-cyan-300 transition-colors">Preise</Link>
+          <Link href="/mitmachen" className="hover:text-cyan-300 transition-colors">Mitmachen</Link>
         </nav>
 
         <div className="flex items-center gap-3 shrink-0">
           <a href={`${TEACHER_URL}/login`} className="hidden sm:inline text-sm text-slate-400 hover:text-white transition-colors">
             Login
           </a>
-          <a href={`${TEACHER_URL}/signup`} className="bg-gradient-to-r from-cyan-400 to-fuchsia-500 text-white text-sm font-semibold px-4 py-2 rounded-lg hover:brightness-110 transition shadow-lg shadow-cyan-500/10">
-            Demo starten
-          </a>
+          <Link href="/mitmachen" className="bg-gradient-to-r from-cyan-400 to-fuchsia-500 text-white text-sm font-semibold px-4 py-2 rounded-lg hover:brightness-110 transition shadow-lg shadow-cyan-500/10">
+            Mitmachen
+          </Link>
         </div>
       </div>
     </header>
