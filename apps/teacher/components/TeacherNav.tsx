@@ -145,30 +145,20 @@ export function TeacherNav() {
   return (
     <>
       <header className="editorial-topbar relative z-30 lg:ml-[252px]">
-        <div className="flex min-h-16 w-full items-center justify-between gap-4">
-          <div className="flex min-w-0 items-center gap-4">
-            <a href="/classes" className="flex shrink-0 items-center">
-              <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-slate-950 text-white">
-                <span className="text-[10px] font-bold tracking-[0.08em]">
-                  DR1FT
-                </span>
+        <div>
+          <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-violet-600">DR1FT / LEHRKRÄFTE</p>
+          <p className="mt-1 text-sm font-semibold text-slate-800">Unterricht gestalten</p>
+        </div>
+        <div className="flex items-center gap-3">
+          <span className="hidden rounded-full border border-slate-200 bg-white px-3 py-1.5 text-[11px] font-medium text-slate-500 sm:inline-flex">Teacher Studio</span>
+          <button type="button" onClick={() => setAccountOpen((open) => !open)} className="editorial-avatar" aria-label="Kontomenü öffnen">D</button>
+          {accountOpen && (
+            <div className="absolute right-5 top-14 z-50 w-56 overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-xl">
+              <div className="border-b border-slate-200 px-4 py-3">
+                <p className="text-sm font-semibold text-slate-900">Lehrkraft</p>
+                <p className="mt-0.5 truncate text-xs text-slate-400">{email ?? "Konto"}</p>
+                <p className="mt-1 truncate text-xs text-slate-500">{school ?? "DR1FT"}{region ? ` · ${region}` : ""}</p>
               </div>
-            </a>
-
-            <div className="hidden h-6 w-px bg-border sm:block" />
-
-            <div className="min-w-0">
-              <p className="truncate text-sm font-semibold text-slate-950">
-                {school ?? "DR1FT Teacher"}
-              </p>
-
-              <p className="truncate text-[11px] text-slate-400">
-                {region ?? "Lehrkraft"}
-              </p>
-            </div>
-          </div>
-
-          <div className="relative flex items-center gap-2">
             <button
               type="button"
               onClick={() => setAccountOpen((open) => !open)}
@@ -194,7 +184,7 @@ export function TeacherNav() {
               />
             </button>
 
-            {accountOpen && (
+            {false && accountOpen && (
               <div className="absolute right-0 top-12 z-50 w-56 overflow-hidden rounded-2xl border border-border bg-white shadow-xl">
                 <div className="border-b border-border px-4 py-3">
                   <p className="text-sm font-semibold text-slate-900">
@@ -232,11 +222,16 @@ export function TeacherNav() {
       </header>
 
       <div className="editorial-sidebar fixed left-0 top-0 z-40 hidden h-screen w-[252px] overflow-y-auto lg:block">
-        <aside className="w-full">
-          <nav className="sticky top-5 rounded-2xl border border-border bg-white p-2 shadow-sm">
-            <p className="px-3 pb-2 pt-2 text-[10px] font-semibold uppercase tracking-[0.14em] text-slate-400">
-              Teacher
-            </p>
+        <aside className="flex min-h-full w-full flex-col">
+          <a href="/" className="editorial-brand">
+            <span className="editorial-brand-mark">d.</span>
+            <span className="min-w-0">
+              <span className="block text-[15px] font-bold tracking-tight text-slate-950">DR1FT</span>
+              <span className="mt-0.5 block text-[10px] font-semibold uppercase tracking-[0.19em] text-slate-500">Teacher Studio</span>
+            </span>
+          </a>
+          <div className="px-4 pb-2 pt-6 text-[10px] font-bold uppercase tracking-[0.16em] text-slate-400">Arbeitsbereiche</div>
+          <nav aria-label="Hauptnavigation" className="px-3">
 
             <NavItem
               href="/"
@@ -283,6 +278,12 @@ export function TeacherNav() {
               active={pathname.startsWith("/account")}
             />
           </nav>
+          <div className="mt-auto border-t border-slate-200/80 p-4">
+            <div className="rounded-xl bg-slate-50 px-3 py-3">
+              <div className="flex items-center gap-2"><span className="h-2 w-2 rounded-full bg-emerald-500" /><span className="text-xs font-semibold text-slate-700">Lehrkräftebereich</span></div>
+              <p className="mt-1.5 text-[11px] leading-relaxed text-slate-500">Klassen, Schüler:innen und Lernfortschritte an einem Ort.</p>
+            </div>
+          </div>
         </aside>
       </div>
     </>
