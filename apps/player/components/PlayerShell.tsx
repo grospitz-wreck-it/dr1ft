@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
-import { Heart, MessageCircle, Share2, Sparkles } from "lucide-react";
+import { Heart, MessageCircle, Share2, Sparkles, Moon, Sun } from "lucide-react";
 import { supabaseBrowserClient } from "../lib/supabaseBrowserClient";
 import { avatarUrl } from "../lib/avatar";
 
@@ -52,6 +52,23 @@ export function PlayerShell({ children }: { children: React.ReactNode }) {
   const [open, setOpen] = useState(false);
   const [liveActivity, setLiveActivity] = useState<LiveActivity[]>([]);
   const [activityRealtime, setActivityRealtime] = useState(false);
+  const [darkMode, setDarkMode] = useState(false);
+
+  useEffect(() => {
+    const saved = window.localStorage.getItem("dr1ft-player-theme");
+    const enabled = saved === "dark";
+    setDarkMode(enabled);
+    document.documentElement.classList.toggle("dark-mode", enabled);
+  }, []);
+
+  function toggleTheme() {
+    setDarkMode((current) => {
+      const next = !current;
+      document.documentElement.classList.toggle("dark-mode", next);
+      window.localStorage.setItem("dr1ft-player-theme", next ? "dark" : "light");
+      return next;
+    });
+  }
 
   useEffect(() => {
     let mounted = true;
@@ -208,6 +225,9 @@ export function PlayerShell({ children }: { children: React.ReactNode }) {
   return (
     <div className="min-h-screen">
       {showShell && <>
+        <button type="button" onClick={toggleTheme} aria-label={darkMode ? "Hellmodus aktivieren" : "Dunkelmodus aktivieren"} title={darkMode ? "Hellmodus" : "Dunkelmodus"} className="fixed right-4 top-4 z-[60] grid h-11 w-11 place-items-center rounded-2xl border border-white/60 bg-white/80 text-violet-700 shadow-lg backdrop-blur-xl transition hover:-translate-y-0.5 hover:bg-white lg:right-8 lg:top-5">
+          {darkMode ? <Sun className="h-5 w-5" /> : <Moon className="h-5 w-5" />}
+        </button>
         <aside className="player-sidebar fixed z-40 inset-y-0 left-0 w-[286px] p-4 pointer-events-none">
           <div className="pointer-events-auto w-full rounded-panel border border-white/20 bg-shell/95 text-white shadow-shell backdrop-blur-2xl flex flex-col overflow-hidden relative">
             <div className="absolute -top-20 -right-16 w-48 h-48 rounded-full bg-social-pink/25 blur-3xl" />
