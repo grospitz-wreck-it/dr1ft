@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { Pencil, Copy } from "lucide-react";
+import { Pencil } from "lucide-react";
 import { CopyAccessCodeButton } from "./CopyAccessCodeButton";
 import ClassImageEditor from "./ClassImageEditor";
 
@@ -65,10 +65,15 @@ export default function ClassImageWorkspace({
         <div className="relative min-h-[300px] p-6 sm:p-8">
           <div className="flex min-h-[250px] flex-col justify-between">
             <div className="flex items-start justify-between gap-4">
-              <div>
-                <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-white/45">
-                  DR1FT Teacher
+              <div className="min-w-0">
+                <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-white/70">
+                  DR1FT · KLASSENRAUM
                 </p>
+                <div className="mt-3 flex flex-wrap items-center gap-2">
+                  <span className="text-[10px] font-semibold uppercase tracking-[0.12em] text-white/65">Schüler-Zugangscode</span>
+                  <code className="rounded-lg border border-white/20 bg-black/25 px-3 py-1.5 font-mono text-sm font-semibold tracking-[0.18em] text-white">{accessCode}</code>
+                  <CopyAccessCodeButton code={accessCode} />
+                </div>
 
                 {classImageUrl && (
                   <p className="mt-2 text-xs text-white/55">
