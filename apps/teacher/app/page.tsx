@@ -59,7 +59,7 @@ export default async function TeacherHomePage() {
             <h1 className="mt-2 text-3xl font-semibold tracking-tight text-slate-950">Dein Unterricht</h1>
             <p className="mt-2 max-w-2xl text-sm leading-6 text-slate-500">Klassen, Schulzugehörigkeit und Lernaktivität an einem Ort.</p>
           </div>
-          <a href="/classes" className="inline-flex items-center justify-center rounded-xl bg-slate-950 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-slate-800">Meine Klassen <span className="ml-2">→</span></a>
+          <a href="/classes" className="inline-flex items-center justify-center rounded-xl bg-violet-600 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-violet-700">Meine Klassen <span className="ml-2">→</span></a>
         </section>
         <section className="rounded-3xl border border-slate-200 bg-white px-6 py-7 shadow-sm sm:px-8">
           <p className="text-xs font-semibold uppercase tracking-[0.18em] text-violet-600">
@@ -150,7 +150,7 @@ export default async function TeacherHomePage() {
 
             <a
               href="/insights"
-              className="mt-5 inline-flex rounded-xl bg-slate-950 px-4 py-2.5 text-sm font-medium text-white transition hover:bg-slate-800"
+              className="mt-5 inline-flex rounded-xl bg-violet-600 px-4 py-2.5 text-sm font-medium text-white transition hover:bg-violet-700"
             >
               Insights öffnen
             </a>
