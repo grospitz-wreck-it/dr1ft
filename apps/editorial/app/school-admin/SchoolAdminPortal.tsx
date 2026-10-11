@@ -81,11 +81,11 @@ export function SchoolAdminPortal({
   const totalStudents = classes.reduce((sum, c) => sum + c.studentCount, 0);
 
   return (
-    <main className="min-h-screen bg-canvas">
-      <header className="sticky top-0 z-40 border-b border-border bg-white/90 backdrop-blur">
-        <div className="mx-auto flex max-w-7xl items-center justify-between px-6 py-4">
+    <main className="min-h-screen bg-[#f7f8fc]">
+      <header className="sticky top-0 z-40 border-b border-slate-200/80 bg-white/90 backdrop-blur-xl">
+        <div className="mx-auto flex max-w-[1440px] items-center justify-between px-5 py-4 sm:px-8 lg:px-10">
           <div className="flex items-center gap-3">
-            <div className="grid h-9 w-9 place-items-center rounded-xl bg-slate-950 text-sm font-bold text-white">D</div>
+            <div className="grid h-9 w-9 place-items-center rounded-xl bg-gradient-to-br from-fuchsia-500 via-violet-500 to-blue-500 text-sm font-bold text-white shadow-md shadow-violet-200">d.</div>
             <div><p className="font-semibold text-slate-900">DR1FT</p><p className="text-xs text-slate-500">Schulbereich</p></div>
           </div>
           <div className="flex items-center gap-3">
@@ -95,17 +95,17 @@ export function SchoolAdminPortal({
         </div>
       </header>
 
-      <div className="mx-auto max-w-7xl px-6 py-8 lg:px-8">
+      <div className="mx-auto max-w-[1440px] px-5 py-8 sm:px-8 lg:px-10 lg:py-10">
         <div className="flex flex-col gap-5 sm:flex-row sm:items-start sm:justify-between">
           <div>
             <p className="text-xs font-semibold uppercase tracking-[0.16em] text-accent">Schulverwaltung</p>
-            <h1 className="mt-2 text-3xl font-semibold tracking-tight text-slate-900">{school.name}</h1>
+            <h1 className="mt-2 text-3xl font-semibold tracking-[-0.04em] text-slate-950 sm:text-4xl">{school.name}</h1>
             <p className="mt-2 text-sm text-slate-500">{school.region || "Region nicht hinterlegt"}{school.school_type ? ` · ${school.school_type}` : ""}</p>
           </div>
-          <span className="inline-flex w-fit items-center gap-2 rounded-full bg-accent/10 px-3 py-1.5 text-xs font-medium text-accent"><ShieldCheck className="h-3.5 w-3.5" />{ROLE_LABELS[role] ?? role}</span>
+          <span className="inline-flex w-fit items-center gap-2 rounded-full border border-violet-100 bg-violet-50 px-3 py-1.5 text-xs font-semibold text-violet-700"><ShieldCheck className="h-3.5 w-3.5" />{ROLE_LABELS[role] ?? role}</span>
         </div>
 
-        <section className="mt-8 grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
+        <section className="mt-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-5">
           <Kpi label="Schüler:innen" value={school.student_count ?? totalStudents} />
           <Kpi label="Lehrkräfte" value={activeMembers.filter((m) => m.role === "teacher").length} />
           <Kpi label="Klassen" value={classes.length} />
