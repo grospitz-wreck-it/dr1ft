@@ -311,54 +311,62 @@ export function SchoolDetailWorkspace({ school: initialSchool, initialMembers, i
     setPendingId(null);
   }
 
-  return <>
-    <header className="sticky top-0 z-30 border-b border-slate-200/80 bg-white/95 backdrop-blur-xl">
-      <div className="mx-auto flex h-[72px] w-full max-w-[1440px] items-center justify-between gap-4 px-5 sm:px-8 lg:px-10">
-
-        <div className="flex min-w-0 items-center gap-3.5">
-          <img
-            src="/branding/drift-logo-appstore-transparent.webp"
-            alt=""
-            aria-hidden="true"
-            className="h-11 w-11 shrink-0 rounded-xl object-contain"
-          />
-
-          <div className="hidden h-8 w-px bg-slate-200 sm:block" />
-
-          <div className="min-w-0">
-            <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-violet-600">
-              DR1FT / SCHULE
-            </p>
-            <p className="mt-0.5 truncate text-sm font-semibold text-slate-800">
-              {school.name}
-            </p>
+  return (
+    <div className="min-h-screen flex bg-canvas">
+      <aside className="editorial-sidebar sticky top-0 flex h-screen w-[252px] shrink-0 flex-col">
+        <div className="editorial-brand">
+          <img src="/branding/drift-logo-appstore-transparent.webp" alt="" aria-hidden="true" className="h-12 w-12 shrink-0 rounded-xl object-contain" />
+          <span className="min-w-0">
+            <span className="block text-[15px] font-bold tracking-tight text-slate-950">DR1FT</span>
+            <span className="mt-0.5 block text-[10px] font-semibold uppercase tracking-[0.19em] text-slate-500">Schulbereich</span>
+          </span>
+        </div>
+        <div className="px-4 pb-2 pt-6 text-[10px] font-bold uppercase tracking-[0.16em] text-slate-400">Schulverwaltung</div>
+        <nav aria-label="Schulnavigation" className="px-3">
+          <ul className="space-y-1">
+            {([
+              { id: "overview", label: "Übersicht", icon: LayoutDashboard },
+              { id: "classes", label: "Klassen", icon: SchoolIcon },
+              { id: "people", label: "Personen", icon: Users },
+              { id: "insights", label: "Insights", icon: BarChart3 },
+              { id: "settings", label: "Schulprofil", icon: Settings },
+            ] as const).map((item) => {
+              const Icon = item.icon;
+              const active = tab === item.id;
+              const count = item.id === "classes" ? stats.classes : item.id === "people" ? activeMembers.length : null;
+              return (
+                <li key={item.id}>
+                  <button type="button" onClick={() => { setTab(item.id); if (item.id === "settings") { setForm(school); setEditing(true); } }} aria-current={active ? "page" : undefined} className={`editorial-nav-link w-full text-left ${active ? "editorial-nav-link-active" : ""}`}>
+                    <Icon className="h-[18px] w-[18px] shrink-0" strokeWidth={1.8} />
+                    <span className="min-w-0 flex-1">{item.label}</span>
+                    {count !== null && <span className="text-[10px] text-slate-400">{count}</span>}
+                    {active && <span className="editorial-nav-indicator" aria-hidden="true" />}
+                  </button>
+                </li>
+              );
+            })}
+          </ul>
+        </nav>
+        <div className="mt-auto border-t border-slate-200/80 p-4">
+          <div className="rounded-xl bg-slate-50 px-3 py-3">
+            <div className="flex items-center gap-2"><span className="h-2 w-2 rounded-full bg-emerald-500" /><span className="text-xs font-semibold text-slate-700">Schulbereich</span></div>
+            <p className="mt-1.5 text-[11px] leading-relaxed text-slate-500">Klassen, Personen und Schulprofil zentral verwalten.</p>
           </div>
         </div>
-
-        <div className="relative flex items-center gap-3">
-          <span className="hidden rounded-full border border-slate-200 bg-white px-3 py-1.5 text-[11px] font-medium text-slate-500 sm:inline-flex">
-            Schulverwaltung
-          </span>
-          <button
-            type="button"
-            onClick={() => setAccountOpen((open) => !open)}
-            className="flex items-center gap-2.5 rounded-xl px-2.5 py-2 transition hover:bg-violet-50"
-            aria-label="Kontomenü öffnen"
-          >
-            <div className="hidden text-right sm:block">
-              <p className="text-sm font-semibold text-slate-800">Administrator</p>
-              <p className="text-[11px] text-slate-400">{regionLabel(school.region)}</p>
-            </div>
-
-            <div className="flex h-9 w-9 items-center justify-center rounded-full bg-slate-950 text-white ring-4 ring-slate-100">
-              <UserRound className="h-4 w-4" />
-            </div>
-
-            <ChevronDown className={`hidden h-4 w-4 text-slate-400 transition sm:block ${
-              accountOpen ? "rotate-180" : ""
-            }`} />
-          </button>
-
+      </aside>
+      <div className="editorial-main min-w-0 flex-1">
+        <header className="editorial-topbar">
+          <div>
+            <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-violet-600">DR1FT / SCHULE</p>
+            <p className="mt-1 text-sm font-semibold text-slate-800">{school.name}</p>
+          </div>
+          <div className="relative flex items-center gap-3">
+            <span className="hidden rounded-full border border-slate-200 bg-white px-3 py-1.5 text-[11px] font-medium text-slate-500 sm:inline-flex">Schulverwaltung</span>
+            <button type="button" onClick={() => setAccountOpen((open) => !open)} className="flex items-center gap-3 rounded-xl px-2 py-1.5 transition hover:bg-violet-50" aria-label="Kontomenü öffnen">
+              <span className="hidden text-right sm:block"><span className="block text-sm font-semibold text-slate-800">Administrator</span><span className="block text-[11px] text-slate-400">{regionLabel(school.region)}</span></span>
+              <span className="editorial-avatar"><UserRound className="h-4 w-4" /></span>
+              <ChevronDown className={`hidden h-4 w-4 text-slate-400 transition sm:block ${accountOpen ? "rotate-180" : ""}`} />
+            </button>
           {accountOpen && (
             <div className="absolute right-0 top-12 w-56 overflow-hidden rounded-2xl border border-border bg-white shadow-xl">
               <div className="border-b border-border px-4 py-3">
@@ -405,95 +413,11 @@ export function SchoolDetailWorkspace({ school: initialSchool, initialMembers, i
               </div>
             </div>
           )}
-        </div>
-      </div>
-    </header>
+          </div>
+        </header>
+        <main className="editorial-content">
+          <div className="mx-auto max-w-[1440px]">
 
-    <div className="relative z-20 mx-auto flex w-full max-w-[1440px] flex-col gap-6 px-5 pb-12 pt-6 sm:px-8 lg:flex-row lg:px-10">
-
-      <aside className="shrink-0 lg:w-52">
-        <nav className="sticky top-5 rounded-2xl border border-slate-200/80 bg-white p-2.5 shadow-[0_4px_18px_rgba(15,23,42,0.04)]">
-
-          <p className="px-3 pb-2 pt-2 text-[10px] font-semibold uppercase tracking-[0.14em] text-slate-400">
-            Schule
-          </p>
-
-          <button
-            type="button"
-            onClick={() => setTab("overview")}
-            className={`flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition ${
-              tab === "overview"
-                ? "bg-violet-600 text-white shadow-sm shadow-violet-200"
-                : "text-slate-600 hover:bg-violet-50 hover:text-violet-700"
-            }`}
-          >
-            <LayoutDashboard className="h-4 w-4" />
-            Übersicht
-          </button>
-
-          <button
-            type="button"
-            onClick={() => setTab("classes")}
-            className={`mt-1 flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition ${
-              tab === "classes"
-                ? "bg-violet-600 text-white shadow-sm shadow-violet-200"
-                : "text-slate-600 hover:bg-violet-50 hover:text-violet-700"
-            }`}
-          >
-            <SchoolIcon className="h-4 w-4" />
-            Klassen
-            <span className="ml-auto text-[10px] opacity-50">{stats.classes}</span>
-          </button>
-
-          <button
-            type="button"
-            onClick={() => setTab("people")}
-            className={`mt-1 flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition ${
-              tab === "people"
-                ? "bg-violet-600 text-white shadow-sm shadow-violet-200"
-                : "text-slate-600 hover:bg-violet-50 hover:text-violet-700"
-            }`}
-          >
-            <Users className="h-4 w-4" />
-            Personen
-            <span className="ml-auto text-[10px] opacity-50">{activeMembers.length}</span>
-          </button>
-
-          <button
-            type="button"
-            onClick={() => setTab("insights")}
-            className={`mt-1 flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition ${
-              tab === "insights"
-                ? "bg-violet-600 text-white shadow-sm shadow-violet-200"
-                : "text-slate-600 hover:bg-violet-50 hover:text-violet-700"
-            }`}
-          >
-            <BarChart3 className="h-4 w-4" />
-            Insights
-          </button>
-
-          <div className="my-2 border-t border-border" />
-
-          <button
-            type="button"
-            onClick={() => {
-              setTab("settings");
-              setForm(school);
-              setEditing(true);
-            }}
-            className={`flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition ${
-              tab === "settings"
-                ? "bg-violet-600 text-white shadow-sm shadow-violet-200"
-                : "text-slate-600 hover:bg-violet-50 hover:text-violet-700"
-            }`}
-          >
-            <Settings className="h-4 w-4" />
-            Schulprofil
-          </button>
-        </nav>
-      </aside>
-
-      <main className="min-w-0 flex-1">
     <section className="group relative overflow-hidden rounded-[1.75rem] bg-slate-950 text-white shadow-[0_16px_40px_rgba(15,23,42,0.16)] ring-1 ring-black/5">
       {school.school_image_path ? (
         <img
@@ -1739,8 +1663,9 @@ export function SchoolDetailWorkspace({ school: initialSchool, initialMembers, i
     )}
 
     {showInvite && <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/30 p-4 backdrop-blur-sm"><div className="w-full max-w-lg rounded-3xl border border-border bg-panel p-6 shadow-2xl"><div className="flex items-start justify-between"><div><p className="text-xs font-semibold uppercase tracking-[0.14em] text-accent">{school.name}</p><h2 className="mt-1 text-xl font-semibold">Person einladen</h2></div><button onClick={() => setShowInvite(false)} className="p-2 text-slate-400"><X className="h-4 w-4" /></button></div><p className="mt-3 text-sm text-slate-500">Die E-Mail-Adresse muss zur hinterlegten Schul-Domain passen.</p><form onSubmit={invite} className="mt-6 space-y-4"><label className="block text-sm font-medium">Name<input required value={displayName} onChange={(e) => setDisplayName(e.target.value)} className="mt-1.5 w-full rounded-xl border border-border px-3 py-2.5" /></label><label className="block text-sm font-medium">Schul-E-Mail<input required type="email" value={email} onChange={(e) => setEmail(e.target.value)} className="mt-1.5 w-full rounded-xl border border-border px-3 py-2.5" /></label><label className="block text-sm font-medium">Rolle<select value={role} onChange={(e) => setRole(e.target.value)} className="mt-1.5 w-full rounded-xl border border-border px-3 py-2.5"><option value="teacher">Lehrkraft</option><option value="school_lead">Schulleitung</option><option value="school_admin">Schuladmin</option></select></label><div className="flex justify-end gap-2"><button type="button" onClick={() => setShowInvite(false)} className="rounded-xl border border-border px-4 py-2.5">Abbrechen</button><button disabled={pendingId === "invite"} className="rounded-xl bg-slate-950 px-4 py-2.5 text-sm text-white">{pendingId === "invite" ? "Wird gesendet …" : "Einladung senden"}</button></div></form></div></div>}
-      </main>
+          </div>
+        </main>
+      </div>
     </div>
-
-  </>;
+  );
 }
