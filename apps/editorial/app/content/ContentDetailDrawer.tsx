@@ -9,7 +9,7 @@
 
 import { useState, useTransition } from "react";
 import { X, Image as ImageIcon, Sparkles, RefreshCw } from "lucide-react";
-import { regenerateContentImage, updateContentItemQuick, updateContentItemStatusQuick } from "./actions";
+import { updateContentItemQuick, updateContentItemStatusQuick } from "./actions";
 
 const MANIPULATION_TECHNIQUES = [
   { value: "framing", label: "Framing", description: "Einordnung durch Wortwahl oder Perspektive" },
@@ -63,7 +63,13 @@ export function ContentDetailDrawer({
     setImageError("");
     setImageNotice("");
     try {
-      const result = await regenerateContentImage(item.id, imageInstructions);
+      const response = await fetch(`/api/content/${item.id}/regenerate-image`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ instructions: imageInstructions }),
+      });
+      const result = await response.json();
+      if (!response.ok) throw new Error(result.error ?? "Bild konnte nicht neu generiert werden.");
       setImageUrl(result.mediaUrl);
       setImageInstructions("");
       setImageNotice("Neue Bildversion erstellt und aktiviert. Das vorherige Asset bleibt gespeichert.");
@@ -197,13 +203,13 @@ export function ContentDetailDrawer({
             <fieldset className="min-w-0">
               <legend className="mb-1.5 text-xs font-semibold text-slate-700">Manipulationstechniken</legend>
               <p className="mb-3 text-xs leading-5 text-slate-500">Wähle alle Techniken aus, die im Inhalt tatsächlich vorkommen.</p>
-              <div className="grid gap-2 sm:grid-cols-2">
+              <div className="flex flex-wrap gap-2">
                 {MANIPULATION_TECHNIQUES.map((technique) => {
                   const checked = techniques.includes(technique.value);
                   return (
                     <label
                       key={technique.value}
-                      className={`flex cursor-pointer items-start gap-2.5 rounded-xl border p-3 transition ${checked ? "border-violet-300 bg-violet-50/70" : "border-border bg-white hover:bg-slate-50"}`}
+                      className={`inline-flex cursor-pointer items-center gap-2 rounded-full border px-3 py-2 text-xs font-medium transition ${checked ? "border-violet-300 bg-violet-50 text-violet-800" : "border-slate-200 bg-white text-slate-600 hover:border-slate-300 hover:bg-slate-50"}`}
                     >
                       <input
                         type="checkbox"
@@ -215,12 +221,9 @@ export function ContentDetailDrawer({
                               : current.filter((value) => value !== technique.value)
                           )
                         }
-                        className="mt-0.5 h-4 w-4 shrink-0 accent-violet-600"
+                        className="h-3.5 w-3.5 accent-violet-600"
                       />
-                      <span className="min-w-0">
-                        <span className="block text-xs font-semibold text-slate-800">{technique.label}</span>
-                        <span className="mt-1 block text-[11px] leading-4 text-slate-500">{technique.description}</span>
-                      </span>
+                      {technique.label}
                     </label>
                   );
                 })}
