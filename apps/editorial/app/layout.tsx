@@ -67,7 +67,12 @@ export default async function RootLayout({
         <div className="min-h-screen flex bg-canvas">
           <aside className="editorial-sidebar sticky top-0 flex h-screen w-[252px] shrink-0 flex-col">
             <Link href="/" className="editorial-brand">
-              <span className="editorial-brand-mark">d.</span>
+              <img
+                src="/branding/drift-logo-appstore-transparent.webp"
+                alt=""
+                aria-hidden="true"
+                className="h-12 w-12 shrink-0 rounded-xl object-contain"
+              />
               <span className="min-w-0">
                 <span className="block text-[15px] font-bold tracking-tight text-slate-950">DR1FT</span>
                 <span className="mt-0.5 block text-[10px] font-semibold uppercase tracking-[0.19em] text-slate-500">Content Studio</span>
