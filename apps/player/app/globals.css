@@ -224,3 +224,27 @@ body.dark-mode {
 .dark-mode main [class*="bg-ink/"] { background-color: rgba(255,255,255,.055) !important; }
 .dark-mode body::before,
 .dark-mode body::after { opacity: .14; }
+
+
+/* Keep post actions readable in dark mode, including the action labels. */
+.dark-mode .dark-post-menu {
+  background: #211a32 !important;
+  color: #f1edf9 !important;
+  border-color: #4a3d63 !important;
+}
+.dark-mode .dark-post-menu button { color: #f1edf9 !important; }
+.dark-mode .dark-post-menu button:hover { background: rgba(167,139,250,.16) !important; }
+.dark-mode .dark-post-menu button span { color: #c4b5fd !important; }
+.dark-mode .dark-share-dialog {
+  background: #211a32 !important;
+  color: #f1edf9 !important;
+  border-color: #4a3d63 !important;
+}
+.dark-mode .dark-share-dialog .bg-slate-50 { background: #2b2240 !important; color: #ddd6ef !important; }
+.dark-mode .dark-share-dialog .text-slate-900 { color: #f1edf9 !important; }
+.dark-mode .dark-share-dialog .text-slate-600,
+.dark-mode .dark-share-dialog .text-slate-500 { color: #bfb4d2 !important; }
+.dark-mode .dark-share-dialog .border-slate-100,
+.dark-mode .dark-share-dialog .border-slate-200 { border-color: #403451 !important; }
+.dark-mode .dark-share-dialog label:hover { background: rgba(167,139,250,.12) !important; }
+.dark-mode .dark-share-dialog button[aria-label="Dialog schließen"]:hover { background: #3a2d52 !important; }
