@@ -15,7 +15,8 @@ export default function LoginPage() {
   const supabase = supabaseBrowserClient();
   const router = useRouter();
 
-  const [checkingSession, setCheckingSession] = useState(true);\n  const [accessCode, setAccessCode] = useState("");
+  const [checkingSession, setCheckingSession] = useState(true);
+  const [accessCode, setAccessCode] = useState("");
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
@@ -52,6 +53,8 @@ export default function LoginPage() {
 
     router.push("/feed");
   }
+
+  if (checkingSession) return null;
 
   return (
     <main className="min-h-screen bg-ink flex items-center justify-center px-4">
