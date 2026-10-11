@@ -66,9 +66,9 @@ export function ContentTable({
   }
 
   return (
-    <div className="bg-panel border border-border rounded-lg overflow-hidden">
+    <div className="overflow-x-auto rounded-2xl border border-slate-200/90 bg-white shadow-[0_3px_18px_rgba(15,23,42,0.025)]">
       {selected.size > 0 && (
-        <div className="flex items-center gap-3 px-4 py-2 bg-accent/5 border-b border-border text-sm">
+        <div className="flex flex-wrap items-center gap-3 border-b border-slate-200 bg-violet-50/70 px-4 py-3 text-sm">
           <span className="font-medium">{selected.size} ausgewählt</span>
           <button disabled={isPending} onClick={() => runBulk("in_review")} className="text-xs px-2 py-1 rounded border border-border hover:bg-panel">
             → Zur Prüfung
@@ -86,9 +86,9 @@ export function ContentTable({
         </div>
       )}
 
-      <table className="w-full text-sm">
+      <table className="w-full min-w-[900px] text-sm">
         <thead>
-          <tr className="border-b border-border text-left text-slate-400 text-xs2 uppercase">
+          <tr className="border-b border-slate-200 bg-slate-50/80 text-left text-[10px] font-bold uppercase tracking-[0.12em] text-slate-500">
             <th className="w-10 px-3 py-2">
               <input type="checkbox" checked={selected.size === rows.length && rows.length > 0} onChange={toggleAll} />
             </th>
@@ -104,7 +104,7 @@ export function ContentTable({
           {rows.map((row) => {
             const Icon = TYPE_ICONS[row.type] ?? FileText;
             return (
-              <tr key={row.id} className="table-row-dense border-b border-border last:border-0 hover:bg-canvas">
+              <tr key={row.id} className="table-row-dense border-b border-slate-100 last:border-0 hover:bg-violet-50/30">
                 <td className="px-3">
                   <input type="checkbox" checked={selected.has(row.id)} onChange={() => toggle(row.id)} />
                 </td>
