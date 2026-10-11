@@ -20,7 +20,15 @@ export default async function TeacherHomePage() {
     .filter(Boolean);
 
   const classIds = classes.map((item: any) => item.id);
-  const schoolIds = Array.from(new Set(classes.map((item: any) => item.school_id).filter(Boolean)));
+  const { data: schoolMemberships } = await supabase
+    .from("school_memberships")
+    .select("school_id, active")
+    .eq("user_id", user.id)
+    .eq("active", true);
+  const schoolIds = Array.from(new Set([
+    ...classes.map((item: any) => item.school_id),
+    ...(schoolMemberships ?? []).map((membership: any) => membership.school_id),
+  ].filter(Boolean)));
   const { data: schoolRows } = schoolIds.length
     ? await supabase.from("schools").select("id, name, region").in("id", schoolIds)
     : { data: [] as any[] };
