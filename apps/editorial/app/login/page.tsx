@@ -59,7 +59,7 @@ export default function LoginPage() {
       <div className="dr1ft-login-overlay absolute inset-0 -z-10" aria-hidden="true" />
       <div className="relative z-10 flex w-full max-w-lg flex-col items-center gap-5 sm:gap-6">
         <header className="flex w-full flex-col items-center text-center">
-          <img src="/branding/drift-logo-transparent-vertical.webp" alt="DR1FT" onError={(event) => { event.currentTarget.onerror = null; event.currentTarget.src = "/branding/drift-logo-appstore-transparent.webp"; }} className="mb-2 h-auto w-[min(52vw,12rem)] object-contain drop-shadow-[0_8px_30px_rgba(124,58,237,0.18)]" fetchPriority="high" />
+          <img src="/branding/drift-logo-appstore-transparent.webp" alt="DR1FT" className="mb-2 h-24 w-24 object-contain drop-shadow-[0_8px_30px_rgba(124,58,237,0.18)]" fetchPriority="high" />
           <p className="font-mono text-[10px] font-semibold uppercase tracking-[0.32em] text-slate-500 sm:text-xs">
             {isSchoolHost ? "Schulverwaltung" : "Content Studio"}
           </p>
