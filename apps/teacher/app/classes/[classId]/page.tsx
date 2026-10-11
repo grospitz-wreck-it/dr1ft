@@ -222,7 +222,6 @@ export default async function ClassDetailPage({
         <ClassImageWorkspace
           classId={classId}
           className={instance.name}
-          accessCode={instance.access_code}
           gradeLevel={instance.grade_level}
           schoolYear={instance.school_year}
           heroImageUrl={heroImageUrl}
