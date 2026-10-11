@@ -163,6 +163,27 @@ export default async function ClassDetailPage({
     0,
   );
 
+  // The existing, class-scoped dashboard RPC reports mission progress for
+  // the currently assigned module. Do not infer historical progress for
+  // modules that are not assigned.
+  const studentsWithMissionData = missionRows.filter(
+    (row: any) => Number(row.missions_total ?? 0) > 0,
+  );
+  const studentsWithCompletedModule = studentsWithMissionData.filter(
+    (row: any) => Number(row.missions_completed ?? 0) >= Number(row.missions_total ?? 0),
+  ).length;
+  const activeModuleStatus =
+    !activeAssignment || total === 0
+      ? "Noch nicht begonnen"
+      : completed >= total
+        ? "Abgeschlossen"
+        : completed > 0
+          ? "In Bearbeitung"
+          : "Noch nicht begonnen";
+  const activeModuleReport = total > 0
+    ? `${completed} von ${total} Mission-Abschlüssen über alle Schüler:innen · ${studentsWithCompletedModule} von ${studentsWithMissionData.length} Schüler:innen haben alle Missionen abgeschlossen`
+    : "Noch keine auswertbaren Missionsfortschritte vorhanden.";
+
   const status =
     instance.status ??
     (instance.is_active ? "active" : "paused");
@@ -340,6 +361,8 @@ export default async function ClassDetailPage({
                 initialPacingMode={
                   activeAssignment?.pacing_mode ?? "compact"
                 }
+                moduleStatus={activeAssignment?.scenario_id === scenario.id ? activeModuleStatus : "Nicht zugewiesen"}
+                moduleReport={activeAssignment?.scenario_id === scenario.id ? activeModuleReport : undefined}
               />
             ))}
           </ul>
