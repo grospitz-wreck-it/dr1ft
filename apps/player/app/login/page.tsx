@@ -47,22 +47,10 @@ export default function LoginPage() {
         <header className="flex w-full flex-col items-center text-center">
           <div className="dr1ft-login-logo-wrap mb-3 sm:mb-4" role="img" aria-label="DR1FT">
             <img
-              src="/branding/drift-logo-transparent-horizontal.webp"
-              alt=""
-              className="dr1ft-login-logo dr1ft-login-logo-white"
+              src="/branding/drift-logo-transparent-horizontal-white.webp"
+              alt="DR1FT"
+              className="dr1ft-login-logo"
               fetchPriority="high"
-            />
-            <img
-              src="/branding/drift-logo-transparent-horizontal.webp"
-              alt=""
-              aria-hidden="true"
-              className="dr1ft-login-logo dr1ft-login-logo-emblem"
-            />
-            <img
-              src="/branding/drift-logo-transparent-horizontal.webp"
-              alt=""
-              aria-hidden="true"
-              className="dr1ft-login-logo dr1ft-login-logo-one"
             />
           </div>
           <p className="font-mono text-[10px] font-semibold uppercase tracking-[0.32em] text-white/80 sm:text-xs">
@@ -137,12 +125,6 @@ export default function LoginPage() {
               {!pending && <span aria-hidden="true">→</span>}
             </button>
 
-            <p className="pt-1 text-center text-xs text-white/50">
-              Noch nicht dabei?{" "}
-              <a href="/join" className="font-medium text-white/75 underline decoration-white/30 underline-offset-4 transition hover:text-cyan-200">
-                Klasse beitreten
-              </a>
-            </p>
           </form>
         </section>
       </div>
@@ -168,7 +150,7 @@ export default function LoginPage() {
         }
         .dr1ft-login-logo-wrap {
           position: relative;
-          width: min(82vw, 31rem);
+          width: min(74vw, 27.9rem);
           aspect-ratio: 3 / 1;
           filter: drop-shadow(0 8px 30px rgba(124, 58, 237, .28));
         }
@@ -179,15 +161,6 @@ export default function LoginPage() {
           width: 100%;
           height: 100%;
           object-fit: contain;
-        }
-        .dr1ft-login-logo-white {
-          filter: brightness(0) invert(1);
-        }
-        .dr1ft-login-logo-emblem {
-          clip-path: inset(0 65% 0 0);
-        }
-        .dr1ft-login-logo-one {
-          clip-path: inset(0 29% 0 58%);
         }
         .dr1ft-login-card {
           background: linear-gradient(145deg, rgba(14, 12, 37, .88), rgba(24, 13, 45, .84));
