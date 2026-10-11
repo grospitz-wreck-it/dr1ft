@@ -316,9 +316,12 @@ export function SchoolDetailWorkspace({ school: initialSchool, initialMembers, i
       <div className="mx-auto flex h-[72px] w-full max-w-[1440px] items-center justify-between gap-4 px-5 sm:px-8 lg:px-10">
 
         <div className="flex min-w-0 items-center gap-3.5">
-          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-fuchsia-500 via-violet-500 to-blue-500 text-white shadow-md shadow-violet-200/70">
-            <span className="text-base font-extrabold tracking-[-0.08em]">d.</span>
-          </div>
+          <img
+            src="/branding/drift-logo-appstore-transparent.webp"
+            alt=""
+            aria-hidden="true"
+            className="h-11 w-11 shrink-0 rounded-xl object-contain"
+          />
 
           <div className="hidden h-8 w-px bg-slate-200 sm:block" />
 
