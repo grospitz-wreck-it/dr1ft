@@ -113,12 +113,15 @@ export async function updateContentItemStatusQuick(
  */
 export async function regenerateContentImage(id: string, instructions: string) {
   const supabase = supabaseServerClient();
-  const workerUrl = process.env.CLOUDFLARE_AMBIENT_IMAGE_URL?.trim();
-  const apiKey = process.env.CLOUDFLARE_AMBIENT_IMAGE_API_KEY?.trim()
-    || process.env.AMBIENT_IMAGE_API_KEY?.trim();
+  // Reuse the already deployed DR1FT FLUX worker and its established secret.
+  // Optional URL override remains available for staging or a future endpoint.
+  const workerUrl = process.env.CLOUDFLARE_AMBIENT_IMAGE_URL?.trim()
+    || "https://dr1ft.grospitz.workers.dev";
+  const apiKey = process.env.AMBIENT_IMAGE_API_KEY?.trim()
+    || process.env.CLOUDFLARE_AMBIENT_IMAGE_API_KEY?.trim();
 
-  if (!workerUrl || !apiKey) {
-    throw new Error("Cloudflare FLUX ist nicht konfiguriert. Bitte CLOUDFLARE_AMBIENT_IMAGE_URL und CLOUDFLARE_AMBIENT_IMAGE_API_KEY in Vercel prüfen.");
+  if (!apiKey) {
+    throw new Error("Der Cloudflare-FLUX-Worker ist erreichbar konfigurierbar, aber das Secret AMBIENT_IMAGE_API_KEY fehlt in den Vercel-Umgebungsvariablen.");
   }
 
   const { data: item, error: itemError } = await supabase
