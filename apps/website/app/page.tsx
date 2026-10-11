@@ -15,8 +15,8 @@ export default function HomePage() {
         <div className="absolute inset-0 -z-10 bg-[linear-gradient(90deg,rgba(5,10,25,.97)_0%,rgba(5,10,25,.88)_25%,rgba(5,10,25,.58)_43%,rgba(10,8,24,.12)_68%,rgba(10,8,24,.22)_100%)]" />
         <div className="absolute inset-0 -z-10 bg-[radial-gradient(circle_at_22%_42%,rgba(0,218,255,.15),transparent_38%),linear-gradient(0deg,rgba(5,10,25,.22),transparent_36%)]" />
 
-        <div className="mx-auto w-full max-w-7xl px-6 pt-32 pb-16 sm:px-10 sm:pt-40 sm:pb-20">
-          <div className="max-w-[560px] text-white">
+        <div className="mx-auto mt-auto w-full max-w-7xl px-6 pt-24 pb-8 sm:px-10 sm:pt-28 sm:pb-10">
+          <div className="max-w-[840px] text-white">
             <p className="inline-flex bg-cyan-300/10 border border-cyan-200/30 text-xs font-medium text-cyan-100 px-3 py-1 rounded-full mb-6 backdrop-blur">
               Medienkompetenz · NRW
             </p>
