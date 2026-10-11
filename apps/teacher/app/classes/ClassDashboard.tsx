@@ -40,35 +40,37 @@ export function ClassDashboard({ classes }: { classes: ClassItem[] }) {
   return (
     <main className="min-h-screen bg-canvas">
       <div className="mx-auto w-full max-w-7xl px-6 pb-12 pt-8 lg:px-8">
-        <section className="rounded-[2rem] bg-slate-950 px-6 py-7 text-white shadow-xl sm:px-8">
-          <div className="flex flex-col gap-6 sm:flex-row sm:items-end sm:justify-between">
-            <div>
-              <p className="text-xs font-semibold uppercase tracking-[0.18em] text-white/45">DR1FT Teacher</p>
-              <h1 className="mt-2 text-4xl font-semibold tracking-tight sm:text-5xl">Meine Klassen</h1>
-            </div>
-            <button
-              type="button"
-              onClick={() => setShowCreate(true)}
-              className="inline-flex items-center justify-center gap-2 self-start rounded-lg bg-white px-4 py-2.5 text-sm font-semibold text-slate-950 transition hover:bg-white/90 sm:self-auto"
-            >
-              <Plus className="h-4 w-4" />
-              Neue Klasse
-            </button>
+        <section className="mb-6 flex flex-col gap-5 sm:flex-row sm:items-end sm:justify-between">
+          <div>
+            <p className="text-xs font-bold uppercase tracking-[0.17em] text-violet-600">DR1FT / TEACHER</p>
+            <h1 className="mt-2 text-3xl font-semibold tracking-tight text-slate-950 sm:text-4xl">Meine Klassen</h1>
+            <p className="mt-2 max-w-2xl text-sm leading-6 text-slate-500">Klassen verwalten, Schüler:innen im Blick behalten und direkt in den Unterricht wechseln.</p>
           </div>
+          <button
+            type="button"
+            onClick={() => setShowCreate(true)}
+            className="inline-flex items-center justify-center gap-2 self-start rounded-xl bg-slate-950 px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-slate-800 sm:self-auto"
+          >
+            <Plus className="h-4 w-4" />
+            Neue Klasse
+          </button>
+        </section>
 
-          <div className="mt-7 grid gap-2 sm:grid-cols-3">
-            <div className="rounded-xl border border-white/10 bg-white/[0.06] px-4 py-3">
-              <p className="text-xs text-white/45">Aktive Klassen</p>
-              <p className="mt-1 text-xl font-semibold">{active.length}</p>
-            </div>
-            <div className="rounded-xl border border-white/10 bg-white/[0.06] px-4 py-3">
-              <p className="text-xs text-white/45">Schüler:innen</p>
-              <p className="mt-1 text-xl font-semibold">{studentCount}</p>
-            </div>
-            <div className="rounded-xl border border-white/10 bg-white/[0.06] px-4 py-3">
-              <p className="text-xs text-white/45">Archiviert</p>
-              <p className="mt-1 text-xl font-semibold">{archived.length}</p>
-            </div>
+        <section className="grid gap-3 sm:grid-cols-3">
+          <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+            <p className="text-xs font-medium text-slate-500">Aktive Klassen</p>
+            <p className="mt-1 text-2xl font-semibold tracking-tight text-slate-950">{active.length}</p>
+            <p className="mt-1 text-xs text-slate-400">Bereit für den Unterricht</p>
+          </div>
+          <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+            <p className="text-xs font-medium text-slate-500">Schüler:innen</p>
+            <p className="mt-1 text-2xl font-semibold tracking-tight text-slate-950">{studentCount}</p>
+            <p className="mt-1 text-xs text-slate-400">In aktiven Klassen</p>
+          </div>
+          <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+            <p className="text-xs font-medium text-slate-500">Archiviert oder pausiert</p>
+            <p className="mt-1 text-2xl font-semibold tracking-tight text-slate-950">{archived.length}</p>
+            <p className="mt-1 text-xs text-slate-400">Nicht aktive Klassen</p>
           </div>
         </section>
 
