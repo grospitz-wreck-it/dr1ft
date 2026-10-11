@@ -2,13 +2,11 @@
 
 import { useState } from "react";
 import { Pencil } from "lucide-react";
-import { CopyAccessCodeButton } from "./CopyAccessCodeButton";
 import ClassImageEditor from "./ClassImageEditor";
 
 type Props = {
   classId: string;
   className: string;
-  accessCode: string;
   gradeLevel: number | null;
   schoolYear: string;
   heroImageUrl: string | null;
@@ -26,7 +24,6 @@ type Props = {
 export default function ClassImageWorkspace({
   classId,
   className,
-  accessCode,
   gradeLevel,
   schoolYear,
   heroImageUrl,
@@ -59,8 +56,8 @@ export default function ClassImageWorkspace({
           <div className="absolute inset-0 bg-[radial-gradient(circle_at_85%_15%,rgba(99,102,241,.35),transparent_38%),radial-gradient(circle_at_15%_85%,rgba(168,85,247,.22),transparent_34%)]" />
         )}
 
-        <div className="absolute inset-0 bg-gradient-to-r from-slate-950/90 via-slate-950/55 to-slate-950/20" />
-        <div className="absolute inset-0 bg-gradient-to-t from-slate-950/90 via-transparent to-slate-950/20" />
+        <div className="absolute inset-0 bg-gradient-to-r from-slate-950/45 via-slate-950/20 to-slate-950/5" />
+        <div className="absolute inset-0 bg-gradient-to-t from-slate-950/45 via-transparent to-slate-950/5" />
 
         <div className="relative min-h-[300px] p-6 sm:p-8">
           <div className="flex min-h-[250px] flex-col justify-between">
@@ -69,23 +66,6 @@ export default function ClassImageWorkspace({
                 <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-white/70">
                   DR1FT · KLASSENRAUM
                 </p>
-                <div className="mt-3 flex flex-wrap items-center gap-2">
-                  <span className="text-[10px] font-semibold uppercase tracking-[0.12em] text-white/65">Schüler-Zugangscode</span>
-                  <code className="rounded-lg border border-white/20 bg-black/25 px-3 py-1.5 font-mono text-sm font-semibold tracking-[0.18em] text-white">{accessCode}</code>
-                  <CopyAccessCodeButton code={accessCode} />
-                </div>
-
-                {classImageUrl && (
-                  <p className="mt-2 text-xs text-white/55">
-                    Klassenbild
-                  </p>
-                )}
-
-                {!classImageUrl && heroImageUrl && (
-                  <p className="mt-2 text-xs text-white/55">
-                    Schulbild
-                  </p>
-                )}
               </div>
 
               {canEditClassImage && (
