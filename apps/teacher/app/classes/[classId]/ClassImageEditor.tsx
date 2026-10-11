@@ -189,7 +189,7 @@ export default function ClassImageEditor({
             Bildausschnitt anpassen
           </h2>
           <p className="mt-1 text-sm leading-6 text-slate-500">
-            Position und Zoom bestimmen, welcher Ausschnitt im Klassen-Header angezeigt wird.
+            Die Vorschau hat dasselbe Seitenverhältnis wie der Klassen-Header. Der gespeicherte Ausschnitt wird dort unverändert übernommen.
           </p>
         </div>
 
@@ -226,7 +226,7 @@ export default function ClassImageEditor({
       <div className="grid gap-6 p-5 lg:grid-cols-[1.5fr_.75fr]">
         {displayedImage ? (
           <div className="overflow-hidden rounded-2xl bg-slate-950">
-            <div className="relative aspect-[16/6] min-h-[220px] overflow-hidden">
+            <div className="relative aspect-[16/7] min-h-[210px] overflow-hidden sm:aspect-[16/4.2]">
               <img
                 src={displayedImage}
                 alt=""
