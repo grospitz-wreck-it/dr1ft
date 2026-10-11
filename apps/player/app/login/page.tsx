@@ -45,12 +45,20 @@ export default function LoginPage() {
 
       <div className="relative z-10 flex w-full max-w-lg flex-col items-center justify-center gap-5 sm:gap-6">
         <header className="flex w-full flex-col items-center text-center">
-          <img
-            src="/branding/drift-logo-transparent-horizontal-white.webp"
-            alt="DR1FT"
-            className="dr1ft-login-logo mb-3 w-[min(82vw,27rem)] object-contain drop-shadow-[0_8px_32px_rgba(124,58,237,0.35)] sm:mb-4 sm:w-[min(76vw,31rem)]"
-            fetchPriority="high"
-          />
+          <div className="dr1ft-login-logo-wrap mb-3 sm:mb-4" role="img" aria-label="DR1FT">
+            <img
+              src="/branding/drift-logo-transparent-horizontal.webp"
+              alt=""
+              className="dr1ft-login-logo dr1ft-login-logo-white"
+              fetchPriority="high"
+            />
+            <img
+              src="/branding/drift-logo-transparent-horizontal.webp"
+              alt=""
+              aria-hidden="true"
+              className="dr1ft-login-logo dr1ft-login-logo-emblem"
+            />
+          </div>
           <p className="font-mono text-[10px] font-semibold uppercase tracking-[0.32em] text-white/80 sm:text-xs">
             Dein Space. Deine Stimme.
           </p>
@@ -152,10 +160,25 @@ export default function LoginPage() {
             radial-gradient(ellipse at 50% 38%, rgba(10, 8, 32, .16) 0%, rgba(10, 8, 32, .34) 58%, rgba(7, 7, 25, .58) 100%),
             linear-gradient(180deg, rgba(7, 7, 25, .16), rgba(7, 7, 25, .42));
         }
-        .dr1ft-login-logo {
-          max-height: clamp(5rem, 17vh, 10.5rem);
+        .dr1ft-login-logo-wrap {
+          position: relative;
           width: min(82vw, 31rem);
+          aspect-ratio: 3 / 1;
           filter: drop-shadow(0 8px 30px rgba(124, 58, 237, .28));
+        }
+        .dr1ft-login-logo {
+          position: absolute;
+          inset: 0;
+          display: block;
+          width: 100%;
+          height: 100%;
+          object-fit: contain;
+        }
+        .dr1ft-login-logo-white {
+          filter: brightness(0) invert(1);
+        }
+        .dr1ft-login-logo-emblem {
+          clip-path: inset(0 65% 0 0);
         }
         .dr1ft-login-card {
           background: linear-gradient(145deg, rgba(14, 12, 37, .88), rgba(24, 13, 45, .84));
@@ -191,7 +214,7 @@ export default function LoginPage() {
         }
         @media (orientation: landscape) and (max-height: 700px) {
           .dr1ft-login-screen { padding-top: .75rem; padding-bottom: .75rem; }
-          .dr1ft-login-logo { max-height: 4.5rem; margin-bottom: .4rem; }
+          .dr1ft-login-logo-wrap { width: min(70vw, 21rem); margin-bottom: .4rem; }
         }
         @media (max-width: 639px) {
           .dr1ft-login-overlay {
