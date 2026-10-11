@@ -15,7 +15,7 @@ export default function RootLayout({
     <html lang="de">
       <body className="min-h-screen bg-canvas text-slate-950">
         <TeacherNav />
-        <main className="min-w-0 lg:pl-[max(16rem,calc((100vw-80rem)/2+14.5rem))] lg:pr-[max(1.5rem,calc((100vw-80rem)/2))]">{children}</main>
+        <main className="editorial-main min-w-0 lg:ml-[252px]"><div className="editorial-content">{children}</div></main>
       </body>
     </html>
   );
