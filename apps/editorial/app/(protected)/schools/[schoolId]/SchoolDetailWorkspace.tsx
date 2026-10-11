@@ -402,10 +402,10 @@ export function SchoolDetailWorkspace({ school: initialSchool, initialMembers, i
       </div>
     </header>
 
-    <div className="relative z-20 mx-auto flex w-full max-w-7xl flex-col gap-6 px-6 pb-12 pt-6 lg:flex-row lg:px-8">
+    <div className="relative z-20 mx-auto flex w-full max-w-[1440px] flex-col gap-6 px-5 pb-12 pt-6 sm:px-8 lg:flex-row lg:px-10">
 
       <aside className="shrink-0 lg:w-52">
-        <nav className="sticky top-5 rounded-2xl border border-border bg-white p-2 shadow-sm">
+        <nav className="sticky top-5 rounded-2xl border border-slate-200/80 bg-white p-2.5 shadow-[0_4px_18px_rgba(15,23,42,0.04)]">
 
           <p className="px-3 pb-2 pt-2 text-[10px] font-semibold uppercase tracking-[0.14em] text-slate-400">
             Schule
@@ -416,8 +416,8 @@ export function SchoolDetailWorkspace({ school: initialSchool, initialMembers, i
             onClick={() => setTab("overview")}
             className={`flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition ${
               tab === "overview"
-                ? "bg-slate-950 text-white"
-                : "text-slate-600 hover:bg-canvas"
+                ? "bg-violet-600 text-white shadow-sm shadow-violet-200"
+                : "text-slate-600 hover:bg-violet-50 hover:text-violet-700"
             }`}
           >
             <LayoutDashboard className="h-4 w-4" />
@@ -429,8 +429,8 @@ export function SchoolDetailWorkspace({ school: initialSchool, initialMembers, i
             onClick={() => setTab("classes")}
             className={`mt-1 flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition ${
               tab === "classes"
-                ? "bg-slate-950 text-white"
-                : "text-slate-600 hover:bg-canvas"
+                ? "bg-violet-600 text-white shadow-sm shadow-violet-200"
+                : "text-slate-600 hover:bg-violet-50 hover:text-violet-700"
             }`}
           >
             <SchoolIcon className="h-4 w-4" />
@@ -443,8 +443,8 @@ export function SchoolDetailWorkspace({ school: initialSchool, initialMembers, i
             onClick={() => setTab("people")}
             className={`mt-1 flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition ${
               tab === "people"
-                ? "bg-slate-950 text-white"
-                : "text-slate-600 hover:bg-canvas"
+                ? "bg-violet-600 text-white shadow-sm shadow-violet-200"
+                : "text-slate-600 hover:bg-violet-50 hover:text-violet-700"
             }`}
           >
             <Users className="h-4 w-4" />
@@ -457,8 +457,8 @@ export function SchoolDetailWorkspace({ school: initialSchool, initialMembers, i
             onClick={() => setTab("insights")}
             className={`mt-1 flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition ${
               tab === "insights"
-                ? "bg-slate-950 text-white"
-                : "text-slate-600 hover:bg-canvas"
+                ? "bg-violet-600 text-white shadow-sm shadow-violet-200"
+                : "text-slate-600 hover:bg-violet-50 hover:text-violet-700"
             }`}
           >
             <BarChart3 className="h-4 w-4" />
@@ -476,8 +476,8 @@ export function SchoolDetailWorkspace({ school: initialSchool, initialMembers, i
             }}
             className={`flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition ${
               tab === "settings"
-                ? "bg-slate-950 text-white"
-                : "text-slate-600 hover:bg-canvas"
+                ? "bg-violet-600 text-white shadow-sm shadow-violet-200"
+                : "text-slate-600 hover:bg-violet-50 hover:text-violet-700"
             }`}
           >
             <Settings className="h-4 w-4" />
@@ -487,7 +487,7 @@ export function SchoolDetailWorkspace({ school: initialSchool, initialMembers, i
       </aside>
 
       <main className="min-w-0 flex-1">
-    <section className="group relative overflow-hidden rounded-[2rem] bg-slate-950 text-white shadow-xl">
+    <section className="group relative overflow-hidden rounded-[1.75rem] bg-slate-950 text-white shadow-[0_16px_40px_rgba(15,23,42,0.16)] ring-1 ring-black/5">
       {school.school_image_path ? (
         <img
           src={`${process.env.NEXT_PUBLIC_SUPABASE_URL}/storage/v1/object/public/school-images/${school.school_image_path}`}
@@ -505,8 +505,8 @@ export function SchoolDetailWorkspace({ school: initialSchool, initialMembers, i
       <div className="absolute inset-0 bg-gradient-to-r from-slate-950/95 via-slate-950/70 to-slate-950/35" />
       <div className="absolute inset-0 bg-gradient-to-t from-slate-950/90 via-transparent to-slate-950/20" />
 
-      <div className="relative min-h-[240px] p-6 sm:p-8">
-        <div className="flex min-h-[200px] flex-col justify-between">
+      <div className="relative min-h-[210px] p-6 sm:p-7">
+        <div className="flex min-h-[175px] flex-col justify-between">
 
           <div className="flex flex-wrap items-center justify-between gap-3">
             <div className="flex flex-wrap items-center gap-2">
@@ -536,7 +536,7 @@ export function SchoolDetailWorkspace({ school: initialSchool, initialMembers, i
           </div>
 
           <div className="max-w-4xl">
-            <h1 className="text-4xl font-semibold tracking-tight sm:text-5xl">
+            <h1 className="text-3xl font-semibold tracking-[-0.04em] sm:text-4xl">
               {school.name}
             </h1>
           </div>
@@ -765,7 +765,7 @@ export function SchoolDetailWorkspace({ school: initialSchool, initialMembers, i
         </div>
 
         <form onSubmit={saveSchool} className="space-y-5">
-          <section className="rounded-2xl border border-border bg-panel p-6">
+          <section className="rounded-2xl border border-slate-200/80 bg-white p-6 shadow-[0_2px_12px_rgba(15,23,42,0.03)]">
             <div>
               <p className="text-xs font-semibold uppercase tracking-[0.14em] text-accent">
                 Identität
@@ -839,7 +839,7 @@ export function SchoolDetailWorkspace({ school: initialSchool, initialMembers, i
             </div>
           </section>
 
-          <section className="rounded-2xl border border-border bg-panel p-6">
+          <section className="rounded-2xl border border-slate-200/80 bg-white p-6 shadow-[0_2px_12px_rgba(15,23,42,0.03)]">
             <div>
               <p className="text-xs font-semibold uppercase tracking-[0.14em] text-accent">
                 Kontakt
@@ -909,7 +909,7 @@ export function SchoolDetailWorkspace({ school: initialSchool, initialMembers, i
             </div>
           </section>
 
-          <section className="rounded-2xl border border-border bg-panel p-6">
+          <section className="rounded-2xl border border-slate-200/80 bg-white p-6 shadow-[0_2px_12px_rgba(15,23,42,0.03)]">
             <div>
               <p className="text-xs font-semibold uppercase tracking-[0.14em] text-accent">
                 DR1FT
@@ -1019,7 +1019,7 @@ export function SchoolDetailWorkspace({ school: initialSchool, initialMembers, i
           ].map(([label, value]) => (
             <div
               key={label}
-              className="rounded-2xl border border-border bg-panel px-5 py-4"
+              className="rounded-2xl border border-slate-200/80 bg-white px-5 py-4 shadow-[0_2px_12px_rgba(15,23,42,0.03)]"
             >
               <p className="text-xs font-medium text-slate-400">{label}</p>
               <p className="mt-1 text-2xl font-semibold tracking-tight text-slate-950">
@@ -1030,7 +1030,7 @@ export function SchoolDetailWorkspace({ school: initialSchool, initialMembers, i
         </div>
 
         <div className="grid gap-5 lg:grid-cols-[1.35fr_.65fr]">
-          <section className="rounded-2xl border border-border bg-panel p-6">
+          <section className="rounded-2xl border border-slate-200/80 bg-white p-6 shadow-[0_2px_12px_rgba(15,23,42,0.03)]">
             <div className="flex items-start justify-between gap-4">
               <div>
                 <p className="text-xs font-semibold uppercase tracking-[0.14em] text-accent">
@@ -1098,7 +1098,7 @@ export function SchoolDetailWorkspace({ school: initialSchool, initialMembers, i
             </dl>
           </section>
 
-          <section className="rounded-2xl border border-border bg-panel p-6">
+          <section className="rounded-2xl border border-slate-200/80 bg-white p-6 shadow-[0_2px_12px_rgba(15,23,42,0.03)]">
             <p className="text-xs font-semibold uppercase tracking-[0.14em] text-accent">
               Administration
             </p>
@@ -1367,7 +1367,7 @@ export function SchoolDetailWorkspace({ school: initialSchool, initialMembers, i
           return (
             <>
               <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-                <div className="rounded-2xl border border-border bg-panel px-5 py-4">
+                <div className="rounded-2xl border border-slate-200/80 bg-white px-5 py-4 shadow-[0_2px_12px_rgba(15,23,42,0.03)]">
                   <p className="text-xs font-medium text-slate-400">Szenario-Abdeckung</p>
                   <p className="mt-1 text-2xl font-semibold tracking-tight text-slate-950">
                     {scenarioRate} %
@@ -1377,7 +1377,7 @@ export function SchoolDetailWorkspace({ school: initialSchool, initialMembers, i
                   </p>
                 </div>
 
-                <div className="rounded-2xl border border-border bg-panel px-5 py-4">
+                <div className="rounded-2xl border border-slate-200/80 bg-white px-5 py-4 shadow-[0_2px_12px_rgba(15,23,42,0.03)]">
                   <p className="text-xs font-medium text-slate-400">Aktive Klassen</p>
                   <p className="mt-1 text-2xl font-semibold tracking-tight text-slate-950">
                     {activeRate} %
@@ -1387,7 +1387,7 @@ export function SchoolDetailWorkspace({ school: initialSchool, initialMembers, i
                   </p>
                 </div>
 
-                <div className="rounded-2xl border border-border bg-panel px-5 py-4">
+                <div className="rounded-2xl border border-slate-200/80 bg-white px-5 py-4 shadow-[0_2px_12px_rgba(15,23,42,0.03)]">
                   <p className="text-xs font-medium text-slate-400">Ø Klassengröße</p>
                   <p className="mt-1 text-2xl font-semibold tracking-tight text-slate-950">
                     {averageClassSize ?? "—"}
@@ -1397,7 +1397,7 @@ export function SchoolDetailWorkspace({ school: initialSchool, initialMembers, i
                   </p>
                 </div>
 
-                <div className="rounded-2xl border border-border bg-panel px-5 py-4">
+                <div className="rounded-2xl border border-slate-200/80 bg-white px-5 py-4 shadow-[0_2px_12px_rgba(15,23,42,0.03)]">
                   <p className="text-xs font-medium text-slate-400">Klassen / Lehrkraft</p>
                   <p className="mt-1 text-2xl font-semibold tracking-tight text-slate-950">
                     {classesPerTeacher ?? "—"}
@@ -1409,7 +1409,7 @@ export function SchoolDetailWorkspace({ school: initialSchool, initialMembers, i
               </div>
 
               <div className="grid gap-5 lg:grid-cols-[1.25fr_.75fr]">
-                <section className="rounded-2xl border border-border bg-panel p-6">
+                <section className="rounded-2xl border border-slate-200/80 bg-white p-6 shadow-[0_2px_12px_rgba(15,23,42,0.03)]">
                   <div className="flex items-start justify-between gap-4">
                     <div>
                       <p className="text-xs font-semibold uppercase tracking-[0.14em] text-accent">
@@ -1441,7 +1441,7 @@ export function SchoolDetailWorkspace({ school: initialSchool, initialMembers, i
                   </div>
                 </section>
 
-                <section className="rounded-2xl border border-border bg-panel p-6">
+                <section className="rounded-2xl border border-slate-200/80 bg-white p-6 shadow-[0_2px_12px_rgba(15,23,42,0.03)]">
                   <p className="text-xs font-semibold uppercase tracking-[0.14em] text-accent">
                     Schulbetrieb
                   </p>
