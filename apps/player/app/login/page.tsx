@@ -46,7 +46,7 @@ export default function LoginPage() {
       <div className="grid w-full max-w-6xl items-center gap-8 lg:grid-cols-[minmax(0,1.1fr)_minmax(380px,0.8fr)] lg:gap-14 xl:gap-20">
         <section className="mx-auto flex w-full max-w-xl flex-col items-center text-center lg:items-start lg:text-left">
           <img
-            src="/branding/dr1ft-logo-transparent-vertical.webp"
+            src="/branding/drift-logo-transparent-horizontal.webp"
             alt="DR1FT"
             className="dr1ft-login-logo mb-5 w-36 object-contain drop-shadow-[0_8px_28px_rgba(124,58,237,0.22)] sm:mb-7 sm:w-44 lg:mx-0 lg:w-52"
             fetchPriority="high"
