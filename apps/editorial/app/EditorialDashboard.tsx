@@ -14,6 +14,7 @@ export function EditorialDashboard({
   classCount,
   studentCount,
   interactionEvents,
+  interactionTotal,
   schools,
   classes,
   modules,
@@ -22,6 +23,7 @@ export function EditorialDashboard({
   classCount: number;
   studentCount: number;
   interactionEvents: InteractionDatum[];
+  interactionTotal: number;
   schools: SchoolOption[];
   classes: ClassOption[];
   modules: ModuleDatum[];
@@ -90,7 +92,7 @@ export function EditorialDashboard({
         <Kpi label="Schulen" value={schoolCount} detail="Registrierte Schulen" />
         <Kpi label="Klassen" value={classCount} detail="Klasseninstanzen" />
         <Kpi label="Schüler:innen" value={studentCount} detail="Aktive Klassenmitgliedschaften" />
-        <Kpi label="Interaktionen" value={interactionEvents.length} detail="Gespeicherte Events im geladenen Datensatz" />
+        <Kpi label="Interaktionen" value={interactionTotal} detail="Gesamtzahl gespeicherter Events" />
       </section>
 
       <section className="grid gap-5 xl:grid-cols-[minmax(0,1.4fr)_minmax(340px,0.8fr)]">
@@ -99,7 +101,7 @@ export function EditorialDashboard({
             <div>
               <p className="text-xs font-semibold uppercase tracking-[0.15em] text-slate-400">Nutzungsanalyse</p>
               <h2 className="mt-1 text-lg font-semibold text-slate-900">Interaktionen</h2>
-              <p className="mt-1 text-sm text-slate-500">{scopeLabel} · {totalInteractions.toLocaleString("de-DE")} Ereignisse</p>
+              <p className="mt-1 text-sm text-slate-500">{scopeLabel} · {totalInteractions.toLocaleString("de-DE")} Ereignisse in der Stichprobe</p>
             </div>
             <select aria-label="Auswertungsbereich" value={scope} onChange={(e) => setScope(e.target.value)} className="rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-700">
               <option value="global">Global</option>
