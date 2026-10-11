@@ -51,15 +51,13 @@ export function SiteFooter() {
             <div className="space-y-2">
               <a href={`${EDITORIAL_URL}/login?next=%2Fschool-admin`} className="block hover:text-cyan-300 transition-colors">Schul-Login</a>
               <Link href="/preise" className="block hover:text-cyan-300 transition-colors">Preise</Link>
-              <a href={`${EDITORIAL_URL}/login?next=%2Fschool-admin`} className="block hover:text-cyan-300 transition-colors">Schul-Login</a>
             </div>
           </div>
           <div>
             <p className="text-white font-medium mb-3">Für Lehrkräfte</p>
             <div className="space-y-2">
               <a href={`${TEACHER_URL}/login`} className="block hover:text-cyan-300 transition-colors">Lehrkraft-Login</a>
-              <a href={`${TEACHER_URL}/login`} className="block hover:text-cyan-300 transition-colors">Login</a>
-              <a href={`${TEACHER_URL}/signup`} className="block hover:text-cyan-300 transition-colors">Registrieren</a>
+              <Link href="/mitmachen" className="block hover:text-cyan-300 transition-colors">Mitmachen</Link>
             </div>
           </div>
           <div>
