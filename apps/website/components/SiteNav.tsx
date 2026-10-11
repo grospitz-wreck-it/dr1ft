@@ -12,22 +12,36 @@ export function SiteNav() {
           <img src="/branding/drift-logo-transparent-horizontal-white.webp" alt="DR1FT" className="h-8 w-auto sm:h-9" />
         </Link>
 
-        <nav className="hidden lg:flex items-center gap-7 text-sm text-slate-400">
-          <a href={`${EDITORIAL_URL}/login?next=%2Fschool-admin`} className="hover:text-cyan-300 transition-colors">Schulen</a>
-          <a href={`${TEACHER_URL}/login`} className="hover:text-cyan-300 transition-colors">Lehrkräfte</a>
-          <a href={`${PLAYER_URL}/join`} className="hover:text-cyan-300 transition-colors">Schüler:innen</a>
-          <Link href="/#produkt" className="hover:text-cyan-300 transition-colors">Produkt</Link>
-          <Link href="/simulation" className="hover:text-cyan-300 transition-colors">Simulation</Link>
-          <Link href="/preise" className="hover:text-cyan-300 transition-colors">Preise</Link>
-          <Link href="/mitmachen" className="hover:text-cyan-300 transition-colors">Mitmachen</Link>
+        <nav aria-label="Hauptnavigation" className="hidden lg:flex items-center gap-1.5 rounded-2xl border border-white/[0.08] bg-white/[0.035] p-1.5 shadow-inner shadow-white/[0.025]">
+          <a href={`${EDITORIAL_URL}/login?next=%2Fschool-admin`} className="group inline-flex items-center gap-2 rounded-xl border border-transparent px-3 py-2 text-sm font-medium text-slate-300 transition-all duration-200 hover:border-cyan-300/20 hover:bg-cyan-300/[0.09] hover:text-white">
+            <span className="h-1.5 w-1.5 rounded-full bg-cyan-300/70 transition group-hover:bg-cyan-200 group-hover:shadow-[0_0_10px_rgba(103,232,249,.8)]" />
+            Schulen
+          </a>
+          <a href={`${TEACHER_URL}/login`} className="group inline-flex items-center gap-2 rounded-xl border border-transparent px-3 py-2 text-sm font-medium text-slate-300 transition-all duration-200 hover:border-violet-300/20 hover:bg-violet-300/[0.09] hover:text-white">
+            <span className="h-1.5 w-1.5 rounded-full bg-violet-300/70 transition group-hover:bg-violet-200 group-hover:shadow-[0_0_10px_rgba(196,181,253,.8)]" />
+            Lehrkräfte
+          </a>
+          <a href={`${PLAYER_URL}/join`} className="group inline-flex items-center gap-2 rounded-xl border border-transparent px-3 py-2 text-sm font-medium text-slate-300 transition-all duration-200 hover:border-fuchsia-300/20 hover:bg-fuchsia-300/[0.09] hover:text-white">
+            <span className="h-1.5 w-1.5 rounded-full bg-fuchsia-300/70 transition group-hover:bg-fuchsia-200 group-hover:shadow-[0_0_10px_rgba(240,171,252,.8)]" />
+            Schüler:innen
+          </a>
+          <Link href="/#produkt" className="group inline-flex items-center gap-2 rounded-xl border border-transparent px-3 py-2 text-sm font-medium text-slate-300 transition-all duration-200 hover:border-cyan-300/20 hover:bg-cyan-300/[0.09] hover:text-white">
+            <span className="h-1.5 w-1.5 rounded-full bg-cyan-300/50 transition group-hover:bg-cyan-200 group-hover:shadow-[0_0_10px_rgba(103,232,249,.8)]" />
+            Produkt
+          </Link>
+          <Link href="/simulation" className="group inline-flex items-center gap-2 rounded-xl border border-transparent px-3 py-2 text-sm font-medium text-slate-300 transition-all duration-200 hover:border-violet-300/20 hover:bg-violet-300/[0.09] hover:text-white">
+            <span className="h-1.5 w-1.5 rounded-full bg-violet-300/50 transition group-hover:bg-violet-200 group-hover:shadow-[0_0_10px_rgba(196,181,253,.8)]" />
+            Simulation
+          </Link>
+          <Link href="/preise" className="group inline-flex items-center gap-2 rounded-xl border border-transparent px-3 py-2 text-sm font-medium text-slate-300 transition-all duration-200 hover:border-fuchsia-300/20 hover:bg-fuchsia-300/[0.09] hover:text-white">
+            <span className="h-1.5 w-1.5 rounded-full bg-fuchsia-300/50 transition group-hover:bg-fuchsia-200 group-hover:shadow-[0_0_10px_rgba(240,171,252,.8)]" />
+            Preise
+          </Link>
         </nav>
 
         <div className="flex items-center gap-3 shrink-0">
-          <a href={`${TEACHER_URL}/login`} className="hidden sm:inline text-sm text-slate-400 hover:text-white transition-colors">
-            Login
-          </a>
-          <Link href="/mitmachen" className="bg-gradient-to-r from-cyan-400 to-fuchsia-500 text-white text-sm font-semibold px-4 py-2 rounded-lg hover:brightness-110 transition shadow-lg shadow-cyan-500/10">
-            Mitmachen
+          <Link href="/mitmachen" className="inline-flex items-center gap-2 rounded-xl bg-gradient-to-r from-cyan-400 via-blue-400 to-fuchsia-500 px-5 py-2.5 text-sm font-bold text-white shadow-lg shadow-cyan-500/15 transition duration-200 hover:-translate-y-0.5 hover:brightness-110 hover:shadow-cyan-400/25">
+            Mitmachen <span aria-hidden="true">→</span>
           </Link>
         </div>
       </div>
