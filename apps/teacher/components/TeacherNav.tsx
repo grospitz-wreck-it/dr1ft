@@ -58,6 +58,7 @@ export function TeacherNav() {
   const [region, setRegion] = useState<string | null>(null);
   const [classCount, setClassCount] = useState(0);
   const [studentCount, setStudentCount] = useState(0);
+  const [classAccessCode, setClassAccessCode] = useState<string | null>(null);
   const [accountOpen, setAccountOpen] = useState(false);
 
   const publicRoute =
@@ -79,6 +80,18 @@ export function TeacherNav() {
       setEmail(user?.email ?? null);
 
       if (!user) return;
+      const classMatch = pathname.match(/^\/classes\/([^/]+)$/);
+      if (classMatch) {
+        const { data: classRow } = await supabase
+          .from("class_instances")
+          .select("access_code")
+          .eq("id", classMatch[1])
+          .maybeSingle();
+        setClassAccessCode(classRow?.access_code ?? null);
+      } else {
+        setClassAccessCode(null);
+      }
+
 
       const { data: schoolMemberships } = await supabase
         .from("school_memberships")
@@ -126,7 +139,7 @@ export function TeacherNav() {
         setStudentCount(count ?? 0);
       }
     })();
-  }, [publicRoute]);
+  }, [publicRoute, pathname]);
 
   if (publicRoute) return null;
 
@@ -150,6 +163,13 @@ export function TeacherNav() {
           <p className="mt-1 text-sm font-semibold text-slate-800">Unterricht gestalten</p>
         </div>
         <div className="relative flex items-center gap-3">
+          {classAccessCode && (
+            <div className="hidden items-center gap-2 rounded-xl border border-slate-200 bg-white px-3 py-1.5 sm:flex">
+              <span className="text-[10px] font-semibold uppercase tracking-[0.12em] text-slate-400">Klassencode</span>
+              <code className="font-mono text-sm font-semibold tracking-[0.14em] text-slate-800">{classAccessCode}</code>
+              <button type="button" onClick={() => navigator.clipboard.writeText(classAccessCode)} className="rounded-lg bg-violet-50 px-2.5 py-1.5 text-xs font-semibold text-violet-700 transition hover:bg-violet-100">Kopieren</button>
+            </div>
+          )}
           <span className="hidden max-w-[260px] truncate rounded-full border border-slate-200 bg-white px-3 py-1.5 text-[11px] font-medium text-slate-600 sm:inline-flex" title={school ? `${school}${region ? " · " + region : ""}` : "Noch keine Schule zugeordnet"}>{school ? `${school}${region ? " · " + region : ""}` : "Noch keine Schule zugeordnet"}</span>
           <button type="button" onClick={() => setAccountOpen((open) => !open)} className="editorial-avatar" aria-label="Kontomenü öffnen">D</button>
           {accountOpen && (
