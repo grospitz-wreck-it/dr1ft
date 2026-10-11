@@ -175,3 +175,52 @@ body::after {
     transition-duration: 0.01ms !important;
   }
 }
+
+
+/* Accessible, persistent player dark theme. The violet/cyan/pink identity
+   remains; surfaces and contrast adapt without changing learning signals. */
+.dark-mode {
+  --drift-bg: #100d1c;
+  --drift-surface: #1c172b;
+  --drift-surface-soft: #29213d;
+  --drift-ink: #f1edf9;
+  --drift-ink-soft: #b5abc9;
+  --drift-border: #3b3153;
+  color-scheme: dark;
+}
+.dark-mode body,
+body.dark-mode {
+  background:
+    radial-gradient(circle at 7% 4%, rgba(124,58,237,.16) 0, transparent 25rem),
+    radial-gradient(circle at 91% 7%, rgba(56,189,248,.10) 0, transparent 24rem),
+    linear-gradient(135deg, #100d1c 0%, #171126 55%, #1b1122 100%) !important;
+  color: var(--drift-ink);
+}
+.dark-mode .player-surface,
+.dark-mode main article,
+.dark-mode main section,
+.dark-mode main .bg-white,
+.dark-mode main [class~="bg-white/90"] {
+  background-color: var(--drift-surface) !important;
+  border-color: var(--drift-border) !important;
+  color: var(--drift-ink);
+}
+.dark-mode main [class~="text-[#27213d]"],
+.dark-mode main [class~="text-[#26324a]"],
+.dark-mode main [class~="text-[#35264d]"] { color: var(--drift-ink) !important; }
+.dark-mode main [class~="text-[#746d89]"],
+.dark-mode main [class~="text-[#68738a]"],
+.dark-mode main [class~="text-[#8d96a7]"],
+.dark-mode main [class~="text-[#9aa3b5]"] { color: var(--drift-ink-soft) !important; }
+.dark-mode main input,
+.dark-mode main textarea,
+.dark-mode main select {
+  background-color: #211a32 !important;
+  color: var(--drift-ink) !important;
+  border-color: var(--drift-border) !important;
+}
+.dark-mode main [class*="border-violet-100"],
+.dark-mode main [class*="border-violet-200"] { border-color: var(--drift-border) !important; }
+.dark-mode main [class*="bg-ink/"] { background-color: rgba(255,255,255,.055) !important; }
+.dark-mode body::before,
+.dark-mode body::after { opacity: .14; }
