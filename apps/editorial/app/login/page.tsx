@@ -59,7 +59,7 @@ export default function LoginPage() {
       <div className="dr1ft-login-overlay absolute inset-0 -z-10" aria-hidden="true" />
       <div className="relative z-10 flex w-full max-w-lg flex-col items-center gap-5 sm:gap-6">
         <header className="flex w-full flex-col items-center text-center">
-          <img src="/branding/drift-logo-appstore-transparent.webp" alt="DR1FT" className="mb-2 h-24 w-24 object-contain drop-shadow-[0_8px_30px_rgba(124,58,237,0.18)]" fetchPriority="high" />
+          <img src="/branding/drift-logo-transparent-vertical.webp" alt="DR1FT" className="mb-2 h-auto w-[min(52vw,12rem)] object-contain drop-shadow-[0_8px_30px_rgba(124,58,237,0.18)]" fetchPriority="high" />
           <p className="font-mono text-[10px] font-semibold uppercase tracking-[0.32em] text-slate-500 sm:text-xs">
             {isSchoolHost ? "Schulverwaltung" : "Content Studio"}
           </p>
@@ -68,7 +68,7 @@ export default function LoginPage() {
           <form onSubmit={handleSubmit} className="dr1ft-login-card space-y-3.5 rounded-[1.5rem] p-4 sm:space-y-4 sm:p-5 md:p-6">
             <div className="mb-1 text-center">
               <h1 className="text-xl font-bold tracking-tight text-slate-950 sm:text-2xl">
-                {isSchoolHost ? "Schulzugang" : "Willkommen zurück"}
+                {isSchoolHost ? "Schulzugang" : "Willkommen"}
               </h1>
               <p className="mt-1.5 text-xs leading-5 text-slate-500 sm:text-sm">Melde dich mit deinem DR1FT-Konto an.</p>
             </div>
@@ -85,9 +85,7 @@ export default function LoginPage() {
               {pending ? "Du wirst angemeldet …" : "Anmelden"} {!pending && <span aria-hidden="true">→</span>}
             </button>
             <Link href="/forgot-password" className="block pt-1 text-center text-sm text-slate-500 transition hover:text-violet-700 hover:underline">Passwort vergessen?</Link>
-            <p className="text-center text-[11px] leading-5 text-slate-500">
-              {isSchoolHost ? "Der Zugang wird von der Schule bzw. DR1FT eingerichtet." : "Zugänge werden durch das DR1FT-Redaktionsteam verwaltet."}
-            </p>
+            
           </form>
         </section>
       </div>
