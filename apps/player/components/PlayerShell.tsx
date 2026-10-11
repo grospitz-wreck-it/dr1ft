@@ -42,6 +42,7 @@ type LiveActivity = {
   text: string;
   createdAt: string;
   contentItemId: string;
+  avatarSeed: string;
 };
 
 export function PlayerShell({ children }: { children: React.ReactNode }) {
@@ -107,7 +108,7 @@ export function PlayerShell({ children }: { children: React.ReactNode }) {
       const [{ data: interactions }, { data: comments }] = await Promise.all([
         supabase
           .from("user_interactions")
-          .select("id, user_id, content_item_id, interaction_type, created_at, user_profiles(display_name)")
+          .select("id, user_id, content_item_id, interaction_type, created_at, user_profiles(display_name, avatar_seed)")
           .eq("class_instance_id", classInstanceId)
           .in("interaction_type", ["like", "share"])
           .order("created_at", { ascending: false })
@@ -125,6 +126,9 @@ export function PlayerShell({ children }: { children: React.ReactNode }) {
 
       if (!mounted) return;
 
+      const commentActorIds = (comments ?? []).map((row: any) => typeof row.extra?.userId === "string" ? row.extra.userId : null).filter((id): id is string => Boolean(id));
+      const { data: commentProfiles } = commentActorIds.length ? await supabase.from("user_profiles").select("id, avatar_seed, display_name").in("id", Array.from(new Set(commentActorIds))) : { data: [] as { id: string; avatar_seed: string | null; display_name: string | null }[] };
+      const commentProfileById = new Map((commentProfiles ?? []).map((profile) => [profile.id, profile]));
       const activities: LiveActivity[] = [];
 
       for (const row of interactions ?? []) {
@@ -138,6 +142,7 @@ export function PlayerShell({ children }: { children: React.ReactNode }) {
           text: kind === "share" ? `${name} hat einen Beitrag geteilt.` : `${name} gefällt ein Beitrag.`,
           createdAt: row.created_at,
           contentItemId: row.content_item_id,
+          avatarSeed: profile?.avatar_seed || row.user_id,
         });
       }
 
@@ -154,6 +159,7 @@ export function PlayerShell({ children }: { children: React.ReactNode }) {
           text: `${name} hat kommentiert.`,
           createdAt: row.created_at,
           contentItemId: typeof extra.parentContentItemId === "string" ? extra.parentContentItemId : row.id,
+          avatarSeed: (actorId ? commentProfileById.get(actorId)?.avatar_seed : null) || actorId || row.id,
         });
       }
 
@@ -250,7 +256,7 @@ export function PlayerShell({ children }: { children: React.ReactNode }) {
                           className="flex items-start gap-2.5 rounded-xl px-1 py-1.5 transition-colors hover:bg-white/[.055] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-300/40"
                           title="Beitrag öffnen"
                         >
-                          <span className="mt-0.5 grid place-items-center w-7 h-7 rounded-lg bg-white/[.07] text-cyan-200 shrink-0"><ActivityIcon className="w-3.5 h-3.5"/></span>
+                          <span className="relative mt-0.5 h-8 w-8 shrink-0 rounded-xl bg-gradient-to-br from-social-pink via-social-violet to-social-blue p-[1.5px]"><img src={avatarUrl(activity.avatarSeed, 72)} alt="" className="h-full w-full rounded-[10px] bg-shell-surface object-cover" /><span className="absolute -bottom-1 -right-1 grid h-4 w-4 place-items-center rounded-full border border-shell bg-shell text-cyan-200"><ActivityIcon className="h-2.5 w-2.5"/></span></span>
                           <div className="min-w-0">
                             <p className="text-xs leading-4 text-white/85">{activity.text}</p>
                             <p className="text-[10px] text-white/35 mt-0.5">{formatRelativeTime(activity.createdAt)}</p>
