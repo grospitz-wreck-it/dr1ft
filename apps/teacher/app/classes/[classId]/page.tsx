@@ -415,32 +415,7 @@ export default async function ClassDetailPage({
           </div>
         </section>
 
-        <section className="mt-6 flex flex-col gap-4 rounded-2xl border border-border bg-white px-6 py-5 sm:flex-row sm:items-center sm:justify-between">
-          <div>
-            <p className="text-xs font-semibold uppercase tracking-[0.14em] text-slate-400">
-              Schüler-Zugangscode
-            </p>
 
-            <p className="mt-1 font-mono text-2xl font-semibold tracking-[0.18em]">
-              {instance.access_code}
-            </p>
-
-            <p className="mt-1 text-sm text-slate-500">
-              Mit diesem Code können Schüler:innen der Klasse beitreten.
-            </p>
-          </div>
-
-          <div className="flex flex-wrap gap-2">
-            <CopyAccessCodeButton code={instance.access_code} />
-
-            <a
-              href={`/grades/lookup?classId=${classId}`}
-              className="rounded-lg border border-border px-3.5 py-2.5 text-sm font-medium text-slate-700 transition hover:bg-canvas"
-            >
-              Jahrgang öffnen
-            </a>
-          </div>
-        </section>
       </div>
     </main>
   );
