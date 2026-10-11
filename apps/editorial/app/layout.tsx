@@ -59,32 +59,63 @@ export default async function RootLayout({
     <html lang="de">
       <body className="font-sans">
         <div className="min-h-screen flex bg-canvas">
-          <nav className="w-56 shrink-0 border-r border-border bg-panel min-h-screen sticky top-0 flex flex-col">
-            <div className="px-4 py-4 border-b border-border">
-              <p className="font-semibold text-sm text-slate-900">DR1FT</p>
-              <p className="text-xs2 text-slate-500">Redaktion</p>
+          <aside className="editorial-sidebar sticky top-0 flex h-screen w-[252px] shrink-0 flex-col">
+            <Link href="/scenarios" className="editorial-brand">
+              <span className="editorial-brand-mark">d.</span>
+              <span className="min-w-0">
+                <span className="block text-[15px] font-bold tracking-tight text-slate-950">DR1FT</span>
+                <span className="mt-0.5 block text-[10px] font-semibold uppercase tracking-[0.19em] text-slate-500">Content Studio</span>
+              </span>
+            </Link>
+
+            <div className="px-4 pb-2 pt-6 text-[10px] font-bold uppercase tracking-[0.16em] text-slate-400">Arbeitsbereiche</div>
+            <nav aria-label="Hauptnavigation" className="px-3">
+              <ul className="space-y-1">
+                {NAV_ITEMS.map((item) => {
+                  const Icon = item.icon;
+                  const active = pathname === item.href || (item.href !== "/" && pathname.startsWith(item.href + "/"));
+
+                  return (
+                    <li key={item.href}>
+                      <Link
+                        href={item.href}
+                        aria-current={active ? "page" : undefined}
+                        className={`editorial-nav-link ${active ? "editorial-nav-link-active" : ""}`}
+                      >
+                        <Icon className="h-[18px] w-[18px] shrink-0" strokeWidth={1.8} />
+                        <span className="min-w-0 flex-1">{item.label}</span>
+                        {active && <span className="editorial-nav-indicator" aria-hidden="true" />}
+                      </Link>
+                    </li>
+                  );
+                })}
+              </ul>
+            </nav>
+
+            <div className="mt-auto border-t border-slate-200/80 p-4">
+              <div className="rounded-xl bg-slate-50 px-3 py-3">
+                <div className="flex items-center gap-2">
+                  <span className="h-2 w-2 rounded-full bg-emerald-500" />
+                  <span className="text-xs font-semibold text-slate-700">Redaktionsbereich</span>
+                </div>
+                <p className="mt-1.5 text-[11px] leading-relaxed text-slate-500">Szenarien, Lerninhalte und Prüfaktionen an einem Ort.</p>
+              </div>
             </div>
+          </aside>
 
-            <ul className="flex-1 py-2">
-              {NAV_ITEMS.map((item) => {
-                const Icon = item.icon;
-
-                return (
-                  <li key={item.href}>
-                    <Link
-                      href={item.href}
-                      className="flex items-center gap-2.5 px-4 py-2 text-sm text-slate-600 hover:bg-canvas hover:text-slate-900"
-                    >
-                      <Icon className="w-4 h-4" strokeWidth={1.75} />
-                      {item.label}
-                    </Link>
-                  </li>
-                );
-              })}
-            </ul>
-          </nav>
-
-          <div className="flex-1 min-w-0">{children}</div>
+          <div className="editorial-main min-w-0 flex-1">
+            <header className="editorial-topbar">
+              <div>
+                <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-violet-600">DR1FT / REDAKTION</p>
+                <p className="mt-1 text-sm font-semibold text-slate-800">Lerninhalte gestalten</p>
+              </div>
+              <div className="flex items-center gap-3">
+                <span className="hidden rounded-full border border-slate-200 bg-white px-3 py-1.5 text-[11px] font-medium text-slate-500 sm:inline-flex">Content Studio</span>
+                <span className="editorial-avatar" aria-label="DR1FT Redaktion">D</span>
+              </div>
+            </header>
+            <main className="editorial-content">{children}</main>
+          </div>
         </div>
       </body>
     </html>
