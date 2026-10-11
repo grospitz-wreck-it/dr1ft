@@ -24,15 +24,15 @@ export default async function TeacherInsightsPage() {
 
   return (
     <main className="min-h-screen bg-canvas">
-      <div className="mx-auto w-full max-w-7xl px-6 pb-12 pt-8 lg:px-8">
-        <section className="rounded-[2rem] bg-slate-950 px-6 py-8 text-white shadow-xl sm:px-8">
-          <p className="text-xs font-semibold uppercase tracking-[0.18em] text-white/45">
-            DR1FT Teacher
+      <div className="mx-auto w-full max-w-7xl px-6 pb-12 pt-6 lg:px-8">
+        <section className="rounded-2xl border border-violet-100 bg-gradient-to-r from-white via-violet-50/70 to-sky-50/70 px-6 py-5 shadow-sm sm:px-7">
+          <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-violet-600">
+            DR1FT / LEHRKRAFT
           </p>
-          <h1 className="mt-2 text-4xl font-semibold tracking-tight sm:text-5xl">
+          <h1 className="mt-1 text-2xl font-semibold tracking-tight text-slate-950 sm:text-3xl">
             Insights
           </h1>
-          <p className="mt-2 max-w-2xl text-sm leading-6 text-white/55">
+          <p className="mt-1 text-sm text-slate-500">
             Lernfortschritte und Klassenanalysen deiner Klassen.
           </p>
         </section>
