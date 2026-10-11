@@ -21,7 +21,7 @@ export default function HomePage() {
               Medienkompetenz · NRW
             </p>
             <h1 className="font-display text-3xl sm:text-4xl lg:text-[2.8rem] font-bold tracking-tight leading-[1.06]">
-              Medienkompetenz, die Schüler:innen wirklich erleben.
+              Medienkompetenz, die<br />Schüler:innen wirklich erleben.
             </h1>
             <p className="text-base sm:text-lg text-slate-200 max-w-md mt-5 leading-relaxed">
               DR1FT ist ein simulierter Social-Media-Feed, in dem Schüler:innen
