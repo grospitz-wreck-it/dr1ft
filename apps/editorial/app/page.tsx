@@ -11,7 +11,7 @@ export default async function HomePage() {
     { data: schoolsData, error: schoolsError },
     { data: classesData, error: classesError },
     { data: membersData, error: membersError },
-    { data: interactionCountData, error: interactionsError, count: interactionCount },
+    { error: interactionsError, count: interactionCount },
     { data: modulesData },
   ] = await Promise.all([
     supabase.from("schools").select("id, name, region"),
