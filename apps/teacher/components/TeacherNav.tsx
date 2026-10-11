@@ -35,8 +35,8 @@ function NavItem({ href, label, icon, active, count }: NavItemProps) {
       href={href}
       className={`flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition ${
         active
-          ? "bg-slate-950 text-white"
-          : "text-slate-600 hover:bg-canvas"
+          ? "bg-violet-50 text-violet-700"
+          : "text-slate-600 hover:bg-slate-50"
       }`}
     >
       {icon}
@@ -144,8 +144,8 @@ export function TeacherNav() {
 
   return (
     <>
-      <header className="relative z-30 border-b border-border bg-white">
-        <div className="mx-auto flex h-16 w-full max-w-7xl items-center justify-between gap-4 px-6 lg:px-8">
+      <header className="editorial-topbar relative z-30 lg:ml-[252px]">
+        <div className="flex min-h-16 w-full items-center justify-between gap-4">
           <div className="flex min-w-0 items-center gap-4">
             <a href="/classes" className="flex shrink-0 items-center">
               <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-slate-950 text-white">
@@ -231,7 +231,7 @@ export function TeacherNav() {
         </div>
       </header>
 
-      <div className="fixed left-[max(1.5rem,calc((100vw-80rem)/2))] top-16 z-20 hidden h-[calc(100vh-4rem)] w-52 overflow-y-auto bg-canvas py-6 lg:block">
+      <div className="editorial-sidebar fixed left-0 top-0 z-40 hidden h-screen w-[252px] overflow-y-auto lg:block">
         <aside className="w-full">
           <nav className="sticky top-5 rounded-2xl border border-border bg-white p-2 shadow-sm">
             <p className="px-3 pb-2 pt-2 text-[10px] font-semibold uppercase tracking-[0.14em] text-slate-400">
@@ -274,7 +274,7 @@ export function TeacherNav() {
               />
             </div>
 
-            <div className="my-2 border-t border-border" />
+            <div className="my-2 border-t border-slate-200/80" />
 
             <NavItem
               href="/account"
