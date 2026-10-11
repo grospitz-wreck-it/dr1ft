@@ -38,10 +38,9 @@ export function EditorialDashboard({
   const visibleClasses = useMemo(() => classes.filter((item) => (schoolId === "all" || item.schoolId === schoolId) && (region === "all" || item.region === region)), [classes, schoolId, region]);
 
   const filtered = interactionEvents.filter((event) => {
-    if (scope === "region" && region !== "all" && event.region !== region) return false;
-    if (scope === "school" && schoolId !== "all" && event.schoolId !== schoolId) return false;
-    if (scope === "class" && region !== "all" && event.region !== region) return false;
-    if (scope === "class" && schoolId !== "all" && event.schoolId !== schoolId) return false;
+    // Apply the geographic scope consistently before narrowing to a school/class.
+    if (scope !== "global" && region !== "all" && event.region !== region) return false;
+    if ((scope === "school" || scope === "class") && schoolId !== "all" && event.schoolId !== schoolId) return false;
     if (scope === "class" && classId !== "all" && event.classId !== classId) return false;
     return true;
   });
@@ -112,6 +111,11 @@ export function EditorialDashboard({
           {scope === "region" && <select aria-label="Bundesland" value={region} onChange={(e) => setRegion(e.target.value)} className="mt-4 w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm sm:max-w-xs"><option value="all">Alle Bundesländer</option>{regions.map((item) => <option key={item} value={item}>{item}</option>)}</select>}
           {scope === "school" && <div className="mt-4 flex flex-col gap-2 sm:flex-row"><select aria-label="Bundesland" value={region} onChange={(e) => { setRegion(e.target.value); setSchoolId("all"); }} className="min-w-0 rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm"><option value="all">Alle Bundesländer</option>{regions.map((item) => <option key={item} value={item}>{item}</option>)}</select><select aria-label="Schule" value={schoolId} onChange={(e) => setSchoolId(e.target.value)} className="min-w-0 flex-1 rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm"><option value="all">Alle Schulen</option>{visibleSchools.map((item) => <option key={item.id} value={item.id}>{item.name}</option>)}</select></div>}
           {scope === "class" && <div className="mt-4 flex flex-col gap-2 sm:flex-row"><select aria-label="Bundesland" value={region} onChange={(e) => { setRegion(e.target.value); setSchoolId("all"); setClassId("all"); }} className="min-w-0 rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm"><option value="all">Alle Bundesländer</option>{regions.map((item) => <option key={item} value={item}>{item}</option>)}</select><select aria-label="Schule" value={schoolId} onChange={(e) => { setSchoolId(e.target.value); setClassId("all"); }} className="min-w-0 flex-1 rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm"><option value="all">Alle Schulen</option>{visibleSchools.map((item) => <option key={item.id} value={item.id}>{item.name}</option>)}</select><select aria-label="Klasse" value={classId} onChange={(e) => setClassId(e.target.value)} className="min-w-0 flex-1 rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm"><option value="all">Alle Klassen</option>{visibleClasses.map((item) => <option key={item.id} value={item.id}>{item.name} · {item.schoolName}</option>)}</select></div>}
+          {scope !== "global" && (
+            <p className="mt-3 text-xs text-slate-400">
+              {classes.length} Klassen geladen · {interactionEvents.length.toLocaleString("de-DE")} Interaktionen geladen · {interactionEvents.filter((event) => event.classId).length.toLocaleString("de-DE")} mit Klassen-ID
+            </p>
+          )}
           <div className="mt-6 grid gap-6 md:grid-cols-[190px_minmax(0,1fr)] md:items-center">
             <div className="relative mx-auto h-44 w-44 rounded-full" style={{ background: gradient }} role="img" aria-label="Kreisdiagramm der Interaktionen nach Typ">
               <div className="absolute inset-[25%] flex flex-col items-center justify-center rounded-full bg-white text-center">
