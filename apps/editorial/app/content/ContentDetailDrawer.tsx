@@ -8,8 +8,25 @@
 // ein Link ohne diesen Parameter — kein zusätzlicher Client-State nötig.
 
 import { useState, useTransition } from "react";
-import { X, Image as ImageIcon, Sparkles } from "lucide-react";
+import { X, Image as ImageIcon, Sparkles, RefreshCw } from "lucide-react";
 import { updateContentItemQuick, updateContentItemStatusQuick } from "./actions";
+
+const MANIPULATION_TECHNIQUES = [
+  { value: "framing", label: "Framing", description: "Einordnung durch Wortwahl oder Perspektive" },
+  { value: "emotional_framing", label: "Emotionales Framing", description: "Gefühle gezielt als Deutungsrahmen nutzen" },
+  { value: "social_proof", label: "Sozialer Druck / Social Proof", description: "Mehrheitsmeinung oder Gruppenzustimmung suggerieren" },
+  { value: "false_dichotomy", label: "Falsche Dichotomie", description: "Nur zwei Optionen darstellen, obwohl es mehr gibt" },
+  { value: "fear_appeal", label: "Angstappell", description: "Mit Angst oder Bedrohung Druck erzeugen" },
+  { value: "misleading_context", label: "Irreführender Kontext", description: "Echte Inhalte in einen falschen Zusammenhang stellen" },
+  { value: "cherry_picking", label: "Selektive Belege", description: "Nur passende Informationen zeigen" },
+  { value: "false_authority", label: "Falsche Autorität", description: "Unbelegte Expertise oder Autorität vortäuschen" },
+  { value: "bandwagon", label: "Mitläufereffekt", description: "Zum Mitmachen bewegen, weil angeblich alle mitmachen" },
+  { value: "scapegoating", label: "Sündenbock-Muster", description: "Eine Person oder Gruppe pauschal verantwortlich machen" },
+  { value: "loaded_language", label: "Aufgeladene Sprache", description: "Wertende Begriffe statt sachlicher Beschreibung einsetzen" },
+  { value: "fabricated_evidence", label: "Erfundene Belege", description: "Zitate, Zahlen oder Beweise erfinden oder verfälschen" },
+  { value: "impersonation", label: "Identität vortäuschen", description: "Eine andere Person oder Quelle imitieren" },
+  { value: "out_of_context_media", label: "Bild aus dem Kontext", description: "Bildmaterial ohne entscheidenden Kontext verwenden" },
+] as const;
 
 const ALLOWED_TRANSITIONS: Record<string, { label: string; next: string }[]> = {
   draft: [{ label: "Zur Prüfung einreichen", next: "in_review" }],
@@ -33,7 +50,7 @@ export function ContentDetailDrawer({
 }) {
   const [isPending, startTransition] = useTransition();
   const [body, setBody] = useState(item?.body ?? "");
-  const [techniques, setTechniques] = useState((item?.manipulation_techniques ?? []).join(", "));
+  const [techniques, setTechniques] = useState<string[]>(item?.manipulation_techniques ?? []);
   const [saved, setSaved] = useState(false);
 
   if (!item) return null;
@@ -44,7 +61,7 @@ export function ContentDetailDrawer({
     startTransition(async () => {
       await updateContentItemQuick(item.id, {
         body,
-        manipulationTechniques: techniques.split(",").map((t: string) => t.trim()).filter(Boolean),
+        manipulationTechniques: techniques,
       });
       setSaved(true);
       setTimeout(() => setSaved(false), 1500);
@@ -132,16 +149,41 @@ export function ContentDetailDrawer({
               />
             </div>
 
-            <div>
-              <label className="mb-1.5 block text-xs font-semibold text-slate-700">Manipulationstechniken</label>
-              <input
-                value={techniques}
-                onChange={(e) => setTechniques(e.target.value)}
-                placeholder="z. B. Framing, falsche Dichotomie"
-                className="w-full rounded-xl border border-border bg-white px-3.5 py-2.5 text-sm text-slate-800 outline-none transition placeholder:text-slate-400 focus:border-accent focus:ring-4 focus:ring-violet-500/10"
-              />
-              <p className="mt-1.5 text-xs text-slate-400">Mehrere Einträge durch Kommas trennen.</p>
-            </div>
+            <fieldset className="min-w-0">
+              <legend className="mb-1.5 text-xs font-semibold text-slate-700">Manipulationstechniken</legend>
+              <p className="mb-3 text-xs leading-5 text-slate-500">Wähle alle Techniken aus, die im Inhalt tatsächlich vorkommen.</p>
+              <div className="grid gap-2 sm:grid-cols-2">
+                {MANIPULATION_TECHNIQUES.map((technique) => {
+                  const checked = techniques.includes(technique.value);
+                  return (
+                    <label
+                      key={technique.value}
+                      className={`flex cursor-pointer items-start gap-2.5 rounded-xl border p-3 transition ${checked ? "border-violet-300 bg-violet-50/70" : "border-border bg-white hover:bg-slate-50"}`}
+                    >
+                      <input
+                        type="checkbox"
+                        checked={checked}
+                        onChange={(e) =>
+                          setTechniques((current) =>
+                            e.target.checked
+                              ? [...current, technique.value]
+                              : current.filter((value) => value !== technique.value)
+                          )
+                        }
+                        className="mt-0.5 h-4 w-4 shrink-0 accent-violet-600"
+                      />
+                      <span className="min-w-0">
+                        <span className="block text-xs font-semibold text-slate-800">{technique.label}</span>
+                        <span className="mt-1 block text-[11px] leading-4 text-slate-500">{technique.description}</span>
+                      </span>
+                    </label>
+                  );
+                })}
+              </div>
+              {techniques.length > 0 && (
+                <p className="mt-2 text-xs text-slate-500">{techniques.length} ausgewählt</p>
+              )}
+            </fieldset>
 
             <button
               onClick={save}
