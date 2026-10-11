@@ -188,7 +188,7 @@ export function TeacherNav() {
       <div className="editorial-sidebar fixed left-0 top-0 z-40 hidden h-screen w-[252px] overflow-y-auto lg:block">
         <aside className="flex min-h-full w-full flex-col">
           <a href="/" className="editorial-brand">
-            <span className="editorial-brand-mark">d.</span>
+            <img src="/branding/drift-logo-appstore-transparent.webp" alt="" aria-hidden="true" className="h-12 w-12 shrink-0 rounded-xl object-contain" />
             <span className="min-w-0">
               <span className="block text-[15px] font-bold tracking-tight text-slate-950">DR1FT</span>
               <span className="mt-0.5 block text-[10px] font-semibold uppercase tracking-[0.19em] text-slate-500">Teacher Studio</span>
