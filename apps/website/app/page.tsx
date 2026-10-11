@@ -15,12 +15,12 @@ export default function HomePage() {
         <div className="absolute inset-0 -z-10 bg-[linear-gradient(90deg,rgba(5,10,25,.97)_0%,rgba(5,10,25,.88)_25%,rgba(5,10,25,.58)_43%,rgba(10,8,24,.12)_68%,rgba(10,8,24,.22)_100%)]" />
         <div className="absolute inset-0 -z-10 bg-[radial-gradient(circle_at_22%_42%,rgba(0,218,255,.15),transparent_38%),linear-gradient(0deg,rgba(5,10,25,.22),transparent_36%)]" />
 
-        <div className="mx-auto w-full max-w-7xl px-6 py-24 sm:px-10 sm:py-28">
-          <div className="max-w-[440px] text-white">
+        <div className="mx-auto w-full max-w-7xl px-6 pt-32 pb-16 sm:px-10 sm:pt-40 sm:pb-20">
+          <div className="max-w-[560px] text-white">
             <p className="inline-flex bg-cyan-300/10 border border-cyan-200/30 text-xs font-medium text-cyan-100 px-3 py-1 rounded-full mb-6 backdrop-blur">
               Medienkompetenz · NRW
             </p>
-            <h1 className="font-display text-4xl sm:text-5xl lg:text-[3.35rem] font-bold tracking-tight leading-[1.03]">
+            <h1 className="font-display text-3xl sm:text-4xl lg:text-[2.8rem] font-bold tracking-tight leading-[1.06]">
               Medienkompetenz, die Schüler:innen wirklich erleben.
             </h1>
             <p className="text-base sm:text-lg text-slate-200 max-w-md mt-5 leading-relaxed">
