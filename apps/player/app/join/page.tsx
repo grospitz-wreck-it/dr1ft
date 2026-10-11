@@ -26,11 +26,7 @@ export default function JoinPage() {
     let active = true;
     supabase.auth.getUser().then(({ data: { user } }) => {
       if (!active) return;
-      if (user) {
-        router.replace("/feed");
-        return;
-      }
-      setCheckingSession(false);
+      router.replace(user ? "/feed" : "/login");
     });
     return () => {
       active = false;
