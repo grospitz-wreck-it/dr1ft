@@ -2,22 +2,164 @@
 @tailwind components;
 @tailwind utilities;
 
-/* Admin-Designsprache: bewusst NICHT wie die Player-App (Tinten/Marker-
-   Gelb) — hier zählt Scanbarkeit über hunderte Zeilen, nicht Erleben.
-   Neutrale Grautöne, eine Akzentfarbe für Aktionen, feste Statusfarben. */
-
+/* DR1FT Editorial: ruhiges Content-Studio, inspiriert von modernen
+   Admin-Dashboards. Bewusst eigenständig statt Template-Copy. */
 :root {
   --font-sans: -apple-system, BlinkMacSystemFont, "Segoe UI", Inter, sans-serif;
   --font-mono: "SF Mono", "JetBrains Mono", Consolas, monospace;
+  --editorial-canvas: #f5f6fa;
+  --editorial-panel: #ffffff;
+  --editorial-border: #e7e9f1;
+  --editorial-ink: #17172b;
+  --editorial-muted: #69738a;
+  --editorial-accent: #635bdf;
 }
+
+html { background: var(--editorial-canvas); }
 
 body {
-  @apply bg-canvas text-slate-900;
+  @apply text-slate-900;
+  background: var(--editorial-canvas);
   font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
 }
 
-/* Dichte Tabellenzeilen für 1000+ Einträge — Standard-Zeilenhöhe wäre
-   auf großen Listen zu raumgreifend. */
-.table-row-dense {
-  @apply h-11;
+.editorial-sidebar {
+  background: rgba(255, 255, 255, 0.94);
+  border-right: 1px solid var(--editorial-border);
 }
+
+.editorial-brand {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 22px 20px 20px;
+  border-bottom: 1px solid var(--editorial-border);
+  text-decoration: none;
+}
+
+.editorial-brand-mark {
+  display: grid;
+  width: 40px;
+  height: 40px;
+  flex: 0 0 auto;
+  place-items: center;
+  border-radius: 13px;
+  color: white;
+  background: linear-gradient(140deg, #8b5cf6, #635bdf 58%, #4f46e5);
+  box-shadow: 0 5px 12px rgba(99, 91, 223, 0.2);
+  font-size: 18px;
+  font-weight: 800;
+  letter-spacing: -0.06em;
+}
+
+.editorial-nav-link {
+  position: relative;
+  display: flex;
+  min-height: 42px;
+  align-items: center;
+  gap: 11px;
+  border-radius: 10px;
+  padding: 0 12px;
+  color: #59647a;
+  font-size: 12px;
+  font-weight: 550;
+  text-decoration: none;
+  transition: background-color 140ms ease, color 140ms ease;
+}
+
+.editorial-nav-link:hover { background: #f5f5fb; color: #282444; }
+
+.editorial-nav-link-active {
+  color: #4f46c8;
+  background: #efedff;
+  font-weight: 650;
+}
+
+.editorial-nav-link-active:hover { background: #e9e6ff; color: #4338ca; }
+
+.editorial-nav-indicator {
+  width: 5px;
+  height: 5px;
+  border-radius: 999px;
+  background: #6d5dfc;
+  box-shadow: 0 0 0 3px rgba(109, 93, 252, 0.1);
+}
+
+.editorial-main { min-height: 100vh; }
+
+.editorial-topbar {
+  position: sticky;
+  top: 0;
+  z-index: 20;
+  display: flex;
+  min-height: 70px;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  border-bottom: 1px solid rgba(231, 233, 241, 0.9);
+  padding: 12px clamp(20px, 3vw, 42px);
+  background: rgba(255, 255, 255, 0.88);
+  backdrop-filter: blur(14px);
+}
+
+.editorial-avatar {
+  display: inline-grid;
+  width: 32px;
+  height: 32px;
+  place-items: center;
+  border: 1px solid #dedbff;
+  border-radius: 50%;
+  background: #f0eeff;
+  color: #574bd1;
+  font-size: 12px;
+  font-weight: 750;
+}
+
+.editorial-content { min-width: 0; padding: clamp(20px, 3vw, 40px); }
+
+.editorial-content > * {
+  max-width: 1440px;
+  margin-left: auto;
+  margin-right: auto;
+}
+
+.editorial-content input:not([type="checkbox"]):not([type="radio"]),
+.editorial-content select,
+.editorial-content textarea {
+  border-color: #dfe3ed;
+  border-radius: 9px;
+}
+
+.editorial-content input:not([type="checkbox"]):not([type="radio"]):focus,
+.editorial-content select:focus,
+.editorial-content textarea:focus {
+  outline: 2px solid rgba(99, 91, 223, 0.18);
+  outline-offset: 1px;
+  border-color: #8a82ef;
+}
+
+@media (max-width: 900px) {
+  .editorial-sidebar { width: 208px; }
+  .editorial-content { padding: 20px; }
+}
+
+@media (max-width: 680px) {
+  .editorial-sidebar {
+    position: static;
+    width: 100%;
+    height: auto;
+    border-right: 0;
+    border-bottom: 1px solid var(--editorial-border);
+  }
+  .editorial-brand { padding: 14px 16px; }
+  .editorial-sidebar > div:first-of-type { padding-top: 12px; }
+  .editorial-sidebar nav ul { display: flex; overflow-x: auto; padding-bottom: 12px; }
+  .editorial-nav-link { white-space: nowrap; }
+  .editorial-sidebar > div:last-child { display: none; }
+  .editorial-topbar { min-height: 58px; padding: 10px 16px; }
+  .editorial-content { padding: 16px; }
+}
+
+/* Dichte Tabellenzeilen für große Content-Bibliotheken. */
+.table-row-dense { @apply h-11; }
