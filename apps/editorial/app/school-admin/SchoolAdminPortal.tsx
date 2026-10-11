@@ -85,7 +85,7 @@ export function SchoolAdminPortal({
       <header className="sticky top-0 z-40 border-b border-slate-200/80 bg-white/90 backdrop-blur-xl">
         <div className="mx-auto flex max-w-[1440px] items-center justify-between px-5 py-4 sm:px-8 lg:px-10">
           <div className="flex items-center gap-3">
-            <div className="grid h-9 w-9 place-items-center rounded-xl bg-gradient-to-br from-fuchsia-500 via-violet-500 to-blue-500 text-sm font-bold text-white shadow-md shadow-violet-200">d.</div>
+            <img src="/branding/drift-logo-appstore-transparent.webp" alt="" aria-hidden="true" className="h-10 w-10 shrink-0 rounded-xl object-contain" />
             <div><p className="font-semibold text-slate-900">DR1FT</p><p className="text-xs text-slate-500">Schulbereich</p></div>
           </div>
           <div className="flex items-center gap-3">
