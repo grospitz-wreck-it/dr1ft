@@ -58,7 +58,7 @@ export function ContentDetailDrawer({
         className="fixed inset-0 z-40 bg-slate-950/30 backdrop-blur-[2px]"
         aria-label="Schließen"
       />
-      <aside className="fixed inset-y-0 right-0 z-50 h-screen w-full max-w-[ min(30rem, 100vw)] overflow-y-auto border-l border-border bg-panel shadow-2xl">
+      <aside className="fixed inset-y-0 right-0 z-50 h-screen w-full max-w-lg overflow-y-auto border-l border-border bg-panel shadow-2xl">
         <div className="sticky top-0 z-10 border-b border-border bg-panel/95 px-5 py-4 backdrop-blur">
           <div className="flex items-start justify-between gap-4">
             <div className="min-w-0">
