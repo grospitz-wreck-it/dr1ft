@@ -145,6 +145,8 @@ body {
 }
 
 @media (max-width: 680px) {
+  .min-h-screen.flex.bg-canvas { flex-direction: column; }
+
   .editorial-sidebar {
     position: static;
     width: 100%;
