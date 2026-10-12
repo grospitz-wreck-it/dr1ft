@@ -8,6 +8,7 @@
 import { ChevronLeft } from "lucide-react";
 import { supabaseServerClient } from "../../../lib/supabaseServerClient";
 import { mapCreatorRow, type FeedItem } from "../../../lib/types";
+import { getCurrentClassInstanceId } from "../../../lib/currentClassInstance";
 import { CreatorFeed } from "./CreatorFeed";
 
 interface Props {
@@ -25,6 +26,18 @@ export default async function CreatorProfilePage({ params }: Props) {
   const {
     data: { user },
   } = await supabase.auth.getUser();
+
+  const classInstanceId = user
+    ? await getCurrentClassInstanceId(supabase)
+    : null;
+
+  if (user && !classInstanceId) {
+    return (
+      <main className="min-h-screen bg-ink flex items-center justify-center">
+        <p className="text-ash text-sm">Du bist aktuell keiner DR1FT-Klasse zugeordnet.</p>
+      </main>
+    );
+  }
 
   const { data: creator } = await supabase
     .from("creators")
@@ -80,6 +93,7 @@ export default async function CreatorProfilePage({ params }: Props) {
       .select("content_item_id")
       .eq("user_id", user.id)
       .eq("interaction_type", "like")
+      .eq("class_instance_id", classInstanceId)
       .in("content_item_id", mappedPosts.map((p) => p.id));
     likedContentIds = new Set((likes ?? []).map((l) => l.content_item_id));
   }
@@ -114,6 +128,7 @@ export default async function CreatorProfilePage({ params }: Props) {
           <CreatorFeed
             posts={mappedPosts}
             userId={user.id}
+            classInstanceId={classInstanceId!}
             likedContentIds={likedContentIds}
           />
         ) : (

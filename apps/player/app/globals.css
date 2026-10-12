@@ -8,40 +8,152 @@
   --font-display: "Space Grotesk", sans-serif;
   --font-body: "Inter", sans-serif;
   --font-mono: "JetBrains Mono", monospace;
+
+  /* DR1FT atmosphere: playful social-app energy, but never a visible learning score. */
+  --drift-bg: #f4f2fb;
+  --drift-surface: #ffffff;
+  --drift-surface-soft: #eeeafa;
+  --drift-ink: #27213d;
+  --drift-ink-soft: #746d89;
+  --drift-purple: #7c3aed;
+  --drift-violet: #a855f7;
+  --drift-pink: #ec4899;
+  --drift-blue: #38bdf8;
+  --drift-mint: #5eead4;
+  --drift-peach: #fb923c;
+  --drift-yellow: #facc15;
+  --drift-border: #ddd8ec;
+  --drift-growth: #14b8a6;
 }
+
+html { background: var(--drift-bg); }
 
 body {
-  @apply bg-ink text-paper font-body;
+  @apply font-body;
+  position: relative;
+  min-height: 100vh;
+  overflow-x: hidden;
+  background:
+    radial-gradient(circle at 7% 4%, rgba(168,85,247,.20) 0, rgba(168,85,247,0) 25rem),
+    radial-gradient(circle at 91% 7%, rgba(56,189,248,.18) 0, rgba(56,189,248,0) 24rem),
+    radial-gradient(circle at 75% 84%, rgba(236,72,153,.14) 0, rgba(236,72,153,0) 28rem),
+    linear-gradient(135deg, #f7f5fc 0%, #f2f1fa 48%, #faf5fb 100%);
+  color: var(--drift-ink);
 }
 
-/* Signature-Element: Textmarker-Annotation über manipulativen Textstellen.
-   Bewusst ein einziger, unverwechselbarer visueller Effekt statt vieler
-   kleiner Animationen — siehe frontend-design Prinzip "Spend your
-   boldness in one place". */
+body::before,
+body::after {
+  content: "";
+  position: fixed;
+  z-index: -1;
+  width: 24rem;
+  height: 24rem;
+  border-radius: 42% 58% 63% 37% / 47% 43% 57% 53%;
+  filter: blur(30px);
+  opacity: .30;
+  pointer-events: none;
+  animation: drift-float 18s ease-in-out infinite alternate;
+}
+
+body::before {
+  left: -12rem;
+  top: 38%;
+  background: linear-gradient(135deg, #c4b5fd, #67e8f9, #f0abfc);
+}
+
+body::after {
+  right: -11rem;
+  bottom: -9rem;
+  background: linear-gradient(135deg, #f9a8d4, #fdba74, #c4b5fd);
+  animation-delay: -7s;
+}
+
+.bg-ink { background-color: var(--drift-bg) !important; }
+.bg-ink-light { background-color: var(--drift-surface-soft) !important; }
+.border-ink-border { border-color: var(--drift-border) !important; }
+.text-paper { color: var(--drift-ink) !important; }
+.bg-paper { background-color: var(--drift-surface) !important; }
+.bg-paper\/90 { background-color: rgb(255 255 255 / 0.9) !important; }
+.text-ash { color: var(--drift-ink-soft) !important; }
+.text-growth { color: var(--drift-growth) !important; }
+.bg-growth { background-color: var(--drift-growth) !important; }
+
+::selection {
+  background: #ddd6fe;
+  color: var(--drift-ink);
+}
+
 .marker-highlight {
-  background: linear-gradient(120deg, transparent 0%, transparent 4%, #ffc857 4%, #ffc857 96%, transparent 96%);
+  background: linear-gradient(120deg, transparent 0%, transparent 4%, #facc15 4%, #facc15 96%, transparent 96%);
   background-repeat: no-repeat;
   background-size: 100% 45%;
   background-position: 0 65%;
   padding: 0 2px;
 }
 
-@media (prefers-reduced-motion: reduce) {
-  * {
-    animation-duration: 0.01ms !important;
-    transition-duration: 0.01ms !important;
+@layer components {
+  .player-sidebar { display: none; }
+
+  @media (min-width: 1024px) {
+    .player-sidebar { display: flex !important; }
+  }
+
+  .player-surface {
+    background: rgba(255,255,255,.76);
+    border: 1px solid rgba(255,255,255,.92);
+    box-shadow: 0 22px 70px rgba(62,40,104,.12), 0 2px 10px rgba(62,40,104,.035);
+    backdrop-filter: blur(22px);
+  }
+
+  .player-soft-blue { background: #e0f2fe; }
+  .player-soft-mint { background: #ccfbf1; }
+  .player-soft-lavender { background: #ede9fe; }
+  .player-soft-peach { background: #ffedd5; }
+  .player-soft-yellow { background: #fef9c3; }
+
+  .player-activity-scroll {
+    scrollbar-width: thin;
+    scrollbar-color: rgba(196, 181, 253, .30) transparent;
+  }
+
+  .player-activity-scroll::-webkit-scrollbar {
+    width: 5px;
+  }
+
+  .player-activity-scroll::-webkit-scrollbar-track {
+    background: transparent;
+  }
+
+  .player-activity-scroll::-webkit-scrollbar-thumb {
+    background: rgba(196, 181, 253, .28);
+    border-radius: 999px;
+  }
+
+  .player-activity-scroll::-webkit-scrollbar-thumb:hover {
+    background: rgba(165, 243, 252, .42);
+  }
+
+  main article {
+    box-shadow: 0 20px 58px rgba(62,40,104,.10), 0 2px 8px rgba(62,40,104,.04);
+  }
+
+  aside > div {
+    box-shadow: 0 24px 70px rgba(62,40,104,.13), 0 2px 10px rgba(62,40,104,.04) !important;
+  }
+
+  .social-glow {
+    box-shadow: 0 14px 42px rgba(124,58,237,.20), 0 4px 16px rgba(236,72,153,.10);
   }
 }
 
+@keyframes drift-float {
+  from { transform: translate3d(0, -12px, 0) rotate(-3deg) scale(.96); }
+  to { transform: translate3d(22px, 14px, 0) rotate(5deg) scale(1.04); }
+}
+
 @keyframes slide-up {
-  from {
-    transform: translateY(24px);
-    opacity: 0;
-  }
-  to {
-    transform: translateY(0);
-    opacity: 1;
-  }
+  from { transform: translateY(24px); opacity: 0; }
+  to { transform: translateY(0); opacity: 1; }
 }
 
 @keyframes pulse-once {
@@ -50,19 +162,118 @@ body {
   100% { transform: scale(1); }
 }
 
-.tap-pulse:active {
-  animation: pulse-once 0.25s ease-out;
+.tap-pulse:active { animation: pulse-once 0.25s ease-out; }
+
+.safe-top { padding-top: env(safe-area-inset-top); }
+.safe-bottom { padding-bottom: env(safe-area-inset-bottom); }
+.touch-target { min-height: 44px; min-width: 44px; }
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
 }
 
-/* iPad/Tablet: Safe-Area für Notch/Home-Indicator, größere Touch-Targets
-   (Apple HIG empfiehlt min. 44x44pt für Touch-Ziele). */
-.safe-top {
-  padding-top: env(safe-area-inset-top);
+
+/* Accessible, persistent player dark theme. The violet/cyan/pink identity
+   remains; surfaces and contrast adapt without changing learning signals. */
+.dark-mode {
+  --drift-bg: #100d1c;
+  --drift-surface: #1c172b;
+  --drift-surface-soft: #29213d;
+  --drift-ink: #f1edf9;
+  --drift-ink-soft: #b5abc9;
+  --drift-border: #3b3153;
+  color-scheme: dark;
 }
-.safe-bottom {
-  padding-bottom: env(safe-area-inset-bottom);
+.dark-mode body,
+body.dark-mode {
+  background:
+    radial-gradient(circle at 7% 4%, rgba(124,58,237,.16) 0, transparent 25rem),
+    radial-gradient(circle at 91% 7%, rgba(56,189,248,.10) 0, transparent 24rem),
+    linear-gradient(135deg, #100d1c 0%, #171126 55%, #1b1122 100%) !important;
+  color: var(--drift-ink);
 }
-.touch-target {
-  min-height: 44px;
-  min-width: 44px;
+.dark-mode .player-surface,
+.dark-mode main article,
+.dark-mode main section,
+.dark-mode main .bg-white,
+.dark-mode main [class~="bg-white/90"] {
+  background-color: var(--drift-surface) !important;
+  border-color: var(--drift-border) !important;
+  color: var(--drift-ink);
+}
+.dark-mode main [class~="text-[#27213d]"],
+.dark-mode main [class~="text-[#26324a]"],
+.dark-mode main [class~="text-[#35264d]"] { color: var(--drift-ink) !important; }
+.dark-mode main [class~="text-[#746d89]"],
+.dark-mode main [class~="text-[#68738a]"],
+.dark-mode main [class~="text-[#8d96a7]"],
+.dark-mode main [class~="text-[#9aa3b5]"] { color: var(--drift-ink-soft) !important; }
+.dark-mode main input,
+.dark-mode main textarea,
+.dark-mode main select {
+  background-color: #211a32 !important;
+  color: var(--drift-ink) !important;
+  border-color: var(--drift-border) !important;
+}
+.dark-mode main [class*="border-violet-100"],
+.dark-mode main [class*="border-violet-200"] { border-color: var(--drift-border) !important; }
+.dark-mode main [class*="bg-ink/"] { background-color: rgba(255,255,255,.055) !important; }
+.dark-mode body::before,
+.dark-mode body::after { opacity: .14; }
+
+
+/* Keep post actions readable in dark mode, including the action labels. */
+.dark-mode .dark-post-menu {
+  background: #211a32 !important;
+  color: #f1edf9 !important;
+  border-color: #4a3d63 !important;
+}
+.dark-mode .dark-post-menu button { color: #f1edf9 !important; }
+.dark-mode .dark-post-menu button:hover { background: rgba(167,139,250,.16) !important; }
+.dark-mode .dark-post-menu button span { color: #c4b5fd !important; }
+.dark-mode .dark-share-dialog {
+  background: #211a32 !important;
+  color: #f1edf9 !important;
+  border-color: #4a3d63 !important;
+}
+.dark-mode .dark-share-dialog .bg-slate-50 { background: #2b2240 !important; color: #ddd6ef !important; }
+.dark-mode .dark-share-dialog .text-slate-900 { color: #f1edf9 !important; }
+.dark-mode .dark-share-dialog .text-slate-600,
+.dark-mode .dark-share-dialog .text-slate-500 { color: #bfb4d2 !important; }
+.dark-mode .dark-share-dialog .border-slate-100,
+.dark-mode .dark-share-dialog .border-slate-200 { border-color: #403451 !important; }
+.dark-mode .dark-share-dialog label:hover { background: rgba(167,139,250,.12) !important; }
+.dark-mode .dark-share-dialog button[aria-label="Dialog schließen"]:hover { background: #3a2d52 !important; }
+
+
+/* Feed card action row: strong contrast in both themes. */
+.dark-mode main article [data-post-menu] {
+  border-color: var(--drift-border) !important;
+}
+.dark-mode main article [data-post-menu] > button:not([aria-label="Beitrag teilen"]) {
+  color: #c9bfdc !important;
+}
+.dark-mode main article [data-post-menu] > button:not([aria-label="Beitrag teilen"]):hover {
+  background: rgba(167,139,250,.14) !important;
+}
+.dark-mode main article [data-post-menu] > button[aria-label="Beitrag teilen"] {
+  color: #fff !important;
+  background: #7c3aed !important;
+}
+.dark-mode main article [data-post-menu] > button[aria-label="Beitrag teilen"]:hover {
+  background: #6d28d9 !important;
+}
+.dark-mode main article [data-post-menu] > button[aria-label="Gefällt mir"] {
+  color: #c9bfdc !important;
+}
+.dark-mode main article [data-post-menu] > button[aria-label="Gefällt mir"].text-social-pink {
+  color: #fb7185 !important;
+}
+.dark-mode main article [data-post-menu] > button[aria-label="Gefällt mir"] svg,
+.dark-mode main article [data-post-menu] > button[aria-label="Kommentare anzeigen"] svg {
+  flex-shrink: 0;
 }

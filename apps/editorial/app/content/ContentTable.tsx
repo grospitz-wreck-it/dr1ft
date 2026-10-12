@@ -14,6 +14,15 @@ const STATUS_COLORS: Record<string, string> = {
   archived: "bg-status-archived",
 };
 
+const STATUS_LABELS: Record<string, string> = {
+  draft: "Entwurf",
+  in_review: "In Prüfung",
+  approved: "Freigegeben",
+  live: "Live",
+  rejected: "Abgelehnt",
+  archived: "Archiviert",
+};
+
 const TYPE_ICONS: Record<string, any> = {
   post: FileText,
   comment: MessageSquare,
@@ -66,9 +75,9 @@ export function ContentTable({
   }
 
   return (
-    <div className="bg-panel border border-border rounded-lg overflow-hidden">
+    <div className="w-full min-w-0 max-w-full overflow-x-auto overscroll-x-contain rounded-2xl border border-slate-200/90 bg-white shadow-[0_3px_18px_rgba(15,23,42,0.025)]">
       {selected.size > 0 && (
-        <div className="flex items-center gap-3 px-4 py-2 bg-accent/5 border-b border-border text-sm">
+        <div className="flex flex-wrap items-center gap-3 border-b border-slate-200 bg-violet-50/70 px-4 py-3 text-sm">
           <span className="font-medium">{selected.size} ausgewählt</span>
           <button disabled={isPending} onClick={() => runBulk("in_review")} className="text-xs px-2 py-1 rounded border border-border hover:bg-panel">
             → Zur Prüfung
@@ -86,25 +95,25 @@ export function ContentTable({
         </div>
       )}
 
-      <table className="w-full text-sm">
+      <table className="w-full min-w-[980px] table-fixed text-sm">
         <thead>
-          <tr className="border-b border-border text-left text-slate-400 text-xs2 uppercase">
-            <th className="w-10 px-3 py-2">
+          <tr className="border-b border-slate-200 bg-slate-50/80 text-left text-[10px] font-bold uppercase tracking-[0.12em] text-slate-500">
+            <th className="w-11 px-3 py-2">
               <input type="checkbox" checked={selected.size === rows.length && rows.length > 0} onChange={toggleAll} />
             </th>
-            <th className="w-20 px-2 py-2">Medium</th>
+            <th className="w-[76px] px-2 py-2">Medium</th>
             <th className="px-2 py-2">Inhalt</th>
-            <th className="px-2 py-2 w-36">Szenario</th>
-            <th className="px-2 py-2 w-28">Creator</th>
-            <th className="px-2 py-2 w-24">Status</th>
-            <th className="px-2 py-2 w-20">Erstellt</th>
+            <th className="w-[190px] px-2 py-2">Szenario</th>
+            <th className="w-[120px] px-2 py-2">Creator</th>
+            <th className="w-[128px] px-2 py-2">Status</th>
+            <th className="w-[100px] px-2 py-2">Erstellt</th>
           </tr>
         </thead>
         <tbody>
           {rows.map((row) => {
             const Icon = TYPE_ICONS[row.type] ?? FileText;
             return (
-              <tr key={row.id} className="table-row-dense border-b border-border last:border-0 hover:bg-canvas">
+              <tr key={row.id} className="table-row-dense border-b border-slate-100 last:border-0 hover:bg-violet-50/30">
                 <td className="px-3">
                   <input type="checkbox" checked={selected.has(row.id)} onChange={() => toggle(row.id)} />
                 </td>
@@ -129,10 +138,10 @@ export function ContentTable({
                     )}
                   </a>
                 </td>
-                <td className="px-2 min-w-0">
+                <td className="min-w-0 overflow-hidden px-2">
                   <a href={hrefWith({ item: row.id })} className="block min-w-0">
                     <div className="flex items-center gap-2 min-w-0">
-                      <span className="truncate max-w-[440px]">{row.body || "—"}</span>
+                      <span className="block truncate">{row.body || "—"}</span>
                       {row.extra?.generatedBy === "ai" && (
                         <span className="hidden xl:inline-flex shrink-0 items-center gap-1 rounded-full bg-violet-50 text-violet-700 border border-violet-100 px-2 py-0.5 text-[10px] font-medium">
                           <Sparkles className="h-3 w-3" />
@@ -149,11 +158,12 @@ export function ContentTable({
                     )}
                   </a>
                 </td>
-                <td className="px-2 text-slate-500 truncate">{row.scenarios?.title ?? "— Ambient —"}</td>
+                <td className="overflow-hidden text-ellipsis whitespace-nowrap px-2 text-slate-500">{row.scenarios?.title ?? "— Ambient —"}</td>
                 <td className="px-2 text-slate-500 truncate">{row.creators?.display_name ?? "—"}</td>
                 <td className="px-2">
-                  <span className={`inline-flex items-center gap-1 text-xs2 text-white px-2 py-0.5 rounded-full ${STATUS_COLORS[row.status]}`}>
-                    {row.status}
+                  <span className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[11px] font-semibold leading-none text-white shadow-sm ${STATUS_COLORS[row.status] ?? "bg-slate-500"}`}>
+                    <span className="h-1.5 w-1.5 rounded-full bg-white/80" />
+                    {STATUS_LABELS[row.status] ?? row.status}
                   </span>
                 </td>
                 <td className="px-2 text-slate-400 text-xs2">

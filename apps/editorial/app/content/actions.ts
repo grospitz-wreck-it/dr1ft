@@ -104,3 +104,93 @@ export async function updateContentItemStatusQuick(
   if (error) throw new Error(error.message);
   revalidatePath("/content");
 }
+
+
+
+/**
+ * Regenerates a content image using the existing DR1FT Cloudflare FLUX
+ * worker and stores the result in the established ambient-assets bucket.
+ */
+export async function regenerateContentImage(id: string, instructions: string) {
+  const supabase = supabaseServerClient();
+  // Reuse the already deployed DR1FT FLUX worker and its established secret.
+  // Optional URL override remains available for staging or a future endpoint.
+  const workerUrl = process.env.CLOUDFLARE_AMBIENT_IMAGE_URL?.trim()
+    || "https://dr1ft.grospitz.workers.dev";
+  const apiKey = process.env.AMBIENT_IMAGE_API_KEY?.trim()
+    || process.env.CLOUDFLARE_AMBIENT_IMAGE_API_KEY?.trim();
+
+  if (!apiKey) {
+    throw new Error("Der Cloudflare-FLUX-Worker ist erreichbar konfigurierbar, aber das Secret AMBIENT_IMAGE_API_KEY fehlt in den Vercel-Umgebungsvariablen.");
+  }
+
+  const { data: item, error: itemError } = await supabase
+    .from("content_items")
+    .select("id, body, media_url, extra")
+    .eq("id", id)
+    .single();
+
+  if (itemError || !item) throw new Error(itemError?.message ?? "Content-Piece nicht gefunden.");
+  if (!item.media_url) throw new Error("Für dieses Content-Piece ist kein Bild hinterlegt.");
+
+  const prompt = [
+    "Create an authentic, age-appropriate image for a German media-literacy learning platform.",
+    "The image must visually match this social-media post:",
+    String(item.body ?? "").slice(0, 2000),
+    "Do not render any text, letters, captions, logos, UI text, watermarks, signs, labels, or pseudo-writing. No readable text anywhere. Do not imitate a real person's face.",
+    instructions.trim() ? `Additional editorial direction: ${instructions.trim().slice(0, 1000)}` : "",
+    "Natural smartphone photography, realistic lighting, candid everyday setting, slightly imperfect framing. Generate only the image."
+  ].filter(Boolean).join("\n\n");
+
+  const response = await fetch(workerUrl, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      "Authorization": `Bearer ${apiKey}`,
+    },
+    body: JSON.stringify({ prompt, aspectRatio: "4:5", steps: 4 }),
+    cache: "no-store",
+    signal: AbortSignal.timeout(90000),
+  });
+
+  if (!response.ok) {
+    throw new Error(`Cloudflare FLUX Fehler (${response.status}): ${(await response.text()).slice(0, 500)}`);
+  }
+
+  const result = await response.json();
+  const base64 = typeof result?.image === "string" ? result.image : null;
+  if (!base64) throw new Error("Cloudflare FLUX hat kein Bild zurückgegeben.");
+
+  const storagePath = `generated/${new Date().toISOString().slice(0, 10)}/content-${crypto.randomUUID()}.jpg`;
+  const { error: uploadError } = await supabase.storage
+    .from("ambient-assets")
+    .upload(storagePath, Buffer.from(base64, "base64"), {
+      contentType: "image/jpeg",
+      upsert: false,
+    });
+
+  if (uploadError) throw new Error(`Neues Bild konnte nicht gespeichert werden: ${uploadError.message}`);
+
+  const { data: publicUrl } = supabase.storage.from("ambient-assets").getPublicUrl(storagePath);
+  const previousExtra = item.extra && typeof item.extra === "object" ? item.extra : {};
+  const nextExtra = {
+    ...previousExtra,
+    generatedBy: "ai",
+    imageProvider: "cloudflare",
+    imageModel: "@cf/black-forest-labs/flux-2-klein-4b",
+    imageRegeneratedAt: new Date().toISOString(),
+    imagePrompt: prompt,
+  };
+
+  const { error: updateError } = await supabase
+    .from("content_items")
+    .update({ media_url: publicUrl.publicUrl, media_type: "image", extra: nextExtra })
+    .eq("id", id);
+
+  if (updateError) {
+    throw new Error(`Bild wurde gespeichert, konnte aber nicht aktiviert werden: ${updateError.message}`);
+  }
+
+  revalidatePath("/content");
+  return { mediaUrl: publicUrl.publicUrl };
+}
