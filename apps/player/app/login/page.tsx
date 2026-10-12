@@ -32,9 +32,7 @@ export default function LoginPage() {
       }
       setCheckingSession(false);
     });
-    return () => {
-      active = false;
-    };
+    return () => { active = false; };
   }, [router, supabase]);
 
   async function handleSubmit(e: React.FormEvent) {
@@ -57,66 +55,176 @@ export default function LoginPage() {
   if (checkingSession) return null;
 
   return (
-    <main className="min-h-screen px-4 py-8 text-paper sm:px-6 sm:py-12 safe-top safe-bottom">
-      <div className="mx-auto flex min-h-[calc(100vh-4rem)] w-full max-w-xl items-center justify-center">
-        <section className="w-full">
-          <header className="mb-6 flex items-center justify-between px-1">
-            <div className="flex items-center gap-3">
-              <span className="grid h-11 w-11 place-items-center rounded-[15px] bg-gradient-to-br from-fuchsia-500 via-violet-500 to-cyan-400 text-white shadow-[0_10px_28px_rgba(168,85,247,.28)]">
-                <span className="font-display text-lg font-bold tracking-[-0.08em]">d.</span>
-              </span>
-              <div>
-                <div className="font-display text-xl font-bold tracking-[-0.05em]">DR1FT</div>
-                <div className="text-[10px] font-semibold uppercase tracking-[0.18em] text-ash">Medienkompetenz</div>
-              </div>
-            </div>
-            <div className="hidden items-center gap-2 rounded-full border border-white/80 bg-white/65 px-3 py-1.5 text-[10px] font-semibold uppercase tracking-[0.14em] text-ash shadow-sm sm:flex">
-              <span className="h-2 w-2 rounded-full bg-emerald-400 shadow-[0_0_0_4px_rgba(52,211,153,.12)]" />
-              Schülerzugang
-            </div>
-          </header>
+    <main className="dr1ft-login-screen relative isolate flex min-h-[100svh] items-center justify-center overflow-hidden px-4 py-8 sm:px-8 sm:py-10 lg:px-12">
+      <div className="dr1ft-login-backdrop absolute inset-0 -z-20" aria-hidden="true" />
+      <div className="dr1ft-login-overlay absolute inset-0 -z-10" aria-hidden="true" />
 
-          <form onSubmit={handleSubmit} className="player-surface overflow-hidden rounded-[30px] p-5 sm:p-8">
-            <div className="mb-7">
-              <div className="mb-4 inline-flex items-center gap-2 rounded-full bg-gradient-to-r from-fuchsia-100 via-violet-100 to-cyan-100 px-3 py-1.5 text-[10px] font-bold uppercase tracking-[0.16em] text-violet-700">
-                <span className="h-1.5 w-1.5 rounded-full bg-fuchsia-500" />
-                Schüler-Login
-              </div>
-              <h1 className="font-display text-3xl font-bold tracking-[-0.04em] text-paper sm:text-4xl">Willkommen zurück.</h1>
-              <p className="mt-3 max-w-lg text-sm leading-6 text-ash sm:text-[15px]">
-                Melde dich mit deinem Klassen-Code, Nutzernamen und Passwort an. Danach geht es direkt in deinen Feed.
+      <div className="relative z-10 flex w-full max-w-lg flex-col items-center justify-center gap-5 sm:gap-6">
+        <header className="flex w-full flex-col items-center text-center">
+          <div className="dr1ft-login-logo-wrap mb-3 sm:mb-4" role="img" aria-label="DR1FT">
+            <img
+              src="/branding/drift-logo-transparent-horizontal-white.webp"
+              alt="DR1FT"
+              className="dr1ft-login-logo"
+              fetchPriority="high"
+            />
+          </div>
+          <p className="font-mono text-[10px] font-semibold uppercase tracking-[0.32em] text-white/80 sm:text-xs">
+            Dein Space. Deine Stimme.
+          </p>
+        </header>
+
+        <section className="mx-auto w-full max-w-[25rem]">
+          <form
+            onSubmit={handleSubmit}
+            className="dr1ft-login-card space-y-3.5 rounded-[1.5rem] p-4 sm:space-y-4 sm:p-5 md:p-6"
+          >
+            <div className="mb-1 text-center">
+              <h1 className="font-display text-xl font-bold tracking-tight text-white sm:text-2xl">
+                Willkommen bei DR1FT
+              </h1>
+              <p className="mt-1.5 text-xs leading-5 text-white/65 sm:text-sm">
+                Melde dich mit deinem Klassencode an.
               </p>
             </div>
 
-            <div className="space-y-5">
-              <label className="block">
-                <span className="mb-2 flex items-center justify-between text-[11px] font-semibold uppercase tracking-[0.12em] text-ash">
-                  Klassen-Code
-                  <span className="font-mono normal-case tracking-[0.08em] text-ash/70">z. B. AB3CD9</span>
-                </span>
-                <input value={accessCode} onChange={(e) => setAccessCode(e.target.value.toUpperCase())} placeholder="AB3CD9" autoComplete="off" required className="touch-target w-full rounded-2xl border border-violet-200 bg-white px-4 py-4 font-mono text-lg font-medium uppercase tracking-[0.22em] text-paper shadow-[0_8px_24px_rgba(62,40,104,.06)] outline-none transition placeholder:text-violet-200 focus:border-violet-400 focus:ring-4 focus:ring-violet-100" />
-              </label>
+            <label className="block space-y-1.5">
+              <span className="text-xs font-semibold text-white/85">Klassencode</span>
+              <input
+                value={accessCode}
+                onChange={(e) => setAccessCode(e.target.value.toUpperCase())}
+                placeholder="z. B. UV4JZJ"
+                autoCapitalize="characters"
+                autoComplete="off"
+                required
+                className="dr1ft-login-input w-full rounded-xl px-4 py-3 text-base outline-none transition sm:py-3.5"
+              />
+            </label>
 
-              <label className="block">
-                <span className="mb-2 block text-[11px] font-semibold uppercase tracking-[0.12em] text-ash">Nutzername</span>
-                <input value={username} onChange={(e) => setUsername(e.target.value)} placeholder="Dein Nutzername" autoComplete="username" required className="touch-target w-full rounded-2xl border border-violet-200 bg-white px-4 py-4 text-sm text-paper shadow-[0_8px_24px_rgba(62,40,104,.06)] outline-none transition placeholder:text-slate-400 focus:border-violet-400 focus:ring-4 focus:ring-violet-100" />
-              </label>
+            <label className="block space-y-1.5">
+              <span className="text-xs font-semibold text-white/85">Name</span>
+              <input
+                value={username}
+                onChange={(e) => setUsername(e.target.value)}
+                placeholder="Dein Nutzername"
+                autoComplete="username"
+                required
+                className="dr1ft-login-input w-full rounded-xl px-4 py-3 text-base outline-none transition sm:py-3.5"
+              />
+            </label>
 
-              <label className="block">
-                <span className="mb-2 block text-[11px] font-semibold uppercase tracking-[0.12em] text-ash">Passwort</span>
-                <input value={password} onChange={(e) => setPassword(e.target.value)} type="password" placeholder="Dein Passwort" autoComplete="current-password" required className="touch-target w-full rounded-2xl border border-violet-200 bg-white px-4 py-4 text-sm text-paper shadow-[0_8px_24px_rgba(62,40,104,.06)] outline-none transition placeholder:text-slate-400 focus:border-violet-400 focus:ring-4 focus:ring-violet-100" />
-              </label>
-            </div>
+            <label className="block space-y-1.5">
+              <span className="text-xs font-semibold text-white/85">Passwort</span>
+              <input
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                type="password"
+                placeholder="Dein Passwort"
+                autoComplete="current-password"
+                required
+                className="dr1ft-login-input w-full rounded-xl px-4 py-3 text-base outline-none transition sm:py-3.5"
+              />
+            </label>
 
-            {error && <p role="alert" className="mt-4 rounded-xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700">{error}</p>}
+            {error && (
+              <p role="alert" className="rounded-xl border border-rose-300/30 bg-rose-400/10 px-3 py-2.5 text-sm text-rose-200">
+                {error}
+              </p>
+            )}
 
-            <button type="submit" disabled={pending} className="mt-7 w-full rounded-2xl bg-gradient-to-r from-violet-600 via-fuchsia-500 to-cyan-400 px-5 py-4 text-sm font-bold text-white shadow-[0_12px_28px_rgba(139,92,246,.25)] transition hover:brightness-105 disabled:cursor-not-allowed disabled:opacity-60">
-              {pending ? "Meldet an…" : "Zum Feed"}
-              {!pending && <span aria-hidden="true"> →</span>}
+            <button
+              type="submit"
+              disabled={pending}
+              className="dr1ft-login-submit flex min-h-12 w-full items-center justify-center gap-2 rounded-xl px-5 py-3 text-sm font-bold text-white transition duration-200 disabled:cursor-wait disabled:opacity-60 sm:min-h-13 sm:text-base"
+            >
+              {pending ? "Du wirst angemeldet …" : "Anmelden"}
+              {!pending && <span aria-hidden="true">→</span>}
             </button>
+            <p className="pt-1 text-center text-[11px] leading-5 text-white/50">
+              Noch kein Zugang? <a href="/join" className="font-semibold text-white/70 underline decoration-white/25 underline-offset-4 transition hover:text-white">Beitreten</a>
+            </p>
           </form>
         </section>
       </div>
+      <style jsx>{`
+        .dr1ft-login-screen {
+          background: #08091e;
+          isolation: isolate;
+          padding-top: max(1.25rem, env(safe-area-inset-top));
+          padding-bottom: max(1.25rem, env(safe-area-inset-bottom));
+        }
+        .dr1ft-login-backdrop {
+          background-image: url("/branding/dr1ft-login-background.webp");
+          background-size: cover;
+          background-position: 50% 50%;
+          transform: scale(1.06);
+          animation: dr1ft-background-drift 38s ease-in-out infinite alternate;
+          will-change: transform;
+        }
+        .dr1ft-login-overlay {
+          background:
+            radial-gradient(ellipse at 50% 38%, rgba(10, 8, 32, .16) 0%, rgba(10, 8, 32, .34) 58%, rgba(7, 7, 25, .58) 100%),
+            linear-gradient(180deg, rgba(7, 7, 25, .16), rgba(7, 7, 25, .42));
+        }
+        .dr1ft-login-logo-wrap {
+          position: relative;
+          width: min(74vw, 27.9rem);
+          aspect-ratio: 3 / 1;
+          filter: drop-shadow(0 8px 30px rgba(124, 58, 237, .28));
+        }
+        .dr1ft-login-logo {
+          position: absolute;
+          inset: 0;
+          display: block;
+          width: 100%;
+          height: 100%;
+          object-fit: contain;
+        }
+        .dr1ft-login-card {
+          background: linear-gradient(145deg, rgba(14, 12, 37, .88), rgba(24, 13, 45, .84));
+          border: 1px solid rgba(196, 181, 253, .27);
+          box-shadow: 0 22px 70px rgba(3, 3, 18, .34), inset 0 1px 0 rgba(255, 255, 255, .09);
+          backdrop-filter: blur(24px);
+          -webkit-backdrop-filter: blur(24px);
+        }
+        .dr1ft-login-input {
+          color: #f8f7ff;
+          background: rgba(255, 255, 255, .075);
+          border: 1px solid rgba(196, 181, 253, .25);
+          min-height: 3rem;
+        }
+        .dr1ft-login-input::placeholder { color: rgba(226, 222, 242, .44); }
+        .dr1ft-login-input:focus {
+          border-color: #67e8f9;
+          box-shadow: 0 0 0 3px rgba(103, 232, 249, .14);
+          background: rgba(255, 255, 255, .105);
+        }
+        .dr1ft-login-submit {
+          background: linear-gradient(100deg, #c026d3 0%, #7c3aed 52%, #0891b2 100%);
+          box-shadow: 0 8px 28px rgba(124, 58, 237, .28);
+        }
+        .dr1ft-login-submit:hover:not(:disabled) {
+          filter: brightness(1.1);
+          transform: translateY(-1px);
+          box-shadow: 0 12px 32px rgba(124, 58, 237, .34);
+        }
+        @keyframes dr1ft-background-drift {
+          from { transform: scale(1.06) translate3d(-1.1%, 0, 0); }
+          to { transform: scale(1.06) translate3d(1.1%, 0, 0); }
+        }
+        @media (orientation: landscape) and (max-height: 700px) {
+          .dr1ft-login-screen { padding-top: .75rem; padding-bottom: .75rem; }
+          .dr1ft-login-logo-wrap { width: min(70vw, 21rem); margin-bottom: .4rem; }
+        }
+        @media (max-width: 639px) {
+          .dr1ft-login-overlay {
+            background: linear-gradient(180deg, rgba(7, 7, 25, .18), rgba(7, 7, 25, .5));
+          }
+        }
+        @media (prefers-reduced-motion: reduce) {
+          .dr1ft-login-backdrop { animation: none; transform: scale(1.02); }
+        }
+      `}</style>
     </main>
   );
 }
