@@ -36,7 +36,11 @@ export default async function RootLayout({
   children: React.ReactNode;
 }) {
   const requestHeaders = headers();
-  const pathname = requestHeaders.get("x-pathname") ?? "";
+  const pathname =
+    requestHeaders.get("x-pathname") ??
+    requestHeaders.get("x-matched-path") ??
+    requestHeaders.get("next-url") ??
+    "";
   const host =
     requestHeaders.get("x-dr1ft-host") ??
     requestHeaders.get("x-forwarded-host") ??
