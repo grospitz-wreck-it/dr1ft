@@ -21,7 +21,7 @@ export const INTEREST_CATALOG = {
   science_space: { label: "Wissenschaft & Weltraum", aliases: ["wissenschaft", "science", "astronomie", "weltraum", "sterne", "forschung"] },
   climate_sustainability: { label: "Klima & Nachhaltigkeit", aliases: ["klimaschutz", "nachhaltigkeit", "sustainability", "vegan", "umwelt", "aktivismus"] },
   politics_society: { label: "Politik & Gesellschaft", aliases: ["politik", "parteipolitik", "bürgerrechte", "buergerrechte", "demokratie", "protestkultur", "aktivismus", "meinungsfreiheit"] },
-  beauty_skincare: { label: "Beauty & Pflege", aliases: ["beauty", "skincare", "naturkosmetik", "gre enbeauty", "hautpflege", "glowup", "seren"] },
+  beauty_skincare: { label: "Beauty & Pflege", aliases: ["beauty", "skincare", "naturkosmetik", "greenbeauty", "hautpflege", "glowup", "seren"] },
   vehicles: { label: "Fahrzeuge & Mobilität", aliases: ["fahrzeuge", "autos", "mobilität", "mobilitaet", "tuning"] },
   building_design: { label: "Bauen & Design", aliases: ["architektur", "modellbau", "bauklötze", "baukloetze", "logik", "karten"] },
 } as const;
