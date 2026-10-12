@@ -13,6 +13,11 @@ function isPublicAuthPath(pathname: string) {
 }
 
 export async function middleware(request: NextRequest) {
+  // Public branding assets must remain reachable without an authenticated session.
+  if (request.nextUrl.pathname.startsWith("/branding/")) {
+    return NextResponse.next();
+  }
+
   request.headers.set("x-pathname", request.nextUrl.pathname);
 
   // Auth pages do not need a Supabase server client at all.
