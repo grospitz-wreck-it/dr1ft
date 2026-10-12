@@ -252,3 +252,5 @@ export type DomainEvent =
   | { type: "MissionCompleted"; userId: string; missionId: string }
   | { type: "CompetencyUpdated"; userId: string; competencyId: string; level: number }
   | { type: "FeedRefreshed"; userId: string };
+
+export * from "./interests";
