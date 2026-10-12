@@ -1,10 +1,8 @@
-// apps/admin/middleware.ts
-// Session-Refresh + Zugangsprüfung für die Redaktionsanwendung.
-
-import { createServerClient, type CookieOptions } from "@supabase/ssr";
+import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
 
 const PUBLIC_AUTH_PATHS = ["/login", "/forgot-password", "/reset-password"];
+const SCHOOL_HOST = (process.env.SCHOOL_HOST ?? "schule.dr1ft.de").toLowerCase();
 
 function isPublicAuthPath(pathname: string) {
   return PUBLIC_AUTH_PATHS.some(
@@ -12,17 +10,27 @@ function isPublicAuthPath(pathname: string) {
   );
 }
 
-export async function middleware(request: NextRequest) {
-  request.headers.set("x-pathname", request.nextUrl.pathname);
+function withRequestContext(request: NextRequest) {
+  const headers = new Headers(request.headers);
+  headers.set("x-pathname", request.nextUrl.pathname);
+  headers.set("x-dr1ft-host", request.nextUrl.hostname.toLowerCase());
+  return headers;
+}
 
-  // Auth pages do not need a Supabase server client at all.
-  // This also keeps the login/reset pages completely independent of
-  // session-cookie parsing.
-  if (isPublicAuthPath(request.nextUrl.pathname)) {
-    return NextResponse.next({ request });
+export async function middleware(request: NextRequest) {
+  const pathname = request.nextUrl.pathname;
+  const hostname = request.nextUrl.hostname.toLowerCase();
+  const isSchoolHost = hostname === SCHOOL_HOST;
+
+  if (isPublicAuthPath(pathname)) {
+    return NextResponse.next({
+      request: { headers: withRequestContext(request) },
+    });
   }
 
-  let response = NextResponse.next({ request });
+  let response = NextResponse.next({
+    request: { headers: withRequestContext(request) },
+  });
 
   const supabase = createServerClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -33,19 +41,15 @@ export async function middleware(request: NextRequest) {
           return request.cookies.getAll();
         },
         setAll(cookiesToSet) {
-          // Keep both the request and response cookies in sync. This is
-          // important when Supabase refreshes an expired session token:
-          // Server Components must see the refreshed request cookie in the
-          // same request in which middleware refreshes it.
-          cookiesToSet.forEach(({ name, value }) => {
-            request.cookies.set(name, value);
+          cookiesToSet.forEach(({ name, value }) =>
+            request.cookies.set(name, value)
+          );
+          response = NextResponse.next({
+            request: { headers: withRequestContext(request) },
           });
-
-          response = NextResponse.next({ request });
-
-          cookiesToSet.forEach(({ name, value, options }) => {
-            response.cookies.set(name, value, options);
-          });
+          cookiesToSet.forEach(({ name, value, options }) =>
+            response.cookies.set(name, value, options)
+          );
         },
       },
     }
@@ -56,28 +60,69 @@ export async function middleware(request: NextRequest) {
   } = await supabase.auth.getUser();
 
   if (!user) {
-    const loginUrl = new URL("/login", request.url);
-    loginUrl.searchParams.set("next", request.nextUrl.pathname);
-    return NextResponse.redirect(loginUrl);
+    const url = new URL("/login", request.url);
+    url.searchParams.set("next", pathname);
+    return NextResponse.redirect(url);
   }
 
-  const { data: staffRow } = await supabase
+  const { data: membership, error: membershipError } = await supabase
+    .from("school_memberships")
+    .select("school_id, role")
+    .eq("user_id", user.id)
+    .eq("active", true)
+    .in("role", ["school_admin", "school_lead"])
+    .maybeSingle();
+
+  console.error("[DR1FT SCHOOL AUTH]", {
+    hostname,
+    pathname,
+    userId: user.id,
+    userEmail: user.email,
+    membership,
+    membershipError: membershipError?.message ?? null,
+  });
+
+  if (isSchoolHost) {
+    if (!membership) {
+      const url = new URL("/login", request.url);
+      url.searchParams.set("error", "not-authorized");
+      return NextResponse.redirect(url);
+    }
+
+    const ownSchoolPath = `/schools/${membership.school_id}`;
+
+    if (pathname === "/" || pathname === "/school-admin" || pathname.startsWith("/school-admin/")) {
+      return NextResponse.redirect(new URL(ownSchoolPath, request.url));
+    }
+
+    if (pathname === ownSchoolPath) {
+      return response;
+    }
+
+    if (pathname.startsWith("/schools/")) {
+      return NextResponse.redirect(new URL(ownSchoolPath, request.url));
+    }
+
+    return NextResponse.redirect(new URL(ownSchoolPath, request.url));
+  }
+
+  const { data: staff } = await supabase
     .from("platform_staff")
     .select("user_id, role")
     .eq("user_id", user.id)
     .maybeSingle();
 
-  // platform_admin is explicitly a global editorial super-admin.
-  // Other platform_staff roles are also allowed into the editorial app.
-  if (!staffRow) {
-    const loginUrl = new URL("/login", request.url);
-    loginUrl.searchParams.set("error", "not-authorized");
-    return NextResponse.redirect(loginUrl);
+  if (staff?.role === "platform_admin") {
+    return response;
   }
 
-  return response;
+  const url = new URL("/login", request.url);
+  url.searchParams.set("error", "not-authorized");
+  return NextResponse.redirect(url);
 }
 
+// Public assets must bypass school-host authentication and host-based redirects.
+// Otherwise /branding/* requests are redirected back to the school detail route.
 export const config = {
   matcher: ["/((?!_next|favicon.ico|branding/).*)"],
 };
