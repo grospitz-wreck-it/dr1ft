@@ -55,7 +55,7 @@ export default function LoginPage() {
       <div className="dr1ft-login-overlay absolute inset-0 -z-10" aria-hidden="true" />
       <div className="relative z-10 flex w-full max-w-lg flex-col items-center gap-5 sm:gap-6">
         <header className="flex w-full flex-col items-center text-center">
-          <img src="/branding/drift-logo-transparent-vertical.webp" alt="DR1FT" className="mb-2 h-auto w-[min(52vw,12rem)] object-contain drop-shadow-[0_8px_30px_rgba(124,58,237,0.18)]" fetchPriority="high" />
+          <img src="/branding/drift-logo-transparent-horizontal-white.webp" alt="DR1FT" className="mb-2 h-auto w-[min(74vw,27.9rem)] object-contain drop-shadow-[0_8px_30px_rgba(124,58,237,0.18)]" fetchPriority="high" />
           <p className="font-mono text-[10px] font-semibold uppercase tracking-[0.32em] text-slate-500 sm:text-xs">Content Studio</p>
         </header>
         <section className="w-full max-w-[25rem]">
@@ -85,7 +85,7 @@ export default function LoginPage() {
       </div>
       <style jsx>{`
         .dr1ft-login-screen { background:#f7f8fc; isolation:isolate; }
-        .dr1ft-login-backdrop { background:radial-gradient(ellipse at 15% 10%,rgba(216,180,254,.34),transparent 38%),radial-gradient(ellipse at 85% 90%,rgba(125,211,252,.30),transparent 38%),linear-gradient(135deg,#fbfaff 0%,#f4f5ff 50%,#f0f9ff 100%); transform:scale(1.02); animation:dr1ft-background-drift 38s ease-in-out infinite alternate; will-change:transform; }
+        .dr1ft-login-backdrop { background:radial-gradient(ellipse at 15% 10%,rgba(216,180,254,.34),transparent 38%),radial-gradient(ellipse at 85% 90%,rgba(125,211,252,.30),transparent 38%),linear-gradient(135deg,#fbfaff 0%,#f4f5ff 50%,#f0f9ff 100%); background-size:130% 100%; background-position:0% 50%; transform:scale(1.02); animation:dr1ft-background-drift 38s ease-in-out infinite alternate; will-change:transform; }
         .dr1ft-login-overlay { background:radial-gradient(ellipse at 50% 38%,rgba(255,255,255,.05),rgba(255,255,255,.18)); }
         .dr1ft-login-card { background:rgba(255,255,255,.88); border:1px solid rgba(226,228,240,.95); box-shadow:0 24px 70px rgba(55,48,100,.10),inset 0 1px 0 rgba(255,255,255,.95); backdrop-filter:blur(24px); -webkit-backdrop-filter:blur(24px); }
         .dr1ft-login-input { color:#17172b; background:rgba(248,249,252,.92); border:1px solid #e1e4ef; min-height:3rem; }
@@ -93,7 +93,7 @@ export default function LoginPage() {
         .dr1ft-login-input:focus { border-color:#8b5cf6; box-shadow:0 0 0 3px rgba(139,92,246,.13); background:#fff; }
         .dr1ft-login-submit { background:linear-gradient(100deg,#c026d3 0%,#7c3aed 52%,#0891b2 100%); box-shadow:0 8px 28px rgba(124,58,237,.28); }
         .dr1ft-login-submit:hover:not(:disabled) { filter:brightness(1.1); transform:translateY(-1px); box-shadow:0 12px 32px rgba(124,58,237,.34); }
-        @keyframes dr1ft-background-drift { from {transform:scale(1.06) translate3d(-1.1%,0,0)} to {transform:scale(1.06) translate3d(1.1%,0,0)} }
+        @keyframes dr1ft-background-drift { from {transform:scale(1.06) translate3d(-1.1%,0,0);background-position:0% 50%} to {transform:scale(1.06) translate3d(1.1%,0,0);background-position:100% 50%} }
         @media (prefers-reduced-motion:reduce) { .dr1ft-login-backdrop { animation:none; transform:scale(1.02); } }
       `}</style>
     </main>
