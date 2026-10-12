@@ -44,5 +44,6 @@ export async function middleware(request: NextRequest) {
 }
 
 export const config = {
+  // Static branding lives in /public/branding and is intentionally outside auth matching.
   matcher: ["/feed/:path*", "/account/:path*", "/creator/:path*", "/messages/:path*", "/group-chat/:path*"],
 };
