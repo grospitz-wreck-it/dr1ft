@@ -84,5 +84,6 @@ export async function middleware(request: NextRequest) {
 }
 
 export const config = {
-  matcher: ["/((?!_next|favicon.ico).*)"],
+  // Never run session/role checks for public static assets such as /branding/*.webp.
+  matcher: ["/((?!_next|favicon.ico|branding/).*)"],
 };
