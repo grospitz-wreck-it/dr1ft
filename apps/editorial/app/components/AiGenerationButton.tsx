@@ -9,13 +9,17 @@ export function AiGenerationButton({
   pendingLabel,
   className = "",
   pendingSteps = [],
+  apiEndpoint,
 }: {
   idleLabel: string;
   pendingLabel: string;
   className?: string;
   pendingSteps?: string[];
+  apiEndpoint?: string;
 }) {
-  const { pending } = useFormStatus();
+  const { pending: formPending } = useFormStatus();
+  const [actionPending, setActionPending] = useState(false);
+  const pending = apiEndpoint ? actionPending : formPending;
   const [stepIndex, setStepIndex] = useState(0);
 
   useEffect(() => {
@@ -31,10 +35,31 @@ export function AiGenerationButton({
     return () => window.clearInterval(interval);
   }, [pending, pendingSteps.length]);
 
+  async function handleApiClick() {
+    if (!apiEndpoint) return;
+    try {
+      setActionPending(true);
+      const response = await fetch(apiEndpoint, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+      });
+      const result = await response.json().catch(() => ({}));
+      if (!response.ok) {
+        throw new Error(result.error || "KI-Generierung fehlgeschlagen.");
+      }
+      window.location.reload();
+    } catch (error) {
+      window.alert(error instanceof Error ? error.message : "KI-Generierung fehlgeschlagen.");
+    } finally {
+      setActionPending(false);
+    }
+  }
+
   return (
     <button
-      type="submit"
+      type={apiEndpoint ? "button" : "submit"}
       disabled={pending}
+      onClick={apiEndpoint ? handleApiClick : undefined}
       aria-busy={pending}
       className={`${className} disabled:cursor-wait disabled:opacity-70`}
     >

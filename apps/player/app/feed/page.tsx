@@ -1,5 +1,4 @@
 // apps/player/app/feed/page.tsx
-
 import { selectNextFeedItems, computeAdaptiveSignalRatio, type FeedContext } from "@dr1ft/engine-core";
 import { mapCreatorRow, type FeedItem } from "../../lib/types";
 import { supabaseServerClient } from "../../lib/supabaseServerClient";
@@ -7,155 +6,49 @@ import { FeedClient } from "./FeedClient";
 
 export default async function FeedPage() {
   const supabase = supabaseServerClient();
-
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-
-  if (!user) {
-    return (
-      <main className="min-h-screen flex items-center justify-center text-ash font-body">
-        Bitte einloggen.
-      </main>
-    );
-  }
-
-  // Freigeschaltete Szenarien über die Klassen des Nutzers
-  const { data: memberships } = await supabase
-    .from("class_memberships")
-    .select("class_id")
-    .eq("user_id", user.id);
-  const classIds = (memberships ?? []).map((m) => m.class_id);
-
-  const { data: assignments } = await supabase
-    .from("class_scenario_assignments")
-    .select("scenario_id")
-    .in("class_id", classIds.length ? classIds : ["00000000-0000-0000-0000-000000000000"]);
-  const assignedScenarioIds = Array.from(new Set((assignments ?? []).map((a) => a.scenario_id)));
-
-  // Kompetenz-Fortschritt
-  const { data: competencyProgress } = await supabase
-    .from("user_competency_progress")
-    .select("*")
-    .eq("user_id", user.id);
-
-  // Alle Kompetenzen (für die Anzeige im Panel — auch die, bei denen
-  // noch kein Fortschritt existiert, starten sichtbar bei Level 1)
-  const { data: allCompetencies } = await supabase
-    .from("competencies")
-    .select("id, title");
-
-  const progressByCompetency = new Map(
-    (competencyProgress ?? []).map((c) => [c.competency_id, c.level])
-  );
-  const competencyDisplay = (allCompetencies ?? []).map((c) => ({
-    id: c.id,
-    title: c.title,
-    level: progressByCompetency.get(c.id) ?? 1,
-  }));
-
-  // Bereits gesehene Inhalte (letzte 200, reicht für Diversitäts-Scoring)
-  const { data: recentInteractions } = await supabase
-    .from("user_interactions")
-    .select("content_item_id, interaction_type")
-    .eq("user_id", user.id)
-    .order("created_at", { ascending: false })
-    .limit(200);
-
-  const recentlySeenContentIds = (recentInteractions ?? [])
-    .filter((i) => i.interaction_type === "view")
-    .map((i) => i.content_item_id);
-
-  // Content-Pool: alle live Posts der freigeschalteten Szenarien PLUS
-  // szenario-unabhängiger Ambient-Content (scenario_id IS NULL) — siehe
-  // 0012_ambient_content.sql. Ohne Ambient-Content wäre jeder Feed-Post
-  // automatisch "verdächtig", weil er zwangsläufig zu einem Szenario gehört.
-  const scenarioFilter =
-    assignedScenarioIds.length > 0
-      ? `scenario_id.in.(${assignedScenarioIds.join(",")}),scenario_id.is.null`
-      : "scenario_id.is.null";
-
-  const { data: pool } = await supabase
-    .from("content_items")
-    .select("*, creators(id, display_name, handle, avatar_url)")
-    .eq("status", "live")
-    .eq("type", "post")
-    .or(scenarioFilter);
-
-  const { data: profile } = await supabase
-    .from("user_profiles")
-    .select("birth_year")
-    .eq("id", user.id)
-    .single();
-
-  const ageRating: FeedContext["userAgeRating"] =
-    profile?.birth_year && new Date().getFullYear() - profile.birth_year >= 16
-      ? "16_plus"
-      : "12_plus";
-
-  const ctx: FeedContext = {
-    userAgeRating: ageRating,
-    competencyProgress: (competencyProgress ?? []).map((c) => ({
-      userId: c.user_id,
-      competencyId: c.competency_id,
-      evidence: c.evidence,
-      level: c.level,
-      updatedAt: c.updated_at,
-    })),
-    recentlySeenContentIds,
-    recentTechniques: [],
-    assignedScenarioIds,
-    signalRatio: computeAdaptiveSignalRatio(
-      (competencyProgress ?? []).map((c) => ({
-        userId: c.user_id,
-        competencyId: c.competency_id,
-        evidence: c.evidence,
-        level: c.level,
-        updatedAt: c.updated_at,
-      }))
-    ),
-  };
-
-  // camelCase-Mapping (DB liefert snake_case)
-  const mappedPool: FeedItem[] = (pool ?? []).map((row: any) => ({
-    id: row.id,
-    type: row.type,
-    scenarioId: row.scenario_id,
-    creatorId: row.creator_id,
-    parentId: row.parent_id,
-    title: row.title,
-    body: row.body,
-    mediaUrl: row.media_url,
-    mediaType: row.media_type,
-    manipulationTechniques: row.manipulation_techniques ?? [],
-    targetCompetencies: row.target_competencies ?? [],
-    difficulty: row.difficulty,
-    ageRating: row.age_rating,
-    sourceRefs: row.source_refs ?? [],
-    status: row.status,
-    reviewedBy: row.reviewed_by,
-    reviewedAt: row.reviewed_at,
-    reviewNotes: row.review_notes,
-    extra: row.extra ?? {},
-    createdAt: row.created_at,
-    updatedAt: row.updated_at,
-    creator: mapCreatorRow(row.creators),
-  }));
-
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return <main className="min-h-screen flex items-center justify-center text-ash font-body">Bitte einloggen.</main>;
+  const { data: classInstanceId, error: classInstanceError } = await supabase.rpc("get_current_class_instance_id");
+  if (classInstanceError || !classInstanceId) return <main className="min-h-screen flex items-center justify-center text-ash font-body px-6 text-center">Du bist aktuell keiner DR1FT-Klasse zugeordnet.</main>;
+  const { data: assignments } = await supabase.from("class_instance_scenario_assignments").select("scenario_id").eq("class_instance_id", classInstanceId);
+  const assignedScenarioIds: string[] = Array.from(new Set<string>((assignments ?? []).map((a) => a.scenario_id)));
+  const { data: assignedScenarios } = assignedScenarioIds.length
+    ? await supabase.from("scenarios").select("id, title, description").in("id", assignedScenarioIds).order("created_at", { ascending: true })
+    : { data: [] as { id: string; title: string; description: string | null }[] };
+  const scenarioIntro = assignedScenarios?.[0] ?? null;
+  const { data: scenarioMissions } = scenarioIntro
+    ? await supabase.from("missions").select("id").eq("scenario_id", scenarioIntro.id).eq("status", "live")
+    : { data: [] as { id: string }[] };
+  const scenarioMissionIds = (scenarioMissions ?? []).map((mission) => mission.id);
+  const { data: completedScenarioMissions } = scenarioMissionIds.length
+    ? await supabase.from("user_mission_progress").select("mission_id").eq("user_id", user.id).eq("class_instance_id", classInstanceId).eq("status", "completed").in("mission_id", scenarioMissionIds)
+    : { data: [] as { mission_id: string }[] };
+  const { data: competencyProgress } = await supabase.from("user_competency_progress").select("*").eq("user_id", user.id).eq("class_instance_id", classInstanceId);
+  const { data: allCompetencies } = await supabase.from("competencies").select("id, title");
+  const progressByCompetency = new Map((competencyProgress ?? []).map((c) => [c.competency_id, c.level]));
+  const competencyDisplay = (allCompetencies ?? []).map((c) => ({ id: c.id, title: c.title, level: progressByCompetency.get(c.id) ?? 1 }));
+  const { data: currentProfile } = await supabase.from("user_profiles").select("display_name, username, avatar_seed, birth_year").eq("id", user.id).maybeSingle();
+  const { data: recentInteractions } = await supabase.from("user_interactions").select("content_item_id, interaction_type").eq("user_id", user.id).eq("class_instance_id", classInstanceId).order("created_at", { ascending: false }).limit(200);
+  const recentlySeenContentIds = (recentInteractions ?? []).filter((i) => i.interaction_type === "view").map((i) => i.content_item_id);
+  const scenarioFilter = assignedScenarioIds.length > 0 ? `scenario_id.in.(${assignedScenarioIds.join(",")}),scenario_id.is.null` : "scenario_id.is.null";
+  const { data: pool } = await supabase.from("content_items").select("*, creators(id, display_name, handle, avatar_url)").eq("status", "live").eq("type", "post").or(scenarioFilter).or(`class_instance_id.eq.${classInstanceId},class_instance_id.is.null`);
+  const contentIds = (pool ?? []).map((row: any) => row.id);
+  const { data: instanceLikes } = contentIds.length ? await supabase.from("user_interactions").select("content_item_id, user_id").eq("class_instance_id", classInstanceId).eq("interaction_type", "like").in("content_item_id", contentIds) : { data: [] as { content_item_id: string; user_id: string }[] };
+  const { data: npcLikes } = contentIds.length ? await supabase.from("npc_social_interactions").select("content_item_id").eq("class_instance_id", classInstanceId).eq("interaction_type", "like").in("content_item_id", contentIds) : { data: [] as { content_item_id: string }[] };
+  const { data: classComments } = contentIds.length ? await supabase.from("content_items").select("parent_id").eq("class_instance_id", classInstanceId).eq("type", "comment").eq("status", "live").in("parent_id", contentIds) : { data: [] as { parent_id: string }[] };
+  const likeCounts = new Map<string, number>(); const commentCounts = new Map<string, number>(); const likeUserIds: string[] = Array.from(new Set<string>((instanceLikes ?? []).map((like) => like.user_id)));
+  for (const like of instanceLikes ?? []) likeCounts.set(like.content_item_id, (likeCounts.get(like.content_item_id) ?? 0) + 1);
+  for (const like of npcLikes ?? []) likeCounts.set(like.content_item_id, (likeCounts.get(like.content_item_id) ?? 0) + 1);
+  for (const comment of classComments ?? []) if (comment.parent_id) commentCounts.set(comment.parent_id, (commentCounts.get(comment.parent_id) ?? 0) + 1);
+  const { data: socialProfiles } = likeUserIds.length ? await supabase.from("user_profiles").select("id, display_name, username, avatar_seed").in("id", likeUserIds) : { data: [] as { id: string; display_name: string | null; username: string | null; avatar_seed: string | null }[] };
+  const socialProfileById = new Map((socialProfiles ?? []).map((p) => [p.id, p])); const socialByContent = new Map<string, Array<{ id: string; displayName: string; username: string; avatarSeed: string }>>();
+  for (const like of instanceLikes ?? []) { const profile = socialProfileById.get(like.user_id); if (!profile) continue; const list = socialByContent.get(like.content_item_id) ?? []; if (!list.some((p) => p.id === profile.id)) list.push({ id: profile.id, displayName: profile.display_name ?? "DR1FT User", username: profile.username ?? "user", avatarSeed: profile.avatar_seed ?? profile.id }); socialByContent.set(like.content_item_id, list); }
+  const mappedPool: FeedItem[] = (pool ?? []).map((row: any) => ({ id: row.id, type: row.type, scenarioId: row.scenario_id, creatorId: row.creator_id, parentId: row.parent_id, title: row.title, body: row.body, mediaUrl: row.media_url, mediaType: row.media_type, manipulationTechniques: row.manipulation_techniques ?? [], targetCompetencies: row.target_competencies ?? [], difficulty: row.difficulty, ageRating: row.age_rating, sourceRefs: row.source_refs ?? [], status: row.status, reviewedBy: row.reviewed_by, reviewedAt: row.reviewed_at, reviewNotes: row.review_notes, extra: { ...(row.extra ?? {}), classLikeCount: likeCounts.get(row.id) ?? 0, classLikeUsers: socialByContent.get(row.id) ?? [], classCommentCount: commentCounts.get(row.id) ?? 0 }, createdAt: row.created_at, updatedAt: row.updated_at, creator: mapCreatorRow(row.creators) }));
+  const ageRating: FeedContext["userAgeRating"] = currentProfile?.birth_year && new Date().getFullYear() - currentProfile.birth_year >= 16 ? "16_plus" : "12_plus";
+  const progress = (competencyProgress ?? []).map((c) => ({ userId: c.user_id, competencyId: c.competency_id, evidence: c.evidence, level: c.level, updatedAt: c.updated_at }));
+  const recentTechniques = mappedPool.filter((item) => recentlySeenContentIds.includes(item.id)).flatMap((item) => item.manipulationTechniques).slice(0, 12);
+  const ctx: FeedContext = { userAgeRating: ageRating, competencyProgress: progress, recentlySeenContentIds, recentTechniques, assignedScenarioIds, signalRatio: computeAdaptiveSignalRatio(progress) };
   const items = selectNextFeedItems(mappedPool, ctx, 20) as FeedItem[];
-
-  const likedContentIds = new Set(
-    (recentInteractions ?? [])
-      .filter((i) => i.interaction_type === "like")
-      .map((i) => i.content_item_id)
-  );
-
-  return (
-    <FeedClient
-      initialItems={items}
-      userId={user.id}
-      likedContentIds={likedContentIds}
-      competencyDisplay={competencyDisplay}
-    />
-  );
+  const likedContentIds = new Set((recentInteractions ?? []).filter((i) => i.interaction_type === "like").map((i) => i.content_item_id));
+  return <FeedClient initialItems={items} userId={user.id} classInstanceId={classInstanceId} likedContentIds={likedContentIds} scenarioIntro={scenarioIntro} scenarioMissionCount={scenarioMissionIds.length} completedScenarioMissionCount={new Set((completedScenarioMissions ?? []).map((mission) => mission.mission_id)).size} profile={{ displayName: currentProfile?.display_name ?? "DR1FT User", username: currentProfile?.username ?? "user", avatarSeed: currentProfile?.avatar_seed ?? user.id }} />;
 }

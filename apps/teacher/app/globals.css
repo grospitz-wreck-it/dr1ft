@@ -21,3 +21,151 @@ body {
 .table-row-dense {
   @apply h-11;
 }
+
+
+/* Shared Editorial shell: teacher and editorial use the same chrome. */
+:root {
+  --editorial-canvas: #f5f6fa;
+  --editorial-panel: #ffffff;
+  --editorial-border: #e7e9f1;
+  --editorial-ink: #17172b;
+  --editorial-muted: #69738a;
+  --editorial-accent: #635bdf;
+}
+
+html { background: var(--editorial-canvas); }
+
+body {
+  background: var(--editorial-canvas);
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+}
+
+.editorial-sidebar {
+  background: rgba(255, 255, 255, 0.94);
+  border-right: 1px solid var(--editorial-border);
+}
+
+.editorial-brand {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 22px 20px 20px;
+  border-bottom: 1px solid var(--editorial-border);
+  text-decoration: none;
+}
+
+.editorial-brand-mark {
+  display: grid;
+  width: 40px;
+  height: 40px;
+  flex: 0 0 auto;
+  place-items: center;
+  border-radius: 13px;
+  color: white;
+  background: linear-gradient(140deg, #8b5cf6, #635bdf 58%, #4f46e5);
+  box-shadow: 0 5px 12px rgba(99, 91, 223, 0.2);
+  font-size: 18px;
+  font-weight: 800;
+  letter-spacing: -0.06em;
+}
+
+.editorial-topbar {
+  position: sticky;
+  top: 0;
+  z-index: 30;
+  display: flex;
+  min-height: 70px;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  border-bottom: 1px solid rgba(231, 233, 241, 0.9);
+  padding: 12px clamp(20px, 3vw, 42px);
+  background: rgba(255, 255, 255, 0.88);
+  backdrop-filter: blur(14px);
+}
+
+.editorial-avatar {
+  display: inline-grid;
+  width: 32px;
+  height: 32px;
+  place-items: center;
+  border: 1px solid #dedbff;
+  border-radius: 50%;
+  background: #f0eeff;
+  color: #574bd1;
+  font-size: 12px;
+  font-weight: 750;
+  cursor: pointer;
+}
+
+.editorial-nav-link {
+  position: relative;
+  display: flex;
+  min-height: 42px;
+  align-items: center;
+  gap: 11px;
+  border-radius: 10px;
+  padding: 0 12px;
+  color: #59647a;
+  font-size: 12px;
+  font-weight: 550;
+  text-decoration: none;
+  transition: background-color 140ms ease, color 140ms ease;
+}
+
+.editorial-nav-link:hover { background: #f5f5fb; color: #282444; }
+.editorial-nav-link-active { color: #4f46c8; background: #efedff; font-weight: 650; }
+.editorial-nav-link-active:hover { background: #e9e6ff; color: #4338ca; }
+.editorial-nav-indicator {
+  width: 5px;
+  height: 5px;
+  border-radius: 999px;
+  background: #6d5dfc;
+  box-shadow: 0 0 0 3px rgba(109, 93, 252, 0.1);
+}
+
+.editorial-main { min-height: 100vh; }
+.editorial-content { min-width: 0; padding: clamp(20px, 3vw, 40px); }
+.editorial-content > * { max-width: 1440px; margin-left: auto; margin-right: auto; }
+
+@media (max-width: 900px) {
+  .editorial-sidebar { width: 208px; }
+  .editorial-content { padding: 20px; }
+}
+
+@media (max-width: 680px) {
+  .editorial-sidebar {
+    position: static;
+    width: 100%;
+    height: auto;
+    border-right: 0;
+    border-bottom: 1px solid var(--editorial-border);
+  }
+  .editorial-brand { padding: 14px 16px; }
+  .editorial-topbar { min-height: 58px; padding: 10px 16px; }
+  .editorial-content { padding: 16px; }
+}
+
+
+/* Public auth pages must escape the teacher dashboard shell completely. */
+body:has(.dr1ft-login-screen) .editorial-sidebar,
+body:has(.dr1ft-login-screen) .editorial-topbar {
+  display: none !important;
+}
+body:has(.dr1ft-login-screen) .editorial-main {
+  width: 100% !important;
+  min-height: 100svh;
+  margin-left: 0 !important;
+}
+body:has(.dr1ft-login-screen) .editorial-content {
+  width: 100% !important;
+  max-width: none !important;
+  min-height: 100svh;
+  margin: 0 !important;
+  padding: 0 !important;
+}
+body:has(.dr1ft-login-screen) .editorial-content > * {
+  max-width: none !important;
+  margin: 0 !important;
+}

@@ -96,31 +96,31 @@ export default async function ContentLibraryPage({ searchParams }: Props) {
   }
 
   return (
-    <div className="flex">
-      <div className="flex-1 min-w-0 px-6 py-5">
-        <div className="flex items-center justify-between mb-4">
-          <h1 className="text-lg font-semibold text-slate-900">
-            Content-Bibliothek
-            <span className="text-slate-400 font-normal ml-2 text-sm">
-              {count ?? 0} Einträge
-            </span>
-          </h1>
-        </div>
+    <div className="min-w-0">
+      <div className="min-w-0 flex-1">
+        <header className="mb-6 flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
+          <div>
+            <div className="mb-2 inline-flex items-center gap-2 rounded-full border border-violet-200 bg-violet-50 px-3 py-1.5 text-[11px] font-bold uppercase tracking-[0.14em] text-violet-700">Content-Verwaltung</div>
+            <h1 className="text-3xl font-bold tracking-tight text-slate-950 sm:text-[34px]">Content-Bibliothek</h1>
+            <p className="mt-2 text-sm text-slate-500">Inhalte durchsuchen, prüfen und ihren Freigabestatus verwalten.</p>
+          </div>
+          <div className="inline-flex items-center gap-2 self-start rounded-xl border border-slate-200 bg-white px-4 py-3 sm:self-auto"><span className="text-2xl font-bold tracking-tight text-slate-950">{count ?? 0}</span><span className="text-xs font-medium text-slate-500">Einträge<br />gefunden</span></div>
+        </header>
 
         {/* Filterleiste — natives GET-Formular, kein Client-JS nötig */}
         <form
           method="GET"
           action="/content"
-          className="flex flex-wrap items-center gap-2 mb-4 bg-panel border border-border rounded-lg p-3"
+          className="mb-5 flex flex-wrap items-center gap-2.5 rounded-2xl border border-slate-200/90 bg-white p-4 shadow-[0_3px_18px_rgba(15,23,42,0.025)] sm:p-5"
         >
           <input
             type="text"
             name="q"
             defaultValue={searchParams.q}
             placeholder="Volltextsuche…"
-            className="border border-border rounded-md px-3 py-1.5 text-sm flex-1 min-w-[180px]"
+            className="min-w-[180px] flex-1 rounded-lg border border-slate-200 px-3 py-2 text-sm"
           />
-          <select name="status" defaultValue={searchParams.status ?? ""} className="border border-border rounded-md px-2 py-1.5 text-sm">
+          <select name="status" defaultValue={searchParams.status ?? ""} className="rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-700">
             <option value="">Alle Status</option>
             {STATUS_OPTIONS.map((s) => (
               <option key={s} value={s}>{s}</option>
@@ -149,9 +149,9 @@ export default async function ContentLibraryPage({ searchParams }: Props) {
             name="technique"
             defaultValue={searchParams.technique}
             placeholder="Technik-Tag…"
-            className="border border-border rounded-md px-3 py-1.5 text-sm w-40"
+            className="w-40 rounded-lg border border-slate-200 px-3 py-2 text-sm"
           />
-          <button type="submit" className="bg-accent hover:bg-accent-hover text-white text-sm px-4 py-1.5 rounded-md">
+          <button type="submit" className="rounded-lg bg-accent px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-accent-hover">
             Filtern
           </button>
           {(searchParams.q || searchParams.status || searchParams.type || searchParams.scenario || searchParams.technique || searchParams.media) && (
@@ -164,7 +164,7 @@ export default async function ContentLibraryPage({ searchParams }: Props) {
         <ContentTable rows={rows ?? []} searchParams={searchParams} />
 
         {/* Pagination */}
-        <div className="flex items-center justify-between mt-4 text-sm text-slate-500">
+        <div className="mt-4 flex items-center justify-between gap-3 text-sm text-slate-500">
           <span>
             {count ? from + 1 : 0}–{Math.min(to + 1, count ?? 0)} von {count ?? 0}
           </span>
@@ -172,7 +172,7 @@ export default async function ContentLibraryPage({ searchParams }: Props) {
             <a
               href={page > 1 ? hrefWith({ page: String(page - 1) }) : undefined}
               aria-disabled={page <= 1}
-              className={`px-3 py-1 rounded-md border border-border ${page <= 1 ? "opacity-40 pointer-events-none" : "hover:bg-panel"}`}
+              className={`rounded-lg border border-slate-200 bg-white px-3 py-2 transition ${page <= 1 ? "pointer-events-none opacity-40" : "hover:bg-slate-50"}`}
             >
               Zurück
             </a>
@@ -180,7 +180,7 @@ export default async function ContentLibraryPage({ searchParams }: Props) {
             <a
               href={page < totalPages ? hrefWith({ page: String(page + 1) }) : undefined}
               aria-disabled={page >= totalPages}
-              className={`px-3 py-1 rounded-md border border-border ${page >= totalPages ? "opacity-40 pointer-events-none" : "hover:bg-panel"}`}
+              className={`rounded-lg border border-slate-200 bg-white px-3 py-2 transition ${page >= totalPages ? "pointer-events-none opacity-40" : "hover:bg-slate-50"}`}
             >
               Weiter
             </a>

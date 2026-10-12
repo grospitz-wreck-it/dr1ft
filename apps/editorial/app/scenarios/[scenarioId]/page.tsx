@@ -1,10 +1,14 @@
 import type { ReactNode } from "react";
-import { ArrowLeft, CheckCircle2, FileText, Flag, Route, Sparkles, Users } from "lucide-react";
+import { ArrowLeft, FileText, Flag, Route, Sparkles, Users } from "lucide-react";
 import { supabaseServerClient } from "../../../lib/supabaseServerClient";
-import { createContentItem, generateScenarioContent, optimizeScenarioBasics, optimizeScenarioFlow, toggleScenarioActive, updateArcDraft, updateMissionDraft, updateScenarioBasics } from "../actions";
+import { createContentItem, generateScenarioContent, optimizeScenarioBasics, toggleScenarioActive, updateScenarioBasics } from "../actions";
 import { ContentStatusControl } from "./ContentStatusControl";
 import { AiGenerationButton } from "../../components/AiGenerationButton";
-import { estimateSessionDuration } from "@dr1ft/engine-core";
+import { LearningDesignStudio } from "./LearningDesignStudio";
+import { LearningStepEditor } from "./LearningStepEditor";
+import { ContentComposer } from "./ContentComposer";
+import { ContentAttachmentEditor } from "./ContentAttachmentEditor";
+import { regenerateLearningImage, rejectLearningImage } from "../learning-content-actions";
 
 interface Props {
   params: { scenarioId: string };
@@ -18,11 +22,6 @@ const AGE_LABELS: Record<string, string> = {
   "18_plus": "18+",
 };
 
-const EVENT_LABELS: Record<string, string> = {
-  PostViewed: "Post angesehen",
-  CommentCreated: "Kommentar geschrieben",
-  NpcReplySelected: "NPC-Antwort gewählt",
-};
 
 const STATUS_LABELS: Record<string, string> = {
   draft: "Entwurf",
@@ -54,6 +53,7 @@ export default async function ScenarioDetailPage({ params, searchParams = {} }: 
     { data: possibleParents },
     { data: missions },
     { data: arcs },
+    { data: latestLearningDesign },
   ] = await Promise.all([
     supabase.from("scenarios").select("id, title, age_band, age_rating, status, is_active").eq("scenario_group", group).order("age_band"),
     supabase.from("content_items").select("*").eq("scenario_id", scenarioId).order("created_at", { ascending: false }),
@@ -62,26 +62,47 @@ export default async function ScenarioDetailPage({ params, searchParams = {} }: 
     supabase.from("content_items").select("id, body, scenario_id").eq("type", "post").or(`scenario_id.eq.${scenarioId},scenario_id.is.null`),
     supabase.from("missions").select("*").eq("scenario_id", scenarioId).order("created_at"),
     supabase.from("story_arcs").select("*").eq("scenario_id", scenarioId).order("created_at"),
+    supabase.from("learning_designs").select("id,version,status,title,description,primary_learning_model,bloom_target,pedagogical_warnings").eq("scenario_id", scenarioId).order("version", { ascending: false }).limit(1).maybeSingle(),
   ]);
+
+  const learningDesignId = latestLearningDesign?.id ?? null;
+  const [{ data: learningSteps }, { data: frameworkMappings }, { data: learningObjectives }] = learningDesignId
+    ? await Promise.all([
+        supabase.from("learning_steps").select("*").eq("learning_design_id", learningDesignId).order("step_index"),
+        supabase.from("framework_mappings").select("id,framework,dimension_label,rationale,source_title,source_url").eq("learning_design_id", learningDesignId).order("framework"),
+        supabase.from("learning_objectives").select("id,title").eq("learning_design_id", learningDesignId).order("priority"),
+      ])
+    : [{ data: [] }, { data: [] }, { data: [] }];
+
+  const learningStepIds = (learningSteps ?? []).map((step) => step.id);
+  const [{ data: learningStepObjectiveMappings }, { data: learningStepCompetencyMappings }, { data: learningStepMissionMappings }, { data: learningEvidenceIndicators }, { data: learningStepContentMappings }] = learningStepIds.length
+    ? await Promise.all([
+        supabase.from("learning_step_objectives").select("learning_step_id,learning_objective_id").in("learning_step_id", learningStepIds),
+        supabase.from("learning_step_competencies").select("learning_step_id,competency_id").in("learning_step_id", learningStepIds),
+        supabase.from("learning_step_missions").select("learning_step_id,mission_id").in("learning_step_id", learningStepIds),
+        supabase.from("evidence_indicators").select("*").in("learning_step_id", learningStepIds).order("created_at"),
+        supabase.from("learning_step_content").select("learning_step_id,content_item_id,role,sort_order").in("learning_step_id", learningStepIds).order("sort_order"),
+      ])
+    : [{ data: [] }, { data: [] }, { data: [] }, { data: [] }, { data: [] }];
+
+  const learningStepCompetencyIds = Array.from(
+    new Set(
+      (learningSteps ?? []).reduce<string[]>((ids, step) => {
+        if (Array.isArray(step.competency_ids)) ids.push(...step.competency_ids);
+        return ids;
+      }, [])
+    )
+  );
+  const { data: learningStepCompetencies } = learningStepCompetencyIds.length
+    ? await supabase.from("competencies").select("id,title").in("id", learningStepCompetencyIds)
+    : { data: [] };
+  const learningObjectiveLabels = Object.fromEntries((learningObjectives ?? []).map((objective) => [objective.id, objective.title]));
+  const learningCompetencyLabels = Object.fromEntries((learningStepCompetencies ?? []).map((competency) => [competency.id, competency.title]));
 
   const arcIds = (arcs ?? []).map((arc) => arc.id);
   const { data: steps } = arcIds.length
     ? await supabase.from("story_arc_steps").select("*").in("arc_id", arcIds).order("order_index")
     : { data: [] };
-
-  const missionById = new Map((missions ?? []).map((mission) => [mission.id, mission]));
-  const activeArc = arcs?.[0] ?? null;
-  const activeSteps = (steps ?? []).filter((step) => step.arc_id === activeArc?.id);
-  const durationEstimate = estimateSessionDuration(
-    Number(scenario.target_duration_minutes ?? 25),
-    (contentItems ?? []).map((item) => ({
-      id: item.id,
-      type: item.type,
-      body: item.body,
-      mediaType: item.media_type,
-      engagementProfile: item.engagement_profile,
-    })),
-  );
 
   const grouped = STATUS_ORDER.map((status) => ({
     status,
@@ -106,7 +127,7 @@ export default async function ScenarioDetailPage({ params, searchParams = {} }: 
               <h1 className="text-2xl font-semibold text-slate-900 mt-2">{scenario.title}</h1>
               <p className="text-sm text-slate-500 mt-2 max-w-3xl">{scenario.description}</p>
               <div className="mt-3 inline-flex items-center gap-2 rounded-lg bg-accent/5 px-2.5 py-1.5 text-[11px] font-medium text-accent">
-                <Sparkles className="w-3 h-3" /> KI-Assistent für Grundlage, Ablauf und Inhalte aktiv
+                <Sparkles className="w-3 h-3" /> KI-Assistent für Grundlage, Lernschritt und Inhalte aktiv
               </div>
               <div className="mt-4 flex flex-wrap items-center gap-2">
                 <details>
@@ -165,129 +186,39 @@ export default async function ScenarioDetailPage({ params, searchParams = {} }: 
           </section>
         )}
 
-        <section className="bg-white border border-slate-200 rounded-2xl p-5 shadow-sm">
-          <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
-            <div>
-              <div className="text-xs font-semibold uppercase tracking-wider text-slate-500">Sessiondauer</div>
-              <div className="mt-1 flex items-baseline gap-2">
-                <span className="text-2xl font-semibold text-slate-900">{durationEstimate.expectedMinutes.toFixed(1).replace(".", ",")} Min.</span>
-                <span className="text-xs text-slate-400">erwartet</span>
-              </div>
-              <div className="text-xs text-slate-500 mt-1">Ziel: {scenario.target_duration_minutes ?? 25} Min. · {contentItems?.length ?? 0} Inhalte</div>
-            </div>
-            <div className="min-w-[220px] md:w-72">
-              <div className="flex justify-between text-[11px] text-slate-500 mb-1">
-                <span>Content-Abdeckung</span>
-                <span>{Math.round(durationEstimate.coverage * 100)} %</span>
-              </div>
-              <div className="h-2 rounded-full bg-slate-100 overflow-hidden">
-                <div className="h-full rounded-full bg-accent" style={{ width: Math.min(100, Math.round(durationEstimate.coverage * 100)) + "%" }} />
-              </div>
-              <div className="text-[11px] text-slate-400 mt-1">
-                {durationEstimate.deltaSeconds >= 0
-                  ? "ca. " + Math.round(durationEstimate.deltaSeconds / 60) + " Min. über Ziel"
-                  : "ca. " + Math.ceil(Math.abs(durationEstimate.deltaSeconds) / 60) + " Min. fehlen"}
-              </div>
-            </div>
-          </div>
-        </section>
+        <LearningDesignStudio scenarioId={scenarioId} latestDesign={latestLearningDesign} />
+
+        {latestLearningDesign && (
+          <LearningStepEditor
+            scenarioId={scenarioId}
+            designId={latestLearningDesign.id}
+            steps={learningSteps ?? []}
+            mappings={frameworkMappings ?? []}
+            competencyLabels={learningCompetencyLabels}
+            objectiveLabels={learningObjectiveLabels}
+            availableObjectives={learningObjectives ?? []}
+            availableCompetencies={competencies ?? []}
+            availableMissions={missions ?? []}
+            objectiveMappings={learningStepObjectiveMappings ?? []}
+            competencyMappings={learningStepCompetencyMappings ?? []}
+            missionMappings={learningStepMissionMappings ?? []}
+            evidenceIndicators={learningEvidenceIndicators ?? []}
+            contentMappings={learningStepContentMappings ?? []}
+            contentItems={contentItems ?? []}
+          />
+        )}
 
         <section className="grid md:grid-cols-4 gap-3">
-          <SummaryCard icon={<Route className="w-4 h-4" />} label="Ablauf" value={activeSteps.length ? `${activeSteps.length} Schritte` : "Noch leer"} />
+          <SummaryCard icon={<Route className="w-4 h-4" />} label="Lernschritte" value={learningSteps?.length ? `${learningSteps.length} Schritte` : "Noch leer"} />
           <SummaryCard icon={<Flag className="w-4 h-4" />} label="Missionen" value={`${missions?.length ?? 0}`} />
           <SummaryCard icon={<FileText className="w-4 h-4" />} label="Inhalte" value={`${contentItems?.length ?? 0}`} />
           <SummaryCard icon={<Users className="w-4 h-4" />} label="Status" value={scenario.is_active ? "Aktiv" : "Entwurf"} />
         </section>
 
-        <section className="bg-white border border-slate-200 rounded-2xl p-6 shadow-sm">
-          <SectionHeader icon={<Route className="w-4 h-4" />} title="Ablauf" subtitle="Die Redaktion denkt in Lernschritten. Missionen und Story-Arc liegen technisch darunter." />
-          {activeArc ? (
-            <div className="mt-5">
-              <div className="flex flex-wrap items-center justify-between gap-3 mb-4">
-                <div className="text-xs text-slate-500">Bestehenden Ablauf verbessern oder einen fehlenden Ablauf mit Missionen erzeugen.</div>
-                <form action={optimizeScenarioFlow.bind(null, scenarioId)}>
-                  <AiGenerationButton
-                    idleLabel="Ablauf mit KI optimieren"
-                    pendingLabel="Ablauf wird optimiert …"
-                    className="inline-flex items-center gap-1.5 rounded-lg bg-accent px-3 py-2 text-xs font-semibold text-white hover:bg-accent-hover"
-                    pendingSteps={["Ablauf analysieren …", "Missionen neu strukturieren …", "Entwurf speichern …"]}
-                  />
-                </form>
-              </div>
-              <details className="mb-4">
-                <summary className="cursor-pointer text-sm font-semibold text-slate-900">{activeArc.title} bearbeiten</summary>
-                <form action={updateArcDraft.bind(null, activeArc.id, scenarioId)} className="mt-3 grid gap-2 max-w-2xl">
-                  <input name="title" defaultValue={activeArc.title} className="rounded-xl border border-slate-200 px-3 py-2 text-sm" />
-                  <textarea name="description" defaultValue={activeArc.description ?? ""} rows={3} className="rounded-xl border border-slate-200 px-3 py-2 text-sm" />
-                  <button className="justify-self-start rounded-xl bg-slate-900 text-white px-3 py-2 text-xs font-semibold">Ablauf speichern</button>
-                </form>
-              </details>
-              {activeSteps.length ? (
-                <ol className="space-y-2">
-                  {activeSteps.map((step, index) => {
-                    const mission = missionById.get(step.mission_id);
-                    if (!mission) return null;
-                    return (
-                      <li key={step.id} className="flex items-center gap-3 rounded-xl border border-slate-200 px-4 py-3">
-                        <span className="w-7 h-7 rounded-full bg-slate-100 flex items-center justify-center text-xs font-semibold text-slate-500">{index + 1}</span>
-                        <div className="flex-1 min-w-0">
-                          <div className="text-sm font-medium text-slate-800">{mission.title}</div>
-                          <div className="text-xs text-slate-500 mt-0.5">{mission.description}</div>
-                          <details className="mt-2">
-                            <summary className="cursor-pointer text-[11px] font-semibold text-accent">Bearbeiten</summary>
-                            <form action={updateMissionDraft.bind(null, mission.id, scenarioId)} className="mt-2 grid gap-2">
-                              <input name="title" defaultValue={mission.title} className="rounded-lg border border-slate-200 px-2 py-1.5 text-xs" />
-                              <textarea name="description" defaultValue={mission.description ?? ""} rows={2} className="rounded-lg border border-slate-200 px-2 py-1.5 text-xs" />
-                              <button className="justify-self-start rounded-lg bg-slate-900 text-white px-2.5 py-1.5 text-[11px] font-semibold">Speichern</button>
-                            </form>
-                          </details>
-                        </div>
-                        <span className="text-[11px] rounded-full bg-slate-100 px-2 py-1 text-slate-500">
-                          {EVENT_LABELS[mission.trigger_condition?.event] ?? "Lernaktion"}
-                        </span>
-                      </li>
-                    );
-                  })}
-                </ol>
-              ) : (
-                <div className="rounded-xl border border-dashed border-slate-300 p-6 text-center text-sm text-slate-500">
-                  Noch keine Schritte. Ergänze den Ablauf direkt in diesem Szenario.
-                </div>
-              )}
-            </div>
-          ) : (
-            <div className="mt-5 rounded-xl border border-dashed border-slate-300 p-7 text-center">
-              <p className="text-sm font-medium text-slate-700">Noch kein Ablauf vorhanden</p>
-              <p className="text-xs text-slate-500 mt-1">Die KI kann aus der Szenario-Grundlage direkt einen ersten Ablauf mit Missionen erstellen.</p>
-              <form action={optimizeScenarioFlow.bind(null, scenarioId)} className="mt-4">
-                <AiGenerationButton
-                  idleLabel="Ersten Ablauf mit KI erstellen"
-                  pendingLabel="Ablauf wird erstellt …"
-                  className="inline-flex items-center gap-1.5 rounded-lg bg-accent px-3 py-2 text-xs font-semibold text-white hover:bg-accent-hover"
-                  pendingSteps={["Szenario analysieren …", "Ablauf und Missionen entwerfen …", "Entwurf speichern …"]}
-                />
-              </form>
-            </div>
-          )}
-          <div className="mt-4 flex items-center justify-between">
-            <span className="text-[11px] text-slate-400">Missionen und Ablauf bleiben als Entwurf bearbeitbar.</span>
-            <span className="inline-flex items-center gap-1.5 text-xs font-semibold text-slate-500">
-              Redaktioneller Draft <CheckCircle2 className="w-3.5 h-3.5" />
-            </span>
-          </div>
-        </section>
-
-        <section className="bg-white border border-slate-200 rounded-2xl p-6 shadow-sm">
+                <section className="bg-white border border-slate-200 rounded-2xl p-6 shadow-sm">
           <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3">
             <SectionHeader icon={<FileText className="w-4 h-4" />} title="Inhalte" subtitle="Posts, Kommentare, DMs und Reflexionen für diese Altersvariante." />
-            <form action={generateScenarioContent.bind(null, scenarioId)}>
-              <AiGenerationButton
-                idleLabel="Mit KI ergänzen"
-                pendingLabel="Inhalte werden erzeugt …"
-                className="shrink-0 inline-flex items-center gap-1.5 rounded-lg border border-accent/30 bg-accent/5 px-3 py-2 text-xs font-semibold text-accent hover:bg-accent/10"
-                pendingSteps={["Ablauf auswerten …", "Inhalte formulieren …", "Drafts speichern …"]}
-              />
-            </form>
+            <ContentComposer scenarioId={scenarioId} />
           </div>
 
           {grouped.length > 0 ? (
@@ -297,10 +228,76 @@ export default async function ScenarioDetailPage({ params, searchParams = {} }: 
                   <div className="text-xs font-semibold uppercase tracking-wider text-slate-500 mb-2">{STATUS_LABELS[group.status] ?? group.status} · {group.items.length}</div>
                   <ul className="space-y-2">
                     {group.items.map((item) => (
-                      <li key={item.id} className="border border-slate-200 rounded-xl p-3">
-                        <p className="text-sm text-slate-900">{item.body}</p>
-                        <p className="text-xs text-slate-400 mt-1">{item.type} · {item.age_rating} · Schwierigkeit {item.difficulty}</p>
-                        <div className="mt-2"><ContentStatusControl contentItemId={item.id} status={item.status} /></div>
+                      <li key={item.id} className="border border-slate-200 rounded-xl overflow-hidden">
+                        {item.media_url && item.media_type === "image" && (
+                          <div className="bg-slate-100">
+                            <img src={item.media_url} alt="" className="w-full max-h-[420px] object-cover" />
+                          </div>
+                        )}
+                        {item.media_url && item.media_type === "video" && videoEmbedUrl(item.media_url) ? (
+                          <div className="aspect-video bg-slate-100">
+                            <iframe src={videoEmbedUrl(item.media_url)!} title="Video" className="w-full h-full" allow="autoplay; encrypted-media; picture-in-picture" allowFullScreen />
+                          </div>
+                        ) : item.media_url && item.media_type === "video" ? (
+                          <div className="bg-black">
+                            <video src={item.media_url} controls playsInline preload="metadata" className="w-full max-h-[420px]" />
+                          </div>
+                        ) : null}
+                        {item.extra?.embed?.url && (
+                          <div className="aspect-video bg-slate-100">
+                            <iframe src={item.extra.embed.url} title="Eingebettetes Video" className="w-full h-full" allowFullScreen />
+                          </div>
+                        )}
+                        <div className="p-3">
+                          <p className="text-sm text-slate-900">{item.body}</p>
+                          <p className="text-xs text-slate-400 mt-1">{item.type} · {item.age_rating} · Schwierigkeit {item.difficulty}</p>
+
+                          {item.media_url && item.media_type === "image" && (
+                            <div className="mt-3 rounded-xl bg-slate-50 border border-slate-200 p-3">
+                              <div className="flex items-center justify-between gap-3">
+                                <div>
+                                  <div className="text-xs font-semibold text-slate-700">Bildredaktion</div>
+                                  <div className="text-[11px] text-slate-500 mt-0.5">
+                                    {item.extra?.imageGeneration?.editorialReview === "rejected"
+                                      ? "Bild abgelehnt · Neugenerierung möglich"
+                                      : "Bild wartet auf redaktionelle Prüfung"}
+                                    {item.extra?.imageGeneration?.generationCount
+                                      ? " · Generation " + item.extra.imageGeneration.generationCount
+                                      : ""}
+                                  </div>
+                                </div>
+                                <div className="text-[10px] text-slate-400">
+                                  {item.extra?.imageGeneration?.provider ?? "AI"}
+                                </div>
+                              </div>
+
+                              <form action={regenerateLearningImage.bind(null, item.id, scenarioId)} className="mt-3 flex flex-col sm:flex-row gap-2">
+                                <input
+                                  name="feedback"
+                                  placeholder="Optional: Was soll beim neuen Bild anders sein?"
+                                  className="flex-1 rounded-lg border border-slate-200 bg-white px-2.5 py-2 text-[11px]"
+                                />
+                                <button type="submit" className="rounded-lg bg-slate-900 text-white px-3 py-2 text-[11px] font-semibold">
+                                  Bild neu generieren
+                                </button>
+                              </form>
+
+                              <form action={rejectLearningImage.bind(null, item.id, scenarioId)} className="mt-2">
+                                <input
+                                  name="editorialFeedback"
+                                  placeholder="Bei Ablehnung Feedback eintragen"
+                                  className="w-full rounded-lg border border-slate-200 bg-white px-2.5 py-2 text-[11px]"
+                                />
+                                <p className="text-[10px] text-slate-400 mt-1">
+                                  Die Ablehnung wird gespeichert; anschließend kann das Bild mit neuem Feedback erzeugt werden.
+                                </p>
+                              </form>
+                            </div>
+                          )}
+
+                          <ContentAttachmentEditor scenarioId={scenarioId} contentItemId={item.id} />
+                          <div className="mt-2"><ContentStatusControl contentItemId={item.id} status={item.status} /></div>
+                        </div>
                       </li>
                     ))}
                   </ul>
@@ -359,6 +356,38 @@ export default async function ScenarioDetailPage({ params, searchParams = {} }: 
       </div>
     </div>
   );
+}
+
+function videoEmbedUrl(value: string) {
+  try {
+    const url = new URL(value.trim());
+    const host = url.hostname.toLowerCase();
+    const parts = url.pathname.split("/").filter(Boolean);
+
+    if (host === "youtu.be") {
+      const id = parts[0];
+      return id ? "https://www.youtube.com/embed/" + id : null;
+    }
+
+    if (host.includes("youtube.com")) {
+      if (parts[0] === "embed" && parts[1]) return "https://www.youtube.com/embed/" + parts[1];
+      if (parts[0] === "shorts" && parts[1]) return "https://www.youtube.com/embed/" + parts[1];
+      const id = url.searchParams.get("v");
+      return id ? "https://www.youtube.com/embed/" + id : null;
+    }
+
+    if (host.includes("vimeo.com")) {
+      if (host === "player.vimeo.com" && parts[0] === "video" && parts[1]) {
+        return "https://player.vimeo.com/video/" + parts[1];
+      }
+      const id = parts.pop();
+      return id && /^\d+$/.test(id) ? "https://player.vimeo.com/video/" + id : null;
+    }
+
+    return null;
+  } catch {
+    return null;
+  }
 }
 
 function SummaryCard({ icon, label, value }: { icon: ReactNode; label: string; value: string }) {

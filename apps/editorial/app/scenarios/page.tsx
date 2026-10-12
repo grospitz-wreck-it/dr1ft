@@ -70,29 +70,47 @@ export default async function ScenariosPage({
     : null;
 
   return (
-    <div className="min-h-screen bg-slate-50 px-6 py-6">
-      <div className="max-w-6xl mx-auto space-y-7">
+    <div className="space-y-8">
+      <div className="max-w-[1440px] space-y-8">
         <header className="flex flex-col lg:flex-row lg:items-end lg:justify-between gap-5">
           <div>
-            <div className="flex items-center gap-2 text-accent text-xs font-semibold uppercase tracking-widest mb-2">
+            <div className="mb-3 inline-flex items-center gap-2 rounded-full border border-violet-200 bg-violet-50 px-3 py-1.5 text-[11px] font-bold uppercase tracking-[0.14em] text-violet-700">
               <BookOpen className="w-4 h-4" /> Lernfälle
             </div>
-            <h1 className="text-3xl font-semibold tracking-tight text-slate-900">Szenarien</h1>
-            <p className="text-slate-500 mt-2 max-w-2xl">
+            <h1 className="text-3xl font-bold tracking-tight text-slate-950 sm:text-[34px]">Szenario-Studio</h1>
+            <p className="mt-2 max-w-2xl text-sm leading-6 text-slate-500">
               Ein Thema, mehrere Altersvarianten. Die redaktionelle Oberfläche führt dich vom
               Lernziel über den Ablauf bis zu Missionen und Inhalten.
             </p>
           </div>
           <a
             href="#scenario-studio"
-            className="inline-flex items-center justify-center gap-2 rounded-xl bg-accent px-4 py-2.5 text-sm font-semibold text-white hover:bg-accent-hover"
+            className="inline-flex items-center justify-center gap-2 rounded-xl bg-accent px-4 py-3 text-sm font-semibold text-white shadow-sm transition hover:bg-accent-hover hover:shadow-md"
           >
             <Sparkles className="w-4 h-4" /> Mit KI entwerfen
           </a>
         </header>
 
-        <section id="scenario-studio" className="bg-white border border-slate-200 rounded-2xl shadow-sm overflow-hidden">
-          <div className="px-6 py-5 border-b border-slate-100">
+        <section aria-label="Szenario-Überblick" className="grid gap-3 sm:grid-cols-3">
+          <div className="rounded-2xl border border-slate-200/90 bg-white p-4 shadow-[0_3px_18px_rgba(15,23,42,0.025)] sm:p-5">
+            <div className="flex items-center justify-between gap-3"><span className="text-xs font-semibold text-slate-500">Szenario-Themen</span><span className="grid h-9 w-9 place-items-center rounded-xl bg-violet-50 text-violet-600"><BookOpen className="h-4 w-4" /></span></div>
+            <div className="mt-3 text-2xl font-bold tracking-tight text-slate-950">{families.length}</div>
+            <p className="mt-1 text-xs text-slate-500">Thematische Szenario-Familien</p>
+          </div>
+          <div className="rounded-2xl border border-slate-200/90 bg-white p-4 shadow-[0_3px_18px_rgba(15,23,42,0.025)] sm:p-5">
+            <div className="flex items-center justify-between gap-3"><span className="text-xs font-semibold text-slate-500">Altersvarianten</span><span className="grid h-9 w-9 place-items-center rounded-xl bg-sky-50 text-sky-600"><Users className="h-4 w-4" /></span></div>
+            <div className="mt-3 text-2xl font-bold tracking-tight text-slate-950">{rows.length}</div>
+            <p className="mt-1 text-xs text-slate-500">Versionen für unterschiedliche Zielgruppen</p>
+          </div>
+          <div className="rounded-2xl border border-slate-200/90 bg-white p-4 shadow-[0_3px_18px_rgba(15,23,42,0.025)] sm:p-5">
+            <div className="flex items-center justify-between gap-3"><span className="text-xs font-semibold text-slate-500">Lernmissionen</span><span className="grid h-9 w-9 place-items-center rounded-xl bg-emerald-50 text-emerald-600"><Route className="h-4 w-4" /></span></div>
+            <div className="mt-3 text-2xl font-bold tracking-tight text-slate-950">{(missions ?? []).length}</div>
+            <p className="mt-1 text-xs text-slate-500">Missionen über alle Szenarien</p>
+          </div>
+        </section>
+
+        <section id="scenario-studio" className="overflow-hidden rounded-2xl border border-slate-200/90 bg-white shadow-[0_4px_24px_rgba(15,23,42,0.035)]">
+          <div className="border-b border-slate-100 px-6 py-5 sm:px-7">
             <div className="flex items-start gap-3">
               <div className="w-9 h-9 rounded-xl bg-violet-50 text-violet-600 flex items-center justify-center shrink-0">
                 <Sparkles className="w-4 h-4" />
@@ -107,7 +125,7 @@ export default async function ScenariosPage({
             </div>
           </div>
 
-          <form action={generateScenarioDraft} className="p-6 grid lg:grid-cols-[1.15fr_.85fr] gap-6">
+          <form action={generateScenarioDraft} className="grid gap-7 p-6 lg:grid-cols-[1.15fr_.85fr] lg:p-7">
             <div className="space-y-5">
               <div>
                 <label className="block text-xs font-semibold text-slate-600 mb-2">THEMA</label>
@@ -174,10 +192,10 @@ export default async function ScenariosPage({
               <div className="grid sm:grid-cols-2 gap-3">
                 <div>
                   <label className="block text-xs font-semibold text-slate-600 mb-2">UMFANG</label>
-                  <select name="duration" defaultValue="25" className="w-full rounded-xl border border-slate-200 px-3 py-2.5 text-sm">
-                    <option value="15">15 Minuten · kompakt</option>
-                    <option value="25">25 Minuten · normal</option>
-                    <option value="35">35 Minuten · ausführlich</option>
+                  <select name="duration" defaultValue="standard" className="w-full rounded-xl border border-slate-200 px-3 py-2.5 text-sm">
+                    <option value="short">Kurz · 5–10 Min.</option>
+                    <option value="standard">Standard · 15–20 Min.</option>
+                    <option value="intensive">Intensiv · 25–35 Min.</option>
                   </select>
                 </div>
                 <div>
@@ -228,14 +246,14 @@ export default async function ScenariosPage({
         <section>
           <div className="flex items-center justify-between mb-3">
             <div>
-              <h2 className="font-semibold text-slate-900">Deine Szenarien</h2>
-              <p className="text-xs text-slate-500 mt-1">{families.length} Themen · {rows.length} Altersvarianten</p>
+              <h2 className="text-lg font-bold tracking-tight text-slate-950">Szenario-Bibliothek</h2>
+              <p className="mt-1 text-sm text-slate-500">Alle Themen, Altersvarianten und zugehörigen Lerninhalte im Überblick.</p>
             </div>
           </div>
 
           <div className="space-y-3">
             {families.map((family) => (
-              <article key={family.key} className="bg-white border border-slate-200 rounded-2xl p-5 shadow-sm">
+              <article key={family.key} className="rounded-2xl border border-slate-200/90 bg-white p-5 shadow-[0_3px_18px_rgba(15,23,42,0.03)] transition hover:border-slate-300 hover:shadow-sm sm:p-6">
                 <div className="flex flex-col xl:flex-row xl:items-start xl:justify-between gap-5">
                   <div className="min-w-0">
                     <h3 className="text-base font-semibold text-slate-900">{family.title}</h3>
@@ -252,7 +270,7 @@ export default async function ScenariosPage({
                       <a
                         key={variant.id}
                         href={`/scenarios/${variant.id}`}
-                        className="group rounded-xl border border-slate-200 px-3 py-2 hover:border-accent hover:bg-accent/5 min-w-[115px]"
+                        className="group min-w-[115px] rounded-xl border border-slate-200 bg-white px-3 py-2.5 transition hover:border-violet-300 hover:bg-violet-50/70"
                       >
                         <div className="text-xs font-semibold text-slate-800">{AGE_BANDS.find(([value]) => value === variant.age_band)?.[1] ?? variant.age_rating}</div>
                         <div className="text-[11px] text-slate-400 mt-0.5">{STATUS[variant.status ?? "draft"] ?? "Entwurf"}</div>

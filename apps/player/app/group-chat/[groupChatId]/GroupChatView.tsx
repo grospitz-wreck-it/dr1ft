@@ -14,7 +14,15 @@ import { Skeleton } from "../../../components/Skeleton";
 
 const REVEAL_DELAY_MS = 900;
 
-export function GroupChatView({ messages, userId }: { messages: FeedItem[]; userId: string }) {
+export function GroupChatView({
+  messages,
+  userId,
+  classInstanceId,
+}: {
+  messages: FeedItem[];
+  userId: string;
+  classInstanceId: string;
+}) {
   const supabase = supabaseBrowserClient();
   const [visibleCount, setVisibleCount] = useState(Math.min(1, messages.length));
 
@@ -28,6 +36,7 @@ export function GroupChatView({ messages, userId }: { messages: FeedItem[]; user
           userId,
           contentItemId: msg.id,
           interactionType: "view",
+          classInstanceId,
         });
       }
     }, REVEAL_DELAY_MS);

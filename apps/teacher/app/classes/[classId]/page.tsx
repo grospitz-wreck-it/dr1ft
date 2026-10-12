@@ -1,133 +1,476 @@
-// apps/teacher/app/classes/[classId]/page.tsx
-
 import { supabaseServerClient } from "../../../lib/supabaseServerClient";
 import { ScenarioToggle } from "./ScenarioToggle";
-import { ResetPasswordButton } from "./ResetPasswordButton";
-import { AddStudentForm } from "./AddStudentForm";
-import { CopyAccessCodeButton } from "./CopyAccessCodeButton";
+import { StudentRoster } from "./StudentRoster";
+import { updateClassDetails } from "../actions";
+import ClassImageWorkspace from "./ClassImageWorkspace";
+import { ClassStatusSelect } from "./ClassStatusSelect";
 
-interface Props { params: { classId: string } }
-
-const EVENT_LABELS: Record<string, string> = {
-  PostViewed: "Post ansehen",
-  CommentCreated: "Kommentar schreiben",
-  NpcReplySelected: "NPC-Antwort wählen",
-};
-
-export default async function ClassDetailPage({ params }: Props) {
+export default async function ClassDetailPage({
+  params,
+}: {
+  params: { classId: string };
+}) {
   const supabase = supabaseServerClient();
   const { classId } = params;
 
-  const { data: classInfo } = await supabase
-    .from("classes")
-    .select("id, name, access_code, is_active, grade_level")
+  const {
+    data: instance,
+  } = await supabase
+    .from("class_instances")
+    .select(
+      "id,name,access_code,is_active,status,grade_level,school_year,school_id,class_image_path,class_image_position_x,class_image_position_y,class_image_zoom",
+    )
     .eq("id", classId)
     .maybeSingle();
 
-  const { data: roster } = await supabase
-    .from("class_memberships")
-    .select("user_id, role, user_profiles(display_name)")
-    .eq("class_id", classId);
+  if (!instance) {
+    return (
+      <main className="min-h-screen bg-canvas">
+        <div className="mx-auto max-w-7xl px-6 py-10 lg:px-8">
+          <a
+            href="/classes"
+            className="text-sm text-slate-500 hover:text-slate-900"
+          >
+            ← Meine Klassen
+          </a>
 
-  const students = (roster ?? []).filter((r: any) => r.role === "student");
-  const { data: allScenarios } = await supabase.from("scenarios").select("*");
-  const { data: assignments } = await supabase
-    .from("class_scenario_assignments")
-    .select("scenario_id, pacing_mode")
-    .eq("class_id", classId);
-  const assignedIds = new Set((assignments ?? []).map((a) => a.scenario_id));
-  const pacingByScenario = new Map((assignments ?? []).map((a) => [a.scenario_id, a.pacing_mode]));
-  const assignedScenarioIds = Array.from(assignedIds);
-  const { data: missions } = assignedScenarioIds.length
-    ? await supabase.from("missions").select("*, scenarios(title)").in("scenario_id", assignedScenarioIds).eq("status", "live")
-    : { data: [] };
+          <div className="mt-6 rounded-2xl border border-border bg-white p-8">
+            <h1 className="text-lg font-semibold text-slate-950">
+              Klasseninstanz nicht gefunden
+            </h1>
+            <p className="mt-2 text-sm text-slate-500">
+              Die Klasse existiert nicht oder du hast keinen Zugriff darauf.
+            </p>
+          </div>
+        </div>
+      </main>
+    );
+  }
+
+  const [
+    { data: roster },
+    { data: scenarios },
+    { data: assignments },
+    { data: school },
+    { data: userResult },
+  ] = await Promise.all([
+    supabase
+      .from("class_instance_memberships")
+      .select(
+        "user_id,role,left_at,user_profiles(display_name,username,avatar_seed)",
+      )
+      .eq("class_instance_id", classId)
+      .is("left_at", null),
+
+    supabase
+      .from("scenarios")
+      .select("id,title,age_rating")
+      .order("title"),
+
+    supabase
+      .from("class_instance_scenario_assignments")
+      .select("scenario_id,pacing_mode,scenarios(title)")
+      .eq("class_instance_id", classId),
+
+    instance.school_id
+      ? supabase
+          .from("schools")
+          .select(
+            "id,name,region,school_image_path,school_image_position_x,school_image_position_y,school_image_zoom",
+          )
+          .eq("id", instance.school_id)
+          .maybeSingle()
+      : Promise.resolve({ data: null }),
+
+    supabase.auth.getUser(),
+  ]);
+
+  const user = userResult.user;
+
+  const teacherMembership = user
+    ? await supabase
+        .from("class_instance_memberships")
+        .select("id")
+        .eq("class_instance_id", classId)
+        .eq("user_id", user.id)
+        .eq("role", "teacher")
+        .is("left_at", null)
+        .maybeSingle()
+    : { data: null };
+
+  const canEditClassImage = Boolean(teacherMembership.data);
+
+  let classImageUrl: string | null = null;
+
+  if (canEditClassImage && instance.class_image_path) {
+    const { data } = await supabase.storage
+      .from("class-images")
+      .createSignedUrl(instance.class_image_path, 60 * 60);
+
+    classImageUrl = data?.signedUrl ?? null;
+  }
+
+  const students = (roster ?? [])
+    .filter((row: any) => row.role === "student")
+    .map((row: any) => ({
+      user_id: row.user_id,
+      display_name: row.user_profiles?.display_name ?? null,
+      username: row.user_profiles?.username ?? null,
+      avatar_seed: row.user_profiles?.avatar_seed ?? null,
+    }));
+
+  const activeAssignment = (assignments ?? [])[0] as any;
 
   const { data: session } = await supabase.auth.getSession();
-  const dashboardRes = await fetch(`${process.env.NEXT_PUBLIC_SUPABASE_URL}/functions/v1/teacher-dashboard`, {
-    method: "POST",
-    headers: { Authorization: `Bearer ${session.session?.access_token}`, "Content-Type": "application/json" },
-    body: JSON.stringify({ classId }),
-  });
-  const dashboard = await dashboardRes.json();
 
-  const studentRows = new Map<string, { name: string; competencies: Record<string, number>; completed: number; total: number }>();
-  (dashboard.studentCompetencyProgress ?? []).forEach((row: any) => {
-    if (!studentRows.has(row.user_id)) studentRows.set(row.user_id, { name: row.display_name, competencies: {}, completed: 0, total: 0 });
-    if (row.competency_title) studentRows.get(row.user_id)!.competencies[row.competency_title] = row.level ?? 1;
-  });
-  (dashboard.studentMissionProgress ?? []).forEach((row: any) => {
-    if (!studentRows.has(row.user_id)) studentRows.set(row.user_id, { name: row.display_name, competencies: {}, completed: 0, total: 0 });
-    const entry = studentRows.get(row.user_id)!;
-    entry.completed = Number(row.missions_completed);
-    entry.total = Number(row.missions_total);
-  });
-  const allCompetencyTitles = Array.from(new Set((dashboard.studentCompetencyProgress ?? []).map((r: any) => r.competency_title).filter(Boolean)));
+  let dashboard: any = {};
 
-  if (!classInfo) return <div className="px-6 py-5 text-sm text-slate-500">Klasse nicht gefunden.</div>;
+  if (session.session?.access_token) {
+    const dashboardRes = await fetch(
+      `${process.env.NEXT_PUBLIC_SUPABASE_URL}/functions/v1/teacher-dashboard`,
+      {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${session.session.access_token}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ classId }),
+        cache: "no-store",
+      },
+    );
+
+    dashboard = await dashboardRes.json().catch(() => ({}));
+  }
+
+  const competencyRows = dashboard.studentCompetencyProgress ?? [];
+  const missionRows = dashboard.studentMissionProgress ?? [];
+
+  const levels = competencyRows
+    .map((row: any) => Number(row.level ?? 0))
+    .filter((level: number) => level > 0);
+
+  const average = levels.length
+    ? levels.reduce((a: number, b: number) => a + b, 0) / levels.length
+    : null;
+
+  const completed = missionRows.reduce(
+    (sum: number, row: any) => sum + Number(row.missions_completed ?? 0),
+    0,
+  );
+
+  const total = missionRows.reduce(
+    (sum: number, row: any) => sum + Number(row.missions_total ?? 0),
+    0,
+  );
+
+  // The existing, class-scoped dashboard RPC reports mission progress for
+  // the currently assigned module. Do not infer historical progress for
+  // modules that are not assigned.
+  const studentsWithMissionData = missionRows.filter(
+    (row: any) => Number(row.missions_total ?? 0) > 0,
+  );
+  const studentsWithCompletedModule = studentsWithMissionData.filter(
+    (row: any) => Number(row.missions_completed ?? 0) >= Number(row.missions_total ?? 0),
+  ).length;
+  const activeModuleStatus =
+    !activeAssignment || total === 0
+      ? "Noch nicht begonnen"
+      : completed >= total
+        ? "Abgeschlossen"
+        : completed > 0
+          ? "In Bearbeitung"
+          : "Noch nicht begonnen";
+  const activeModuleReport = total > 0
+    ? `${completed} von ${total} Mission-Abschlüssen über alle Schüler:innen · ${studentsWithCompletedModule} von ${studentsWithMissionData.length} Schüler:innen haben alle Missionen abgeschlossen`
+    : "Noch keine auswertbaren Missionsfortschritte vorhanden.";
+
+  const status =
+    instance.status ??
+    (instance.is_active ? "active" : "paused");
+
+  const schoolImageUrl = school?.school_image_path
+    ? `${process.env.NEXT_PUBLIC_SUPABASE_URL}/storage/v1/object/public/school-images/${school.school_image_path}`
+    : null;
+
+  const heroImageUrl = classImageUrl ?? schoolImageUrl;
+
+  const heroPositionX =
+    classImageUrl
+      ? instance.class_image_position_x ?? 50
+      : school?.school_image_position_x ?? 50;
+
+  const heroPositionY =
+    classImageUrl
+      ? instance.class_image_position_y ?? 50
+      : school?.school_image_position_y ?? 50;
+
+  const heroZoom =
+    classImageUrl
+      ? instance.class_image_zoom ?? 1
+      : school?.school_image_zoom ?? 1;
 
   return (
-    <div className="px-6 py-5 max-w-4xl space-y-8">
-      <header className="space-y-4">
-        <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-          <div>
-            <p className="text-xs2 font-medium uppercase tracking-wide text-slate-400">Klasse</p>
-            <h1 className="text-2xl font-semibold text-slate-900">{classInfo.name}</h1>
-            {classInfo.grade_level && <p className="text-sm text-slate-500">Jahrgang {classInfo.grade_level}</p>}
+    <main className="min-h-screen bg-canvas">
+      <div className="mx-auto w-full max-w-7xl px-6 pb-12 pt-8 lg:px-8">
+        <a
+          href="/classes"
+          className="inline-flex items-center text-sm text-slate-500 transition hover:text-slate-900"
+        >
+          ← Meine Klassen
+        </a>
+
+        <ClassImageWorkspace
+          classId={classId}
+          className={instance.name}
+          gradeLevel={instance.grade_level}
+          schoolYear={instance.school_year}
+          heroImageUrl={heroImageUrl}
+          heroPositionX={heroPositionX}
+          heroPositionY={heroPositionY}
+          heroZoom={heroZoom}
+          classImagePath={instance.class_image_path}
+          classImageUrl={classImageUrl}
+          classImagePositionX={instance.class_image_position_x ?? 50}
+          classImagePositionY={instance.class_image_position_y ?? 50}
+          classImageZoom={instance.class_image_zoom ?? 1}
+          canEditClassImage={canEditClassImage}
+        />
+
+        <section className="mt-6 overflow-hidden rounded-2xl border border-border bg-white">
+          <div className="grid divide-y divide-border sm:grid-cols-2 sm:divide-x sm:divide-y-0 lg:grid-cols-4">
+            <Metric label="Schüler:innen" value={students.length} />
+            <Metric
+              label="Aktives Modul"
+              value={activeAssignment?.scenarios?.title ?? "Keines"}
+            />
+            <Metric
+              label="Ø Kompetenz"
+              value={average === null ? "—" : `${average.toFixed(1)} / 5`}
+            />
+            <Metric
+              label="Missionen"
+              value={total ? `${completed}/${total}` : "—"}
+            />
           </div>
-          <span className={`text-xs px-2.5 py-1 rounded-full ${classInfo.is_active ? "bg-status-live text-white" : "bg-slate-200 text-slate-600"}`}>{classInfo.is_active ? "aktiv" : "inaktiv"}</span>
-        </div>
+        </section>
 
-        <div className="bg-panel border border-border rounded-lg p-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-          <div>
-            <p className="text-xs2 font-medium uppercase tracking-wide text-slate-400">Schüler-Zugangscode</p>
-            <p className="mt-1 text-2xl font-mono font-semibold tracking-[0.18em] text-slate-900">{classInfo.access_code}</p>
-            <p className="mt-1 text-xs text-slate-500">Mit diesem Code können Schüler:innen selbst beitreten.</p>
+        <section className="mt-6 rounded-2xl border border-border bg-white">
+          <div className="border-b border-border px-6 py-5">
+            <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+              <div>
+                <p className="text-xs font-semibold uppercase tracking-[0.14em] text-accent">
+                  Klassenprofil
+                </p>
+
+                <h2 className="mt-1.5 text-lg font-semibold text-slate-950">
+                  Klasse bearbeiten
+                </h2>
+
+                <p className="mt-1 text-sm text-slate-500">
+                  Name, Jahrgang und Schuljahr können jederzeit angepasst werden.
+                </p>
+              </div>
+
+              <div className="shrink-0">
+                <p className="mb-1.5 text-xs font-medium text-slate-400">
+                  Status
+                </p>
+                <ClassStatusSelect
+                  classId={classId}
+                  status={
+                    status === "paused" || status === "ended"
+                      ? status
+                      : "active"
+                  }
+                />
+              </div>
+            </div>
           </div>
-          <CopyAccessCodeButton code={classInfo.access_code} />
+
+          <form
+            action={updateClassDetails.bind(null, classId)}
+            className="grid gap-4 p-6 sm:grid-cols-3"
+          >
+            <label className="text-sm font-medium text-slate-700">
+              Klassenname
+              <input
+                name="name"
+                defaultValue={instance.name}
+                required
+                className="mt-1.5 w-full rounded-lg border border-border px-3 py-2.5 text-sm"
+              />
+            </label>
+
+            <label className="text-sm font-medium text-slate-700">
+              Jahrgang
+              <input
+                name="gradeLevel"
+                type="number"
+                min={1}
+                max={13}
+                defaultValue={instance.grade_level ?? ""}
+                placeholder="Jahrgang"
+                className="mt-1.5 w-full rounded-lg border border-border px-3 py-2.5 text-sm"
+              />
+            </label>
+
+            <label className="text-sm font-medium text-slate-700">
+              Schuljahr
+              <input
+                name="schoolYear"
+                defaultValue={instance.school_year}
+                required
+                className="mt-1.5 w-full rounded-lg border border-border px-3 py-2.5 text-sm"
+              />
+            </label>
+
+            <button className="sm:col-span-3 justify-self-start rounded-lg bg-violet-600 px-4 py-2.5 text-sm font-medium text-white transition hover:bg-violet-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-violet-400 focus-visible:ring-offset-2">
+              Änderungen speichern
+            </button>
+          </form>
+        </section>
+
+        <section className="mt-6 overflow-hidden rounded-2xl border border-border bg-white">
+          <div className="border-b border-border px-6 py-5">
+            <p className="text-xs font-semibold uppercase tracking-[0.14em] text-accent">
+              Lerninhalt
+            </p>
+
+            <h2 className="mt-1.5 text-lg font-semibold text-slate-950">
+              Modul für diese Klasse
+            </h2>
+
+            <p className="mt-1 text-sm text-slate-500">
+              Immer genau ein Modul aktiv. Vorhandene Lernfortschritte bleiben
+              beim Wechsel erhalten.
+            </p>
+          </div>
+
+          <ul className="divide-y divide-border">
+            {(scenarios ?? []).map((scenario: any) => (
+              <ScenarioToggle
+                key={scenario.id}
+                classId={classId}
+                scenarioId={scenario.id}
+                title={scenario.title}
+                ageRating={scenario.age_rating}
+                initiallyAssigned={
+                  activeAssignment?.scenario_id === scenario.id
+                }
+                initialPacingMode={
+                  activeAssignment?.pacing_mode ?? "compact"
+                }
+                moduleStatus={activeAssignment?.scenario_id === scenario.id ? activeModuleStatus : "Nicht zugewiesen"}
+                moduleReport={activeAssignment?.scenario_id === scenario.id ? activeModuleReport : undefined}
+              />
+            ))}
+          </ul>
+        </section>
+
+        <div className="mt-6">
+          <StudentRoster
+            classId={classId}
+            initialStudents={students}
+          />
         </div>
-      </header>
 
-      <section>
-        <h2 className="text-sm font-medium text-slate-500 uppercase text-xs2 mb-2">Module &amp; Missionen dieser Klasse</h2>
-        <div className="bg-panel border border-border rounded-lg divide-y divide-border">
-          {missions?.map((m: any) => <div key={m.id} className="px-4 py-3 flex justify-between items-start text-sm"><div><p className="font-medium text-slate-900">{m.title}</p><p className="text-xs2 text-slate-400">{m.scenarios?.title}</p></div><span className="text-xs2 text-slate-500">{EVENT_LABELS[m.trigger_condition?.event] ?? m.trigger_condition?.event} × {m.trigger_condition?.count ?? 1}</span></div>)}
-          {(!missions || missions.length === 0) && <p className="px-4 py-3 text-sm text-slate-400">Noch keine Module für die freigeschalteten Szenarien.</p>}
-        </div>
-      </section>
+        <section className="mt-6 overflow-hidden rounded-2xl border border-border bg-white">
+          <div className="border-b border-border px-6 py-5">
+            <p className="text-xs font-semibold uppercase tracking-[0.14em] text-accent">
+              DR1FT Insights
+            </p>
 
-      <section>
-        <h2 className="text-sm font-medium text-slate-500 uppercase text-xs2 mb-2">Wo gibt es Schwierigkeiten</h2>
-        <p className="text-xs2 text-slate-400 mb-2">Missionen mit der niedrigsten Abschlussquote in dieser Klasse — mögliche Curriculum-Stellen, die im Unterricht nachbesprochen werden sollten.</p>
-        <div className="bg-panel border border-border rounded-lg divide-y divide-border">
-          {dashboard.missionBottlenecks?.slice(0, 5).map((row: any) => <div key={row.mission_id} className="px-4 py-3 flex justify-between items-center text-sm"><span className="text-slate-900">{row.mission_title}</span><span className={`text-xs2 px-2 py-0.5 rounded-full text-white ${row.completion_rate < 0.4 ? "bg-status-rejected" : row.completion_rate < 0.7 ? "bg-status-review" : "bg-status-live"}`}>{Math.round(row.completion_rate * 100)}% ({row.completed_count}/{row.student_count})</span></div>)}
-          {(!dashboard.missionBottlenecks || dashboard.missionBottlenecks.length === 0) && <p className="px-4 py-3 text-sm text-slate-400">Noch keine Daten.</p>}
-        </div>
-      </section>
+            <h2 className="mt-1.5 text-lg font-semibold text-slate-950">
+              Klassenanalyse
+            </h2>
 
-      <section>
-        <h2 className="text-sm font-medium text-slate-500 uppercase text-xs2 mb-2">Kompetenzentwicklung (Klassendurchschnitt)</h2>
-        <div className="bg-panel border border-border rounded-lg divide-y divide-border">
-          {dashboard.competencyOverview?.map((row: any) => <div key={row.competency_id} className="px-4 py-2 flex justify-between text-sm"><span className="text-slate-700">{row.competency_title}</span><span className="text-slate-500">Ø {row.avg_level} / 5 ({row.student_count} Schüler:innen)</span></div>)}
-        </div>
-      </section>
+            <p className="mt-1 text-sm text-slate-500">
+              Kompetenzen und Missionen – nur für die Lehrkraft dieser Klasse.
+            </p>
+          </div>
 
-      <section>
-        <h2 className="text-sm font-medium text-slate-500 uppercase text-xs2 mb-2">Fortschritt pro Schüler:in</h2>
-        <p className="text-xs2 text-slate-400 mb-2">Nur für dich sichtbar. Zeigt Kompetenz-Level und Missions-Fortschritt — keine Einzelauswertung, welcher Post angeklickt/geliked wurde.</p>
-        <div className="bg-panel border border-border rounded-lg overflow-x-auto"><table className="w-full text-sm"><thead><tr className="border-b border-border text-left text-slate-400 text-xs2 uppercase"><th className="px-4 py-2">Schüler:in</th>{allCompetencyTitles.map((t) => <th key={t as string} className="px-3 py-2">{t as string}</th>)}<th className="px-3 py-2">Missionen</th></tr></thead><tbody>{Array.from(studentRows.values()).map((s, i) => <tr key={i} className="border-b border-border last:border-0"><td className="px-4 py-2 text-slate-900">{s.name}</td>{allCompetencyTitles.map((t) => <td key={t as string} className="px-3 py-2 text-slate-500">{s.competencies[t as string] ?? "—"}/5</td>)}<td className="px-3 py-2 text-slate-500">{s.completed}/{s.total}</td></tr>)}{studentRows.size === 0 && <tr><td colSpan={2 + allCompetencyTitles.length} className="px-4 py-4 text-center text-slate-400">Noch keine Daten.</td></tr>}</tbody></table></div>
-      </section>
+          <div className="grid gap-px bg-border lg:grid-cols-2">
+            <Panel title="Kompetenzentwicklung">
+              {dashboard.competencyOverview?.length ? (
+                dashboard.competencyOverview.map((row: any) => (
+                  <div
+                    key={row.competency_id}
+                    className="flex justify-between bg-white px-5 py-3 text-sm"
+                  >
+                    <span>{row.competency_title}</span>
+                    <span className="text-slate-500">
+                      Ø {row.avg_level} / 5
+                    </span>
+                  </div>
+                ))
+              ) : (
+                <div className="bg-white p-5 text-sm text-slate-400">
+                  Noch keine Daten.
+                </div>
+              )}
+            </Panel>
 
-      <section>
-        <h2 className="text-sm font-medium text-slate-500 uppercase text-xs2 mb-2">Freigeschaltete Szenarien</h2>
-        <ul className="bg-panel border border-border rounded-lg divide-y divide-border">{allScenarios?.map((s) => <ScenarioToggle key={s.id} classId={classId} scenarioId={s.id} title={s.title} ageRating={s.age_rating} initiallyAssigned={assignedIds.has(s.id)} initialPacingMode={(pacingByScenario.get(s.id) as "compact" | "as_designed") ?? "compact"} />)}</ul>
-      </section>
+            <Panel title="Wo gibt es Schwierigkeiten">
+              {dashboard.missionBottlenecks?.slice(0, 5).length ? (
+                dashboard.missionBottlenecks
+                  .slice(0, 5)
+                  .map((row: any) => (
+                    <div
+                      key={row.mission_id}
+                      className="flex justify-between bg-white px-5 py-3 text-sm"
+                    >
+                      <span>{row.mission_title}</span>
+                      <span>
+                        {Math.round(
+                          Number(row.completion_rate ?? 0) * 100,
+                        )}{" "}
+                        %
+                      </span>
+                    </div>
+                  ))
+              ) : (
+                <div className="bg-white p-5 text-sm text-slate-400">
+                  Noch keine Daten.
+                </div>
+              )}
+            </Panel>
+          </div>
+        </section>
 
-      <section>
-        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between mb-2"><div><h2 className="text-sm font-medium text-slate-500 uppercase text-xs2">Klassenmitglieder</h2><p className="text-xs2 text-slate-400 mt-1">{students.length} Schüler:in{students.length === 1 ? "" : "nen"}</p></div><AddStudentForm classId={classId} /></div>
-        <ul className="bg-panel border border-border rounded-lg divide-y divide-border">{roster?.map((r: any) => <li key={r.user_id} className="px-4 py-3 text-sm flex items-center justify-between gap-3"><span className="text-slate-700">{r.user_profiles?.display_name ?? "—"} · {r.role}</span>{r.role === "student" && <ResetPasswordButton studentUserId={r.user_id} classId={classId} />}</li>)}{(!roster || roster.length === 0) && <li className="px-4 py-4 text-sm text-slate-400">Noch keine Klassenmitglieder.</li>}</ul>
-      </section>
 
-      <p className="text-xs2 text-slate-400">Jahrgangsweite Auswertung? Falls diese Klasse einen Jahrgang hat: <a href={`/grades/lookup?classId=${classId}`} className="text-accent hover:text-accent-hover">zur Jahrgangs-Übersicht</a></p>
+      </div>
+    </main>
+  );
+}
+
+function Metric({
+  label,
+  value,
+}: {
+  label: string;
+  value: string | number;
+}) {
+  return (
+    <div className="rounded-2xl bg-slate-50 p-4">
+      <p className="text-xs text-slate-400">{label}</p>
+      <p className="mt-2 truncate text-xl font-semibold">{value}</p>
+    </div>
+  );
+}
+
+function Panel({
+  title,
+  children,
+}: {
+  title: string;
+  children: React.ReactNode;
+}) {
+  return (
+    <div>
+      <div className="border-b border-border bg-white px-5 py-4">
+        <h3 className="text-sm font-semibold">{title}</h3>
+      </div>
+      {children}
     </div>
   );
 }

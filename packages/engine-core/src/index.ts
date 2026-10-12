@@ -5,4 +5,3 @@ export * from "./recordInteraction";
 export * from "./analyticsEngine";
 export * from "./npcEngine";
 export * from "./narrativeEngine";
-export * from "./sessionDurationEngine";

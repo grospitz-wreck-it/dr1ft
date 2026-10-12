@@ -3,6 +3,7 @@
 import { ChevronLeft } from "lucide-react";
 import { supabaseServerClient } from "../../../lib/supabaseServerClient";
 import { mapCreatorRow, type FeedItem } from "../../../lib/types";
+import { getCurrentClassInstanceId } from "../../../lib/currentClassInstance";
 import { GroupChatView } from "./GroupChatView";
 
 interface Props {
@@ -52,7 +53,17 @@ export default async function GroupChatPage({ params }: Props) {
   if (!user) {
     return (
       <main className="min-h-screen bg-ink flex items-center justify-center">
-        <p className="text-ash text-sm">Bitte einloggen.</p>
+        <p className="text-ash text-sm">Du bist nicht eingeloggt.</p>
+      </main>
+    );
+  }
+
+  const classInstanceId = await getCurrentClassInstanceId(supabase);
+
+  if (!classInstanceId) {
+    return (
+      <main className="min-h-screen bg-ink flex items-center justify-center">
+        <p className="text-ash text-sm">Du bist aktuell keiner DR1FT-Klasse zugeordnet.</p>
       </main>
     );
   }
@@ -67,7 +78,11 @@ export default async function GroupChatPage({ params }: Props) {
       </header>
 
       <div className="max-w-md mx-auto px-3 py-4">
-        <GroupChatView messages={mapped} userId={user.id} />
+        <GroupChatView
+          messages={mapped}
+          userId={user.id}
+          classInstanceId={classInstanceId}
+        />
       </div>
     </main>
   );
