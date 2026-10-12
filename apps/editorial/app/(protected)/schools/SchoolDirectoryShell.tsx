@@ -6,7 +6,7 @@ export function SchoolDirectoryShell({ children }: { children: ReactNode }) {
   return (
     <div className="min-h-screen flex bg-canvas">
       <aside className="editorial-sidebar sticky top-0 flex h-screen w-[252px] shrink-0 flex-col">
-        <Link href="/schools" className="editorial-brand">
+        <a href="/schools" className="editorial-brand">
           <img
             src="/branding/drift-logo-appstore-transparent.webp"
             alt=""
@@ -21,7 +21,7 @@ export function SchoolDirectoryShell({ children }: { children: ReactNode }) {
               Schulbereich
             </span>
           </span>
-        </Link>
+        </a>
 
         <div className="px-4 pb-2 pt-6 text-[10px] font-bold uppercase tracking-[0.16em] text-slate-400">
           Schulverwaltung
