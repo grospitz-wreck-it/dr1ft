@@ -140,9 +140,7 @@ export default function LoginPage() {
               {pending ? "Du wirst angemeldet …" : "Anmelden"}
               {!pending && <span aria-hidden="true">→</span>}
             </button>
-            <p className="pt-1 text-center text-[11px] leading-5 text-white/50">
-              Noch kein Zugang? <a href="/join" className="font-semibold text-white/70 underline decoration-white/25 underline-offset-4 transition hover:text-white">Beitreten</a>
-            </p>
+            <p className="pt-1 text-center text-[11px] leading-5 text-white/50">Noch keinen Zugang? Frage deine Lehrkraft nach dem Klassencode.</p>
           </form>
         </section>
       </div>
@@ -154,9 +152,9 @@ export default function LoginPage() {
           padding-bottom: max(1.25rem, env(safe-area-inset-bottom));
         }
         .dr1ft-login-backdrop {
-          background-image: url("/branding/dr1ft-login-background.webp");
-          background-size: cover;
-          background-position: 50% 50%;
+          background-image: radial-gradient(ellipse at 18% 12%, rgba(124, 58, 237, .40), transparent 42%), radial-gradient(ellipse at 84% 78%, rgba(8, 145, 178, .34), transparent 40%), linear-gradient(125deg, #08091e 0%, #17102f 48%, #081c2d 100%);
+          background-size: 130% 100%;
+          background-position: 0% 50%;
           transform: scale(1.06);
           animation: dr1ft-background-drift 38s ease-in-out infinite alternate;
           will-change: transform;
@@ -209,8 +207,8 @@ export default function LoginPage() {
           box-shadow: 0 12px 32px rgba(124, 58, 237, .34);
         }
         @keyframes dr1ft-background-drift {
-          from { transform: scale(1.06) translate3d(-1.1%, 0, 0); }
-          to { transform: scale(1.06) translate3d(1.1%, 0, 0); }
+          from { transform: scale(1.06) translate3d(-1.1%, 0, 0); background-position: 0% 50%; }
+          to { transform: scale(1.06) translate3d(1.1%, 0, 0); background-position: 100% 50%; }
         }
         @media (orientation: landscape) and (max-height: 700px) {
           .dr1ft-login-screen { padding-top: .75rem; padding-bottom: .75rem; }
