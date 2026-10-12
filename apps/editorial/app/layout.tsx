@@ -97,6 +97,17 @@ export default async function RootLayout({
 
                   return (
                     <li key={item.href}>
+                      {item.href === "/schools" ? (
+                        <a
+                          href={item.href}
+                          aria-current={active ? "page" : undefined}
+                          className={`editorial-nav-link ${active ? "editorial-nav-link-active" : ""}`}
+                        >
+                          <Icon className="h-[18px] w-[18px] shrink-0" strokeWidth={1.8} />
+                          <span className="min-w-0 flex-1">{item.label}</span>
+                          {active && <span className="editorial-nav-indicator" aria-hidden="true" />}
+                        </a>
+                      ) : (
                       <Link
                         href={item.href}
                         aria-current={active ? "page" : undefined}
@@ -106,6 +117,7 @@ export default async function RootLayout({
                         <span className="min-w-0 flex-1">{item.label}</span>
                         {active && <span className="editorial-nav-indicator" aria-hidden="true" />}
                       </Link>
+                      )}
                     </li>
                   );
                 })}
