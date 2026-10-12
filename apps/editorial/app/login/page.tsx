@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import { createBrowserClient } from "@supabase/ssr";
 
@@ -22,10 +22,20 @@ function getSafeNextPath() {
 
 export default function LoginPage() {
   const supabase = supabaseBrowserClient();
-  const isSchoolHost =
-    typeof window !== "undefined" &&
-    window.location.hostname.toLowerCase() ===
-      (process.env.NEXT_PUBLIC_SCHOOL_HOST ?? "schule.dr1ft.de").toLowerCase();
+  const [isSchoolHost, setIsSchoolHost] = useState(false);
+
+  useEffect(() => {
+    const hostname = window.location.hostname.toLowerCase();
+    const configuredSchoolHost = (
+      process.env.NEXT_PUBLIC_SCHOOL_HOST ?? "schule.dr1ft.de"
+    ).toLowerCase();
+
+    setIsSchoolHost(
+      hostname === configuredSchoolHost ||
+        (process.env.NODE_ENV === "development" &&
+          (hostname === "localhost" || hostname === "127.0.0.1"))
+    );
+  }, []);
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");

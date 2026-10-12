@@ -3,6 +3,7 @@ import { redirect } from "next/navigation";
 import { ArrowRight, Building2 } from "lucide-react";
 import { supabaseServerClient } from "../../../lib/supabaseServerClient";
 import { SchoolAdminWorkspace } from "./SchoolAdminWorkspace";
+import { SchoolDirectoryShell } from "./SchoolDirectoryShell";
 
 export default async function SchoolsPage() {
   const supabase = supabaseServerClient();
@@ -41,5 +42,5 @@ export default async function SchoolsPage() {
     teacherCount: counts.get(school.id)?.teachers ?? 0,
   }));
 
-  return <main className="min-h-screen bg-[#f7f8fc]"><div className="mx-auto max-w-[1440px] px-5 py-7 sm:px-8 lg:px-10 lg:py-10"><div className="mb-8 flex flex-col justify-between gap-5 border-b border-slate-200 pb-7 sm:flex-row sm:items-end"><div><div className="mb-3 inline-flex items-center gap-2 rounded-full border border-violet-100 bg-violet-50 px-3 py-1.5 text-[10px] font-bold uppercase tracking-[0.18em] text-violet-700"><Building2 className="h-3.5 w-3.5" /> DR1FT · Plattform</div><h1 className="text-3xl font-semibold tracking-[-0.04em] text-slate-950 sm:text-4xl">Schulen verwalten</h1><p className="mt-2 max-w-2xl text-sm leading-6 text-slate-500">Schulprofile, Zugänge und Nutzung an einem zentralen Ort.</p></div><div className="text-xs text-slate-400">Plattformverwaltung <span className="mx-1.5">/</span> <span className="font-medium text-slate-600">Schulen</span></div></div><SchoolAdminWorkspace initialSchools={initialSchools} /></div></main>;
+  return <SchoolDirectoryShell><main className="min-h-screen bg-[#f7f8fc]"><div className="mx-auto max-w-[1440px] px-5 py-7 sm:px-8 lg:px-10 lg:py-10"><div className="mb-8 flex flex-col justify-between gap-5 border-b border-slate-200 pb-7 sm:flex-row sm:items-end"><div><div className="mb-3 inline-flex items-center gap-2 rounded-full border border-violet-100 bg-violet-50 px-3 py-1.5 text-[10px] font-bold uppercase tracking-[0.18em] text-violet-700"><Building2 className="h-3.5 w-3.5" /> DR1FT · Plattform</div><h1 className="text-3xl font-semibold tracking-[-0.04em] text-slate-950 sm:text-4xl">Schulen verwalten</h1><p className="mt-2 max-w-2xl text-sm leading-6 text-slate-500">Schulprofile, Zugänge und Nutzung an einem zentralen Ort.</p></div><div className="text-xs text-slate-400">Plattformverwaltung <span className="mx-1.5">/</span> <span className="font-medium text-slate-600">Schulen</span></div></div><SchoolAdminWorkspace initialSchools={initialSchools} /></div></main></SchoolDirectoryShell>;
 }

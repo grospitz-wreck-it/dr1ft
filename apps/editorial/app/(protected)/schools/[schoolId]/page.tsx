@@ -56,7 +56,7 @@ export default async function SchoolDetailPage({ params }: { params: { schoolId:
     if (membership.role === "teacher" || membership.role === "school_admin" || membership.role === "school_lead") {
       const names = teachersByClass.get(membership.class_instance_id) ?? [];
       const profile = membership.user_profiles as { display_name?: string | null } | null;
-      if (profile?.display_name) names.push(profile.display_name);
+      names.push(profile?.display_name?.trim() || "Name nicht hinterlegt");
       teachersByClass.set(membership.class_instance_id, names);
     }
     if (membership.role === "student") {
@@ -89,6 +89,7 @@ export default async function SchoolDetailPage({ params }: { params: { schoolId:
       ) : (
         <SchoolDetailWorkspace
           school={school}
+          isPlatformAdmin={isPlatformAdmin}
           initialMembers={members ?? []}
           initialClasses={schoolClasses}
           stats={{

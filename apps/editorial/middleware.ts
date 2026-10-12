@@ -20,7 +20,10 @@ function withRequestContext(request: NextRequest) {
 export async function middleware(request: NextRequest) {
   const pathname = request.nextUrl.pathname;
   const hostname = request.nextUrl.hostname.toLowerCase();
-  const isSchoolHost = hostname === SCHOOL_HOST;
+  const isSchoolHost =
+    hostname === SCHOOL_HOST ||
+    (process.env.NODE_ENV === "development" &&
+      (hostname === "localhost" || hostname === "127.0.0.1"));
 
   if (isPublicAuthPath(pathname)) {
     return NextResponse.next({
