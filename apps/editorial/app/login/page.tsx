@@ -51,6 +51,8 @@ export default function LoginPage() {
 
   return (
     <main className="min-h-screen flex items-center justify-center px-4 bg-gray-50">
+      <div className="w-full max-w-sm space-y-5">
+      <img src="/branding/drift-logo-transparent-vertical.webp" alt="DR1FT" className="mx-auto h-auto w-32 object-contain" />
       <form
         onSubmit={handleSubmit}
         className="bg-white border rounded-lg p-6 w-full max-w-sm space-y-4"
@@ -96,6 +98,7 @@ export default function LoginPage() {
           /staff vergeben — kein Self-Serve-Signup für die Redaktion.
         </p>
       </form>
+      </div>
     </main>
   );
 }
