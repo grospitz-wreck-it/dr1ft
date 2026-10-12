@@ -45,5 +45,5 @@ export const config = {
   // Eigene App/Domain jetzt — schützt alles außer /login und /signup
   // (Middleware-Matcher können keine Ausnahmen ausdrücken, das passiert
   // oben im Funktionskörper über die Pfad-Prüfung).
-  matcher: ["/((?!login|signup|_next|favicon.ico).*)"],
+  matcher: ["/((?!login|signup|_next|favicon.ico|branding/).*)"],
 };
