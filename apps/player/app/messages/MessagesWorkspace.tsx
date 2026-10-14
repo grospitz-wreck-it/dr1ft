@@ -46,7 +46,7 @@ export default function MessagesWorkspace({
               <p className="text-[10px] font-bold uppercase tracking-[.22em] text-cyan-200/70">Dein Space</p>
               <h1 className="mt-1 font-display text-2xl font-bold tracking-tight">Nachrichten</h1>
             </div>
-            <button onClick={() => { setSelected(null); setShowContacts(false); }} className="drift-gradient-button inline-flex shrink-0 items-center gap-2 rounded-2xl px-3.5 py-3 text-xs font-semibold shadow-lg shadow-violet-900/30">
+            <button onClick={() => { setSelected(null); setShowContacts(true); }} className="drift-gradient-button inline-flex shrink-0 items-center gap-2 rounded-2xl px-3.5 py-3 text-xs font-semibold shadow-lg shadow-violet-900/30">
               <SquarePen className="h-4 w-4" /><span className="hidden sm:inline">Neue Nachricht</span><span className="sm:hidden">Neu</span>
             </button>
           </div>
@@ -54,7 +54,7 @@ export default function MessagesWorkspace({
           <div className="space-y-4 p-4 sm:p-5">
             <label className="flex items-center gap-3 rounded-2xl border border-white/10 bg-white/[.045] px-4 py-3.5 text-white/50 transition focus-within:border-cyan-300/40 focus-within:bg-white/[.07]">
               <Search className="h-4 w-4 shrink-0" />
-              <input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Kontakte suchen" className="min-w-0 flex-1 bg-transparent text-sm text-white outline-none placeholder:text-white/35" />
+              <input id="contact-search" value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Kontakte suchen" className="min-w-0 flex-1 bg-transparent text-sm text-white outline-none placeholder:text-white/35" />
             </label>
 
             <div className="grid grid-cols-2 rounded-2xl border border-white/[.06] bg-black/20 p-1">
