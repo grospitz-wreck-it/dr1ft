@@ -39,7 +39,7 @@ export default async function ScenarioMessagePage({ params }: Props) {
         <a href="/messages" className="mb-5 inline-flex items-center gap-1 text-xs text-ash hover:text-paper"><ChevronLeft className="h-4 w-4" /> Zurück zum Postfach</a>
         <p className="text-[10px] font-bold uppercase tracking-[.22em] text-cyan-200/70">DR1FT · Szenario-Nachricht</p>
         <h1 className="mt-2 text-2xl font-bold tracking-tight">{item.title || "Neue Nachricht"}</h1>
-        <p className="mt-2 text-xs text-ash">Von {creator?.display_name || creator?.handle || "einer Szenario-Figur"} · {new Date(delivery.delivered_at).toLocaleString("de-DE", { dateStyle: "medium", timeStyle: "short" })}</p>
+        <p className="mt-2 text-xs text-ash">Von {creator?.display_name || creator?.handle || "einer Szenario-Figur"} · {new Date(delivery.delivered_at || new Date().toISOString()).toLocaleString("de-DE", { dateStyle: "medium", timeStyle: "short" })}</p>
       </header>
       <div className="whitespace-pre-wrap px-5 py-7 text-sm leading-7 sm:px-7 sm:py-9">{item.body || "Diese Nachricht enthält keinen Text."}</div>
       {readError && <p className="border-t border-amber-300/20 bg-amber-300/5 px-5 py-3 text-xs text-amber-100">Der Nachrichteninhalt wurde geöffnet, aber der Gelesen-Status konnte nicht gespeichert werden.</p>}
