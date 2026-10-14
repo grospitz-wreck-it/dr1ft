@@ -80,67 +80,7 @@ export default async function MessagesInboxPage() {
     (pending ?? []).map((p) => [p.creator_id, p.pending_resume_at])
   );
 
-  return (
-    <main className="min-h-screen bg-ink">
-      <header className="sticky top-0 z-10 bg-ink/90 backdrop-blur border-b border-ink-border safe-top px-4 py-3 flex items-center justify-between">
-        <a href="/feed" className="touch-target inline-flex items-center gap-1 font-mono text-xs text-ash">
-          <ChevronLeft className="w-4 h-4" /> Feed
-        </a>
-        <p className="font-display text-paper text-sm">Nachrichten</p>
-        <span className="w-11" />
-      </header>
-
-      <div className="max-w-md mx-auto px-3 py-4 space-y-6">
-        {receivedShares && receivedShares.length > 0 && (
-          <section>
-            <p className="font-mono text-[11px] text-ash uppercase tracking-wide mb-2">Mit dir geteilt</p>
-            <div className="space-y-2">
-              {receivedShares.map((share) => {
-                const sender = sharedSenderById.get(share.user_id);
-                const post = sharedPostById.get(share.content_item_id);
-                if (!post) return null;
-                const senderName = sender?.display_name || sender?.username || "Ein Klassenkamerad";
-                return <article key={share.id} className="rounded-2xl border border-ink/10 bg-paper p-4 text-ink shadow-sm">
-                  <div className="flex items-center gap-2 text-sm">
-                    <span className="grid h-9 w-9 shrink-0 place-items-center overflow-hidden rounded-xl bg-ink/5 text-xs font-semibold">{sender?.avatar_seed ? <img src={`https://api.dicebear.com/10.x/voxel-art/svg?seed=${encodeURIComponent(sender.avatar_seed)}&size=72`} alt="" className="h-full w-full object-cover"/> : senderName.slice(0,1).toUpperCase()}</span>
-                    <span><strong>{senderName}</strong> hat einen Beitrag mit dir geteilt.<span className="block text-xs text-ink/45">{new Date(share.created_at).toLocaleString("de-DE", { dateStyle: "medium", timeStyle: "short" })}</span></span>
-                  </div>
-                  <p className="mt-3 text-sm leading-6">{post.body || post.title || "Geteilter Beitrag"}</p>
-                  {post.media_url && post.media_type === "image" && <img src={post.media_url} alt="" className="mt-3 max-h-56 w-full rounded-xl object-cover"/>}
-                  <a href={`/feed#post-${post.id}`} className="mt-3 inline-flex rounded-xl bg-ink px-3 py-2 text-xs font-semibold text-paper">Beitrag im Feed ansehen</a>
-                </article>;
-              })}
-            </div>
-          </section>
-        )}
-        {groupChats && groupChats.length > 0 && (
-          <section>
-            <p className="font-mono text-[11px] text-ash uppercase tracking-wide mb-2">
-              Gruppenchats
-            </p>
-            <div className="space-y-2">
-              {groupChats.map((gc) => (
-                <a
-                  key={gc.id}
-                  href={`/group-chat/${gc.id}`}
-                  className="flex items-center gap-2 bg-paper text-ink rounded-card px-4 py-3 text-sm touch-target"
-                >
-                  <MessageSquare className="w-4 h-4 shrink-0" /> {gc.title}
-                </a>
-              ))}
-            </div>
-          </section>
-        )}
-
-        <section>
-          <p className="font-mono text-[11px] text-ash uppercase tracking-wide mb-2">
-            Direktnachrichten
-          </p>
-          <div className="space-y-2">
-            {npcCreators?.map((c) => {
-              const resumeAt = pendingByCreator.get(c.id);
-              const isDue = resumeAt && new Date(resumeAt) <= new Date();
-              const contacts = (npcCreators ?? []).map((creator) => {
+  const contacts = (npcCreators ?? []).map((creator) => {
     const resumeAt = pendingByCreator.get(creator.id);
     return {
       id: creator.id,
