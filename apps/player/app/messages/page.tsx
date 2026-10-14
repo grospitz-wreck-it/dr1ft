@@ -90,6 +90,34 @@ export default async function MessagesInboxPage() {
     };
   });
 
+  const { data: deliveries } = await supabase
+    .from("scenario_message_deliveries")
+    .select("id, content_item_id, delivered_at")
+    .eq("class_instance_id", classInstanceId)
+    .not("delivered_at", "is", null)
+    .order("delivered_at", { ascending: false })
+    .limit(50);
+  const deliveryIds = (deliveries ?? []).map((delivery) => delivery.id);
+  const scenarioContentIds = Array.from(new Set((deliveries ?? []).map((delivery) => delivery.content_item_id)));
+  const { data: scenarioReads } = deliveryIds.length
+    ? await supabase.from("scenario_message_reads").select("delivery_id").eq("user_id", user.id).in("delivery_id", deliveryIds)
+    : { data: [] as { delivery_id: string }[] };
+  const { data: scenarioContent } = scenarioContentIds.length
+    ? await supabase.from("content_items").select("id, title, body, creator_id").in("id", scenarioContentIds)
+    : { data: [] as { id: string; title: string | null; body: string | null; creator_id: string | null }[] };
+  const scenarioCreatorIds = Array.from(new Set((scenarioContent ?? []).map((item) => item.creator_id).filter(Boolean))) as string[];
+  const { data: scenarioCreators } = scenarioCreatorIds.length
+    ? await supabase.from("creators").select("id, display_name").in("id", scenarioCreatorIds)
+    : { data: [] as { id: string; display_name: string }[] };
+  const scenarioContentById = new Map((scenarioContent ?? []).map((item) => [item.id, item]));
+  const scenarioCreatorById = new Map((scenarioCreators ?? []).map((creator) => [creator.id, creator]));
+  const readDeliveryIds = new Set((scenarioReads ?? []).map((read) => read.delivery_id));
+  const scenarioMessages = (deliveries ?? []).flatMap((delivery) => {
+    const item = scenarioContentById.get(delivery.content_item_id);
+    if (!item) return [];
+    const creator = item.creator_id ? scenarioCreatorById.get(item.creator_id) : null;
+    return [{ id: delivery.id, senderName: creator?.display_name || "DR1FT Szenario", title: item.title || "Neue Nachricht", preview: item.body || "Öffne die Nachricht, um sie zu lesen.", deliveredAt: delivery.delivered_at, isRead: readDeliveryIds.has(delivery.id) }];
+  });
   const shares = (receivedShares ?? []).flatMap((share) => {
     const post = sharedPostById.get(share.content_item_id);
     if (!post) return [];
@@ -105,5 +133,5 @@ export default async function MessagesInboxPage() {
     }];
   });
 
-  return <MessagesWorkspace contacts={contacts} groupChats={groupChats ?? []} shares={shares} />;
+  return <MessagesWorkspace contacts={contacts} groupChats={groupChats ?? []} shares={shares} scenarioMessages={scenarioMessages} />;
 }
