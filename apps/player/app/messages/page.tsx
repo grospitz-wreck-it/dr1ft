@@ -116,7 +116,7 @@ export default async function MessagesInboxPage() {
     const item = scenarioContentById.get(delivery.content_item_id);
     if (!item) return [];
     const creator = item.creator_id ? scenarioCreatorById.get(item.creator_id) : null;
-    return [{ id: delivery.id, senderName: creator?.display_name || "DR1FT Szenario", title: item.title || "Neue Nachricht", preview: item.body || "Öffne die Nachricht, um sie zu lesen.", deliveredAt: delivery.delivered_at, isRead: readDeliveryIds.has(delivery.id) }];
+    return [{ id: delivery.id, senderName: creator?.display_name || "DR1FT Szenario", title: item.title || "Neue Nachricht", preview: item.body || "Öffne die Nachricht, um sie zu lesen.", deliveredAt: delivery.delivered_at || "", isRead: readDeliveryIds.has(delivery.id) }];
   });
   const shares = (receivedShares ?? []).flatMap((share) => {
     const post = sharedPostById.get(share.content_item_id);
