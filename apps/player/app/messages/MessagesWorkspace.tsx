@@ -49,7 +49,6 @@ export default function MessagesWorkspace({
               <p className="text-[10px] font-bold uppercase tracking-[.22em] text-cyan-200/70">Dein Space</p>
               <h1 className="mt-1 font-display text-2xl font-bold tracking-tight">Nachrichten</h1>
             </div>
-            <span aria-hidden="true" className="h-10 w-10 shrink-0" />
           </div>
 
           <div className="space-y-4 overflow-y-auto p-4 sm:p-5">
@@ -116,16 +115,16 @@ export default function MessagesWorkspace({
         .chat-doodle { position:relative; isolation:isolate; }
         .chat-doodle-main { position:absolute; left:0; top:0; width:78%; height:100%; object-fit:contain; filter:drop-shadow(0 8px 20px rgba(128,35,255,.24)); }
         .chat-doodle-smiley { position:absolute; right:0; bottom:0; width:52%; height:66%; object-fit:contain; filter:drop-shadow(0 8px 18px rgba(0,190,255,.24)); }
-        .drift-neon-background { opacity:.38; mix-blend-mode:multiply; }
+        .drift-neon-background { opacity:.55; mix-blend-mode:multiply; }
         :global(html.dark-mode) .drift-neon-background { opacity:.38; mix-blend-mode:screen; }
         .drift-messenger { color:var(--drift-ink); background:var(--drift-surface); border-color:var(--drift-border); }
-        :global(html:not(.dark-mode)) .drift-messenger [class*="text-white"] { color:var(--drift-ink-soft) !important; }
+        :global(html:not(.dark-mode)) .drift-messenger [class*="text-white"] { color:#756d8e !important; }
         :global(html:not(.dark-mode)) .drift-messenger .drift-gradient-button, :global(html:not(.dark-mode)) .drift-messenger .drift-gradient-button [class*="text-white"] { color:#fff !important; }
         :global(html:not(.dark-mode)) .drift-messenger [class*="bg-white/"] { background-color:rgba(39,33,61,.035) !important; }
         :global(html:not(.dark-mode)) .drift-messenger [class*="border-white/"] { border-color:var(--drift-border) !important; }
         :global(html:not(.dark-mode)) .drift-messenger input::placeholder { color:var(--drift-ink-soft) !important; opacity:.75; }
         .drift-messenger-list { background:var(--drift-surface-soft); border-color:var(--drift-border); }
-        .drift-messenger-chat { background:radial-gradient(ellipse at 80% 0%,rgba(124,58,237,.10),transparent 42%),var(--drift-surface); }
+        .drift-messenger-chat { background:radial-gradient(ellipse at 84% 8%,rgba(99,102,241,.16),transparent 38%),radial-gradient(ellipse at 18% 100%,rgba(217,70,239,.10),transparent 34%),#fbf9ff; }
         .drift-gradient-button { color:#fff; background:linear-gradient(110deg,#c026d3,#7c3aed 52%,#2563eb); }
         .drift-secondary-button { border-color:var(--drift-border); background:var(--drift-surface-soft); color:var(--drift-ink); }
         .drift-muted { color:var(--drift-ink-soft); border-color:var(--drift-border); }
