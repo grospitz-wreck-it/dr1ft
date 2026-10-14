@@ -5,6 +5,7 @@ import { MessageCircle, Search, SquarePen, Users, UserRoundPlus, Send, ChevronLe
 
 type Contact = { id: string; display_name: string; handle: string; isDue: boolean };
 type GroupChat = { id: string; title: string };
+type ScenarioMessage = { id: string; senderName: string; title: string; preview: string; deliveredAt: string; isRead: boolean };
 type Share = {
   id: string;
   created_at: string;
@@ -21,10 +22,12 @@ export default function MessagesWorkspace({
   contacts,
   groupChats,
   shares,
+  scenarioMessages,
 }: {
   contacts: Contact[];
   groupChats: GroupChat[];
   shares: Share[];
+  scenarioMessages: ScenarioMessage[];
 }) {
   const [query, setQuery] = useState("");
   const [filter, setFilter] = useState<"all" | "unread">("all");
@@ -79,6 +82,14 @@ export default function MessagesWorkspace({
               {groupChats.map((chat) => <button key={chat.id} onClick={() => { setSelected(chat.id); setShowContacts(false); }} className={`flex w-full items-center gap-3 rounded-2xl border p-3 text-left transition ${selected === chat.id ? "border-cyan-300/25 bg-white/[.08]" : "border-transparent hover:border-white/10 hover:bg-white/[.045]"}`}><span className="grid h-11 w-11 shrink-0 place-items-center rounded-[15px] bg-cyan-300/10 text-cyan-200"><Users className="h-5 w-5" /></span><span className="min-w-0 flex-1 truncate text-sm font-medium">{chat.title}</span></button>)}
             </div>}
 
+            {scenarioMessages.length > 0 && <div className="space-y-2 pt-2">
+              <p className="px-2 pb-1 text-[10px] font-bold uppercase tracking-[.2em] text-white/35">Szenario-Nachrichten</p>
+              {scenarioMessages.filter((message) => filter === "all" || !message.isRead).map((message) => <a key={message.id} href={`/messages/scenario/${message.id}`} className="flex items-center gap-3 rounded-2xl border border-white/[.07] bg-white/[.025] p-3 transition hover:border-cyan-300/20 hover:bg-white/[.06]">
+                <span className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-gradient-to-br from-fuchsia-500/20 to-cyan-400/15 text-cyan-200"><MessageCircle className="h-4 w-4" /></span>
+                <span className="min-w-0 flex-1"><span className="flex items-center gap-2"><span className="truncate text-xs font-semibold">{message.senderName}</span>{!message.isRead && <span className="h-2 w-2 shrink-0 rounded-full bg-pink-400" />}</span><span className="mt-1 block truncate text-xs text-white/65">{message.title}</span><span className="mt-1 block truncate text-[11px] text-white/40">{message.preview}</span></span>
+              </a>)}
+              {filter === "unread" && scenarioMessages.every((message) => message.isRead) && <p className="rounded-xl border border-dashed border-white/10 px-3 py-4 text-center text-xs text-white/45">Keine ungelesenen Szenario-Nachrichten.</p>}
+            </div>}
             {shares.length > 0 && <div className="space-y-2 pt-2">
               <p className="px-2 pb-1 text-[10px] font-bold uppercase tracking-[.2em] text-white/35">Mit dir geteilt</p>
               {shares.slice(0, 4).map((share) => <a key={share.id} href={`/feed#post-${share.postId}`} className="flex items-center gap-3 rounded-2xl border border-white/[.06] bg-white/[.025] p-3 transition hover:bg-white/[.06]"><span className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-violet-400/10 text-violet-200"><Send className="h-4 w-4" /></span><span className="min-w-0 flex-1"><span className="block truncate text-xs font-semibold">{share.senderName}</span><span className="mt-1 block truncate text-xs text-white/40">{share.text}</span></span></a>)}
