@@ -15,7 +15,7 @@ type Share = {
   postId: string;
 };
 
-function ChatDoodle({ large = false, group = false }: { large?: boolean; group?: boolean }) { return <div aria-hidden="true" className={`chat-doodle mb-7 ${large ? "h-40 w-52" : "h-28 w-36"}`}><img src="/branding/chat.webp" alt="" className="chat-doodle-main" /><img src="/branding/smiley-chat.webp" alt="" className="chat-doodle-smiley" />{group && <span className="absolute right-0 top-0 text-2xl text-cyan-300">✦</span>}</div>; }
+function ChatDoodle({ large = false }: { large?: boolean }) { return <div aria-hidden="true" className={`chat-doodle ${large ? "h-64 w-72" : "h-20 w-24"}`}><img src="/branding/chat.webp" alt="" className="chat-doodle-main" /></div>; }
 
 export default function MessagesWorkspace({
   contacts,
@@ -40,7 +40,7 @@ export default function MessagesWorkspace({
   const selectedGroup = groupChats.find((chat) => chat.id === selected);
 
   return (
-    <main className="drift-messenger relative flex h-[calc(100dvh-2rem)] min-h-[620px] flex-col overflow-hidden rounded-[28px] border shadow-2xl">
+    <main className="drift-messenger relative -mt-4 flex h-[calc(100dvh-2rem)] min-h-[620px] flex-col overflow-hidden rounded-[28px] border shadow-2xl">
       <img src="/branding/bg-neon-circle.webp" alt="" aria-hidden="true" className="drift-neon-background pointer-events-none absolute bottom-0 right-0 z-0 w-[min(38vw,34rem)] max-w-none" />
       <div className="relative z-[1] grid min-h-0 flex-1 grid-cols-1 lg:grid-cols-[minmax(280px,32%)_minmax(0,1fr)]">
         <aside className={`drift-messenger-list border-b border-white/10 lg:border-b-0 lg:border-r ${!showContacts ? "hidden lg:block" : ""}`}>
@@ -104,18 +104,18 @@ export default function MessagesWorkspace({
           </div> : selectedGroup ? <div className="relative flex flex-1 flex-col items-center justify-center px-6 py-12 text-center"><div className="drift-orb drift-orb-top" /><ChatDoodle group /><h2 className="relative text-2xl font-bold">Gruppenchat öffnen</h2><p className="relative mt-3 max-w-sm text-sm leading-6 text-white/55">Setze das Gespräch mit deiner Klasse fort.</p><a href={`/group-chat/${selectedGroup.id}`} className="drift-gradient-button relative mt-7 inline-flex items-center gap-2 rounded-2xl px-5 py-3.5 text-sm font-semibold"><Users className="h-4 w-4" /> Gruppenchat öffnen</a></div> : <div className="relative flex flex-1 flex-col items-center justify-center overflow-hidden px-6 py-14 text-center">
             <div className="drift-orb drift-orb-top" /><div className="drift-orb drift-orb-bottom" />
             <ChatDoodle large />
-            <p className="relative text-[10px] font-bold uppercase tracking-[.25em] text-cyan-200/70">Dein Chat-Space</p><h2 className="relative mt-3 text-2xl font-bold tracking-tight sm:text-3xl">Noch niemand hier?</h2><p className="relative mt-3 max-w-sm text-sm leading-6 text-white/55 sm:text-base">Wähle einen Kontakt aus oder starte eine neue Unterhaltung.</p>
+            
             <button onClick={() => { setShowContacts(true); document.getElementById("contact-search")?.focus(); }} className="relative mt-7 inline-flex items-center gap-2 rounded-2xl border px-5 py-3.5 text-sm font-semibold drift-secondary-button"><UserRoundPlus className="h-4 w-4" /> Kontakt auswählen</button>
           </div>}
           <footer className="border-t px-5 py-3 text-center text-[10px] drift-muted">DR1FT · Gespräche deiner Klasse</footer>
         </section>
       </div>
-      <button onClick={() => { setSelected(null); setShowContacts(true); document.getElementById("contact-search")?.focus(); }} className="drift-gradient-button absolute bottom-5 right-5 z-20 inline-flex items-center gap-2 rounded-2xl px-5 py-3.5 text-sm font-semibold shadow-xl sm:bottom-7 sm:right-7" aria-label="Neue Nachricht schreiben"><SquarePen className="h-4 w-4" /><span>Neue Nachricht</span></button>
+      <button onClick={() => { setSelected(null); setShowContacts(true); document.getElementById("contact-search")?.focus(); }} className="drift-gradient-button drift-message-notch absolute bottom-0 right-0 z-20 inline-flex items-center gap-2 rounded-tl-2xl rounded-br-[26px] px-7 py-5 text-sm font-semibold" aria-label="Neue Nachricht schreiben"><SquarePen className="h-4 w-4" /><span>Neue Nachricht</span></button>
       <style jsx>{`
-        .chat-doodle { position:relative; isolation:isolate; }
-        .chat-doodle-main { position:absolute; left:0; top:0; width:78%; height:100%; object-fit:contain; filter:drop-shadow(0 8px 20px rgba(128,35,255,.24)); }
+        .chat-doodle { position:relative; isolation:isolate; margin-inline:auto; }
+        .chat-doodle-main { position:absolute; inset:0; width:100%; height:100%; object-fit:contain; filter:drop-shadow(0 8px 20px rgba(128,35,255,.24)); }
         .chat-doodle-smiley { position:absolute; right:0; bottom:0; width:52%; height:66%; object-fit:contain; filter:drop-shadow(0 8px 18px rgba(0,190,255,.24)); }
-        .drift-neon-background { opacity:.55; mix-blend-mode:multiply; }
+        .drift-neon-background { opacity:.55; mix-blend-mode:multiply; }\n        .drift-message-notch { box-shadow:-1px -1px 0 var(--drift-border); }\n        .drift-message-notch:before { content:""; position:absolute; width:26px; height:26px; left:-26px; bottom:0; background:radial-gradient(circle at 0 0,transparent 26px,var(--drift-surface) 27px); }\n        .drift-message-notch:after { content:""; position:absolute; width:26px; height:26px; right:0; top:-26px; background:radial-gradient(circle at 100% 0,transparent 26px,var(--drift-surface) 27px); }
         :global(html.dark-mode) .drift-neon-background { opacity:.38; mix-blend-mode:screen; }
         .drift-messenger { color:var(--drift-ink); background:var(--drift-surface); border-color:var(--drift-border); }
         :global(html:not(.dark-mode)) .drift-messenger [class*="text-white"] { color:#756d8e !important; }
