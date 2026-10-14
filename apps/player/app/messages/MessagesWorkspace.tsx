@@ -15,7 +15,7 @@ type Share = {
   postId: string;
 };
 
-function ChatDoodle({ large = false }: { large?: boolean }) { return <div aria-hidden="true" className={`chat-doodle ${large ? "h-64 w-72" : "h-20 w-24"}`}><img src="/branding/chat.webp" alt="" className="chat-doodle-main" /></div>; }
+function ChatDoodle({ large = false, group = false }: { large?: boolean; group?: boolean }) { return <div aria-hidden="true" className={`chat-doodle ${large ? "h-64 w-72" : "h-20 w-24"}`}><img src="/branding/chat.webp" alt="" className="chat-doodle-main" /></div>; }
 
 export default function MessagesWorkspace({
   contacts,
