@@ -49,9 +49,7 @@ export default function MessagesWorkspace({
               <p className="text-[10px] font-bold uppercase tracking-[.22em] text-cyan-200/70">Dein Space</p>
               <h1 className="mt-1 font-display text-2xl font-bold tracking-tight">Nachrichten</h1>
             </div>
-            <button onClick={() => { setSelected(null); setShowContacts(true); }} className="drift-gradient-button inline-flex shrink-0 items-center gap-2 rounded-2xl px-3.5 py-3 text-xs font-semibold shadow-lg shadow-violet-900/30">
-              <SquarePen className="h-4 w-4" /><span className="hidden sm:inline">Neue Nachricht</span><span className="sm:hidden">Neu</span>
-            </button>
+            <span aria-hidden="true" className="h-10 w-10 shrink-0" />
           </div>
 
           <div className="space-y-4 overflow-y-auto p-4 sm:p-5">
@@ -116,11 +114,10 @@ export default function MessagesWorkspace({
       <button onClick={() => { setSelected(null); setShowContacts(true); document.getElementById("contact-search")?.focus(); }} className="drift-gradient-button absolute bottom-5 right-5 z-20 inline-flex items-center gap-2 rounded-2xl px-5 py-3.5 text-sm font-semibold shadow-xl sm:bottom-7 sm:right-7" aria-label="Neue Nachricht schreiben"><SquarePen className="h-4 w-4" /><span>Neue Nachricht</span></button>
       <style jsx>{`
         .chat-doodle { position:relative; isolation:isolate; }
-        .chat-bubble { position:absolute; display:grid; place-items:center; border:1.5px solid rgba(192,132,252,.8); border-radius:28px; color:#c4b5fd; background:linear-gradient(145deg,rgba(168,85,247,.20),rgba(37,99,235,.14)); box-shadow:0 0 34px rgba(124,58,237,.16),inset 0 0 22px rgba(192,132,252,.07); }
-        .chat-bubble-main { left:8%; top:8%; width:76%; height:76%; border-radius:30px; }
-        .chat-bubble-small { right:0; bottom:1%; width:46%; height:48%; border-color:rgba(34,211,238,.9); color:#67e8f9; border-radius:23px; background:linear-gradient(145deg,rgba(34,211,238,.17),rgba(37,99,235,.12)); }
-        .chat-dot { position:absolute; width:10px; height:10px; border-radius:999px; box-shadow:0 0 16px currentColor; }
-        .chat-dot-cyan { right:5%; top:0; color:#67e8f9; background:currentColor; } .chat-dot-pink { left:0; bottom:6%; color:#f472b6; background:currentColor; }
+        .chat-doodle-main { position:absolute; left:0; top:0; width:78%; height:100%; object-fit:contain; filter:drop-shadow(0 8px 20px rgba(128,35,255,.24)); }
+        .chat-doodle-smiley { position:absolute; right:0; bottom:0; width:52%; height:66%; object-fit:contain; filter:drop-shadow(0 8px 18px rgba(0,190,255,.24)); }
+        .drift-neon-background { opacity:.38; mix-blend-mode:multiply; }
+        :global(html.dark-mode) .drift-neon-background { opacity:.38; mix-blend-mode:screen; }
         .drift-messenger { color:var(--drift-ink); background:var(--drift-surface); border-color:var(--drift-border); }
         :global(html:not(.dark-mode)) .drift-messenger [class*="text-white"] { color:var(--drift-ink-soft) !important; }
         :global(html:not(.dark-mode)) .drift-messenger .drift-gradient-button, :global(html:not(.dark-mode)) .drift-messenger .drift-gradient-button [class*="text-white"] { color:#fff !important; }
