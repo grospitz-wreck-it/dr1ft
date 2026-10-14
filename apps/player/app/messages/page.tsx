@@ -167,7 +167,7 @@ export default async function MessagesInboxPage() {
               );
             })}
             {(!npcCreators || npcCreators.length === 0) && (
-              <div className="flex items-center gap-4 rounded-2xl border border-dashed border-white/15 bg-paper/[0.03] p-4"><img src="/branding/chat.webp" alt="" className="h-16 w-16 shrink-0 object-contain" /><div><p className="text-sm font-medium text-paper">Noch keine Kontakte</p><p className="mt-1 text-xs leading-5 text-ash">Sobald ein Szenario Gespräche freischaltet, tauchen sie hier auf.</p></div></div>
+              <div className="flex items-center gap-4 rounded-2xl border border-dashed border-white/15 bg-paper/[0.03] p-4"><div className="flex shrink-0 items-center -space-x-4"><img src="/branding/chat.webp" alt="" className="h-16 w-16 object-contain" /><img src="/branding/smiley-chat.webp" alt="" className="h-12 w-12 object-contain" /></div><div><p className="text-sm font-medium text-paper">Noch keine Kontakte</p><p className="mt-1 text-xs leading-5 text-ash">Sobald ein Szenario Gespräche freischaltet, tauchen sie hier auf.</p></div></div>
             )}
           </div>
         </section>
