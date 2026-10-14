@@ -121,6 +121,11 @@ export default function MessagesWorkspace({
         .chat-dot { position:absolute; width:10px; height:10px; border-radius:999px; box-shadow:0 0 16px currentColor; }
         .chat-dot-cyan { right:5%; top:0; color:#67e8f9; background:currentColor; } .chat-dot-pink { left:0; bottom:6%; color:#f472b6; background:currentColor; }
         .drift-messenger { color:var(--drift-ink); background:var(--drift-surface); border-color:var(--drift-border); }
+        :global(html:not(.dark-mode)) .drift-messenger [class*="text-white"] { color:var(--drift-ink-soft) !important; }
+        :global(html:not(.dark-mode)) .drift-messenger .drift-gradient-button, :global(html:not(.dark-mode)) .drift-messenger .drift-gradient-button [class*="text-white"] { color:#fff !important; }
+        :global(html:not(.dark-mode)) .drift-messenger [class*="bg-white/"] { background-color:rgba(39,33,61,.035) !important; }
+        :global(html:not(.dark-mode)) .drift-messenger [class*="border-white/"] { border-color:var(--drift-border) !important; }
+        :global(html:not(.dark-mode)) .drift-messenger input::placeholder { color:var(--drift-ink-soft) !important; opacity:.75; }
         .drift-messenger-list { background:var(--drift-surface-soft); border-color:var(--drift-border); }
         .drift-messenger-chat { background:radial-gradient(ellipse at 80% 0%,rgba(124,58,237,.10),transparent 42%),var(--drift-surface); }
         .drift-gradient-button { color:#fff; background:linear-gradient(110deg,#c026d3,#7c3aed 52%,#2563eb); }
