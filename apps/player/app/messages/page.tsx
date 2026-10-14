@@ -3,7 +3,7 @@
 // waren aber im Feed nirgends erreichbar. Diese Seite listet alle
 // ansprechbaren NPCs + aktive Gruppenchats der freigeschalteten Szenarien.
 
-import { ChevronLeft, MessageSquare, Send, Circle } from "lucide-react";
+import MessagesWorkspace from "./MessagesWorkspace";
 import { supabaseServerClient } from "../../lib/supabaseServerClient";
 
 export default async function MessagesInboxPage() {
@@ -140,30 +140,30 @@ export default async function MessagesInboxPage() {
             {npcCreators?.map((c) => {
               const resumeAt = pendingByCreator.get(c.id);
               const isDue = resumeAt && new Date(resumeAt) <= new Date();
-              return (
-                <a
-                  key={c.id}
-                  href={`/messages/${c.id}`}
-                  className="flex items-center justify-between bg-paper text-ink rounded-card px-4 py-3 text-sm touch-target"
-                >
-                  <span className="flex items-center gap-2">
-                    <Send className="w-4 h-4 text-ink/40 shrink-0" />
-                    {c.display_name} <span className="text-ink/40">{c.handle}</span>
-                  </span>
-                  {isDue && (
-                    <span className="flex items-center gap-1 text-xs text-red-500">
-                      <Circle className="w-2 h-2 fill-current" /> neu
-                    </span>
-                  )}
-                </a>
-              );
-            })}
-            {(!npcCreators || npcCreators.length === 0) && (
-              <p className="text-ash text-sm">Noch keine Kontakte.</p>
-            )}
-          </div>
-        </section>
-      </div>
-    </main>
-  );
+              const contacts = (npcCreators ?? []).map((creator) => {
+    const resumeAt = pendingByCreator.get(creator.id);
+    return {
+      id: creator.id,
+      display_name: creator.display_name,
+      handle: creator.handle,
+      isDue: Boolean(resumeAt && new Date(resumeAt) <= new Date()),
+    };
+  });
+
+  const shares = (receivedShares ?? []).flatMap((share) => {
+    const post = sharedPostById.get(share.content_item_id);
+    if (!post) return [];
+    const sender = sharedSenderById.get(share.user_id);
+    return [{
+      id: share.id,
+      created_at: share.created_at,
+      senderName: sender?.display_name || sender?.username || "Ein Klassenkamerad",
+      senderSeed: sender?.avatar_seed ?? null,
+      text: post.body || post.title || "Geteilter Beitrag",
+      mediaUrl: post.media_url && post.media_type === "image" ? post.media_url : null,
+      postId: post.id,
+    }];
+  });
+
+  return <MessagesWorkspace contacts={contacts} groupChats={groupChats ?? []} shares={shares} />;
 }
