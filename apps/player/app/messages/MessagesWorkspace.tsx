@@ -71,7 +71,7 @@ export default function MessagesWorkspace({
                   <MessageCircle className="h-4 w-4 shrink-0 text-white/25 group-hover:text-cyan-200" />
                 </button>
               ))}
-              {filteredContacts.length === 0 && <div className="rounded-2xl border border-dashed border-white/10 px-4 py-5 text-center text-xs leading-5 text-white/40">{filter === "unread" ? "Keine ungelesenen Nachrichten." : "Keine passenden Kontakte gefunden."}</div>}
+              {filteredContacts.length === 0 && <div className="flex min-h-48 flex-col items-center justify-center rounded-2xl border border-dashed border-white/10 px-4 py-5 text-center text-xs leading-5 text-white/55"><img src="/branding/smiley-chat.webp" alt="" aria-hidden="true" className="mb-3 h-20 w-24 object-contain" /><span>{filter === "unread" ? "Keine ungelesenen Nachrichten." : "Noch keine Kontakte – starte ein Gespräch."}</span></div>}
             </div>
 
             {groupChats.length > 0 && <div className="space-y-2 pt-2">
