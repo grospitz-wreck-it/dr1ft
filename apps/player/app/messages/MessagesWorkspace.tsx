@@ -15,7 +15,7 @@ type Share = {
   postId: string;
 };
 
-function ChatDoodle({ large = false, group = false }: { large?: boolean; group?: boolean }) { return <div aria-hidden="true" className={`chat-doodle mb-7 grid place-items-center ${large ? "h-36 w-44" : "h-28 w-32"}`}><div className="chat-bubble chat-bubble-main"><MessageCircle className={large ? "h-14 w-14" : "h-10 w-10"} strokeWidth={1.8} /></div><div className="chat-bubble chat-bubble-small"><MessageCircle className="h-7 w-7" strokeWidth={2} /></div><span className="chat-dot chat-dot-cyan" /><span className="chat-dot chat-dot-pink" />{group && <span className="absolute right-0 top-0 text-2xl text-cyan-300">✦</span>}</div>; }
+function ChatDoodle({ large = false, group = false }: { large?: boolean; group?: boolean }) { return <div aria-hidden="true" className={`chat-doodle mb-7 ${large ? "h-40 w-52" : "h-28 w-36"}`}><img src="/branding/chat.webp" alt="" className="chat-doodle-main" /><img src="/branding/smiley-chat.webp" alt="" className="chat-doodle-smiley" />{group && <span className="absolute right-0 top-0 text-2xl text-cyan-300">✦</span>}</div>; }
 
 export default function MessagesWorkspace({
   contacts,
@@ -40,8 +40,9 @@ export default function MessagesWorkspace({
   const selectedGroup = groupChats.find((chat) => chat.id === selected);
 
   return (
-    <main className="drift-messenger relative flex h-[calc(100dvh-4rem)] min-h-[620px] flex-col overflow-hidden rounded-[28px] border shadow-2xl">
-      <div className="grid min-h-0 flex-1 grid-cols-1 lg:grid-cols-[minmax(280px,32%)_minmax(0,1fr)]">
+    <main className="drift-messenger relative flex h-[calc(100dvh-2rem)] min-h-[620px] flex-col overflow-hidden rounded-[28px] border shadow-2xl">
+      <img src="/branding/bg-neon-circle.webp" alt="" aria-hidden="true" className="drift-neon-background pointer-events-none absolute bottom-0 right-0 z-0 w-[min(38vw,34rem)] max-w-none" />
+      <div className="relative z-[1] grid min-h-0 flex-1 grid-cols-1 lg:grid-cols-[minmax(280px,32%)_minmax(0,1fr)]">
         <aside className={`drift-messenger-list border-b border-white/10 lg:border-b-0 lg:border-r ${!showContacts ? "hidden lg:block" : ""}`}>
           <div className="flex items-center justify-between gap-3 border-b border-white/[.07] px-5 py-5">
             <div>
