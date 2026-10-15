@@ -119,8 +119,17 @@ export function PlayerShell({ children }: { children: React.ReactNode }) {
       if (deliveryError || !deliveries?.length) { if (mounted) setHasUnreadMessages(false); return; }
       const ids = deliveries.map((delivery) => delivery.id);
       const { data: reads, error: readError } = await supabase.from("scenario_message_reads").select("delivery_id").eq("user_id", authUser.id).in("delivery_id", ids);
+      const { data: directUnread, error: directError } = await supabase
+        .from("student_direct_messages")
+        .select("id")
+        .eq("class_instance_id", classInstanceId)
+        .eq("recipient_id", authUser.id)
+        .is("read_at", null)
+        .limit(1);
       if (!mounted) return;
-      setHasUnreadMessages(!readError && ids.some((id) => !(reads ?? []).some((read) => read.delivery_id === id)));
+      const hasUnreadScenario = !readError && ids.some((id) => !(reads ?? []).some((read) => read.delivery_id === id));
+      const hasUnreadDirect = !directError && (directUnread ?? []).length > 0;
+      setHasUnreadMessages(hasUnreadScenario || hasUnreadDirect);
     }
     void checkUnreadMessages();
     const interval = window.setInterval(() => { void checkUnreadMessages(); }, 15000);
