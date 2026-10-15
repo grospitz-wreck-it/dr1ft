@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { MessageCircle, Search, SquarePen, Users, UserRoundPlus, Send, ChevronLeft } from "lucide-react";
 
 type Contact = { id: string; display_name: string; handle: string; isDue: boolean };
@@ -40,6 +40,9 @@ export default function MessagesWorkspace({
   const [messageLoading, setMessageLoading] = useState(false);
   const [messageError, setMessageError] = useState("");
   const [contactLoadError, setContactLoadError] = useState("");
+  const messageEndRef = useRef<HTMLDivElement | null>(null);
+
+  useEffect(() => { messageEndRef.current?.scrollIntoView({ behavior: "smooth", block: "end" }); }, [directMessages, messageLoading]);
 
   useEffect(() => {
     let active = true;
@@ -166,14 +169,15 @@ export default function MessagesWorkspace({
           </header>
 
           {selectedStudent ? <div className="relative flex min-h-0 flex-1 flex-col">
-            <div className="flex-1 space-y-3 overflow-y-auto px-4 py-5 sm:px-7">
+            <div className="dm-message-list flex-1 space-y-3 overflow-y-auto px-4 py-5 sm:px-7">
               {messageLoading && directMessages.length === 0 && <p className="py-10 text-center text-sm text-white/45">Unterhaltung wird geladen …</p>}
               {!messageLoading && directMessages.length === 0 && <div className="flex h-full min-h-52 flex-col items-center justify-center text-center"><ChatDoodle /><p className="mt-2 text-lg font-semibold">Sag Hallo!</p><p className="mt-1 text-sm text-white/45">Das ist der Anfang eurer Unterhaltung.</p></div>}
-              {directMessages.map((message) => <div key={message.id} className={`flex ${message.sender_id === selectedStudent.id ? "justify-start" : "justify-end"}`}><div className={`max-w-[85%] rounded-2xl px-4 py-3 sm:max-w-[72%] ${message.sender_id === selectedStudent.id ? "rounded-bl-md border border-white/10 bg-white/[.06]" : "rounded-br-md bg-gradient-to-r from-fuchsia-600 to-blue-600 text-white"}`}><p className="whitespace-pre-wrap break-words text-sm leading-6">{message.body}</p><p className={`mt-1 text-right text-[10px] ${message.sender_id === selectedStudent.id ? "text-white/35" : "text-white/65"}`}>{new Date(message.created_at).toLocaleString("de-DE", { hour: "2-digit", minute: "2-digit" })}</p></div></div>)}
+              {directMessages.map((message, index) => <div key={message.id} className={`flex ${message.sender_id === selectedStudent.id ? "justify-start" : "justify-end"}`}><div className={`dm-bubble max-w-[88%] rounded-2xl px-4 py-2.5 sm:max-w-[72%] ${message.sender_id === selectedStudent.id ? "dm-bubble-in rounded-bl-sm" : "dm-bubble-out rounded-br-sm"}`}><p className="whitespace-pre-wrap break-words text-sm leading-[1.55]">{message.body}</p><p className="dm-message-time mt-1 text-right text-[10px]">{new Date(message.created_at).toLocaleString("de-DE", { hour: "2-digit", minute: "2-digit" })}</p></div></div>)}
+              <div ref={messageEndRef} />
               {messageError && <p role="alert" className="rounded-xl border border-rose-300/20 bg-rose-300/5 p-3 text-xs text-rose-200">{messageError}</p>}
             </div>
             <form onSubmit={sendDirectMessage} className="flex items-end gap-2 border-t border-white/[.08] p-3 sm:p-4">
-              <textarea value={draft} onChange={(event) => setDraft(event.target.value)} maxLength={4000} rows={1} placeholder="Nachricht schreiben …" className="max-h-36 min-h-12 flex-1 resize-y rounded-2xl border border-white/10 bg-white/[.045] px-4 py-3 text-sm text-white outline-none placeholder:text-white/35 focus:border-cyan-300/40" />
+              <textarea value={draft} onChange={(event) => setDraft(event.target.value)} maxLength={4000} rows={1} placeholder="Nachricht schreiben …" className="dm-composer max-h-36 min-h-12 flex-1 resize-y rounded-2xl border px-4 py-3 text-sm outline-none focus:border-violet-400/60" />
               <button type="submit" disabled={!draft.trim() || messageLoading} className="drift-gradient-button inline-flex h-12 shrink-0 items-center gap-2 rounded-2xl px-4 text-sm font-semibold disabled:cursor-not-allowed disabled:opacity-40"><Send className="h-4 w-4" /><span className="hidden sm:inline">Senden</span></button>
             </form>
           </div> : selectedContact ? <div className="relative flex flex-1 flex-col items-center justify-center px-6 py-12 text-center">
@@ -205,14 +209,14 @@ export default function MessagesWorkspace({
         :global(html:not(.dark-mode)) .drift-messenger [class*="border-white/"] { border-color:var(--drift-border) !important; }
         :global(html:not(.dark-mode)) .drift-messenger input::placeholder { color:var(--drift-ink-soft) !important; opacity:.75; }
         .drift-messenger-list { background:var(--drift-surface-soft); border-color:var(--drift-border); }
-        .drift-messenger-chat { background:radial-gradient(ellipse at 84% 8%,rgba(99,102,241,.16),transparent 38%),radial-gradient(ellipse at 18% 100%,rgba(217,70,239,.10),transparent 34%),#fbf9ff; }
+        .drift-messenger-chat { background:radial-gradient(ellipse at 84% 8%,rgba(99,102,241,.10),transparent 38%),radial-gradient(ellipse at 18% 100%,rgba(217,70,239,.07),transparent 34%),#f7f5fc; }\n        .dm-bubble { box-shadow:0 1px 2px rgba(35,25,60,.08); overflow-wrap:anywhere; }\n        .dm-bubble-in { color:#29243a !important; background:#ffffff !important; border:1px solid #e8e3f1 !important; border-bottom-left-radius:5px !important; }\n        .dm-bubble-in p { color:#29243a !important; }\n        .dm-bubble-out { color:#ffffff !important; background:linear-gradient(135deg,#8b35d9 0%,#5546e8 58%,#3267e8 100%) !important; border:1px solid rgba(255,255,255,.18) !important; border-bottom-right-radius:5px !important; }\n        .dm-bubble-out p { color:#ffffff !important; }\n        .dm-bubble .dm-message-time { opacity:.72; font-variant-numeric:tabular-nums; }\n        .dm-composer { color:#29243a; background:#ffffff; border-color:#ddd6ec; }\n        .dm-composer::placeholder { color:#716a82; opacity:1; }
         .drift-gradient-button { color:#fff; background:linear-gradient(110deg,#c026d3,#7c3aed 52%,#2563eb); }
         .drift-secondary-button { border-color:var(--drift-border); background:var(--drift-surface-soft); color:var(--drift-ink); }
         .drift-muted { color:var(--drift-ink-soft); border-color:var(--drift-border); }
         .drift-orb { position:absolute; width:16rem; height:16rem; border-radius:9999px; pointer-events:none; filter:blur(42px); opacity:.14; } .drift-orb-top { right:-7rem; top:-7rem; background:#2563eb; } .drift-orb-bottom { left:-8rem; bottom:-8rem; background:#a21caf; }
         :global(html.dark-mode) .drift-messenger { color:#f7f4ff; background:linear-gradient(135deg,#110d20 0%,#17102c 52%,#100d20 100%); border-color:rgba(255,255,255,.10); }
         :global(html.dark-mode) .drift-messenger-list { background:linear-gradient(180deg,rgba(25,17,45,.98),rgba(16,13,31,.98)); border-color:rgba(255,255,255,.10); }
-        :global(html.dark-mode) .drift-messenger-chat { background:radial-gradient(ellipse at 80% 0%,rgba(91,33,182,.17),transparent 42%),#100d20; }
+        :global(html.dark-mode) .drift-messenger-chat { background:radial-gradient(ellipse at 80% 0%,rgba(91,33,182,.17),transparent 42%),#100d20; }\n        :global(html.dark-mode) .dm-bubble-in { color:#f5f1ff !important; background:#292239 !important; border-color:#403653 !important; }\n        :global(html.dark-mode) .dm-bubble-in p { color:#f5f1ff !important; }\n        :global(html.dark-mode) .dm-bubble-out { color:#ffffff !important; background:linear-gradient(135deg,#a62bc8 0%,#7041e8 54%,#2867df 100%) !important; }\n        :global(html.dark-mode) .dm-bubble-out p { color:#ffffff !important; }\n        :global(html.dark-mode) .dm-composer { color:#f5f1ff; background:#211a30; border-color:#443754; }\n        :global(html.dark-mode) .dm-composer::placeholder { color:#b8aecb; opacity:1; }
         :global(html.dark-mode) .drift-secondary-button { color:#f7f4ff; border-color:rgba(255,255,255,.13); background:rgba(255,255,255,.06); }
         :global(html.dark-mode) .drift-muted { color:rgba(255,255,255,.28); border-color:rgba(255,255,255,.06); }
         @media(max-width:1023px){ .drift-messenger { height:calc(100dvh - 9rem); min-height:560px; } }
