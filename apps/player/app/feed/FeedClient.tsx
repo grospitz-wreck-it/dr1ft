@@ -18,6 +18,32 @@ export function FeedClient({ initialItems, userId, classInstanceId, likedContent
   const [reflection, setReflection] = useState<{ missionId: string; contentItemId: string } | null>(null);
   const [scenarioStarted, setScenarioStarted] = useState(false);
   const [scenarioFinished, setScenarioFinished] = useState(false);
+  const [scenarioStateLoaded, setScenarioStateLoaded] = useState(false);
+  const scenarioStateKey = `dr1ft:scenario-state:${userId}:${classInstanceId}:${scenarioIntro?.id ?? "none"}`;
+
+  useEffect(() => {
+    try {
+      const saved = window.sessionStorage.getItem(scenarioStateKey);
+      if (saved) {
+        const state = JSON.parse(saved) as { started?: boolean; finished?: boolean };
+        setScenarioStarted(state.started === true);
+        setScenarioFinished(state.finished === true);
+      } else {
+        setScenarioStarted(false);
+        setScenarioFinished(false);
+      }
+    } catch {
+      setScenarioStarted(false);
+      setScenarioFinished(false);
+    } finally {
+      setScenarioStateLoaded(true);
+    }
+  }, [scenarioStateKey]);
+
+  useEffect(() => {
+    if (!scenarioStateLoaded) return;
+    window.sessionStorage.setItem(scenarioStateKey, JSON.stringify({ started: scenarioStarted, finished: scenarioFinished }));
+  }, [scenarioStateKey, scenarioStateLoaded, scenarioStarted, scenarioFinished]);
   const seenRef = useRef<Set<string>>(new Set());
   useEffect(() => startRealtimeEventBridge(supabase, userId), [supabase, userId, classInstanceId]);
 
