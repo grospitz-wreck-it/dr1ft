@@ -19,7 +19,9 @@ export async function GET(request: Request) {
       .order("display_name", { ascending: true })
       .limit(200);
     if (error) return NextResponse.json({ error: "Kontakte konnten nicht geladen werden." }, { status: 500 });
-    return NextResponse.json({ contacts: (profiles ?? []).map((p) => ({ id: p.id, display_name: p.display_name || p.username || "DR1FT Schüler", handle: p.username ? `@${p.username}` : "@dr1ft", isDue: false })) });
+    const { data: unreadMessages } = await supabase.from("student_direct_messages").select("sender_id").eq("class_instance_id", classInstanceId).eq("recipient_id", user.id).is("read_at", null);
+    const unreadSenderIds = new Set((unreadMessages ?? []).map((message) => message.sender_id));
+    return NextResponse.json({ contacts: (profiles ?? []).map((p) => ({ id: p.id, display_name: p.display_name || p.username || "DR1FT Schüler", handle: p.username ? `@${p.username}` : "@dr1ft", isDue: unreadSenderIds.has(p.id) })), hasUnread: unreadSenderIds.size > 0 });
   }
 
   const { data: peer, error: peerError } = await supabase.from("user_profiles").select("id, display_name, username").eq("id", peerId).eq("class_instance_id", classInstanceId).maybeSingle();
