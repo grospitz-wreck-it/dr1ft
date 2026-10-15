@@ -11,21 +11,37 @@ export async function GET(request: Request) {
   const url = new URL(request.url);
   const peerId = url.searchParams.get("peerId");
   if (!peerId) {
-    const { data: profiles, error } = await supabase
-      .from("user_profiles")
-      .select("id, display_name, username, avatar_seed")
+    const { data: memberships, error: membershipError } = await supabase
+      .from("class_instance_memberships")
+      .select("user_id")
       .eq("class_instance_id", classInstanceId)
-      .neq("id", user.id)
-      .order("display_name", { ascending: true })
-      .limit(200);
+      .is("left_at", null);
+    if (membershipError) return NextResponse.json({ error: "Klassenmitglieder konnten nicht geladen werden." }, { status: 500 });
+    const memberIds = Array.from(new Set((memberships ?? []).map((membership) => membership.user_id))).filter((id) => id !== user.id);
+    const { data: profiles, error } = memberIds.length
+      ? await supabase
+          .from("user_profiles")
+          .select("id, display_name, username, avatar_seed")
+          .in("id", memberIds)
+          .order("display_name", { ascending: true })
+          .limit(200)
+      : { data: [], error: null };
     if (error) return NextResponse.json({ error: "Kontakte konnten nicht geladen werden." }, { status: 500 });
     const { data: unreadMessages } = await supabase.from("student_direct_messages").select("sender_id").eq("class_instance_id", classInstanceId).eq("recipient_id", user.id).is("read_at", null);
     const unreadSenderIds = new Set((unreadMessages ?? []).map((message) => message.sender_id));
     return NextResponse.json({ contacts: (profiles ?? []).map((p) => ({ id: p.id, display_name: p.display_name || p.username || "DR1FT Schüler", handle: p.username ? `@${p.username}` : "@dr1ft", isDue: unreadSenderIds.has(p.id) })), hasUnread: unreadSenderIds.size > 0 });
   }
 
-  const { data: peer, error: peerError } = await supabase.from("user_profiles").select("id, display_name, username").eq("id", peerId).eq("class_instance_id", classInstanceId).maybeSingle();
-  if (peerError || !peer) return NextResponse.json({ error: "Dieser Kontakt gehört nicht zu deiner Klasse." }, { status: 404 });
+  const { data: peerMembership, error: peerMembershipError } = await supabase
+    .from("class_instance_memberships")
+    .select("user_id")
+    .eq("user_id", peerId)
+    .eq("class_instance_id", classInstanceId)
+    .is("left_at", null)
+    .maybeSingle();
+  if (peerMembershipError || !peerMembership) return NextResponse.json({ error: "Dieser Kontakt gehört nicht zu deiner Klasse." }, { status: 404 });
+  const { data: peer, error: peerError } = await supabase.from("user_profiles").select("id, display_name, username").eq("id", peerId).maybeSingle();
+  if (peerError || !peer) return NextResponse.json({ error: "Kontaktprofil konnte nicht geladen werden." }, { status: 404 });
 
   const { data: messages, error } = await supabase
     .from("student_direct_messages")
@@ -58,8 +74,14 @@ export async function POST(request: Request) {
   if (!recipientId || !body || body.length > 4000) return NextResponse.json({ error: "Bitte eine Nachricht mit maximal 4000 Zeichen eingeben." }, { status: 400 });
   if (recipientId === user.id) return NextResponse.json({ error: "Du kannst dir selbst keine Nachricht senden." }, { status: 400 });
 
-  const { data: recipient, error: recipientError } = await supabase.from("user_profiles").select("id").eq("id", recipientId).eq("class_instance_id", classInstanceId).maybeSingle();
-  if (recipientError || !recipient) return NextResponse.json({ error: "Du kannst nur Schüler:innen aus deiner Klasse anschreiben." }, { status: 403 });
+  const { data: recipientMembership, error: recipientError } = await supabase
+    .from("class_instance_memberships")
+    .select("user_id")
+    .eq("user_id", recipientId)
+    .eq("class_instance_id", classInstanceId)
+    .is("left_at", null)
+    .maybeSingle();
+  if (recipientError || !recipientMembership) return NextResponse.json({ error: "Du kannst nur Schüler:innen aus deiner Klasse anschreiben." }, { status: 403 });
 
   const { data: message, error } = await supabase.from("student_direct_messages").insert({ class_instance_id: classInstanceId, sender_id: user.id, recipient_id: recipientId, body }).select("id, sender_id, recipient_id, body, created_at, read_at").single();
   if (error) return NextResponse.json({ error: "Nachricht konnte nicht gesendet werden." }, { status: 500 });
