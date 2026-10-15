@@ -38,7 +38,7 @@ export async function GET(request: Request) {
 
   const unreadIds = (messages ?? []).filter((m) => m.recipient_id === user.id && !m.read_at).map((m) => m.id);
   if (unreadIds.length) {
-    const { error: readError } = await supabase.from("student_direct_messages").update({ read_at: new Date().toISOString() }).in("id", unreadIds).eq("recipient_id", user.id);
+    const { error: readError } = await supabase.rpc("mark_student_direct_messages_read", { p_message_ids: unreadIds });
     if (readError) return NextResponse.json({ error: "Nachrichten geladen, Gelesen-Status konnte nicht gespeichert werden." }, { status: 500 });
   }
   return NextResponse.json({ messages: messages ?? [], peer: { id: peer.id, display_name: peer.display_name || peer.username || "DR1FT Schüler" } });
