@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
-import { MessageCircle, Search, SquarePen, Users, UserRoundPlus, Send, ChevronLeft } from "lucide-react";
+import { MessageCircle, Search, Users, UserRoundPlus, Send, ChevronLeft } from "lucide-react";
 
 type Contact = { id: string; display_name: string; handle: string; isDue: boolean };
 type DirectMessage = { id: string; sender_id: string; recipient_id: string; body: string; created_at: string; read_at: string | null };
@@ -195,7 +195,6 @@ export default function MessagesWorkspace({
           <footer className="border-t px-5 py-3 text-center text-[10px] drift-muted">DR1FT · Gespräche deiner Klasse</footer>
         </section>
       </div>
-      <button onClick={() => { setSelected(null); setShowContacts(true); document.getElementById("contact-search")?.focus(); }} className="drift-gradient-button drift-message-notch absolute bottom-0 right-0 z-20 inline-flex items-center gap-2 rounded-tl-2xl rounded-br-[26px] px-7 py-5 text-sm font-semibold" aria-label="Neue Nachricht schreiben"><SquarePen className="h-4 w-4" /><span>Neue Nachricht</span></button>
       <style jsx>{`
         .chat-doodle { position:relative; isolation:isolate; margin-inline:auto; }
         .chat-doodle-main { position:absolute; inset:0; width:100%; height:100%; object-fit:contain; filter:drop-shadow(0 8px 20px rgba(128,35,255,.24)); }
