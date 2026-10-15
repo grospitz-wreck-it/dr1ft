@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import { MessageCircle, Search, Users, UserRoundPlus, Send, ChevronLeft, Smile } from "lucide-react";
+import EmojiPicker, { EmojiStyle, Theme } from "emoji-picker-react";
 
 type Contact = { id: string; display_name: string; handle: string; isDue: boolean };
 type DirectMessage = { id: string; sender_id: string; recipient_id: string; body: string; created_at: string; read_at: string | null };
@@ -41,6 +42,7 @@ export default function MessagesWorkspace({
   const [messageError, setMessageError] = useState("");
   const [contactLoadError, setContactLoadError] = useState("");
   const [emojiOpen, setEmojiOpen] = useState(false);
+  const [emojiStyle, setEmojiStyle] = useState<EmojiStyle>(EmojiStyle.APPLE);
   const draftRef = useRef<HTMLTextAreaElement | null>(null);
   const messageEndRef = useRef<HTMLDivElement | null>(null);
 
@@ -193,7 +195,15 @@ export default function MessagesWorkspace({
               {messageError && <p role="alert" className="rounded-xl border border-rose-300/20 bg-rose-300/5 p-3 text-xs text-rose-200">{messageError}</p>}
             </div>
             <div className="dm-compose-area relative border-t border-white/[.08] p-3 sm:p-4">
-              {emojiOpen && <div className="dm-picker mb-3 grid grid-cols-8 gap-1 rounded-2xl border p-2 sm:grid-cols-10" role="dialog" aria-label="Emoji auswählen">{["😀","😃","😄","😁","😆","😅","😂","🤣","🥹","😊","😍","🥰","😘","😎","🤔","🙄","😢","😭","😡","🤯","🤗","🤝","👍","👎","👏","🙌","❤️","🧡","💛","💚","💙","💜","✨","🔥","🎉","💯","🤡","👀","🙏","💪"].map((emoji) => <button key={emoji} type="button" onClick={() => insertEmoji(emoji)} className="grid h-9 w-9 place-items-center rounded-lg text-xl transition hover:bg-violet-500/15" aria-label={emoji}>{emoji}</button>)}</div>}
+              {emojiOpen && <div className="dm-picker mb-3 overflow-hidden rounded-2xl border p-2 sm:p-3" role="dialog" aria-label="Emoji auswählen">
+                <div className="mb-2 flex flex-wrap items-center justify-between gap-2 px-1">
+                  <span className="text-sm font-semibold">Alle Emojis</span>
+                  <div className="flex flex-wrap gap-1" aria-label="Emoji-Stil auswählen">
+                    {([{ value: EmojiStyle.APPLE, label: "Apple" }, { value: EmojiStyle.GOOGLE, label: "Google" }, { value: EmojiStyle.FACEBOOK, label: "Facebook" }, { value: EmojiStyle.TWITTER, label: "Twitter" }, { value: EmojiStyle.NATIVE, label: "System" }]).map((style) => <button key={style.value} type="button" onClick={() => setEmojiStyle(style.value)} className={`rounded-lg px-2 py-1 text-[11px] font-medium transition ${emojiStyle === style.value ? "bg-violet-600 text-white" : "bg-violet-500/10 hover:bg-violet-500/20"}`}>{style.label}</button>)}
+                  </div>
+                </div>
+                <EmojiPicker onEmojiClick={(emojiData) => insertEmoji(emojiData.emoji)} emojiStyle={emojiStyle} theme={Theme.AUTO} width="100%" height={390} searchPlaceHolder="Emoji suchen …" previewConfig={{ showPreview: false }} lazyLoadEmojis />
+              </div>}
               <form onSubmit={sendDirectMessage} className="flex items-end gap-2">
                 <button type="button" onClick={() => setEmojiOpen((open) => !open)} aria-label="Emoji auswählen" title="Emoji" className="dm-tool-button grid h-11 w-10 shrink-0 place-items-center rounded-xl"><Smile className="h-5 w-5" /></button>
                 <textarea ref={draftRef} value={draft} onChange={(event) => setDraft(event.target.value)} maxLength={4000} rows={1} placeholder="Nachricht schreiben …" className="dm-composer max-h-36 min-h-11 min-w-0 flex-1 resize-y rounded-2xl border px-4 py-3 text-sm outline-none focus:border-violet-400/60" />
@@ -229,7 +239,7 @@ export default function MessagesWorkspace({
         :global(html:not(.dark-mode)) .drift-messenger input::placeholder { color:var(--drift-ink-soft) !important; opacity:.75; }
         .drift-messenger-list { background:var(--drift-surface-soft); border-color:var(--drift-border); }
         .drift-messenger-chat { background:radial-gradient(ellipse at 84% 8%,rgba(99,102,241,.10),transparent 38%),radial-gradient(ellipse at 18% 100%,rgba(217,70,239,.07),transparent 34%),#f7f5fc; }\n        .dm-bubble { box-shadow:0 1px 2px rgba(35,25,60,.08); overflow-wrap:anywhere; }\n        .dm-bubble-in { color:#29243a !important; background:#ffffff !important; border:1px solid #e8e3f1 !important; border-bottom-left-radius:5px !important; }\n        .dm-bubble-in p { color:#29243a !important; }\n        .dm-bubble-out { color:#ffffff !important; background:linear-gradient(135deg,#8b35d9 0%,#5546e8 58%,#3267e8 100%) !important; border:1px solid rgba(255,255,255,.18) !important; border-bottom-right-radius:5px !important; }\n        .dm-bubble-out p { color:#ffffff !important; }\n        .dm-bubble .dm-message-time { opacity:.72; font-variant-numeric:tabular-nums; }\n        .dm-composer { color:#29243a; background:#ffffff; border-color:#ddd6ec; }\n        .dm-composer::placeholder { color:#716a82; opacity:1; }
-        .dm-picker { color:#302842; background:#ffffff; border-color:#ddd6ec; box-shadow:0 12px 36px rgba(35,25,60,.12); }
+        .dm-picker { color:#302842; background:#ffffff; border-color:#ddd6ec; box-shadow:0 12px 36px rgba(35,25,60,.12); }\n        .dm-picker .EmojiPickerReact { --epr-emoji-size: 30px; --epr-emoji-gap: 7px; --epr-emoji-padding: 7px; --epr-header-padding: 8px; --epr-search-input-height: 42px; --epr-category-navigation-button-size: 34px; border:0 !important; }\n        .dm-picker .EmojiPickerReact .epr-emoji { transform:scale(1.08); }
         .dm-tool-button { color:#6f4bc3; border:1px solid #ddd6ec; background:#fff; transition:background .15s ease,color .15s ease; }
         .dm-tool-button:hover { color:#4b35bd; background:#f1eaff; }
         .drift-gradient-button { color:#fff; background:linear-gradient(110deg,#c026d3,#7c3aed 52%,#2563eb); }
@@ -239,7 +249,7 @@ export default function MessagesWorkspace({
         :global(html.dark-mode) .drift-messenger { color:#f7f4ff; background:linear-gradient(135deg,#110d20 0%,#17102c 52%,#100d20 100%); border-color:rgba(255,255,255,.10); }
         :global(html.dark-mode) .drift-messenger-list { background:linear-gradient(180deg,rgba(25,17,45,.98),rgba(16,13,31,.98)); border-color:rgba(255,255,255,.10); }
         :global(html.dark-mode) .drift-messenger-chat { background:radial-gradient(ellipse at 80% 0%,rgba(91,33,182,.17),transparent 42%),#100d20; }\n        :global(html.dark-mode) .dm-bubble-in { color:#f5f1ff !important; background:#292239 !important; border-color:#403653 !important; }\n        :global(html.dark-mode) .dm-bubble-in p { color:#f5f1ff !important; }\n        :global(html.dark-mode) .dm-bubble-out { color:#ffffff !important; background:linear-gradient(135deg,#a62bc8 0%,#7041e8 54%,#2867df 100%) !important; }\n        :global(html.dark-mode) .dm-bubble-out p { color:#ffffff !important; }\n        :global(html.dark-mode) .dm-composer { color:#f5f1ff; background:#211a30; border-color:#443754; }\n        :global(html.dark-mode) .dm-composer::placeholder { color:#b8aecb; opacity:1; }
-        :global(html.dark-mode) .dm-picker { color:#f5f1ff; background:#211a30; border-color:#443754; }
+        :global(html.dark-mode) .dm-picker { color:#f5f1ff; background:#211a30; border-color:#443754; }\n        :global(html.dark-mode) .dm-picker .EmojiPickerReact { --epr-bg-color:#211a30; --epr-category-label-bg-color:#211a30; --epr-text-color:#f5f1ff; --epr-search-input-bg-color:#30253f; --epr-search-input-text-color:#f5f1ff; --epr-search-input-placeholder-color:#b8aecb; --epr-hover-bg-color:#38294d; --epr-focus-bg-color:#38294d; --epr-category-icon-active-color:#d7c3ff; }
         :global(html.dark-mode) .dm-tool-button { color:#d7c3ff; border-color:#443754; background:#211a30; }
         :global(html.dark-mode) .dm-tool-button:hover { color:#fff; background:#38294d; }
         :global(html.dark-mode) .drift-secondary-button { color:#f7f4ff; border-color:rgba(255,255,255,.13); background:rgba(255,255,255,.06); }
