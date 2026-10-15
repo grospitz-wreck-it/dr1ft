@@ -202,7 +202,7 @@ export default function MessagesWorkspace({
                     {([{ value: EmojiStyle.APPLE, label: "Apple" }, { value: EmojiStyle.GOOGLE, label: "Google" }, { value: EmojiStyle.FACEBOOK, label: "Facebook" }, { value: EmojiStyle.TWITTER, label: "Twitter" }, { value: EmojiStyle.NATIVE, label: "System" }]).map((style) => <button key={style.value} type="button" onClick={() => setEmojiStyle(style.value)} className={`rounded-lg px-2 py-1 text-[11px] font-medium transition ${emojiStyle === style.value ? "bg-violet-600 text-white" : "bg-violet-500/10 hover:bg-violet-500/20"}`}>{style.label}</button>)}
                   </div>
                 </div>
-                <EmojiPicker onEmojiClick={(emojiData) => insertEmoji(emojiData.emoji)} emojiStyle={emojiStyle} theme={Theme.AUTO} width="100%" height={390} searchPlaceHolder="Emoji suchen …" previewConfig={{ showPreview: false }} lazyLoadEmojis />
+                <EmojiPicker onEmojiClick={(emojiData) => insertEmoji(emojiData.emoji)} emojiStyle={emojiStyle} theme={Theme.AUTO} width="100%" height={440} searchPlaceHolder="Emoji suchen …" previewConfig={{ showPreview: false }} lazyLoadEmojis />
               </div>}
               <form onSubmit={sendDirectMessage} className="flex items-end gap-2">
                 <button type="button" onClick={() => setEmojiOpen((open) => !open)} aria-label="Emoji auswählen" title="Emoji" className="dm-tool-button grid h-11 w-10 shrink-0 place-items-center rounded-xl"><Smile className="h-5 w-5" /></button>
@@ -229,7 +229,10 @@ export default function MessagesWorkspace({
         .chat-doodle { position:relative; isolation:isolate; margin-inline:auto; }
         .chat-doodle-main { position:absolute; inset:0; width:100%; height:100%; object-fit:contain; filter:drop-shadow(0 8px 20px rgba(128,35,255,.24)); }
         .chat-doodle-smiley { position:absolute; right:0; bottom:0; width:52%; height:66%; object-fit:contain; filter:drop-shadow(0 8px 18px rgba(0,190,255,.24)); }
-        .drift-neon-background { opacity:.55; mix-blend-mode:multiply; }\n        .drift-message-notch { box-shadow:-1px -1px 0 var(--drift-border); }\n        .drift-message-notch:before { content:""; position:absolute; width:26px; height:26px; left:-26px; bottom:0; background:radial-gradient(circle at 0 0,transparent 26px,var(--drift-surface) 27px); }\n        .drift-message-notch:after { content:""; position:absolute; width:26px; height:26px; right:0; top:-26px; background:radial-gradient(circle at 100% 0,transparent 26px,var(--drift-surface) 27px); }
+        .drift-neon-background { opacity:.55; mix-blend-mode:multiply; }
+        .drift-message-notch { box-shadow:-1px -1px 0 var(--drift-border); }
+        .drift-message-notch:before { content:""; position:absolute; width:26px; height:26px; left:-26px; bottom:0; background:radial-gradient(circle at 0 0,transparent 26px,var(--drift-surface) 27px); }
+        .drift-message-notch:after { content:""; position:absolute; width:26px; height:26px; right:0; top:-26px; background:radial-gradient(circle at 100% 0,transparent 26px,var(--drift-surface) 27px); }
         :global(html.dark-mode) .drift-neon-background { opacity:.38; mix-blend-mode:screen; }
         .drift-messenger { color:var(--drift-ink); background:var(--drift-surface); border-color:var(--drift-border); }
         :global(html:not(.dark-mode)) .drift-messenger [class*="text-white"] { color:#756d8e !important; }
@@ -238,8 +241,18 @@ export default function MessagesWorkspace({
         :global(html:not(.dark-mode)) .drift-messenger [class*="border-white/"] { border-color:var(--drift-border) !important; }
         :global(html:not(.dark-mode)) .drift-messenger input::placeholder { color:var(--drift-ink-soft) !important; opacity:.75; }
         .drift-messenger-list { background:var(--drift-surface-soft); border-color:var(--drift-border); }
-        .drift-messenger-chat { background:radial-gradient(ellipse at 84% 8%,rgba(99,102,241,.10),transparent 38%),radial-gradient(ellipse at 18% 100%,rgba(217,70,239,.07),transparent 34%),#f7f5fc; }\n        .dm-bubble { box-shadow:0 1px 2px rgba(35,25,60,.08); overflow-wrap:anywhere; }\n        .dm-bubble-in { color:#29243a !important; background:#ffffff !important; border:1px solid #e8e3f1 !important; border-bottom-left-radius:5px !important; }\n        .dm-bubble-in p { color:#29243a !important; }\n        .dm-bubble-out { color:#ffffff !important; background:linear-gradient(135deg,#8b35d9 0%,#5546e8 58%,#3267e8 100%) !important; border:1px solid rgba(255,255,255,.18) !important; border-bottom-right-radius:5px !important; }\n        .dm-bubble-out p { color:#ffffff !important; }\n        .dm-bubble .dm-message-time { opacity:.72; font-variant-numeric:tabular-nums; }\n        .dm-composer { color:#29243a; background:#ffffff; border-color:#ddd6ec; }\n        .dm-composer::placeholder { color:#716a82; opacity:1; }
-        .dm-picker { color:#302842; background:#ffffff; border-color:#ddd6ec; box-shadow:0 12px 36px rgba(35,25,60,.12); }\n        .dm-picker .EmojiPickerReact { --epr-emoji-size: 30px; --epr-emoji-gap: 7px; --epr-emoji-padding: 7px; --epr-header-padding: 8px; --epr-search-input-height: 42px; --epr-category-navigation-button-size: 34px; border:0 !important; }\n        .dm-picker .EmojiPickerReact .epr-emoji { transform:scale(1.08); }
+        .drift-messenger-chat { background:radial-gradient(ellipse at 84% 8%,rgba(99,102,241,.10),transparent 38%),radial-gradient(ellipse at 18% 100%,rgba(217,70,239,.07),transparent 34%),#f7f5fc; }
+        .dm-bubble { box-shadow:0 1px 2px rgba(35,25,60,.08); overflow-wrap:anywhere; }
+        .dm-bubble-in { color:#29243a !important; background:#ffffff !important; border:1px solid #e8e3f1 !important; border-bottom-left-radius:5px !important; }
+        .dm-bubble-in p { color:#29243a !important; }
+        .dm-bubble-out { color:#ffffff !important; background:linear-gradient(135deg,#8b35d9 0%,#5546e8 58%,#3267e8 100%) !important; border:1px solid rgba(255,255,255,.18) !important; border-bottom-right-radius:5px !important; }
+        .dm-bubble-out p { color:#ffffff !important; }
+        .dm-bubble .dm-message-time { opacity:.72; font-variant-numeric:tabular-nums; }
+        .dm-composer { color:#29243a; background:#ffffff; border-color:#ddd6ec; }
+        .dm-composer::placeholder { color:#716a82; opacity:1; }
+        .dm-picker { color:#302842; background:#ffffff; border-color:#ddd6ec; box-shadow:0 12px 36px rgba(35,25,60,.12); }
+        .dm-picker .EmojiPickerReact { --epr-emoji-size: 38px; --epr-emoji-gap: 0px; --epr-emoji-padding: 2px; --epr-header-padding: 4px; --epr-search-input-height: 44px; --epr-category-navigation-button-size: 32px; border:0 !important; }
+        .dm-picker .EmojiPickerReact .epr-emoji { transform:scale(1.16); }\n        .dm-picker .EmojiPickerReact .epr-emoji-list { row-gap:0 !important; column-gap:0 !important; }\n        .dm-picker .EmojiPickerReact .epr-emoji-category { margin:0 !important; }\n        .dm-picker .EmojiPickerReact .epr-emoji-category-label { padding:4px 8px !important; line-height:1.2 !important; }\n        .dm-picker .EmojiPickerReact .epr-header { padding:4px !important; gap:4px !important; }
         .dm-tool-button { color:#6f4bc3; border:1px solid #ddd6ec; background:#fff; transition:background .15s ease,color .15s ease; }
         .dm-tool-button:hover { color:#4b35bd; background:#f1eaff; }
         .drift-gradient-button { color:#fff; background:linear-gradient(110deg,#c026d3,#7c3aed 52%,#2563eb); }
@@ -248,8 +261,15 @@ export default function MessagesWorkspace({
         .drift-orb { position:absolute; width:16rem; height:16rem; border-radius:9999px; pointer-events:none; filter:blur(42px); opacity:.14; } .drift-orb-top { right:-7rem; top:-7rem; background:#2563eb; } .drift-orb-bottom { left:-8rem; bottom:-8rem; background:#a21caf; }
         :global(html.dark-mode) .drift-messenger { color:#f7f4ff; background:linear-gradient(135deg,#110d20 0%,#17102c 52%,#100d20 100%); border-color:rgba(255,255,255,.10); }
         :global(html.dark-mode) .drift-messenger-list { background:linear-gradient(180deg,rgba(25,17,45,.98),rgba(16,13,31,.98)); border-color:rgba(255,255,255,.10); }
-        :global(html.dark-mode) .drift-messenger-chat { background:radial-gradient(ellipse at 80% 0%,rgba(91,33,182,.17),transparent 42%),#100d20; }\n        :global(html.dark-mode) .dm-bubble-in { color:#f5f1ff !important; background:#292239 !important; border-color:#403653 !important; }\n        :global(html.dark-mode) .dm-bubble-in p { color:#f5f1ff !important; }\n        :global(html.dark-mode) .dm-bubble-out { color:#ffffff !important; background:linear-gradient(135deg,#a62bc8 0%,#7041e8 54%,#2867df 100%) !important; }\n        :global(html.dark-mode) .dm-bubble-out p { color:#ffffff !important; }\n        :global(html.dark-mode) .dm-composer { color:#f5f1ff; background:#211a30; border-color:#443754; }\n        :global(html.dark-mode) .dm-composer::placeholder { color:#b8aecb; opacity:1; }
-        :global(html.dark-mode) .dm-picker { color:#f5f1ff; background:#211a30; border-color:#443754; }\n        :global(html.dark-mode) .dm-picker .EmojiPickerReact { --epr-bg-color:#211a30; --epr-category-label-bg-color:#211a30; --epr-text-color:#f5f1ff; --epr-search-input-bg-color:#30253f; --epr-search-input-text-color:#f5f1ff; --epr-search-input-placeholder-color:#b8aecb; --epr-hover-bg-color:#38294d; --epr-focus-bg-color:#38294d; --epr-category-icon-active-color:#d7c3ff; }
+        :global(html.dark-mode) .drift-messenger-chat { background:radial-gradient(ellipse at 80% 0%,rgba(91,33,182,.17),transparent 42%),#100d20; }
+        :global(html.dark-mode) .dm-bubble-in { color:#f5f1ff !important; background:#292239 !important; border-color:#403653 !important; }
+        :global(html.dark-mode) .dm-bubble-in p { color:#f5f1ff !important; }
+        :global(html.dark-mode) .dm-bubble-out { color:#ffffff !important; background:linear-gradient(135deg,#a62bc8 0%,#7041e8 54%,#2867df 100%) !important; }
+        :global(html.dark-mode) .dm-bubble-out p { color:#ffffff !important; }
+        :global(html.dark-mode) .dm-composer { color:#f5f1ff; background:#211a30; border-color:#443754; }
+        :global(html.dark-mode) .dm-composer::placeholder { color:#b8aecb; opacity:1; }
+        :global(html.dark-mode) .dm-picker { color:#f5f1ff; background:#211a30; border-color:#443754; }
+        :global(html.dark-mode) .dm-picker .EmojiPickerReact { --epr-bg-color:#211a30; --epr-category-label-bg-color:#211a30; --epr-text-color:#f5f1ff; --epr-search-input-bg-color:#30253f; --epr-search-input-text-color:#f5f1ff; --epr-search-input-placeholder-color:#b8aecb; --epr-hover-bg-color:#38294d; --epr-focus-bg-color:#38294d; --epr-category-icon-active-color:#d7c3ff; }
         :global(html.dark-mode) .dm-tool-button { color:#d7c3ff; border-color:#443754; background:#211a30; }
         :global(html.dark-mode) .dm-tool-button:hover { color:#fff; background:#38294d; }
         :global(html.dark-mode) .drift-secondary-button { color:#f7f4ff; border-color:rgba(255,255,255,.13); background:rgba(255,255,255,.06); }
