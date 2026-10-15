@@ -1,9 +1,10 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { MessageCircle, Search, SquarePen, Users, UserRoundPlus, Send, ChevronLeft } from "lucide-react";
 
 type Contact = { id: string; display_name: string; handle: string; isDue: boolean };
+type DirectMessage = { id: string; sender_id: string; recipient_id: string; body: string; created_at: string; read_at: string | null };
 type GroupChat = { id: string; title: string };
 type ScenarioMessage = { id: string; senderName: string; title: string; preview: string; deliveredAt: string; isRead: boolean };
 type Share = {
@@ -33,11 +34,69 @@ export default function MessagesWorkspace({
   const [filter, setFilter] = useState<"all" | "unread">("all");
   const [selected, setSelected] = useState<string | null>(null);
   const [showContacts, setShowContacts] = useState(true);
+  const [studentContacts, setStudentContacts] = useState<Contact[]>([]);
+  const [directMessages, setDirectMessages] = useState<DirectMessage[]>([]);
+  const [draft, setDraft] = useState("");
+  const [messageLoading, setMessageLoading] = useState(false);
+  const [messageError, setMessageError] = useState("");
+  const [contactLoadError, setContactLoadError] = useState("");
 
-  const filteredContacts = useMemo(() => contacts.filter((contact) => {
+  useEffect(() => {
+    let active = true;
+    fetch("/api/messages/direct", { cache: "no-store" })
+      .then(async (response) => {
+        const payload = await response.json();
+        if (!response.ok) throw new Error(payload.error || "Kontakte konnten nicht geladen werden.");
+        if (active) setStudentContacts(payload.contacts ?? []);
+      })
+      .catch((error) => { if (active) setContactLoadError(error instanceof Error ? error.message : "Kontakte konnten nicht geladen werden."); });
+    return () => { active = false; };
+  }, []);
+
+  const selectedStudent = studentContacts.find((contact) => contact.id === selected);
+  useEffect(() => {
+    if (!selectedStudent) { setDirectMessages([]); setMessageError(""); return; }
+    let active = true;
+    setMessageLoading(true);
+    setMessageError("");
+    fetch("/api/messages/direct?peerId=" + encodeURIComponent(selectedStudent.id), { cache: "no-store" })
+      .then(async (response) => {
+        const payload = await response.json();
+        if (!response.ok) throw new Error(payload.error || "Unterhaltung konnte nicht geladen werden.");
+        if (active) setDirectMessages(payload.messages ?? []);
+      })
+      .catch((error) => { if (active) setMessageError(error instanceof Error ? error.message : "Unterhaltung konnte nicht geladen werden."); })
+      .finally(() => { if (active) setMessageLoading(false); });
+    return () => { active = false; };
+  }, [selectedStudent?.id]);
+
+  async function sendDirectMessage(event: React.FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    if (!selectedStudent || !draft.trim() || messageLoading) return;
+    setMessageLoading(true);
+    setMessageError("");
+    try {
+      const response = await fetch("/api/messages/direct", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ recipientId: selectedStudent.id, body: draft.trim() }),
+      });
+      const payload = await response.json();
+      if (!response.ok) throw new Error(payload.error || "Nachricht konnte nicht gesendet werden.");
+      setDirectMessages((current) => [...current, payload.message]);
+      setDraft("");
+    } catch (error) {
+      setMessageError(error instanceof Error ? error.message : "Nachricht konnte nicht gesendet werden.");
+    } finally {
+      setMessageLoading(false);
+    }
+  }
+
+  const allContacts = useMemo(() => [...contacts, ...studentContacts], [contacts, studentContacts]);
+  const filteredContacts = useMemo(() => allContacts.filter((contact) => {
     const matchesQuery = `${contact.display_name} ${contact.handle}`.toLowerCase().includes(query.toLowerCase());
     return matchesQuery && (filter === "all" || contact.isDue);
-  }), [contacts, query, filter]);
+  }), [allContacts, query, filter]);
 
   const selectedContact = contacts.find((contact) => contact.id === selected);
   const selectedGroup = groupChats.find((chat) => chat.id === selected);
@@ -74,7 +133,7 @@ export default function MessagesWorkspace({
                   <MessageCircle className="h-4 w-4 shrink-0 text-white/25 group-hover:text-cyan-200" />
                 </button>
               ))}
-              {filteredContacts.length === 0 && <div className="flex min-h-48 flex-col items-center justify-center rounded-2xl border border-dashed border-white/10 px-4 py-5 text-center text-xs leading-5 text-white/55"><img src="/branding/smiley-chat.webp" alt="" aria-hidden="true" className="mb-3 h-20 w-24 object-contain" /><span>{filter === "unread" ? "Keine ungelesenen Nachrichten." : "Noch keine Kontakte – starte ein Gespräch."}</span></div>}
+              {contactLoadError && <p className="rounded-xl border border-rose-300/20 bg-rose-300/5 p-3 text-xs text-rose-200">{contactLoadError}</p>}{filteredContacts.length === 0 && <div className="flex min-h-48 flex-col items-center justify-center rounded-2xl border border-dashed border-white/10 px-4 py-5 text-center text-xs leading-5 text-white/55"><img src="/branding/smiley-chat.webp" alt="" aria-hidden="true" className="mb-3 h-20 w-24 object-contain" /><span>{filter === "unread" ? "Keine ungelesenen Nachrichten." : "Noch keine Kontakte – starte ein Gespräch."}</span></div>}
             </div>
 
             {groupChats.length > 0 && <div className="space-y-2 pt-2">
@@ -101,12 +160,23 @@ export default function MessagesWorkspace({
           <header className="flex h-[74px] shrink-0 items-center justify-between border-b border-white/[.07] px-5 sm:px-7">
             <div className="flex min-w-0 items-center gap-3">
               <button onClick={() => setShowContacts(true)} className="grid h-9 w-9 shrink-0 place-items-center rounded-xl text-white/60 hover:bg-white/[.07] lg:hidden" aria-label="Zur Kontaktliste"><ChevronLeft className="h-5 w-5" /></button>
-              <div className="min-w-0"><p className="truncate text-base font-bold">{selectedContact?.display_name || selectedGroup?.title || "Nachrichten"}</p><p className="mt-1 text-[10px] font-semibold uppercase tracking-[.17em] text-white/30">{selectedContact ? "Direktnachricht" : selectedGroup ? "Klassengruppe" : "Dein DR1FT-Postfach"}</p></div>
+              <div className="min-w-0"><p className="truncate text-base font-bold">{selectedStudent?.display_name || selectedContact?.display_name || selectedGroup?.title || "Nachrichten"}</p><p className="mt-1 text-[10px] font-semibold uppercase tracking-[.17em] text-white/30">{selectedStudent || selectedContact ? "Direktnachricht" : selectedGroup ? "Klassengruppe" : "Dein DR1FT-Postfach"}</p></div>
             </div>
             <span aria-hidden="true" className="h-10 w-10" />
           </header>
 
-          {selectedContact ? <div className="relative flex flex-1 flex-col items-center justify-center px-6 py-12 text-center">
+          {selectedStudent ? <div className="relative flex min-h-0 flex-1 flex-col">
+            <div className="flex-1 space-y-3 overflow-y-auto px-4 py-5 sm:px-7">
+              {messageLoading && directMessages.length === 0 && <p className="py-10 text-center text-sm text-white/45">Unterhaltung wird geladen …</p>}
+              {!messageLoading && directMessages.length === 0 && <div className="flex h-full min-h-52 flex-col items-center justify-center text-center"><ChatDoodle /><p className="mt-2 text-lg font-semibold">Sag Hallo!</p><p className="mt-1 text-sm text-white/45">Das ist der Anfang eurer Unterhaltung.</p></div>}
+              {directMessages.map((message) => <div key={message.id} className={`flex ${message.sender_id === selectedStudent.id ? "justify-start" : "justify-end"}`}><div className={`max-w-[85%] rounded-2xl px-4 py-3 sm:max-w-[72%] ${message.sender_id === selectedStudent.id ? "rounded-bl-md border border-white/10 bg-white/[.06]" : "rounded-br-md bg-gradient-to-r from-fuchsia-600 to-blue-600 text-white"}`}><p className="whitespace-pre-wrap break-words text-sm leading-6">{message.body}</p><p className={`mt-1 text-right text-[10px] ${message.sender_id === selectedStudent.id ? "text-white/35" : "text-white/65"}`}>{new Date(message.created_at).toLocaleString("de-DE", { hour: "2-digit", minute: "2-digit" })}</p></div></div>)}
+              {messageError && <p role="alert" className="rounded-xl border border-rose-300/20 bg-rose-300/5 p-3 text-xs text-rose-200">{messageError}</p>}
+            </div>
+            <form onSubmit={sendDirectMessage} className="flex items-end gap-2 border-t border-white/[.08] p-3 sm:p-4">
+              <textarea value={draft} onChange={(event) => setDraft(event.target.value)} maxLength={4000} rows={1} placeholder="Nachricht schreiben …" className="max-h-36 min-h-12 flex-1 resize-y rounded-2xl border border-white/10 bg-white/[.045] px-4 py-3 text-sm text-white outline-none placeholder:text-white/35 focus:border-cyan-300/40" />
+              <button type="submit" disabled={!draft.trim() || messageLoading} className="drift-gradient-button inline-flex h-12 shrink-0 items-center gap-2 rounded-2xl px-4 text-sm font-semibold disabled:cursor-not-allowed disabled:opacity-40"><Send className="h-4 w-4" /><span className="hidden sm:inline">Senden</span></button>
+            </form>
+          </div> : selectedContact ? <div className="relative flex flex-1 flex-col items-center justify-center px-6 py-12 text-center">
             <div className="drift-orb drift-orb-top" /><div className="drift-orb drift-orb-bottom" />
             <ChatDoodle />
             <h2 className="relative text-2xl font-bold tracking-tight">Unterhaltung öffnen</h2>
