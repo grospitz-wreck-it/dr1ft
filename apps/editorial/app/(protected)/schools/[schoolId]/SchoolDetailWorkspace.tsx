@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { Building2, ChevronDown, LogOut, MoreHorizontal, Pencil, Plus, Save, Settings, UserRound, Users, School as SchoolIcon, BarChart3, LayoutDashboard, X } from "lucide-react";
+import { ArrowLeft, Building2, ChevronDown, LogOut, MoreHorizontal, Pencil, Plus, Save, Settings, UserRound, Users, School as SchoolIcon, BarChart3, LayoutDashboard, X } from "lucide-react";
 import { createBrowserClient } from "@supabase/ssr";
 
 type School = { id: string; name: string; region: string | null; email_domain: string | null; school_type: string | null; street: string | null; house_number: string | null; postal_code: string | null; city: string | null; phone: string | null; website: string | null; student_count: number | null; status: string; plan: string; funding_type: string; internal_notes: string | null; school_image_path: string | null; school_image_position_x: number; school_image_position_y: number; school_image_zoom: number; created_at: string; updated_at: string };
