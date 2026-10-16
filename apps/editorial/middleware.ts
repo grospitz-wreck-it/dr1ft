@@ -12,9 +12,7 @@ function isPublicAuthPath(pathname: string) {
 
 function withRequestContext(request: NextRequest) {
   const headers = new Headers(request.headers);
-  const pathname = request.nextUrl.pathname.replace(/\/+$/, "") || "/";
-  headers.set("x-pathname", pathname);
-  headers.set("x-dr1ft-school-area", pathname === "/schools" || pathname.startsWith("/schools/") ? "1" : "0");
+  headers.set("x-pathname", request.nextUrl.pathname);
   headers.set("x-dr1ft-host", request.nextUrl.hostname.toLowerCase());
   return headers;
 }
