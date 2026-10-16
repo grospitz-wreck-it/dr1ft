@@ -501,3 +501,133 @@ export async function regenerateLearningImage(contentItemId: string, scenarioId:
   revalidatePath("/scenarios/" + scenarioId);
   return { mediaUrl: image.url, generationCount: nextGeneration.generationCount };
 }
+
+
+/** Speichert Inhaltstext und die individuelle, redaktionelle Interaktionslogik eines Content-Items. */
+export async function saveContentEditorial(
+  scenarioId: string,
+  contentItemId: string,
+  input: {
+    title?: string;
+    body?: string;
+    interaction?: {
+      type?: string;
+      goal?: string;
+      expectedFinding?: string;
+      successFeedback?: string;
+      retryFeedback?: string;
+    };
+  },
+) {
+  const supabase = supabaseServerClient();
+  const { data: item, error: readError } = await supabase
+    .from("content_items")
+    .select("id,extra")
+    .eq("id", contentItemId)
+    .eq("scenario_id", scenarioId)
+    .single();
+  if (readError || !item) throw new Error(readError?.message || "Inhalt nicht gefunden.");
+
+  const currentExtra = item.extra && typeof item.extra === "object" && !Array.isArray(item.extra)
+    ? item.extra as Record<string, unknown>
+    : {};
+  const interaction = {
+    type: String(input.interaction?.type || "inspect_source").slice(0, 80),
+    goal: String(input.interaction?.goal || "").trim().slice(0, 1600),
+    expectedFinding: String(input.interaction?.expectedFinding || "").trim().slice(0, 2400),
+    successFeedback: String(input.interaction?.successFeedback || "").trim().slice(0, 1600),
+    retryFeedback: String(input.interaction?.retryFeedback || "").trim().slice(0, 1600),
+  };
+  const interactionChecks = currentExtra.interaction_checks && typeof currentExtra.interaction_checks === "object"
+    ? currentExtra.interaction_checks as Record<string, unknown>
+    : {};
+  const checkKey = interaction.type;
+  const nextChecks = {
+    ...interactionChecks,
+    [checkKey]: {
+      ...((interactionChecks[checkKey] && typeof interactionChecks[checkKey] === "object") ? interactionChecks[checkKey] as Record<string, unknown> : {}),
+      enabled: Boolean(interaction.goal || interaction.expectedFinding || interaction.successFeedback || interaction.retryFeedback),
+      feedback: interaction.successFeedback || interaction.expectedFinding,
+      expectedFinding: interaction.expectedFinding,
+      goal: interaction.goal,
+      retryFeedback: interaction.retryFeedback,
+    },
+  };
+  const update: Record<string, unknown> = {
+    extra: { ...currentExtra, learning_interaction: interaction, interaction_checks: nextChecks },
+    updated_at: new Date().toISOString(),
+  };
+  if (input.title !== undefined) update.title = String(input.title).trim().slice(0, 240) || null;
+  if (input.body !== undefined) update.body = String(input.body).trim().slice(0, 12000);
+  const { error } = await supabase.from("content_items").update(update).eq("id", contentItemId).eq("scenario_id", scenarioId);
+  if (error) throw new Error(error.message);
+  revalidatePath("/scenarios/" + scenarioId);
+}
+
+/** Liefert einen bearbeitbaren KI-Vorschlag für die Interaktion; speichert nichts automatisch. */
+export async function suggestContentInteraction(
+  scenarioId: string,
+  contentItemId: string,
+  interactionType: string,
+) {
+  const supabase = supabaseServerClient();
+  const { data: item, error } = await supabase
+    .from("content_items")
+    .select("id,title,body,extra")
+    .eq("id", contentItemId)
+    .eq("scenario_id", scenarioId)
+    .single();
+  if (error || !item) throw new Error(error?.message || "Inhalt nicht gefunden.");
+  const { data: scenario } = await supabase.from("scenarios").select("title,description,age_band").eq("id", scenarioId).single();
+  if (!scenario) throw new Error("Szenario nicht gefunden.");
+
+  const apiKey = process.env.GEMINI_API_KEY?.trim();
+  if (!apiKey) throw new Error("KI-Vorschläge sind gerade nicht verfügbar. Du kannst alle Felder manuell ausfüllen.");
+  const prompt = [
+    "Du bist pädagogische Redaktionshilfe für DR1FT, eine Medienkompetenz-Lernumgebung.",
+    "Erstelle einen bearbeitbaren Interaktionsvorschlag zu einem konkreten Szenario-Inhalt.",
+    "Erfinde keine externen Tatsachen und behaupte keine Fakten, die nicht aus dem Inhalt oder dem Auftrag hervorgehen.",
+    "Wenn der Inhalt keine echte Quelle oder Belege enthält, formuliere erwartete Erkenntnisse als redaktionell zu prüfende Annahme und weise darauf hin.",
+    "Szenario: " + scenario.title,
+    "Beschreibung: " + (scenario.description || ""),
+    "Altersgruppe: " + scenario.age_band,
+    "Titel: " + (item.title || ""),
+    "Inhalt: " + (item.body || ""),
+    "Interaktionstyp: " + interactionType,
+    "Erzeuge ein kind- und jugendgerechtes Lernziel, eine konkrete erwartete Erkenntnis, eine bestärkende Rückmeldung bei korrekter Lösung und einen hilfreichen Hinweis bei unvollständiger Lösung.",
+  ].join("\n");
+  const response = await fetch("https://generativelanguage.googleapis.com/v1beta/interactions", {
+    method: "POST",
+    headers: { "Content-Type": "application/json", "x-goog-api-key": apiKey },
+    body: JSON.stringify({
+      model: "gemini-3.5-flash-lite",
+      input: prompt,
+      response_format: {
+        type: "text",
+        mime_type: "application/json",
+        schema: {
+          type: "object",
+          properties: {
+            goal: { type: "string" },
+            expectedFinding: { type: "string" },
+            successFeedback: { type: "string" },
+            retryFeedback: { type: "string" },
+          },
+          required: ["goal", "expectedFinding", "successFeedback", "retryFeedback"],
+        },
+      },
+    }),
+    cache: "no-store",
+  });
+  if (!response.ok) throw new Error("KI-Vorschlag fehlgeschlagen: " + (await response.text()).slice(0, 400));
+  const data = await response.json();
+  const raw = data.output_text ?? data.output?.find?.((part: any) => part.type === "text")?.text ?? "";
+  const parsed = JSON.parse(String(raw).trim());
+  return {
+    type: interactionType,
+    goal: String(parsed.goal || ""),
+    expectedFinding: String(parsed.expectedFinding || ""),
+    successFeedback: String(parsed.successFeedback || ""),
+    retryFeedback: String(parsed.retryFeedback || ""),
+  };
+}

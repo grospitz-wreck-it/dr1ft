@@ -8,6 +8,7 @@ import { LearningDesignStudio } from "./LearningDesignStudio";
 import { LearningStepEditor } from "./LearningStepEditor";
 import { ContentComposer } from "./ContentComposer";
 import { ContentAttachmentEditor } from "./ContentAttachmentEditor";
+import { ContentItemEditor } from "./ContentItemEditor";
 import { regenerateLearningImage, rejectLearningImage } from "../learning-content-actions";
 
 interface Props {
@@ -295,6 +296,7 @@ export default async function ScenarioDetailPage({ params, searchParams = {} }: 
                             </div>
                           )}
 
+                          <ContentItemEditor scenarioId={scenarioId} item={item} />
                           <ContentAttachmentEditor scenarioId={scenarioId} contentItemId={item.id} />
                           <div className="mt-2"><ContentStatusControl contentItemId={item.id} status={item.status} /></div>
                         </div>
