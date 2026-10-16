@@ -58,11 +58,9 @@ export default async function RootLayout({
   const normalizedPathname =
     pathname.split("?")[0].replace(/\/+$/, "") || "/";
 
-  const isSchoolArea =
-    normalizedPathname === "/schools" ||
-    normalizedPathname.startsWith("/schools/");
+  const isSchoolDetailPage = normalizedPathname.startsWith("/schools/");
 
-  if (isPublicAuthPage || hostname === schoolHost || isSchoolArea) {
+  if (isPublicAuthPage || hostname === schoolHost || isSchoolDetailPage) {
     return (
       <html lang="de">
         <body className="font-sans">{children}</body>
