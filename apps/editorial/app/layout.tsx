@@ -62,7 +62,9 @@ export default async function RootLayout({
     normalizedPathname === "/schools" ||
     normalizedPathname.startsWith("/schools/");
 
-  if (isPublicAuthPage || hostname === schoolHost || isSchoolArea) {
+  const isSchoolDetailPage = normalizedPathname.startsWith("/schools/");
+
+  if (isPublicAuthPage || hostname === schoolHost || isSchoolDetailPage) {
     return (
       <html lang="de">
         <body className="font-sans">{children}</body>
