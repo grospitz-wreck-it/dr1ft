@@ -12,19 +12,18 @@ function isPublicAuthPath(pathname: string) {
 
 function withRequestContext(request: NextRequest) {
   const headers = new Headers(request.headers);
-  const pathname = request.nextUrl.pathname;
-  headers.set("x-pathname", pathname);
+  headers.set("x-pathname", request.nextUrl.pathname);
   headers.set("x-dr1ft-host", request.nextUrl.hostname.toLowerCase());
-  // Pass the route decision explicitly to the root layout; do not rely on
-  // Next.js internal path headers, which can differ on preview deployments.
-  request.cookies.set("dr1ft-school-detail", pathname.startsWith("/schools/") ? "1" : "0");
   return headers;
 }
 
 export async function middleware(request: NextRequest) {
   const pathname = request.nextUrl.pathname;
   const hostname = request.nextUrl.hostname.toLowerCase();
-  const isSchoolHost = hostname === SCHOOL_HOST;
+  const isSchoolHost =
+    hostname === SCHOOL_HOST ||
+    (process.env.NODE_ENV === "development" &&
+      (hostname === "localhost" || hostname === "127.0.0.1"));
 
   if (isPublicAuthPath(pathname)) {
     return NextResponse.next({
