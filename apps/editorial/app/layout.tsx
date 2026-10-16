@@ -36,7 +36,12 @@ export default async function RootLayout({
   children: React.ReactNode;
 }) {
   const requestHeaders = headers();
-  const pathname = requestHeaders.get("x-pathname") ?? "";
+  const pathname = (
+    requestHeaders.get("x-pathname") ??
+    requestHeaders.get("x-matched-path") ??
+    requestHeaders.get("next-url") ??
+    ""
+  ).split("?")[0].replace(/\/+$/, "") || "/";
   const host =
     requestHeaders.get("x-dr1ft-host") ??
     requestHeaders.get("x-forwarded-host") ??
@@ -51,9 +56,9 @@ export default async function RootLayout({
 
   // The school portal renders its own navigation. Keep it outside the editorial shell
   // so school admins never get two sidebars when arriving via schule.dr1ft.de.
-  const isSchoolDetailPage = pathname.startsWith("/schools/") && pathname !== "/schools";
+  const isSchoolArea = pathname === "/schools" || pathname.startsWith("/schools/");
 
-  if (isPublicAuthPage || hostname === schoolHost || isSchoolDetailPage) {
+  if (isPublicAuthPage || hostname === schoolHost || isSchoolArea) {
     return (
       <html lang="de">
         <body className="font-sans">{children}</body>
