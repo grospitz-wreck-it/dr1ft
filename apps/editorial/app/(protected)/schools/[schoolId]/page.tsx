@@ -89,6 +89,7 @@ export default async function SchoolDetailPage({ params }: { params: { schoolId:
       ) : (
         <SchoolDetailWorkspace
           school={school}
+          isPlatformAdmin={isPlatformAdmin}
           initialMembers={members ?? []}
           initialClasses={schoolClasses}
           stats={{
