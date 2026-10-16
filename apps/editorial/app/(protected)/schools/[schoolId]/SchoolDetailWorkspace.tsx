@@ -59,7 +59,7 @@ function regionLabel(value: string | null) {
 
 
 
-export function SchoolDetailWorkspace({ school: initialSchool, initialMembers, initialClasses, stats }: { school: School; initialMembers: Member[]; initialClasses: SchoolClass[]; stats: Stats }) {
+export function SchoolDetailWorkspace({ school: initialSchool, initialMembers, initialClasses, stats, isPlatformAdmin }: { school: School; initialMembers: Member[]; initialClasses: SchoolClass[]; stats: Stats; isPlatformAdmin: boolean }) {
   const [school, setSchool] = useState(initialSchool);
   const [members, setMembers] = useState(initialMembers);
   const [tab, setTab] = useState<"overview" | "classes" | "people" | "insights" | "settings">("overview");
