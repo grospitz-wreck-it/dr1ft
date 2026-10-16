@@ -190,7 +190,7 @@ export default function MessagesWorkspace({
             <div className="dm-message-list flex-1 space-y-3 overflow-y-auto px-4 py-5 sm:px-7">
               {messageLoading && directMessages.length === 0 && <p className="py-10 text-center text-sm text-white/45">Unterhaltung wird geladen …</p>}
               {!messageLoading && directMessages.length === 0 && <div className="flex h-full min-h-52 flex-col items-center justify-center text-center"><ChatDoodle /><p className="mt-2 text-lg font-semibold">Sag Hallo!</p><p className="mt-1 text-sm text-white/45">Das ist der Anfang eurer Unterhaltung.</p></div>}
-              {directMessages.map((message, index) => <div key={message.id} className={`flex ${message.sender_id === selectedStudent.id ? "justify-start" : "justify-end"}`}><div className={`dm-bubble max-w-[88%] rounded-2xl px-4 py-2.5 sm:max-w-[72%] ${message.sender_id === selectedStudent.id ? "dm-bubble-in rounded-bl-sm" : "dm-bubble-out rounded-br-sm"}`}><p className="whitespace-pre-wrap break-words text-sm leading-[1.55]">{message.body}</p><p className="dm-message-time mt-1 text-right text-[10px]">{new Date(message.created_at).toLocaleString("de-DE", { hour: "2-digit", minute: "2-digit" })}</p></div></div>)}
+              {directMessages.map((message, index) => <div key={message.id} className={`flex ${message.sender_id === selectedStudent.id ? "justify-start" : "justify-end"}`}><div className={`dm-bubble max-w-[82%] rounded-xl px-3 py-2 sm:max-w-[64%] ${message.sender_id === selectedStudent.id ? "dm-bubble-in rounded-bl-sm" : "dm-bubble-out rounded-br-sm"}`}><p className="dm-message-body whitespace-pre-wrap break-words text-lg leading-[1.4] sm:text-xl">{message.body}</p><p className="dm-message-time mt-1 text-right text-xs sm:text-sm">{new Date(message.created_at).toLocaleString("de-DE", { hour: "2-digit", minute: "2-digit" })}</p></div></div>)}
               <div ref={messageEndRef} />
               {messageError && <p role="alert" className="rounded-xl border border-rose-300/20 bg-rose-300/5 p-3 text-xs text-rose-200">{messageError}</p>}
             </div>
@@ -243,11 +243,11 @@ export default function MessagesWorkspace({
         .drift-messenger-list { background:var(--drift-surface-soft); border-color:var(--drift-border); }
         .drift-messenger-chat { background:radial-gradient(ellipse at 84% 8%,rgba(99,102,241,.10),transparent 38%),radial-gradient(ellipse at 18% 100%,rgba(217,70,239,.07),transparent 34%),#f7f5fc; }
         .dm-bubble { box-shadow:0 1px 2px rgba(35,25,60,.08); overflow-wrap:anywhere; }
-        .dm-bubble-in { color:#29243a !important; background:#ffffff !important; border:1px solid #e8e3f1 !important; border-bottom-left-radius:5px !important; }
+        .dm-bubble { box-shadow:0 1px 3px rgba(31,20,55,.08) !important; border-radius:16px !important; }\n        .dm-bubble-in { color:#29243a !important; background:#ffffff !important; border:1px solid #e8e3f1 !important; border-bottom-left-radius:5px !important; }
         .dm-bubble-in p { color:#29243a !important; }
         .dm-bubble-out { color:#ffffff !important; background:linear-gradient(135deg,#8b35d9 0%,#5546e8 58%,#3267e8 100%) !important; border:1px solid rgba(255,255,255,.18) !important; border-bottom-right-radius:5px !important; }
         .dm-bubble-out p { color:#ffffff !important; }
-        .dm-bubble .dm-message-time { opacity:.72; font-variant-numeric:tabular-nums; }
+        .dm-bubble .dm-message-body { overflow-wrap:anywhere; }\n        .dm-message-time { opacity:.72; font-variant-numeric:tabular-nums; }
         .dm-composer { color:#29243a; background:#ffffff; border-color:#ddd6ec; }
         .dm-composer::placeholder { color:#716a82; opacity:1; }
         .dm-picker { color:#302842; background:#ffffff; border-color:#ddd6ec; box-shadow:0 12px 36px rgba(35,25,60,.12); }
