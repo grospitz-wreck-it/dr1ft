@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { cookies, headers } from "next/headers";
+import { headers } from "next/headers";
 import {
   LayoutGrid,
   Gauge,
@@ -58,12 +58,11 @@ export default async function RootLayout({
   const normalizedPathname =
     pathname.split("?")[0].replace(/\/+$/, "") || "/";
 
-  const routeCookies = cookies();
-  const isSchoolDetailPage =
-    routeCookies.get("dr1ft-school-detail")?.value === "1" ||
+  const isSchoolArea =
+    normalizedPathname === "/schools" ||
     normalizedPathname.startsWith("/schools/");
 
-  if (isPublicAuthPage || hostname === schoolHost || isSchoolDetailPage) {
+  if (isPublicAuthPage || hostname === schoolHost || isSchoolArea) {
     return (
       <html lang="de">
         <body className="font-sans">{children}</body>
