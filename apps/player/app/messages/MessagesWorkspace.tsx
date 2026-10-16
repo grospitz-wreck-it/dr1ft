@@ -70,7 +70,11 @@ export default function MessagesWorkspace({
       .then(async (response) => {
         const payload = await response.json();
         if (!response.ok) throw new Error(payload.error || "Unterhaltung konnte nicht geladen werden.");
-        if (active) setDirectMessages(payload.messages ?? []);
+        if (active) {
+          setDirectMessages(payload.messages ?? []);
+          setStudentContacts((current) => current.map((contact) => contact.id === selectedStudent.id ? { ...contact, isDue: false } : contact));
+          window.dispatchEvent(new Event("dr1ft:messages-read"));
+        }
       })
       .catch((error) => { if (active) setMessageError(error instanceof Error ? error.message : "Unterhaltung konnte nicht geladen werden."); })
       .finally(() => { if (active) setMessageLoading(false); });
