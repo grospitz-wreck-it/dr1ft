@@ -36,13 +36,11 @@ export default async function RootLayout({
   children: React.ReactNode;
 }) {
   const requestHeaders = headers();
-  const pathname = (
+  const pathname =
     requestHeaders.get("x-pathname") ??
     requestHeaders.get("x-matched-path") ??
     requestHeaders.get("next-url") ??
-    ""
-  ).split("?")[0].replace(/\/+$/, "") || "/";
-  const isSchoolArea = requestHeaders.get("x-dr1ft-school-area") === "1" || pathname === "/schools" || pathname.startsWith("/schools/");
+    "";
   const host =
     requestHeaders.get("x-dr1ft-host") ??
     requestHeaders.get("x-forwarded-host") ??
@@ -57,6 +55,13 @@ export default async function RootLayout({
 
   // The school portal renders its own navigation. Keep it outside the editorial shell
   // so school admins never get two sidebars when arriving via schule.dr1ft.de.
+  const normalizedPathname =
+    pathname.split("?")[0].replace(/\/+$/, "") || "/";
+
+  const isSchoolArea =
+    normalizedPathname === "/schools" ||
+    normalizedPathname.startsWith("/schools/");
+
   if (isPublicAuthPage || hostname === schoolHost || isSchoolArea) {
     return (
       <html lang="de">
@@ -92,6 +97,17 @@ export default async function RootLayout({
 
                   return (
                     <li key={item.href}>
+                      {item.href === "/schools" ? (
+                        <a
+                          href={item.href}
+                          aria-current={active ? "page" : undefined}
+                          className={`editorial-nav-link ${active ? "editorial-nav-link-active" : ""}`}
+                        >
+                          <Icon className="h-[18px] w-[18px] shrink-0" strokeWidth={1.8} />
+                          <span className="min-w-0 flex-1">{item.label}</span>
+                          {active && <span className="editorial-nav-indicator" aria-hidden="true" />}
+                        </a>
+                      ) : (
                       <Link
                         href={item.href}
                         aria-current={active ? "page" : undefined}
@@ -101,6 +117,7 @@ export default async function RootLayout({
                         <span className="min-w-0 flex-1">{item.label}</span>
                         {active && <span className="editorial-nav-indicator" aria-hidden="true" />}
                       </Link>
+                      )}
                     </li>
                   );
                 })}
