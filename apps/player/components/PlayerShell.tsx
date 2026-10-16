@@ -133,8 +133,14 @@ export function PlayerShell({ children }: { children: React.ReactNode }) {
       setHasUnreadMessages(hasUnreadScenario || hasUnreadDirect);
     }
     void checkUnreadMessages();
+    const handleMessagesRead = () => { void checkUnreadMessages(); };
+    window.addEventListener("dr1ft:messages-read", handleMessagesRead);
     const interval = window.setInterval(() => { void checkUnreadMessages(); }, 15000);
-    return () => { mounted = false; window.clearInterval(interval); };
+    return () => {
+      mounted = false;
+      window.clearInterval(interval);
+      window.removeEventListener("dr1ft:messages-read", handleMessagesRead);
+    };
   }, [supabase, pathname, user?.username]);
   useEffect(() => {
     if (!user) {
@@ -277,7 +283,7 @@ export function PlayerShell({ children }: { children: React.ReactNode }) {
               <div className="px-3 pb-2 text-[10px] font-semibold uppercase tracking-[0.18em] text-white/30">Dein Space</div>
               <nav className="space-y-1.5">
                 {NAV.map((item) => { const active = isActive(pathname, item.href); return <Link key={item.href} href={item.href} className={`group relative flex items-center gap-3 px-3 py-3 rounded-2xl transition-all duration-200 ${active ? "bg-gradient-to-r from-social-pink/25 via-social-violet/20 to-social-blue/10 text-white shadow-inner" : "text-white/55 hover:bg-white/[.07] hover:text-white"}`}>
-                  <span className={`relative grid place-items-center w-9 h-9 rounded-xl transition-all ${active ? "bg-white/10 text-social-blue" : "bg-white/[.025] group-hover:bg-white/[.08]"}`}><Icon name={item.icon} active={active} />{item.label === "Nachrichten" && hasUnreadMessages && <span aria-label="Ungelesene Nachrichten" className="absolute -left-1 top-1/2 h-2.5 w-2.5 -translate-y-1/2 rounded-full bg-social-pink shadow-[0_0_10px_rgba(236,72,153,.75)]" />}</span>
+                  <span className={`relative grid place-items-center w-9 h-9 rounded-xl transition-all ${active ? "bg-white/10 text-social-blue" : "bg-white/[.025] group-hover:bg-white/[.08]"}`}><Icon name={item.icon} active={active} />{item.label === "Nachrichten" && hasUnreadMessages && <span aria-label="Ungelesene Nachrichten" className="absolute -right-1 -top-1 h-2.5 w-2.5 rounded-full bg-social-pink shadow-[0_0_10px_rgba(236,72,153,.75)]" />}</span>
                   <span className="font-medium text-sm">{item.label}</span>
                   {active && <span className="absolute right-2 w-1 h-7 rounded-full bg-gradient-to-b from-social-pink to-social-blue shadow-[0_0_14px_rgba(34,211,238,.6)]" />}
                 </Link>; })}
