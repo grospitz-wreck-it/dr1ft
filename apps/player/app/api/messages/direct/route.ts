@@ -27,9 +27,20 @@ export async function GET(request: Request) {
           .limit(200)
       : { data: [], error: null };
     if (error) return NextResponse.json({ error: "Kontakte konnten nicht geladen werden." }, { status: 500 });
-    const { data: unreadMessages } = await supabase.from("student_direct_messages").select("sender_id").eq("class_instance_id", classInstanceId).eq("recipient_id", user.id).is("read_at", null);
+    const [{ data: unreadMessages }, { data: recentMessages }] = await Promise.all([
+      supabase.from("student_direct_messages").select("sender_id").eq("class_instance_id", classInstanceId).eq("recipient_id", user.id).is("read_at", null),
+      supabase.from("student_direct_messages").select("sender_id, recipient_id, body, created_at").eq("class_instance_id", classInstanceId).or(`sender_id.eq.${user.id},recipient_id.eq.${user.id}`).order("created_at", { ascending: false }).limit(1000),
+    ]);
     const unreadSenderIds = new Set((unreadMessages ?? []).map((message) => message.sender_id));
-    return NextResponse.json({ contacts: (profiles ?? []).map((p) => ({ id: p.id, display_name: p.display_name || p.username || "DR1FT Schüler", handle: p.username ? `@${p.username}` : "@dr1ft", isDue: unreadSenderIds.has(p.id) })), hasUnread: unreadSenderIds.size > 0 });
+    const latestByPeer = new Map<string, { body: string; created_at: string; sender_id: string }>();
+    for (const message of recentMessages ?? []) {
+      const peerId = message.sender_id === user.id ? message.recipient_id : message.sender_id;
+      if (!latestByPeer.has(peerId)) latestByPeer.set(peerId, { body: message.body, created_at: message.created_at, sender_id: message.sender_id });
+    }
+    return NextResponse.json({ contacts: (profiles ?? []).map((p) => {
+      const latest = latestByPeer.get(p.id);
+      return { id: p.id, display_name: p.display_name || p.username || "DR1FT Schüler", handle: p.username ? `@${p.username}` : "@dr1ft", isDue: unreadSenderIds.has(p.id), lastMessage: latest?.body ?? null, lastMessageAt: latest?.created_at ?? null, lastMessageFromMe: latest?.sender_id === user.id };
+    }), hasUnread: unreadSenderIds.size > 0 });
   }
 
   const { data: peerMembership, error: peerMembershipError } = await supabase
