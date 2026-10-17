@@ -93,6 +93,11 @@ body::after {
 
 @layer components {
   .player-sidebar { display: none; }
+  /* The compact header navigation is mobile/tablet only; desktop uses the sidebar. */
+  .player-mobile-header { display: block; }
+  @media (min-width: 1024px) {
+    .player-mobile-header { display: none !important; }
+  }
 
   @media (min-width: 1024px) {
     .player-sidebar { display: flex !important; }
