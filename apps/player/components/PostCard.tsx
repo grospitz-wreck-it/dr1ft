@@ -7,6 +7,7 @@
 // immediate feedback so exploration itself feels like a normal product flow.
 
 import { useEffect, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import Link from "next/link";
 import { Check, ChevronDown, Eye, Flag, Heart, Image as ImageIcon, MessageCircle, MoreHorizontal, Search, Share2, UserRound, X } from "lucide-react";
 import type { FeedItem, CreatorSummary } from "../lib/types";
@@ -255,7 +256,7 @@ export function PostCard({ item, userId, classInstanceId, initiallyLiked, onView
           <button onClick={() => setMenuOpen((open) => !open)} className="touch-target grid w-11 place-items-center rounded-xl text-ink/60 transition-colors hover:bg-ink/5" aria-label="Weitere Optionen" aria-expanded={menuOpen}><MoreHorizontal className="w-5 h-5"/></button>
           {menuOpen && <div className="absolute z-20 right-0 bottom-12 w-60 rounded-xl border border-ink/15 bg-paper text-ink shadow-xl p-1.5 dark-post-menu">{showCheck("inspect_source") && <ActionButton icon={<Search/>} label="Quelle ansehen" onClick={inspectSource}/>}{showCheck("inspect_media") && <ActionButton icon={<ImageIcon/>} label="Bild prüfen" onClick={inspectMedia}/>}{showCheck("inspect_context") && <ActionButton icon={<Eye/>} label="Kontext prüfen" onClick={inspectContext}/>}{showCheck("inspect_profile") && <ActionButton icon={<UserRound/>} label="Profil ansehen" onClick={inspectProfile}/>}{showCheck("compare_information") && <ActionButton icon={<Search/>} label="Informationen vergleichen" onClick={compareInformation}/>}<div className="my-1 border-t border-ink/10"/><ActionButton icon={<Share2/>} label="Teilen" onClick={share}/><ActionButton icon={<Flag/>} label="Melden" onClick={report}/><ActionButton icon={<X/>} label="Ignorieren" onClick={ignore}/></div>}
         </div>
-        {shareOpen && <div className="fixed inset-0 z-[100] flex items-center justify-center bg-slate-950/60 p-4 backdrop-blur-sm" onPointerDown={(event) => { if (event.target === event.currentTarget) setShareOpen(false); }}>
+        {shareOpen && typeof document !== "undefined" && createPortal(<div className="fixed inset-0 z-[1000] flex items-center justify-center bg-slate-950/60 p-4 backdrop-blur-sm" onPointerDown={(event) => { if (event.target === event.currentTarget) setShareOpen(false); }}>
           <section role="dialog" aria-modal="true" aria-labelledby={`share-title-${item.id}`} className="w-full max-w-md rounded-3xl border border-slate-200 bg-white p-5 text-slate-900 shadow-2xl dark-share-dialog">
             <div className="flex items-start justify-between gap-4">
               <div><h2 id={`share-title-${item.id}`} className="text-lg font-semibold">Beitrag teilen</h2><p className="mt-1 text-sm text-slate-500">Nur mit Leuten aus deiner Klasseninstanz.</p></div>
@@ -275,7 +276,7 @@ export function PostCard({ item, userId, classInstanceId, initiallyLiked, onView
               <button type="button" disabled={!selectedRecipients.length || shareSaving || shareLoading} onClick={() => void sendShare()} className="inline-flex items-center gap-2 rounded-xl bg-violet-700 px-4 py-2.5 text-sm font-semibold text-white disabled:opacity-40"><Share2 className="h-4 w-4"/>{shareSaving ? "Wird geteilt …" : "Jetzt teilen"}</button>
             </div>
           </section>
-        </div>}
+        </div>, document.body)}
         {feedback && <div className="mt-3 rounded-lg bg-ink/5 px-3 py-2.5 flex items-start gap-2 text-xs leading-relaxed" role="status"><Check className="w-4 h-4 shrink-0 mt-0.5"/><span>{feedback}</span></div>}
         {commentsOpen && <div className="mt-3 space-y-3">
           <div className="rounded-xl border border-ink/10 bg-ink/[0.025] p-3">
