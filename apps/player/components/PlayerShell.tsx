@@ -339,8 +339,8 @@ export function PlayerShell({ children }: { children: React.ReactNode }) {
           </div>
         </aside>
 
-        <div className="player-mobile-header fixed inset-x-0 top-0 z-50 border-b border-violet-200/70 bg-white/95 text-slate-900 shadow-[0_8px_24px_rgba(47,28,82,.10)] backdrop-blur-xl dark-mode: text-white">
-          <div className="flex min-h-[68px] w-full items-center gap-2 px-3">
+        <div className="player-mobile-header fixed left-0 right-0 top-0 z-50 w-full border-b border-violet-200/70 bg-white/95 text-slate-900 shadow-[0_8px_24px_rgba(47,28,82,.10)] backdrop-blur-xl dark-mode">
+          <div className="flex min-h-[68px] w-full items-center gap-2 px-3 pt-[env(safe-area-inset-top)]">
             <Link href="/feed" aria-label="DR1FT – Feed" className="flex min-w-0 shrink-0 items-center gap-1.5">
               <img src="/branding/drift-logo-appstore-transparent.webp" alt="" aria-hidden="true" className="h-9 w-9 shrink-0 object-contain" />
               <span className="font-display text-base font-bold tracking-[-0.05em]">DR1FT</span>
