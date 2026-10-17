@@ -278,7 +278,7 @@ export default async function ScenarioDetailPage({ params, searchParams = {} }: 
                               <div><p className="text-[10px] font-bold uppercase tracking-[0.14em] text-violet-600">Szene gestalten</p><h4 className="mt-1 text-sm font-semibold text-slate-900">{item.title || (item.type === "dm_message" ? "Direktnachricht" : item.type === "comment" ? "Kommentar" : item.type === "reflection_prompt" ? "Reflexionsimpuls" : "Szenario-Post")}</h4></div>
                               <ContentStatusControl contentItemId={item.id} status={item.status} />
                             </div>
-                            <ContentItemEditor scenarioId={scenarioId} item={item} />
+                            <ContentItemEditor scenarioId={scenarioId} item={item} creators={creators ?? []} />
                           </div>
                         </div>
                       </article>
