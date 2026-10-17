@@ -292,7 +292,8 @@ export async function generateAmbientDrafts(formData: FormData) {
   const interests = String(formData.get("interests") ?? "").split(",").map((v) => v.trim()).filter(Boolean).slice(0, 3);
 
   const { data: ambientCreatorRows } = await supabase.from("creators").select("id").eq("creator_role", "ambient");
-  const automaticCreatorIds = (ambientCreatorRows ?? []).map((creator: any) => creator.id);
+  const { data: fallbackCreatorRows } = await supabase.from("creators").select("id");
+  const automaticCreatorIds = (ambientCreatorRows ?? []).length ? (ambientCreatorRows ?? []).map((creator: any) => creator.id) : (fallbackCreatorRows ?? []).map((creator: any) => creator.id);
   const creatorVoice = creatorId ? (await supabase.from("creators").select("display_name, persona").eq("id", creatorId).maybeSingle()).data : null;
   const profile = (await supabase.from("ambient_generation_profiles").select("*").eq("age_band", ageBand).eq("is_active", true).limit(1).maybeSingle()).data;
   // Gemini ist optional. Wenn der Nutzer Gemini auswählt, aber in Vercel
