@@ -23,14 +23,16 @@ const interactionTypes = [
   { value: "custom", label: "Eigene Interaktion", hint: "Eine andere Lernhandlung festlegen" },
 ];
 
-export function ContentItemEditor({ scenarioId, item }: {
+export function ContentItemEditor({ scenarioId, item, creators }: {
   scenarioId: string;
-  item: { id: string; title?: string | null; body: string | null; extra?: unknown };
+  item: { id: string; title?: string | null; body: string | null; creator_id?: string | null; extra?: unknown };
+  creators: Array<{ id: string; display_name: string; creator_role?: string | null }>;
 }) {
   const extra = item.extra && typeof item.extra === "object" ? item.extra as Record<string, any> : {};
   const saved = extra.learning_interaction && typeof extra.learning_interaction === "object" ? extra.learning_interaction : {};
   const [title, setTitle] = useState(item.title || "");
   const [body, setBody] = useState(item.body || "");
+  const [creatorId, setCreatorId] = useState(item.creator_id || "");
   const [interaction, setInteraction] = useState<Interaction>({
     type: saved.type || "inspect_source",
     expectedAction: saved.expectedAction === "report" || saved.expectedAction === "ignore" ? saved.expectedAction : "none",
@@ -47,7 +49,7 @@ export function ContentItemEditor({ scenarioId, item }: {
     setMessage("");
     startTransition(async () => {
       try {
-        await saveContentEditorial(scenarioId, item.id, { title, body, interaction });
+        await saveContentEditorial(scenarioId, item.id, { title, body, creatorId, interaction });
         setMessage("Gespeichert – Inhalt und Lernziel sind aktualisiert.");
       } catch (error) {
         setMessage(error instanceof Error ? error.message : "Speichern fehlgeschlagen.");
@@ -73,6 +75,7 @@ export function ContentItemEditor({ scenarioId, item }: {
 
   return (
     <div className="mt-3 overflow-hidden rounded-2xl border border-violet-100 bg-gradient-to-br from-violet-50/70 via-white to-sky-50/70">
+      <div className="px-4 pt-4"><label className="block text-xs font-semibold text-slate-600">ABSENDER / NPC<select value={creatorId} onChange={(event) => setCreatorId(event.target.value)} className="mt-1.5 w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm font-normal text-slate-900"><option value="">NPC auswählen …</option>{creators.map((creator) => <option key={creator.id} value={creator.id}>{creator.display_name}{creator.creator_role ? ` · ${creator.creator_role}` : ""}</option>)}</select><span className="mt-1 block text-[11px] font-normal text-slate-500">Der Absender wird im Player angezeigt und kann hier geändert werden.</span></label></div>
       <button type="button" onClick={() => setOpen(!open)} className="flex w-full items-center gap-3 px-4 py-3 text-left">
         <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-violet-100 text-violet-700"><Pencil className="h-4 w-4" /></span>
         <span className="min-w-0 flex-1">
