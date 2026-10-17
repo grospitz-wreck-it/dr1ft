@@ -314,7 +314,7 @@ export function PostCard({ item, userId, classInstanceId, initiallyLiked, onView
   return <>
     <article id={`post-${item.id}`} ref={ref} className="relative bg-paper text-ink rounded-card overflow-visible shadow-sm">
       <div className="p-4 pb-0"><AuthorRow creator={item.creator}/><p className="font-mono text-[11px] text-ink/50 mb-2 uppercase tracking-wide">{item.type}</p></div>
-      {item.mediaUrl && item.mediaType === "image" && <div className="flex w-full items-center justify-center overflow-hidden bg-ink/[0.025]"><img src={item.mediaUrl} alt="" className="block h-auto max-h-[min(70vh,640px)] w-auto max-w-full object-contain object-center" loading="lazy"/></div>}
+      {item.mediaUrl && item.mediaType === "image" && <div className="w-full bg-ink/[0.025]"><img src={item.mediaUrl} alt="" className="block h-auto w-full max-w-full object-contain object-center" loading="lazy"/></div>}
       {item.mediaUrl && item.mediaType === "video" && <video src={item.mediaUrl} controls className="w-full max-h-96 object-cover bg-black"/>}
       <div className="p-4 pt-3">
         <p className="font-body text-[15px] leading-relaxed">{item.body}</p>
