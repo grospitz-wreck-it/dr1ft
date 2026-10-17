@@ -260,7 +260,7 @@ export function PlayerShell({ children }: { children: React.ReactNode }) {
   return (
     <div className="min-h-screen">
       {showShell && <>
-        <button type="button" onClick={toggleTheme} aria-label={darkMode ? "Hellmodus aktivieren" : "Dunkelmodus aktivieren"} title={darkMode ? "Hellmodus" : "Dunkelmodus"} className="fixed right-4 top-4 z-[60] grid h-11 w-11 place-items-center rounded-2xl border border-white/60 bg-white/80 text-violet-700 shadow-lg backdrop-blur-xl transition hover:-translate-y-0.5 hover:bg-white lg:right-8 lg:top-5">
+        <button type="button" onClick={toggleTheme} aria-label={darkMode ? "Hellmodus aktivieren" : "Dunkelmodus aktivieren"} title={darkMode ? "Hellmodus" : "Dunkelmodus"} className="fixed right-4 top-4 z-[60] hidden h-11 w-11 place-items-center rounded-2xl border border-white/60 bg-white/80 text-violet-700 shadow-lg backdrop-blur-xl transition hover:-translate-y-0.5 hover:bg-white lg:grid lg:right-8 lg:top-5">
           {darkMode ? <Sun className="h-5 w-5" /> : <Moon className="h-5 w-5" />}
         </button>
         <aside className="player-sidebar fixed z-40 inset-y-0 left-0 w-[286px] p-4 pointer-events-none">
@@ -340,21 +340,29 @@ export function PlayerShell({ children }: { children: React.ReactNode }) {
         </aside>
 
         <div className="lg:hidden fixed z-50 top-3 left-3 right-3 pointer-events-none">
-          <div className="pointer-events-auto h-14 rounded-2xl border border-white/50 bg-shell/90 text-white backdrop-blur-xl shadow-shell-soft flex items-center justify-between px-3">
-            <Link href="/feed" className="flex items-center gap-2.5"><span className="grid place-items-center w-9 h-9 rounded-xl bg-gradient-to-br from-fuchsia-500 via-violet-500 to-cyan-400 font-display font-bold">d.</span><span className="font-display font-bold tracking-[-0.04em]">DR1FT</span></Link>
-            <button onClick={() => setOpen((v) => !v)} className="touch-target grid place-items-center rounded-xl hover:bg-white/10" aria-label="Navigation öffnen"><span className="text-lg">{open ? "×" : "☰"}</span></button>
+          <div className="pointer-events-auto h-16 rounded-2xl border border-white/50 bg-shell/95 text-white backdrop-blur-xl shadow-shell-soft flex items-center justify-between px-3">
+            <Link href="/feed" aria-label="DR1FT – Feed" className="flex min-w-0 items-center gap-2.5">
+              <img src="/branding/drift-logo-appstore-transparent.webp" alt="" aria-hidden="true" className="h-10 w-10 shrink-0 object-contain" />
+              <span className="font-display text-lg font-bold tracking-[-0.04em]">DR1FT</span>
+            </Link>
+            <div className="flex shrink-0 items-center gap-2">
+              <button type="button" onClick={toggleTheme} aria-label={darkMode ? "Hellmodus aktivieren" : "Dunkelmodus aktivieren"} className="grid h-10 w-10 place-items-center rounded-xl text-violet-300 hover:bg-white/10">{darkMode ? <Sun className="h-5 w-5" /> : <Moon className="h-5 w-5" />}</button>
+              <Link href="/profile" aria-label="Mein Profil" className="grid h-10 w-10 place-items-center rounded-xl bg-gradient-to-br from-fuchsia-400 via-violet-400 to-cyan-300 p-[2px]">
+                <img src={avatarUrl(user.avatarSeed, 80)} alt="" className="h-full w-full rounded-[10px] bg-shell-surface object-cover" />
+              </Link>
+            </div>
           </div>
           {open && <div className="mt-2 p-2 rounded-2xl border border-white/20 bg-shell/95 text-white backdrop-blur-xl shadow-xl">{NAV.map((item) => <Link onClick={() => setOpen(false)} key={item.href} href={item.href} className={`flex items-center gap-3 p-3 rounded-xl ${isActive(pathname, item.href) ? "bg-white/10" : ""}`}><Icon name={item.icon}/><span className="text-sm font-medium">{item.label}</span></Link>)}</div>}
         </div>
 
         <nav className="lg:hidden fixed z-40 bottom-3 left-3 right-3 pointer-events-none safe-bottom">
-          <div className="pointer-events-auto mx-auto max-w-md h-[68px] rounded-panel border border-white/50 bg-shell/92 text-white backdrop-blur-xl shadow-shell-nav grid grid-cols-4 p-1.5">
-            {NAV.map((item) => { const active = isActive(pathname, item.href); return <Link key={item.href} href={item.href} className={`relative rounded-[18px] grid place-items-center transition ${active ? "bg-gradient-to-br from-fuchsia-500/30 to-cyan-400/20 text-white" : "text-white/45"}`}><Icon name={item.icon} active={active}/>{active && <span className="absolute bottom-1 w-1 h-1 rounded-full bg-cyan-300 shadow-[0_0_8px_rgba(103,232,249,.9)]"/>}</Link>; })}
+          <div className="pointer-events-auto mx-auto max-w-sm min-h-[72px] rounded-2xl border border-white/25 bg-[#211832]/95 text-white backdrop-blur-xl shadow-shell-nav grid grid-cols-2 gap-1 p-1.5">
+            {NAV.map((item) => { const active = isActive(pathname, item.href); return <Link key={item.href} href={item.href} className={`relative flex min-h-[58px] items-center justify-center gap-2 rounded-xl px-3 transition ${active ? "bg-gradient-to-r from-fuchsia-500/35 via-violet-500/30 to-cyan-400/25 text-white" : "text-white/75 hover:bg-white/10"}`}><Icon name={item.icon} active={active}/><span className="text-sm font-semibold">{item.label}</span>{item.label === "Nachrichten" && hasUnreadMessages && <span aria-label="Ungelesene Nachrichten" className="absolute right-3 top-2 h-2 w-2 rounded-full bg-pink-400 shadow-[0_0_8px_rgba(236,72,153,.8)]"/>}</Link>; })}
           </div>
         </nav>
       </>}
       <main className={showShell ? "lg:pl-[286px]" : ""}>
-        <div className={showShell ? "min-h-screen px-3 pt-[76px] pb-[96px] lg:px-8 lg:pt-8 lg:pb-8" : ""}>{children}</div>
+        <div className={showShell ? "min-h-screen px-3 pt-[92px] pb-[108px] sm:px-4 lg:px-8 lg:pt-8 lg:pb-8" : ""}>{children}</div>
       </main>
     </div>
   );
