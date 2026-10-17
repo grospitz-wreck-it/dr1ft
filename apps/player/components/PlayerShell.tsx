@@ -340,7 +340,7 @@ export function PlayerShell({ children }: { children: React.ReactNode }) {
         </aside>
 
         <div className="lg:hidden fixed z-50 top-3 left-3 right-3 pointer-events-none">
-          <div className="pointer-events-auto h-16 rounded-2xl border border-white/50 bg-shell/95 text-white backdrop-blur-xl shadow-shell-soft flex items-center justify-between px-3">
+          <div className="player-mobile-header pointer-events-auto h-16 rounded-2xl border border-white/50 bg-shell/95 text-white backdrop-blur-xl shadow-shell-soft flex items-center justify-between px-3">
             <Link href="/feed" aria-label="DR1FT – Feed" className="flex min-w-0 items-center gap-2.5">
               <img src="/branding/drift-logo-appstore-transparent.webp" alt="" aria-hidden="true" className="h-10 w-10 shrink-0 object-contain" />
               <span className="font-display text-lg font-bold tracking-[-0.04em]">DR1FT</span>
@@ -356,8 +356,8 @@ export function PlayerShell({ children }: { children: React.ReactNode }) {
         </div>
 
         <nav className="lg:hidden fixed z-40 bottom-3 left-3 right-3 pointer-events-none safe-bottom">
-          <div className="pointer-events-auto mx-auto max-w-sm min-h-[72px] rounded-2xl border border-white/25 bg-[#211832]/95 text-white backdrop-blur-xl shadow-shell-nav grid grid-cols-2 gap-1 p-1.5">
-            {NAV.map((item) => { const active = isActive(pathname, item.href); return <Link key={item.href} href={item.href} className={`relative flex min-h-[58px] items-center justify-center gap-2 rounded-xl px-3 transition ${active ? "bg-gradient-to-r from-fuchsia-500/35 via-violet-500/30 to-cyan-400/25 text-white" : "text-white/75 hover:bg-white/10"}`}><Icon name={item.icon} active={active}/><span className="text-sm font-semibold">{item.label}</span>{item.label === "Nachrichten" && hasUnreadMessages && <span aria-label="Ungelesene Nachrichten" className="absolute right-3 top-2 h-2 w-2 rounded-full bg-pink-400 shadow-[0_0_8px_rgba(236,72,153,.8)]"/>}</Link>; })}
+          <div className="player-mobile-nav pointer-events-auto mx-auto max-w-sm min-h-[72px] rounded-2xl border border-white/25 bg-[#211832]/95 text-white backdrop-blur-xl shadow-shell-nav grid grid-cols-2 gap-1 p-1.5">
+            {NAV.map((item) => { const active = isActive(pathname, item.href); return <Link key={item.href} href={item.href} aria-current={active ? "page" : undefined} className={`relative flex min-h-[58px] items-center justify-center gap-2 rounded-xl px-3 transition ${active ? "bg-gradient-to-r from-fuchsia-500/35 via-violet-500/30 to-cyan-400/25 text-white" : "text-white/75 hover:bg-white/10"}`}><Icon name={item.icon} active={active}/><span className="text-sm font-semibold">{item.label}</span>{item.label === "Nachrichten" && hasUnreadMessages && <span aria-label="Ungelesene Nachrichten" className="absolute right-3 top-2 h-2 w-2 rounded-full bg-pink-400 shadow-[0_0_8px_rgba(236,72,153,.8)]"/>}</Link>; })}
           </div>
         </nav>
       </>}
