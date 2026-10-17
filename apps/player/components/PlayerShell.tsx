@@ -382,7 +382,6 @@ export function PlayerShell({ children }: { children: React.ReactNode }) {
                 </div>
               </div>
             </div>
-          </div>
         </aside>
 
         <div className="lg:hidden fixed z-50 top-3 left-3 right-3 pointer-events-none">
