@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useMemo, useState, useTransition } from "react";
 import { Check, ChevronDown, Pencil, Sparkles } from "lucide-react";
 import { saveContentEditorial, suggestContentInteraction } from "../learning-content-actions";
 
@@ -26,13 +26,24 @@ const interactionTypes = [
 export function ContentItemEditor({ scenarioId, item, creators }: {
   scenarioId: string;
   item: { id: string; title?: string | null; body: string | null; creator_id?: string | null; extra?: unknown };
-  creators: Array<{ id: string; display_name: string; creator_role?: string | null }>;
+  creators: Array<{ id: string; display_name: string; creator_role?: string | null; npc_category?: string | null; npc_role?: string | null; bio?: string | null; story_role?: string | null; age_bands?: string[] | null; is_active?: boolean | null }>;
 }) {
   const extra = item.extra && typeof item.extra === "object" ? item.extra as Record<string, any> : {};
   const saved = extra.learning_interaction && typeof extra.learning_interaction === "object" ? extra.learning_interaction : {};
   const [title, setTitle] = useState(item.title || "");
   const [body, setBody] = useState(item.body || "");
   const [creatorId, setCreatorId] = useState(item.creator_id || "");
+  const [creatorQuery, setCreatorQuery] = useState("");
+  const [creatorGroup, setCreatorGroup] = useState<"all" | "ambient" | "learning">("all");
+  const selectedCreator = creators.find((creator) => creator.id === creatorId);
+  const filteredCreators = useMemo(() => creators.filter((creator) => {
+    const isAmbient = creator.npc_role === "ambient" || creator.creator_role === "ambient";
+    const isLearning = !isAmbient || Boolean(creator.story_role) || Boolean(creator.bio?.trim());
+    const matchesGroup = creatorGroup === "all" || (creatorGroup === "ambient" ? isAmbient : isLearning);
+    const search = creatorQuery.trim().toLocaleLowerCase("de-DE");
+    const haystack = [creator.display_name, creator.npc_category, creator.npc_role, creator.creator_role, creator.story_role, creator.bio, ...(creator.age_bands ?? [])].filter(Boolean).join(" ").toLocaleLowerCase("de-DE");
+    return matchesGroup && (!search || haystack.includes(search));
+  }), [creators, creatorGroup, creatorQuery]);
   const [interaction, setInteraction] = useState<Interaction>({
     type: saved.type || "inspect_source",
     expectedAction: saved.expectedAction === "report" || saved.expectedAction === "ignore" ? saved.expectedAction : "none",
@@ -75,7 +86,14 @@ export function ContentItemEditor({ scenarioId, item, creators }: {
 
   return (
     <div className="mt-3 overflow-hidden rounded-2xl border border-violet-100 bg-gradient-to-br from-violet-50/70 via-white to-sky-50/70">
-      <div className="px-4 pt-4"><label className="block text-xs font-semibold text-slate-600">ABSENDER / NPC<select value={creatorId} onChange={(event) => setCreatorId(event.target.value)} className="mt-1.5 w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm font-normal text-slate-900"><option value="">NPC auswählen …</option>{creators.map((creator) => <option key={creator.id} value={creator.id}>{creator.display_name}{creator.creator_role ? ` · ${creator.creator_role}` : ""}</option>)}</select><span className="mt-1 block text-[11px] font-normal text-slate-500">Der Absender wird im Player angezeigt und kann hier geändert werden.</span></label></div>
+      <div className="px-4 pt-4">
+        <div className="mb-2 flex flex-wrap items-center justify-between gap-2"><label htmlFor={`npc-search-${item.id}`} className="block text-xs font-semibold text-slate-600">ABSENDER / NPC</label><span className="text-[10px] text-slate-400">{creators.length} aktive Profile</span></div>
+        {selectedCreator ? <div className="mb-2 flex items-start justify-between gap-3 rounded-xl border border-violet-200 bg-violet-50/70 p-3"><div className="min-w-0"><p className="text-sm font-semibold text-slate-800">{selectedCreator.display_name}</p><p className="mt-0.5 text-[10px] font-medium uppercase tracking-wide text-violet-700">{selectedCreator.story_role || selectedCreator.npc_category || selectedCreator.npc_role || selectedCreator.creator_role || "NPC"}</p>{selectedCreator.bio && <p className="mt-1 line-clamp-2 text-xs leading-relaxed text-slate-600">{selectedCreator.bio}</p>}</div><button type="button" onClick={() => setCreatorId("")} className="shrink-0 rounded-lg border border-violet-200 bg-white px-2.5 py-1.5 text-[11px] font-medium text-violet-700">Ändern</button></div> : null}
+        <input id={`npc-search-${item.id}`} value={creatorQuery} onChange={(event) => setCreatorQuery(event.target.value)} placeholder="NPC suchen – Name, Biografie, Rolle …" className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm font-normal text-slate-900 outline-none focus:border-violet-300 focus:ring-2 focus:ring-violet-100" />
+        <div className="mt-2 flex flex-wrap gap-1.5">{([{value:"all",label:"Alle NPCs"},{value:"ambient",label:"Ambient"},{value:"learning",label:"Lernmodule"}] as const).map((group) => <button type="button" key={group.value} onClick={() => setCreatorGroup(group.value)} className={`rounded-full border px-3 py-1.5 text-[11px] font-medium transition ${creatorGroup === group.value ? "border-violet-300 bg-violet-100 text-violet-800" : "border-slate-200 bg-white text-slate-500 hover:border-violet-200"}`}>{group.label}</button>)}</div>
+        {!selectedCreator && <div className="mt-2 max-h-56 space-y-1 overflow-y-auto rounded-xl border border-slate-200 bg-white p-1.5">{filteredCreators.length ? filteredCreators.map((creator) => <button type="button" key={creator.id} onClick={() => setCreatorId(creator.id)} className="w-full rounded-lg px-3 py-2 text-left transition hover:bg-violet-50"><span className="flex items-center justify-between gap-2"><span className="truncate text-xs font-semibold text-slate-800">{creator.display_name}</span><span className="shrink-0 rounded-full bg-slate-100 px-2 py-0.5 text-[9px] text-slate-500">{creator.story_role || creator.npc_category || creator.npc_role || creator.creator_role || "NPC"}</span></span>{creator.bio && <span className="mt-0.5 line-clamp-2 block text-[11px] leading-relaxed text-slate-500">{creator.bio}</span>}</button>) : <p className="px-3 py-4 text-center text-xs text-slate-400">Keine passenden NPCs gefunden.</p>}</div>}
+        <span className="mt-1.5 block text-[11px] font-normal text-slate-500">Suche auch in Biografien und Rollen. Kritische Figuren mit Hintergrundgeschichte findest du unter „Lernmodule“.</span>
+      </div>
       <button type="button" onClick={() => setOpen(!open)} className="flex w-full items-center gap-3 px-4 py-3 text-left">
         <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-violet-100 text-violet-700"><Pencil className="h-4 w-4" /></span>
         <span className="min-w-0 flex-1">
