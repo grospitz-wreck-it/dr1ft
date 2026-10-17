@@ -6,6 +6,7 @@ import { saveContentEditorial, suggestContentInteraction } from "../learning-con
 
 type Interaction = {
   type: string;
+  expectedAction: "report" | "ignore" | "none";
   goal: string;
   expectedFinding: string;
   successFeedback: string;
@@ -32,6 +33,7 @@ export function ContentItemEditor({ scenarioId, item }: {
   const [body, setBody] = useState(item.body || "");
   const [interaction, setInteraction] = useState<Interaction>({
     type: saved.type || "inspect_source",
+    expectedAction: saved.expectedAction === "report" || saved.expectedAction === "ignore" ? saved.expectedAction : "none",
     goal: saved.goal || "",
     expectedFinding: saved.expectedFinding || "",
     successFeedback: saved.successFeedback || "",
@@ -98,6 +100,14 @@ export function ContentItemEditor({ scenarioId, item }: {
               <span className="block text-xs font-semibold text-slate-800">{option.label}</span><span className="mt-1 block text-[11px] leading-relaxed text-slate-500">{option.hint}</span>
             </button>)}
           </div>
+          {interaction.type === "report" && <label className="mt-3 block text-xs font-semibold text-slate-600">Welche Handlung ist hier die erwartete Lösung?
+            <select value={interaction.expectedAction} onChange={(event) => setInteraction((current) => ({ ...current, expectedAction: event.target.value as Interaction["expectedAction"] }))} className="mt-1.5 w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm font-normal text-slate-900">
+              <option value="none">Keine eindeutige Musterlösung</option>
+              <option value="report">Beitrag melden</option>
+              <option value="ignore">Beitrag nicht melden</option>
+            </select>
+            <span className="mt-1 block text-[11px] font-normal text-slate-500">Diese Vorgabe dient der Auswertung. Sie wird Lernenden nicht vorab angezeigt.</span>
+          </label>}
           <div className="mt-3 rounded-xl bg-slate-50 p-3 text-xs text-slate-500">Ausgewählt: <strong className="text-slate-700">{selected?.label}</strong>. Ergänze, was in diesem konkreten Fall als gute Lösung zählt.</div>
           <div className="mt-3 grid gap-3">
             <label className="text-xs font-semibold text-slate-600">Lernziel – was sollen sie herausfinden?
