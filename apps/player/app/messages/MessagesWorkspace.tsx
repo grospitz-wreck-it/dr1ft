@@ -129,12 +129,16 @@ export default function MessagesWorkspace({
   return (
     <main className="drift-messenger relative -mt-4 flex h-[calc(100dvh-2rem)] min-h-[620px] flex-col overflow-hidden rounded-[28px] border shadow-2xl">
       <img src="/branding/bg-neon-circle.webp" alt="" aria-hidden="true" className="drift-neon-background pointer-events-none absolute bottom-0 right-0 z-0 w-[min(38vw,34rem)] max-w-none" />
-      <div className="relative z-[1] grid min-h-0 flex-1 grid-cols-1 lg:grid-cols-[minmax(280px,32%)_minmax(0,1fr)]">
-        <aside className={`drift-messenger-list border-b border-white/10 lg:border-b-0 lg:border-r ${!showContacts ? "hidden lg:block" : ""}`}>
-          <div className="flex items-center justify-between gap-3 border-b border-white/[.07] px-5 py-5">
+      <div className="relative z-[1] grid min-h-0 flex-1 grid-cols-1">
+        <aside className={`drift-messenger-list border-b border-white/10 lg:border-b-0 ${!showContacts ? "hidden" : ""}`}>
+          <div className="flex flex-wrap items-center justify-between gap-3 border-b border-white/[.07] px-5 py-4 sm:px-6">
             <div>
               <p className="text-[10px] font-bold uppercase tracking-[.22em] text-cyan-200/70">Dein Space</p>
               <h1 className="mt-1 font-display text-2xl font-bold tracking-tight">Nachrichten</h1>
+            </div>
+            <div className="flex items-center gap-1 rounded-2xl border border-white/[.06] bg-black/20 p-1" aria-label="Nachrichten filtern">
+              <button type="button" onClick={() => setFilter("unread")} aria-pressed={filter === "unread"} className={`rounded-xl px-3 py-2 text-xs font-semibold transition ${filter === "unread" ? "drift-gradient-button shadow-lg" : "text-white/50 hover:text-white"}`}>Ungelesen{allContacts.filter((contact) => contact.isDue).length > 0 && <span className="ml-1.5 rounded-full bg-white/20 px-1.5 py-0.5 text-[10px]">{allContacts.filter((contact) => contact.isDue).length}</span>}</button>
+              <button type="button" onClick={() => setFilter("all")} aria-pressed={filter === "all"} className={`rounded-xl px-3 py-2 text-xs font-semibold transition ${filter === "all" ? "drift-gradient-button shadow-lg" : "text-white/50 hover:text-white"}`}>Alle</button>
             </div>
           </div>
 
@@ -144,12 +148,7 @@ export default function MessagesWorkspace({
               <input id="contact-search" value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Kontakte suchen" className="min-w-0 flex-1 bg-transparent text-sm text-white outline-none placeholder:text-white/35" />
             </label>
 
-            <div className="grid grid-cols-2 rounded-2xl border border-white/[.06] bg-black/20 p-1">
-              <button onClick={() => setFilter("all")} className={`rounded-xl px-3 py-2.5 text-sm font-semibold transition ${filter === "all" ? "drift-gradient-button shadow-lg" : "text-white/50 hover:text-white"}`}>Alle</button>
-              <button onClick={() => setFilter("unread")} className={`rounded-xl px-3 py-2.5 text-sm font-semibold transition ${filter === "unread" ? "drift-gradient-button shadow-lg" : "text-white/50 hover:text-white"}`}>Ungelesen</button>
-            </div>
-
-            <div className="space-y-2">
+<div className="space-y-2">
               <p className="px-2 pb-1 text-[10px] font-bold uppercase tracking-[.2em] text-white/35">Direktnachrichten</p>
               {filteredContacts.map((contact) => (
                 <button key={contact.id} onClick={() => { setSelected(contact.id); setShowContacts(false); }} className={`group flex w-full items-center gap-3 rounded-2xl border p-3 text-left transition ${selected === contact.id ? "border-cyan-300/25 bg-gradient-to-r from-fuchsia-500/15 via-violet-500/10 to-cyan-400/10" : "border-transparent hover:border-white/10 hover:bg-white/[.045]"}`}>
@@ -181,10 +180,10 @@ export default function MessagesWorkspace({
           </div>
         </aside>
 
-        <section className={`drift-messenger-chat relative flex min-h-[68vh] flex-col ${showContacts ? "hidden lg:flex" : "flex"}`}>
+        <section className={`drift-messenger-chat relative flex min-h-0 flex-col ${showContacts ? "hidden" : "flex"}`}>
           <header className="flex h-[74px] shrink-0 items-center justify-between border-b border-white/[.07] px-5 sm:px-7">
             <div className="flex min-w-0 items-center gap-3">
-              <button onClick={() => setShowContacts(true)} className="grid h-9 w-9 shrink-0 place-items-center rounded-xl text-white/60 hover:bg-white/[.07] lg:hidden" aria-label="Zur Kontaktliste"><ChevronLeft className="h-5 w-5" /></button>
+              <button onClick={() => setShowContacts(true)} className="grid h-9 w-9 shrink-0 place-items-center rounded-xl text-white/60 hover:bg-white/[.07]" aria-label="Zur Kontaktliste"><ChevronLeft className="h-5 w-5" /></button>
               <div className="min-w-0"><p className="truncate text-base font-bold">{selectedStudent?.display_name || selectedContact?.display_name || selectedGroup?.title || "Nachrichten"}</p><p className="mt-1 text-[10px] font-semibold uppercase tracking-[.17em] text-white/30">{selectedStudent || selectedContact ? "Direktnachricht" : selectedGroup ? "Klassengruppe" : "Dein DR1FT-Postfach"}</p></div>
             </div>
             <span aria-hidden="true" className="h-10 w-10" />
