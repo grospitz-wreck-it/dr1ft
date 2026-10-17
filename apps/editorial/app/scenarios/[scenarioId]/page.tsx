@@ -8,8 +8,9 @@ import { LearningDesignStudio } from "./LearningDesignStudio";
 import { LearningStepEditor } from "./LearningStepEditor";
 import { ContentComposer } from "./ContentComposer";
 import { ContentAttachmentEditor } from "./ContentAttachmentEditor";
+import { ImageRegenerationForm } from "./ImageRegenerationForm";
 import { ContentItemEditor } from "./ContentItemEditor";
-import { regenerateLearningImage, rejectLearningImage } from "../learning-content-actions";
+import { rejectLearningImage } from "../learning-content-actions";
 
 interface Props {
   params: { scenarioId: string };
@@ -264,10 +265,7 @@ export default async function ScenarioDetailPage({ params, searchParams = {} }: 
                                   <span>{item.extra?.imageGeneration?.editorialReview === "rejected" ? "Bild abgelehnt" : "Redaktionelle Bildprüfung"}{item.extra?.imageGeneration?.generationCount ? " · Version " + item.extra.imageGeneration.generationCount : ""}</span>
                                   <span>{item.extra?.imageGeneration?.provider ?? "Medien"}</span>
                                 </div>
-                                <form action={regenerateLearningImage.bind(null, item.id, scenarioId)} className="mt-2 flex gap-2">
-                                  <input name="feedback" placeholder="Was soll anders sein?" className="min-w-0 flex-1 rounded-lg border border-slate-200 px-2.5 py-2 text-[11px]" />
-                                  <button type="submit" className="rounded-lg bg-slate-900 px-3 py-2 text-[11px] font-semibold text-white">Neu erstellen</button>
-                                </form>
+                                <ImageRegenerationForm contentItemId={item.id} scenarioId={scenarioId} />
                                 <form action={rejectLearningImage.bind(null, item.id, scenarioId)} className="mt-2 flex gap-2">
                                   <input name="editorialFeedback" placeholder="Feedback bei Ablehnung" className="min-w-0 flex-1 rounded-lg border border-slate-200 px-2.5 py-2 text-[11px]" />
                                 </form>

@@ -456,7 +456,7 @@ export async function regenerateLearningImage(contentItemId: string, scenarioId:
   const supabase = supabaseServerClient();
   const { data: item, error } = await supabase
     .from("content_items")
-    .select("id,media_url,extra")
+    .select("id,body,title,media_url,extra")
     .eq("id", contentItemId)
     .eq("scenario_id", scenarioId)
     .single();
@@ -465,10 +465,23 @@ export async function regenerateLearningImage(contentItemId: string, scenarioId:
 
   const extra = item.extra || {};
   const generation = (extra.imageGeneration || {}) as Record<string, unknown>;
-  const prompt = String(generation.fullPrompt || generation.prompt || "").trim();
-  if (!prompt) throw new Error("Kein reproduzierbarer Bildprompt vorhanden.");
-
-  const revisedPrompt = feedback?.trim() ? prompt + " Editorial feedback: " + feedback.trim() : prompt;
+  let prompt = String(generation.fullPrompt || generation.prompt || "").trim();
+  if (!prompt) {
+    const { data: scenario } = await supabase.from("scenarios")
+      .select("title,description,age_band").eq("id", scenarioId).single();
+    prompt = [
+      "Create an authentic, ordinary social-media image for a German media-literacy learning scenario.",
+      "Scenario: " + (scenario?.title || "DR1FT learning scenario"),
+      "Scenario context: " + (scenario?.description || ""),
+      "Age group: " + (scenario?.age_band || "teenagers"),
+      "Post title: " + (item.title || ""),
+      "Post content and intended context: " + (item.body || ""),
+      "Create a visually plausible everyday image that supports the post context.",
+      "Natural smartphone photography, realistic lighting, believable everyday setting.",
+      "No readable text, logos, celebrity likeness or staged advertising.",
+    ].join(" ");
+  }
+  const revisedPrompt = feedback ? prompt + " Editorial feedback: " + feedback : prompt;
   const image = await generateImage(revisedPrompt, String(generation.aspectRatio || "4:5"), scenarioId);
 
   const nextGeneration = {
