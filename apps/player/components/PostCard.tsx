@@ -62,30 +62,56 @@ export function PostCard({ item, userId, classInstanceId, initiallyLiked, onView
   useEffect(() => {
     if (!menuOpen) return;
     let frame = 0;
+    let resizeObserver: ResizeObserver | undefined;
+
     const updateMenuPosition = () => {
       const button = menuButtonRef.current;
       const menu = menuRef.current;
       if (!button || !menu) return;
+
       const rect = button.getBoundingClientRect();
-      const width = Math.min(240, window.innerWidth - 32);
-      const height = Math.min(menu.scrollHeight, window.innerHeight * 0.7);
-      const left = Math.max(16, Math.min(rect.right - width, window.innerWidth - width - 16));
-      const spaceAbove = rect.top - 12;
-      const spaceBelow = window.innerHeight - rect.bottom - 12;
-      const top = spaceAbove >= height || spaceAbove >= spaceBelow
-        ? Math.max(12, rect.top - height - 12)
-        : Math.min(rect.bottom + 12, window.innerHeight - height - 12);
-      setMenuPosition({ position: "fixed", top, left, width, maxHeight: "70vh", overflowY: "auto", visibility: "visible" });
+      const margin = 12;
+      const edge = 16;
+      const width = Math.min(240, window.innerWidth - edge * 2);
+      const maxHeight = Math.max(120, window.innerHeight - margin * 2);
+      const measuredHeight = menu.getBoundingClientRect().height || menu.scrollHeight;
+      const height = Math.min(measuredHeight, maxHeight);
+      const left = Math.max(edge, Math.min(rect.right - width, window.innerWidth - width - edge));
+      const spaceAbove = rect.top - margin;
+      const spaceBelow = window.innerHeight - rect.bottom - margin;
+      const placeAbove = spaceAbove >= height || (spaceAbove > spaceBelow && spaceAbove >= 160);
+      const top = placeAbove
+        ? Math.max(margin, rect.top - height - margin)
+        : Math.min(rect.bottom + margin, window.innerHeight - height - margin);
+
+      setMenuPosition({
+        position: "fixed",
+        top,
+        left,
+        width,
+        maxHeight,
+        overflowY: "auto",
+        visibility: "visible",
+      });
     };
-    frame = window.requestAnimationFrame(updateMenuPosition);
+
+    frame = window.requestAnimationFrame(() => {
+      updateMenuPosition();
+      if (menuRef.current && typeof ResizeObserver !== "undefined") {
+        resizeObserver = new ResizeObserver(updateMenuPosition);
+        resizeObserver.observe(menuRef.current);
+      }
+    });
+
     window.addEventListener("resize", updateMenuPosition);
     window.addEventListener("scroll", updateMenuPosition, true);
     return () => {
       window.cancelAnimationFrame(frame);
+      resizeObserver?.disconnect();
       window.removeEventListener("resize", updateMenuPosition);
       window.removeEventListener("scroll", updateMenuPosition, true);
     };
-  }, [menuOpen]);
+  }, [menuOpen, item.id]);
 
   useEffect(() => {
     const onGlobalMenuOpen = (event: Event) => {
