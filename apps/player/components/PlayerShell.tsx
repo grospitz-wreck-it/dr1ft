@@ -288,7 +288,18 @@ export function PlayerShell({ children }: { children: React.ReactNode }) {
                   {active && <span className="absolute right-2 w-1 h-7 rounded-full bg-gradient-to-b from-social-pink to-social-blue shadow-[0_0_14px_rgba(34,211,238,.6)]" />}
                 </Link>; })}
               </nav>
-              <div className="relative mt-7 mx-2 h-[300px] rounded-tile border border-white/10 bg-gradient-to-br from-social-pink/15 via-social-violet/15 to-social-blue/10 overflow-hidden">
+                          <div className="relative p-3 mt-auto border-t border-white/[.06]">
+              <Link href="/profile" className="flex items-center gap-3 p-3 rounded-2xl hover:bg-white/[.07] transition-colors">
+                <span className="relative rounded-[13px] p-[2px] bg-gradient-to-br from-fuchsia-400 via-violet-400 to-cyan-300"><img src={avatarUrl(user.avatarSeed, 80)} alt="" className="w-10 h-10 rounded-[11px] bg-shell-surface object-cover" /></span>
+                <div className="min-w-0 flex-1"><div className="font-medium text-sm truncate">{user.displayName}</div><div className="text-[11px] text-white/40 truncate">@{user.username}</div></div>
+                <span className="text-white/35">•••</span>
+              </Link>
+            </div>
+          </div>
+        </aside>
+
+        <aside aria-label="Aktivitäten deiner Klasse" className="player-activity-rail fixed z-30 inset-y-0 right-0 hidden w-[300px] p-4 xl:block">
+          <div className="relative flex h-full min-h-0 flex-col rounded-tile rounded-tile border border-white/10 bg-gradient-to-br from-social-pink/15 via-social-violet/15 to-social-blue/10 overflow-hidden">
                 <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-social-pink/0 via-social-pink/60 to-social-blue/0" />
                 <div className="relative px-4 pt-4 pb-3 flex items-center justify-between border-b border-white/[.06]">
                   <div className="flex items-center gap-2 min-w-0">
@@ -305,8 +316,8 @@ export function PlayerShell({ children }: { children: React.ReactNode }) {
                     {activityRealtime ? "LIVE" : "SYNC"}
                   </span>
                 </div>
-                <div className="relative h-[245px] min-h-0 overflow-hidden">
-                  <div className="player-activity-scroll h-full overflow-y-auto px-4 py-3" aria-live="polite">
+                <div className="relative flex-1 min-h-0 overflow-hidden">
+                  <div className="player-activity-scroll h-full overflow-y-auto px-3 py-3" aria-live="polite">
                     {liveActivity.length ? <div className="space-y-2.5">
                       {liveActivity.map((activity) => {
                         const ActivityIcon = activity.kind === "like" ? Heart : activity.kind === "share" ? Share2 : MessageCircle;
@@ -329,14 +340,6 @@ export function PlayerShell({ children }: { children: React.ReactNode }) {
                 </div>
               </div>
             </div>
-            <div className="relative p-3 mt-auto border-t border-white/[.06]">
-              <Link href="/profile" className="flex items-center gap-3 p-3 rounded-2xl hover:bg-white/[.07] transition-colors">
-                <span className="relative rounded-[13px] p-[2px] bg-gradient-to-br from-fuchsia-400 via-violet-400 to-cyan-300"><img src={avatarUrl(user.avatarSeed, 80)} alt="" className="w-10 h-10 rounded-[11px] bg-shell-surface object-cover" /></span>
-                <div className="min-w-0 flex-1"><div className="font-medium text-sm truncate">{user.displayName}</div><div className="text-[11px] text-white/40 truncate">@{user.username}</div></div>
-                <span className="text-white/35">•••</span>
-              </Link>
-            </div>
-          </div>
         </aside>
 
         <div className="lg:hidden fixed z-50 top-3 left-3 right-3 pointer-events-none">
@@ -353,8 +356,8 @@ export function PlayerShell({ children }: { children: React.ReactNode }) {
           </div>
         </nav>
       </>}
-      <main className={showShell ? "lg:pl-[286px]" : ""}>
-        <div className={showShell ? "min-h-screen px-3 pt-[76px] pb-[96px] lg:px-8 lg:pt-8 lg:pb-8" : ""}>{children}</div>
+      <main className={showShell ? "lg:pl-[286px] xl:pr-[300px]" : ""}>
+        <div className={showShell ? "min-h-screen px-3 pt-[76px] pb-[96px] lg:px-8 lg:pt-8 lg:pb-8" : ""}><div className={showShell ? "mx-auto w-full max-w-4xl" : ""}>{children}</div></div>
       </main>
     </div>
   );
