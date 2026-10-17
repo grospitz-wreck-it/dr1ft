@@ -291,6 +291,8 @@ export async function generateAmbientDrafts(formData: FormData) {
   const creatorId = String(formData.get("creatorId") ?? "") || null;
   const interests = String(formData.get("interests") ?? "").split(",").map((v) => v.trim()).filter(Boolean).slice(0, 3);
 
+  const { data: ambientCreatorRows } = await supabase.from("creators").select("id").eq("creator_role", "ambient");
+  const automaticCreatorIds = (ambientCreatorRows ?? []).map((creator: any) => creator.id);
   const creatorVoice = creatorId ? (await supabase.from("creators").select("display_name, persona").eq("id", creatorId).maybeSingle()).data : null;
   const profile = (await supabase.from("ambient_generation_profiles").select("*").eq("age_band", ageBand).eq("is_active", true).limit(1).maybeSingle()).data;
   // Gemini ist optional. Wenn der Nutzer Gemini auswählt, aber in Vercel
@@ -375,7 +377,8 @@ export async function generateAmbientDrafts(formData: FormData) {
       imageProvider = image.provider;
       imageModel = image.model;
     }
-    rows.push({ type: "post", scenario_id: null, creator_id: creatorId, body: item.body.trim().slice(0, 1000), media_url: mediaUrl, media_type: mediaUrl ? "image" : null, manipulation_techniques: [], target_competencies: [], difficulty: 1, age_rating: ageBand === "16_17" || ageBand === "18_plus" ? "16_plus" : ageBand === "all" ? "all_ages" : "12_plus", status: "draft", extra: { generatedBy: "ai", generatorVersion: "ambient-studio-v4", provider, theme, ageBand, interests, style, styleLabel: styleText, typoLevel, slangLevel, emojiLevel, imageRatio, imageMode, format: item.format, mood: item.mood, topic: item.topic, creatorVibe: item.creatorVibe, imageRequested: shouldImage, imageGenerated: Boolean(mediaUrl), imageProvider, imageModel, languageLibrary: "source-grounded-2026-08" } });
+    const assignedCreatorId = creatorId || (automaticCreatorIds.length ? automaticCreatorIds[Math.floor(Math.random() * automaticCreatorIds.length)] : null);
+    rows.push({ type: "post", scenario_id: null, creator_id: assignedCreatorId, body: item.body.trim().slice(0, 1000), media_url: mediaUrl, media_type: mediaUrl ? "image" : null, manipulation_techniques: [], target_competencies: [], difficulty: 1, age_rating: ageBand === "16_17" || ageBand === "18_plus" ? "16_plus" : ageBand === "all" ? "all_ages" : "12_plus", status: "draft", extra: { generatedBy: "ai", generatorVersion: "ambient-studio-v4", provider, theme, ageBand, interests, style, styleLabel: styleText, typoLevel, slangLevel, emojiLevel, imageRatio, imageMode, format: item.format, mood: item.mood, topic: item.topic, creatorVibe: item.creatorVibe, imageRequested: shouldImage, imageGenerated: Boolean(mediaUrl), imageProvider, imageModel, languageLibrary: "source-grounded-2026-08" } });
   }
   if (!rows.length) throw new Error("Die KI hat keine gültigen Items geliefert.");
   const { error } = await supabase.from("content_items").insert(rows);
