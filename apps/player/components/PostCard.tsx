@@ -72,24 +72,29 @@ export function PostCard({ item, userId, classInstanceId, initiallyLiked, onView
       const rect = button.getBoundingClientRect();
       const margin = 12;
       const edge = 16;
-      const width = Math.min(240, window.innerWidth - edge * 2);
+      const width = Math.max(0, Math.min(240, window.innerWidth - edge * 2));
       const maxHeight = Math.max(120, window.innerHeight - margin * 2);
       const measuredHeight = menu.getBoundingClientRect().height || menu.scrollHeight;
       const height = Math.min(measuredHeight, maxHeight);
       const left = Math.max(edge, Math.min(rect.right - width, window.innerWidth - width - edge));
-      const spaceAbove = rect.top - margin;
-      const spaceBelow = window.innerHeight - rect.bottom - margin;
-      const placeAbove = spaceAbove >= height || (spaceAbove > spaceBelow && spaceAbove >= 160);
+      const spaceAbove = Math.max(0, rect.top - margin);
+      const spaceBelow = Math.max(0, window.innerHeight - rect.bottom - margin);
+      // Always choose the side with enough room; otherwise use the larger side
+      // and constrain the portal menu to that space instead of letting it cover
+      // the next card or jump outside the viewport.
+      const placeAbove = spaceAbove >= height || (spaceAbove > spaceBelow && spaceAbove >= spaceBelow);
+      const availableHeight = Math.max(120, Math.min(maxHeight, placeAbove ? spaceAbove : spaceBelow));
+      const finalHeight = Math.min(height, availableHeight);
       const top = placeAbove
-        ? Math.max(margin, rect.top - height - margin)
-        : Math.min(rect.bottom + margin, window.innerHeight - height - margin);
+        ? Math.max(margin, rect.top - finalHeight - margin)
+        : Math.min(rect.bottom + margin, window.innerHeight - finalHeight - margin);
 
       setMenuPosition({
         position: "fixed",
         top,
         left,
         width,
-        maxHeight,
+        maxHeight: availableHeight,
         overflowY: "auto",
         visibility: "visible",
       });
@@ -315,7 +320,7 @@ export function PostCard({ item, userId, classInstanceId, initiallyLiked, onView
       {item.mediaUrl && item.mediaType === "video" && <video src={item.mediaUrl} controls className="w-full max-h-96 object-cover bg-black"/>}
       <div className="p-4 pt-3">
         <p className="font-body text-[15px] leading-relaxed">{item.body}</p>
-        <div data-post-menu className="relative flex items-center gap-2 mt-3 pt-3 border-t border-ink/10">
+        <div data-post-actions className="relative flex items-center gap-2 mt-3 pt-3 border-t border-ink/10">
           <button onClick={toggleLike} className={`tap-pulse touch-target flex items-center gap-1.5 rounded-xl px-3 text-sm font-body transition-colors hover:bg-ink/5 ${liked ? "text-social-pink" : "text-ink/60"}`} aria-label="Gefällt mir"><Heart className="w-5 h-5" fill={liked ? "currentColor" : "none"} strokeWidth={2}/>{baseLikeCount + (liked ? 1 : 0)}</button>
           <button onClick={toggleComments} className="touch-target flex items-center gap-1.5 rounded-xl px-3 text-sm font-body text-ink/60 transition-colors hover:bg-ink/5" aria-label="Kommentare anzeigen"><MessageCircle className="w-[18px] h-[18px]" strokeWidth={2}/>{comments ? comments.length : liveCommentCount}</button>
           <button onClick={() => void share()} className="touch-target ml-auto inline-flex items-center gap-2 rounded-xl bg-violet-600 px-4 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-violet-700" aria-label="Beitrag teilen"><Share2 className="h-4 w-4"/><span>Teilen</span></button>
