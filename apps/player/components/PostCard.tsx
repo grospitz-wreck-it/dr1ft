@@ -49,7 +49,7 @@ export function PostCard({ item, userId, classInstanceId, initiallyLiked, onView
     setLiveCommentCount(commentCount);
   }, [commentCount]);
   const action = (extra.action ?? {}) as Record<string, unknown>;
-  const learningInteraction = (extra.learning_interaction ?? null) as { type?: string; goal?: string; expectedFinding?: string; successFeedback?: string; retryFeedback?: string } | null;
+  const learningInteraction = (extra.learning_interaction ?? null) as { type?: string; expectedAction?: "report" | "ignore" | "none"; goal?: string; expectedFinding?: string; successFeedback?: string; retryFeedback?: string } | null;
   const mediaContext = (extra.media_context ?? {}) as Record<string, unknown>;
   const interactionChecks = (extra.interaction_checks ?? {}) as Record<string, { enabled?: boolean; feedback?: string }>;
   const hasConfiguredChecks = Object.keys(interactionChecks).length > 0;
@@ -239,8 +239,8 @@ export function PostCard({ item, userId, classInstanceId, initiallyLiked, onView
       setShareSaving(false);
     }
   }
-  async function report() { await track("report"); const configured = learningInteraction?.type === "report" ? (learningInteraction.successFeedback || learningInteraction.expectedFinding) : ""; showFeedback(configured?.trim() || checkFeedback("report") || "Deine Meldung wurde aufgenommen."); setMenuOpen(false); }
-  async function ignore() { await track("ignore"); const configured = learningInteraction?.type === "report" ? learningInteraction.retryFeedback : ""; showFeedback(configured?.trim() || "Beitrag wird für dich ausgeblendet."); setMenuOpen(false); }
+  async function report() { const expectedAction = learningInteraction?.type === "report" ? learningInteraction.expectedAction || "none" : "none"; const outcome = expectedAction === "none" ? "unscored" : expectedAction === "report" ? "aligned" : "not_aligned"; await track("report", { ui: "post_overflow_menu", assessment: { interactionType: "report", chosenAction: "report", expectedAction, outcome, learningGoal: learningInteraction?.goal || null } }); const configured = learningInteraction?.type === "report" ? (outcome === "aligned" ? (learningInteraction.successFeedback || learningInteraction.expectedFinding) : outcome === "not_aligned" ? (learningInteraction.retryFeedback || learningInteraction.expectedFinding) : (learningInteraction.successFeedback || learningInteraction.expectedFinding)) : ""; showFeedback(configured?.trim() || checkFeedback("report") || "Deine Meldung wurde aufgenommen."); setMenuOpen(false); }
+  async function ignore() { const expectedAction = learningInteraction?.type === "report" ? learningInteraction.expectedAction || "none" : "none"; const outcome = expectedAction === "none" ? "unscored" : expectedAction === "ignore" ? "aligned" : "not_aligned"; await track("ignore", { ui: "post_overflow_menu", assessment: { interactionType: "report", chosenAction: "ignore", expectedAction, outcome, learningGoal: learningInteraction?.goal || null } }); const configured = learningInteraction?.type === "report" ? (outcome === "aligned" ? (learningInteraction.successFeedback || learningInteraction.expectedFinding) : outcome === "not_aligned" ? (learningInteraction.retryFeedback || learningInteraction.expectedFinding) : (learningInteraction.retryFeedback || learningInteraction.expectedFinding)) : ""; showFeedback(configured?.trim() || "Beitrag wird für dich ausgeblendet."); setMenuOpen(false); }
 
   return <>
     <article id={`post-${item.id}`} ref={ref} className="relative bg-paper text-ink rounded-card overflow-visible shadow-sm">
