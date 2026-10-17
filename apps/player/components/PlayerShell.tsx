@@ -339,7 +339,7 @@ export function PlayerShell({ children }: { children: React.ReactNode }) {
           </div>
         </aside>
 
-        <div className="player-mobile-header fixed left-0 right-0 top-0 z-50 w-full border-b border-violet-200/70 bg-white/95 text-slate-900 shadow-[0_8px_24px_rgba(47,28,82,.10)] backdrop-blur-xl dark-mode">
+        <div className="player-mobile-header fixed inset-x-0 top-0 z-50 m-0 w-full rounded-none border-0 border-b border-violet-200/70 bg-white/95 text-slate-900 shadow-none backdrop-blur-xl">
           <div className="flex min-h-[68px] w-full items-center gap-2 px-3 pt-[env(safe-area-inset-top)]">
             <Link href="/feed" aria-label="DR1FT – Feed" className="flex min-w-0 shrink-0 items-center gap-1.5">
               <img src="/branding/drift-logo-appstore-transparent.webp" alt="" aria-hidden="true" className="h-9 w-9 shrink-0 object-contain" />
@@ -356,7 +356,7 @@ export function PlayerShell({ children }: { children: React.ReactNode }) {
         </div>
       </>}
       <main className={showShell ? "lg:pl-[286px]" : ""}>
-        <div className={showShell ? "min-h-screen px-3 pt-[80px] pb-6 sm:px-4 lg:px-8 lg:pt-8 lg:pb-8" : ""}>{children}</div>
+        <div className={showShell ? "min-h-screen px-3 pt-[76px] pb-6 sm:px-4 lg:px-8 lg:pt-8 lg:pb-8" : ""}>{children}</div>
       </main>
     </div>
   );
