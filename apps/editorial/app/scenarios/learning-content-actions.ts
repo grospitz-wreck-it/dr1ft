@@ -640,6 +640,7 @@ export async function suggestContentInteraction(
   const parsed = JSON.parse(String(raw).trim());
   return {
     type: interactionType,
+    expectedAction: "none" as const,
     goal: String(parsed.goal || ""),
     expectedFinding: String(parsed.expectedFinding || ""),
     successFeedback: String(parsed.successFeedback || ""),
