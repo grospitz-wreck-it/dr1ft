@@ -525,6 +525,7 @@ export async function saveContentEditorial(
     body?: string;
     interaction?: {
       type?: string;
+      expectedAction?: "report" | "ignore" | "none";
       goal?: string;
       expectedFinding?: string;
       successFeedback?: string;
@@ -546,6 +547,7 @@ export async function saveContentEditorial(
     : {};
   const interaction = {
     type: String(input.interaction?.type || "inspect_source").slice(0, 80),
+    expectedAction: ["report", "ignore", "none"].includes(String(input.interaction?.expectedAction)) ? input.interaction?.expectedAction : "none",
     goal: String(input.interaction?.goal || "").trim().slice(0, 1600),
     expectedFinding: String(input.interaction?.expectedFinding || "").trim().slice(0, 2400),
     successFeedback: String(input.interaction?.successFeedback || "").trim().slice(0, 1600),
