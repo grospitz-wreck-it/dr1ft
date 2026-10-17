@@ -288,7 +288,48 @@ export function PlayerShell({ children }: { children: React.ReactNode }) {
                   {active && <span className="absolute right-2 w-1 h-7 rounded-full bg-gradient-to-b from-social-pink to-social-blue shadow-[0_0_14px_rgba(34,211,238,.6)]" />}
                 </Link>; })}
               </nav>
-                          <div className="relative p-3 mt-auto border-t border-white/[.06]">
+              <div className="relative mt-7 mx-2 h-[300px] xl:hidden rounded-tile border border-white/10 bg-gradient-to-br from-social-pink/15 via-social-violet/15 to-social-blue/10 overflow-hidden">
+                <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-social-pink/0 via-social-pink/60 to-social-blue/0" />
+                <div className="relative px-4 pt-4 pb-3 flex items-center justify-between border-b border-white/[.06]">
+                  <div className="flex items-center gap-2 min-w-0">
+                    <span className="relative grid place-items-center w-7 h-7 rounded-lg bg-white/[.07] text-social-mint shrink-0">
+                      <span className="w-2 h-2 rounded-full bg-social-mint shadow-[0_0_0_4px_rgba(110,231,183,.10),0_0_12px_rgba(110,231,183,.65)]" />
+                    </span>
+                    <div className="min-w-0">
+                      <span className="block text-[10px] uppercase tracking-[0.14em] font-semibold text-white/45 truncate">AKTIVITÄT IN DEINER KLASSE</span>
+                      <span className="block text-[10px] text-white/25 mt-0.5">{liveActivity.length ? `${liveActivity.length} aktuelle Aktivitäten` : "Noch keine neuen Aktivitäten"}</span>
+                    </div>
+                  </div>
+                  <span className={`shrink-0 ml-2 inline-flex items-center gap-1.5 rounded-full px-2 py-1 text-[9px] font-semibold uppercase tracking-[0.12em] border ${activityRealtime ? "border-social-mint/20 bg-social-mint/10 text-social-mint" : "border-white/10 bg-white/[.04] text-white/30"}`}>
+                    <span className={`w-1.5 h-1.5 rounded-full ${activityRealtime ? "bg-emerald-300 animate-pulse" : "bg-white/25"}`} />
+                    {activityRealtime ? "LIVE" : "SYNC"}
+                  </span>
+                </div>
+                <div className="relative h-[245px] min-h-0 overflow-hidden">
+                  <div className="player-activity-scroll h-full overflow-y-auto px-4 py-3" aria-live="polite">
+                    {liveActivity.length ? <div className="space-y-2.5">
+                      {liveActivity.map((activity) => {
+                        const ActivityIcon = activity.kind === "like" ? Heart : activity.kind === "share" ? Share2 : MessageCircle;
+                        return <Link
+                          key={activity.id}
+                          href={`/feed#post-${activity.contentItemId}`}
+                          className="flex items-start gap-2.5 rounded-xl px-1 py-1.5 transition-colors hover:bg-white/[.055] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-300/40"
+                          title="Beitrag öffnen"
+                        >
+                          <span className="relative mt-0.5 h-8 w-8 shrink-0 rounded-xl bg-gradient-to-br from-social-pink via-social-violet to-social-blue p-[1.5px]"><img src={avatarUrl(activity.avatarSeed, 72)} alt="" className="h-full w-full rounded-[10px] bg-shell-surface object-cover" /><span className="absolute -bottom-1 -right-1 grid h-4 w-4 place-items-center rounded-full border border-shell bg-shell text-cyan-200"><ActivityIcon className="h-2.5 w-2.5"/></span></span>
+                          <div className="min-w-0">
+                            <p className="text-xs leading-4 text-white/85">{activity.text}</p>
+                            <p className="text-[10px] text-white/35 mt-0.5">{formatRelativeTime(activity.createdAt)}</p>
+                          </div>
+                        </Link>;
+                      })}
+                    </div> : <div className="h-full flex items-center justify-center text-center px-3"><div><Sparkles className="w-4 h-4 mx-auto mb-2 text-cyan-200/60"/><p className="text-xs text-white/50">Gerade ist es ruhig.</p><p className="text-[10px] text-white/25 mt-1">Neue Aktivitäten erscheinen hier live.</p></div></div>}
+                  </div>
+                  <div className="pointer-events-none absolute inset-x-0 bottom-0 h-8 bg-gradient-to-t from-[#2b2148]/45 to-transparent" />
+                </div>
+              </div>
+            </div>
+            <div className="relative p-3 mt-auto border-t border-white/[.06]">
               <Link href="/profile" className="flex items-center gap-3 p-3 rounded-2xl hover:bg-white/[.07] transition-colors">
                 <span className="relative rounded-[13px] p-[2px] bg-gradient-to-br from-fuchsia-400 via-violet-400 to-cyan-300"><img src={avatarUrl(user.avatarSeed, 80)} alt="" className="w-10 h-10 rounded-[11px] bg-shell-surface object-cover" /></span>
                 <div className="min-w-0 flex-1"><div className="font-medium text-sm truncate">{user.displayName}</div><div className="text-[11px] text-white/40 truncate">@{user.username}</div></div>
@@ -299,7 +340,8 @@ export function PlayerShell({ children }: { children: React.ReactNode }) {
         </aside>
 
         <aside aria-label="Aktivitäten deiner Klasse" className="player-activity-rail fixed z-30 inset-y-0 right-0 hidden w-[300px] p-4 xl:block">
-          <div className="relative flex h-full min-h-0 flex-col rounded-tile rounded-tile border border-white/10 bg-gradient-to-br from-social-pink/15 via-social-violet/15 to-social-blue/10 overflow-hidden">
+          <div className="pointer-events-auto h-full w-full rounded-panel border border-white/20 bg-shell/95 p-3 text-white shadow-shell backdrop-blur-2xl flex flex-col overflow-hidden relative">
+            <div className="relative flex h-full min-h-0 flex-col rounded-tile rounded-tile border border-white/10 bg-gradient-to-br from-social-pink/15 via-social-violet/15 to-social-blue/10 overflow-hidden">
                 <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-social-pink/0 via-social-pink/60 to-social-blue/0" />
                 <div className="relative px-4 pt-4 pb-3 flex items-center justify-between border-b border-white/[.06]">
                   <div className="flex items-center gap-2 min-w-0">
@@ -340,6 +382,7 @@ export function PlayerShell({ children }: { children: React.ReactNode }) {
                 </div>
               </div>
             </div>
+          </div>
         </aside>
 
         <div className="lg:hidden fixed z-50 top-3 left-3 right-3 pointer-events-none">
