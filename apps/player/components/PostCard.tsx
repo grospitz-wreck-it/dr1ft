@@ -40,9 +40,6 @@ export function PostCard({ item, userId, classInstanceId, initiallyLiked, onView
   const [shareRecipients, setShareRecipients] = useState<Array<{ id: string; displayName: string; username: string }>>([]);
   const [selectedRecipients, setSelectedRecipients] = useState<string[]>([]);
   const [feedback, setFeedback] = useState<string | null>(null);
-  const [learningChoice, setLearningChoice] = useState<string | null>(null);
-  const [learningReflection, setLearningReflection] = useState("");
-  const [learningReveal, setLearningReveal] = useState(false);
   const [comparison, setComparison] = useState<{ related: FeedItem | null; loading: boolean; selected?: "contradict" | "support"; error?: string } | null>(null);
 
   const baseLikeCount = Number((item.extra as any)?.baseEngagement ?? 0);
@@ -53,7 +50,6 @@ export function PostCard({ item, userId, classInstanceId, initiallyLiked, onView
   }, [commentCount]);
   const action = (extra.action ?? {}) as Record<string, unknown>;
   const learningInteraction = (extra.learning_interaction ?? null) as { type?: string; goal?: string; expectedFinding?: string; successFeedback?: string; retryFeedback?: string } | null;
-  const hasLearningInteraction = Boolean(learningInteraction && (learningInteraction.goal || learningInteraction.expectedFinding || learningInteraction.successFeedback || learningInteraction.retryFeedback));
   const mediaContext = (extra.media_context ?? {}) as Record<string, unknown>;
   const interactionChecks = (extra.interaction_checks ?? {}) as Record<string, { enabled?: boolean; feedback?: string }>;
   const hasConfiguredChecks = Object.keys(interactionChecks).length > 0;
@@ -243,8 +239,8 @@ export function PostCard({ item, userId, classInstanceId, initiallyLiked, onView
       setShareSaving(false);
     }
   }
-  async function report() { await track("report"); showFeedback("Deine Meldung wurde aufgenommen."); setMenuOpen(false); }
-  async function ignore() { await track("ignore"); showFeedback("Beitrag wird für dich ausgeblendet."); setMenuOpen(false); }
+  async function report() { await track("report"); const configured = learningInteraction?.type === "report" ? (learningInteraction.successFeedback || learningInteraction.expectedFinding) : ""; showFeedback(configured?.trim() || checkFeedback("report") || "Deine Meldung wurde aufgenommen."); setMenuOpen(false); }
+  async function ignore() { await track("ignore"); const configured = learningInteraction?.type === "report" ? learningInteraction.retryFeedback : ""; showFeedback(configured?.trim() || "Beitrag wird für dich ausgeblendet."); setMenuOpen(false); }
 
   return <>
     <article id={`post-${item.id}`} ref={ref} className="relative bg-paper text-ink rounded-card overflow-visible shadow-sm">
@@ -253,30 +249,6 @@ export function PostCard({ item, userId, classInstanceId, initiallyLiked, onView
       {item.mediaUrl && item.mediaType === "video" && <video src={item.mediaUrl} controls className="w-full max-h-96 object-cover bg-black"/>}
       <div className="p-4 pt-3">
         <p className="font-body text-[15px] leading-relaxed">{item.body}</p>
-        {hasLearningInteraction && learningInteraction && <section className="mt-4 rounded-2xl border border-violet-200 bg-violet-50/70 p-4" aria-label="Lerninteraktion">
-          <div className="text-[10px] font-bold uppercase tracking-[0.16em] text-violet-700">Deine Entscheidung</div>
-          {learningInteraction.goal && <p className="mt-1.5 text-sm font-medium leading-relaxed text-ink">{learningInteraction.goal}</p>}
-          {learningInteraction.type === "report" ? <div className="mt-3 grid grid-cols-2 gap-2">
-            <button type="button" onClick={() => { setLearningChoice("report"); setLearningReveal(false); }} className={`rounded-xl border px-3 py-2.5 text-sm font-semibold transition ${learningChoice === "report" ? "border-violet-600 bg-violet-700 text-white" : "border-violet-200 bg-white text-ink hover:bg-violet-100"}`}>Beitrag melden</button>
-            <button type="button" onClick={() => { setLearningChoice("ignore"); setLearningReveal(false); }} className={`rounded-xl border px-3 py-2.5 text-sm font-semibold transition ${learningChoice === "ignore" ? "border-violet-600 bg-violet-700 text-white" : "border-violet-200 bg-white text-ink hover:bg-violet-100"}`}>Nicht melden</button>
-          </div> : learningInteraction.type === "reflect" || learningInteraction.type === "custom" ? <div className="mt-3 space-y-2">
-            <textarea value={learningReflection} onChange={(event) => { setLearningReflection(event.target.value); setLearningReveal(false); }} rows={3} placeholder="Was denkst du – und warum?" className="w-full rounded-xl border border-violet-200 bg-white px-3 py-2.5 text-sm text-ink outline-none focus:border-violet-400" />
-            <button type="button" onClick={() => { if (learningReflection.trim()) { setLearningChoice("reflect"); setLearningReveal(true); } }} disabled={!learningReflection.trim()} className="rounded-xl bg-violet-700 px-4 py-2.5 text-sm font-semibold text-white disabled:opacity-40">Antwort ansehen</button>
-          </div> : <div className="mt-3 flex flex-wrap gap-2">
-            {learningInteraction.type === "inspect_source" && <button type="button" onClick={() => void inspectSource()} className="rounded-xl border border-violet-200 bg-white px-3 py-2 text-sm font-semibold text-ink">Quelle prüfen</button>}
-            {learningInteraction.type === "inspect_media" && <button type="button" onClick={() => void inspectMedia()} className="rounded-xl border border-violet-200 bg-white px-3 py-2 text-sm font-semibold text-ink">Bild oder Video prüfen</button>}
-            {learningInteraction.type === "inspect_context" && <button type="button" onClick={() => void inspectContext()} className="rounded-xl border border-violet-200 bg-white px-3 py-2 text-sm font-semibold text-ink">Kontext prüfen</button>}
-            {learningInteraction.type === "compare_information" && <button type="button" onClick={() => void compareInformation()} className="rounded-xl border border-violet-200 bg-white px-3 py-2 text-sm font-semibold text-ink">Informationen vergleichen</button>}
-            {!["inspect_source", "inspect_media", "inspect_context", "compare_information"].includes(learningInteraction.type || "") && <button type="button" onClick={() => setLearningReveal((value) => !value)} className="rounded-xl bg-violet-700 px-4 py-2.5 text-sm font-semibold text-white">{learningReveal ? "Einordnung schließen" : "Einordnung ansehen"}</button>}
-          </div>}
-          {learningInteraction.type === "report" && learningChoice && <button type="button" onClick={() => setLearningReveal(true)} className="mt-3 rounded-xl bg-violet-700 px-4 py-2.5 text-sm font-semibold text-white">Entscheidung reflektieren</button>}
-          {learningReveal && <div className="mt-3 space-y-2 rounded-xl border border-violet-200 bg-white p-3 text-sm leading-relaxed" role="status">
-            {learningInteraction.expectedFinding && <div><p className="text-[10px] font-bold uppercase tracking-wide text-violet-700">Wichtige Erkenntnis</p><p className="mt-1 text-ink">{learningInteraction.expectedFinding}</p></div>}
-            {learningInteraction.successFeedback && <p className="text-ink">{learningInteraction.successFeedback}</p>}
-            {learningInteraction.retryFeedback && <div className="border-t border-violet-100 pt-2"><p className="text-[10px] font-bold uppercase tracking-wide text-amber-700">Denk auch daran</p><p className="mt-1 text-ink">{learningInteraction.retryFeedback}</p></div>}
-            {learningInteraction.type === "report" && <p className="border-t border-violet-100 pt-2 text-xs text-ink/60">Deine Auswahl: {learningChoice === "report" ? "Beitrag melden" : "Nicht melden"}. Die Redaktion hat keine eindeutige Musterlösung hinterlegt; prüfe die Begründung anhand der Hinweise.</p>}
-          </div>}
-        </section>}
         <div data-post-menu className="relative flex items-center gap-2 mt-3 pt-3 border-t border-ink/10">
           <button onClick={toggleLike} className={`tap-pulse touch-target flex items-center gap-1.5 rounded-xl px-3 text-sm font-body transition-colors hover:bg-ink/5 ${liked ? "text-social-pink" : "text-ink/60"}`} aria-label="Gefällt mir"><Heart className="w-5 h-5" fill={liked ? "currentColor" : "none"} strokeWidth={2}/>{baseLikeCount + (liked ? 1 : 0)}</button>
           <button onClick={toggleComments} className="touch-target flex items-center gap-1.5 rounded-xl px-3 text-sm font-body text-ink/60 transition-colors hover:bg-ink/5" aria-label="Kommentare anzeigen"><MessageCircle className="w-[18px] h-[18px]" strokeWidth={2}/>{comments ? comments.length : liveCommentCount}</button>
