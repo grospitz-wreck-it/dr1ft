@@ -36,7 +36,8 @@ export function PostCard({ item, userId, classInstanceId, initiallyLiked, onView
   const [commentSaving, setCommentSaving] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
   const menuButtonRef = useRef<HTMLButtonElement>(null);
-  const [menuPosition, setMenuPosition] = useState<React.CSSProperties>({ position: "fixed", top: 12, left: 12 });
+  const menuRef = useRef<HTMLDivElement>(null);
+  const [menuPosition, setMenuPosition] = useState<React.CSSProperties>({ position: "fixed", top: 12, left: 12, visibility: "hidden" });
   const [shareOpen, setShareOpen] = useState(false);
   const [shareLoading, setShareLoading] = useState(false);
   const [shareSaving, setShareSaving] = useState(false);
@@ -59,19 +60,24 @@ export function PostCard({ item, userId, classInstanceId, initiallyLiked, onView
   const checkFeedback = (key: string) => typeof interactionChecks[key]?.feedback === "string" ? interactionChecks[key].feedback!.trim() : "";
 
   useEffect(() => {
-    if (!menuOpen || !menuButtonRef.current) return;
+    if (!menuOpen) return;
+    let frame = 0;
     const updateMenuPosition = () => {
-      const rect = menuButtonRef.current?.getBoundingClientRect();
-      if (!rect) return;
+      const button = menuButtonRef.current;
+      const menu = menuRef.current;
+      if (!button || !menu) return;
+      const rect = button.getBoundingClientRect();
       const width = Math.min(240, window.innerWidth - 32);
-      const menu = document.querySelector<HTMLElement>("[data-post-menu]");
-      const height = Math.min(menu?.scrollHeight ?? 280, window.innerHeight * 0.7);
+      const height = Math.min(menu.scrollHeight, window.innerHeight * 0.7);
       const left = Math.max(16, Math.min(rect.right - width, window.innerWidth - width - 16));
       const spaceAbove = rect.top - 12;
-      const top = spaceAbove >= height ? rect.top - height - 12 : Math.min(rect.bottom + 12, window.innerHeight - height - 12);
-      setMenuPosition({ position: "fixed", top: Math.max(12, top), left, width, maxHeight: "70vh", overflowY: "auto" });
+      const spaceBelow = window.innerHeight - rect.bottom - 12;
+      const top = spaceAbove >= height || spaceAbove >= spaceBelow
+        ? Math.max(12, rect.top - height - 12)
+        : Math.min(rect.bottom + 12, window.innerHeight - height - 12);
+      setMenuPosition({ position: "fixed", top, left, width, maxHeight: "70vh", overflowY: "auto", visibility: "visible" });
     };
-    const frame = window.requestAnimationFrame(updateMenuPosition);
+    frame = window.requestAnimationFrame(updateMenuPosition);
     window.addEventListener("resize", updateMenuPosition);
     window.addEventListener("scroll", updateMenuPosition, true);
     return () => {
@@ -278,8 +284,8 @@ export function PostCard({ item, userId, classInstanceId, initiallyLiked, onView
           <button onClick={toggleLike} className={`tap-pulse touch-target flex items-center gap-1.5 rounded-xl px-3 text-sm font-body transition-colors hover:bg-ink/5 ${liked ? "text-social-pink" : "text-ink/60"}`} aria-label="Gefällt mir"><Heart className="w-5 h-5" fill={liked ? "currentColor" : "none"} strokeWidth={2}/>{baseLikeCount + (liked ? 1 : 0)}</button>
           <button onClick={toggleComments} className="touch-target flex items-center gap-1.5 rounded-xl px-3 text-sm font-body text-ink/60 transition-colors hover:bg-ink/5" aria-label="Kommentare anzeigen"><MessageCircle className="w-[18px] h-[18px]" strokeWidth={2}/>{comments ? comments.length : liveCommentCount}</button>
           <button onClick={() => void share()} className="touch-target ml-auto inline-flex items-center gap-2 rounded-xl bg-violet-600 px-4 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-violet-700" aria-label="Beitrag teilen"><Share2 className="h-4 w-4"/><span>Teilen</span></button>
-          <button ref={menuButtonRef} onClick={() => { const rect = menuButtonRef.current?.getBoundingClientRect(); if (rect) { const width = Math.min(240, window.innerWidth - 32); const height = 240; const left = Math.max(16, Math.min(rect.right - width, window.innerWidth - width - 16)); const top = rect.top >= height + 12 ? rect.top - height - 12 : Math.min(rect.bottom + 12, window.innerHeight - height - 12); setMenuPosition({ position: "fixed", top: Math.max(12, top), left, width, maxHeight: "min(70vh, 360px)", overflowY: "auto" }); } setMenuOpen((open) => !open); }} className="touch-target grid w-11 place-items-center rounded-xl text-ink/60 transition-colors hover:bg-ink/5" data-post-menu-trigger aria-label="Weitere Optionen" aria-expanded={menuOpen}><MoreHorizontal className="w-5 h-5"/></button>
-          {menuOpen && typeof document !== "undefined" && createPortal(<div data-post-menu className="z-[1100] rounded-xl border border-ink/15 bg-paper text-ink shadow-xl p-1.5 dark-post-menu" style={menuPosition}>{showCheck("inspect_source") && <ActionButton icon={<Search/>} label="Quelle ansehen" onClick={inspectSource}/>}{showCheck("inspect_media") && <ActionButton icon={<ImageIcon/>} label="Bild prüfen" onClick={inspectMedia}/>}{showCheck("inspect_context") && <ActionButton icon={<Eye/>} label="Kontext prüfen" onClick={inspectContext}/>}{showCheck("inspect_profile") && <ActionButton icon={<UserRound/>} label="Profil ansehen" onClick={inspectProfile}/>}{showCheck("compare_information") && <ActionButton icon={<Search/>} label="Informationen vergleichen" onClick={compareInformation}/>}<div className="my-1 border-t border-ink/10"/><ActionButton icon={<Share2/>} label="Teilen" onClick={share}/><ActionButton icon={<Flag/>} label="Melden" onClick={report}/><ActionButton icon={<X/>} label="Ignorieren" onClick={ignore}/></div>, document.body)}
+          <button ref={menuButtonRef} onClick={() => { setMenuPosition((position) => ({ ...position, visibility: "hidden" })); setMenuOpen((open) => !open); }} className="touch-target grid w-11 place-items-center rounded-xl text-ink/60 transition-colors hover:bg-ink/5" data-post-menu-trigger aria-label="Weitere Optionen" aria-expanded={menuOpen}><MoreHorizontal className="w-5 h-5"/></button>
+          {menuOpen && typeof document !== "undefined" && createPortal(<div ref={menuRef} data-post-menu className="z-[1100] rounded-xl border border-ink/15 bg-paper text-ink shadow-xl p-1.5 dark-post-menu" style={menuPosition}>{showCheck("inspect_source") && <ActionButton icon={<Search/>} label="Quelle ansehen" onClick={inspectSource}/>}{showCheck("inspect_media") && <ActionButton icon={<ImageIcon/>} label="Bild prüfen" onClick={inspectMedia}/>}{showCheck("inspect_context") && <ActionButton icon={<Eye/>} label="Kontext prüfen" onClick={inspectContext}/>}{showCheck("inspect_profile") && <ActionButton icon={<UserRound/>} label="Profil ansehen" onClick={inspectProfile}/>}{showCheck("compare_information") && <ActionButton icon={<Search/>} label="Informationen vergleichen" onClick={compareInformation}/>}<div className="my-1 border-t border-ink/10"/><ActionButton icon={<Share2/>} label="Teilen" onClick={share}/><ActionButton icon={<Flag/>} label="Melden" onClick={report}/><ActionButton icon={<X/>} label="Ignorieren" onClick={ignore}/></div>, document.body)}
         </div>
         {shareOpen && typeof document !== "undefined" && createPortal(<div className="fixed inset-0 z-[1000] flex items-center justify-center bg-slate-950/60 p-4 backdrop-blur-sm" onPointerDown={(event) => { if (event.target === event.currentTarget) setShareOpen(false); }}>
           <section role="dialog" aria-modal="true" aria-labelledby={`share-title-${item.id}`} className="w-full max-w-md rounded-3xl border border-slate-200 bg-white p-5 text-slate-900 shadow-2xl dark-share-dialog">
