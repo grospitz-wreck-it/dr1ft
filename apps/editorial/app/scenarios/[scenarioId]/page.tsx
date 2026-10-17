@@ -59,7 +59,7 @@ export default async function ScenarioDetailPage({ params, searchParams = {} }: 
   ] = await Promise.all([
     supabase.from("scenarios").select("id, title, age_band, age_rating, status, is_active").eq("scenario_group", group).order("age_band"),
     supabase.from("content_items").select("*").eq("scenario_id", scenarioId).order("created_at", { ascending: false }),
-    supabase.from("creators").select("id, display_name, creator_role").or(`scenario_id.eq.${scenarioId},scenario_id.is.null`),
+    supabase.from("creators").select("id, display_name, creator_role, npc_category, npc_role, bio, story_role, age_bands, is_active").or(`scenario_id.eq.${scenarioId},scenario_id.is.null`).eq("is_active", true).order("display_name"),
     supabase.from("competencies").select("id, title"),
     supabase.from("content_items").select("id, body, scenario_id").eq("type", "post").or(`scenario_id.eq.${scenarioId},scenario_id.is.null`),
     supabase.from("missions").select("*").eq("scenario_id", scenarioId).order("created_at"),
