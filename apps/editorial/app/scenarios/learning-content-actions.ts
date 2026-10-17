@@ -303,6 +303,9 @@ export async function generateLearningContent(scenarioId: string, learningDesign
 
   if (!scenario) throw new Error("Szenario nicht gefunden.");
 
+  const { data: availableCreators } = await supabase.from("creators").select("id, creator_role").or(`scenario_id.eq.${scenarioId},scenario_id.is.null`);
+  const creatorIds = (availableCreators ?? []).filter((creator: any) => creator.creator_role !== "system").map((creator: any) => creator.id);
+
   const designQuery = supabase
     .from("learning_designs")
     .select("id,title,description")
@@ -380,6 +383,7 @@ export async function generateLearningContent(scenarioId: string, learningDesign
         .from("content_items")
         .insert({
           scenario_id: scenarioId,
+          creator_id: creatorIds.length ? creatorIds[Math.floor(Math.random() * creatorIds.length)] : null,
           type,
           body,
           media_url: mediaUrl,
@@ -523,6 +527,7 @@ export async function saveContentEditorial(
   input: {
     title?: string;
     body?: string;
+    creatorId?: string;
     interaction?: {
       type?: string;
       expectedAction?: "report" | "ignore" | "none";
@@ -572,6 +577,7 @@ export async function saveContentEditorial(
     extra: { ...currentExtra, learning_interaction: interaction, interaction_checks: nextChecks },
     updated_at: new Date().toISOString(),
   };
+  if (input.creatorId !== undefined) update.creator_id = input.creatorId || null;
   if (input.title !== undefined) update.title = String(input.title).trim().slice(0, 240) || null;
   if (input.body !== undefined) update.body = String(input.body).trim().slice(0, 12000);
   const { error } = await supabase.from("content_items").update(update).eq("id", contentItemId).eq("scenario_id", scenarioId);
