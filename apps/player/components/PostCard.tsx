@@ -88,6 +88,15 @@ export function PostCard({ item, userId, classInstanceId, initiallyLiked, onView
   }, [menuOpen]);
 
   useEffect(() => {
+    const onGlobalMenuOpen = (event: Event) => {
+      const detail = (event as CustomEvent<{ postId: string }>).detail;
+      setMenuOpen(detail?.postId === item.id);
+    };
+    window.addEventListener("dr1ft:post-menu-open", onGlobalMenuOpen);
+    return () => window.removeEventListener("dr1ft:post-menu-open", onGlobalMenuOpen);
+  }, [item.id]);
+
+  useEffect(() => {
     if (!menuOpen) return;
     const closeOnOutside = (event: PointerEvent) => {
       const target = event.target;
@@ -284,7 +293,7 @@ export function PostCard({ item, userId, classInstanceId, initiallyLiked, onView
           <button onClick={toggleLike} className={`tap-pulse touch-target flex items-center gap-1.5 rounded-xl px-3 text-sm font-body transition-colors hover:bg-ink/5 ${liked ? "text-social-pink" : "text-ink/60"}`} aria-label="Gefällt mir"><Heart className="w-5 h-5" fill={liked ? "currentColor" : "none"} strokeWidth={2}/>{baseLikeCount + (liked ? 1 : 0)}</button>
           <button onClick={toggleComments} className="touch-target flex items-center gap-1.5 rounded-xl px-3 text-sm font-body text-ink/60 transition-colors hover:bg-ink/5" aria-label="Kommentare anzeigen"><MessageCircle className="w-[18px] h-[18px]" strokeWidth={2}/>{comments ? comments.length : liveCommentCount}</button>
           <button onClick={() => void share()} className="touch-target ml-auto inline-flex items-center gap-2 rounded-xl bg-violet-600 px-4 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-violet-700" aria-label="Beitrag teilen"><Share2 className="h-4 w-4"/><span>Teilen</span></button>
-          <button ref={menuButtonRef} onClick={() => { setMenuPosition((position) => ({ ...position, visibility: "hidden" })); setMenuOpen((open) => !open); }} className="touch-target grid w-11 place-items-center rounded-xl text-ink/60 transition-colors hover:bg-ink/5" data-post-menu-trigger aria-label="Weitere Optionen" aria-expanded={menuOpen}><MoreHorizontal className="w-5 h-5"/></button>
+          <button ref={menuButtonRef} onClick={() => { if (menuOpen) { setMenuOpen(false); return; } setMenuPosition((position) => ({ ...position, visibility: "hidden" })); window.dispatchEvent(new CustomEvent("dr1ft:post-menu-open", { detail: { postId: item.id } })); }} className="touch-target grid w-11 place-items-center rounded-xl text-ink/60 transition-colors hover:bg-ink/5" data-post-menu-trigger aria-label="Weitere Optionen" aria-expanded={menuOpen}><MoreHorizontal className="w-5 h-5"/></button>
           {menuOpen && typeof document !== "undefined" && createPortal(<div ref={menuRef} data-post-menu className="z-[1100] rounded-xl border border-ink/15 bg-paper text-ink shadow-xl p-1.5 dark-post-menu" style={menuPosition}>{showCheck("inspect_source") && <ActionButton icon={<Search/>} label="Quelle ansehen" onClick={inspectSource}/>}{showCheck("inspect_media") && <ActionButton icon={<ImageIcon/>} label="Bild prüfen" onClick={inspectMedia}/>}{showCheck("inspect_context") && <ActionButton icon={<Eye/>} label="Kontext prüfen" onClick={inspectContext}/>}{showCheck("inspect_profile") && <ActionButton icon={<UserRound/>} label="Profil ansehen" onClick={inspectProfile}/>}{showCheck("compare_information") && <ActionButton icon={<Search/>} label="Informationen vergleichen" onClick={compareInformation}/>}<div className="my-1 border-t border-ink/10"/><ActionButton icon={<Share2/>} label="Teilen" onClick={share}/><ActionButton icon={<Flag/>} label="Melden" onClick={report}/><ActionButton icon={<X/>} label="Ignorieren" onClick={ignore}/></div>, document.body)}
         </div>
         {shareOpen && typeof document !== "undefined" && createPortal(<div className="fixed inset-0 z-[1000] flex items-center justify-center bg-slate-950/60 p-4 backdrop-blur-sm" onPointerDown={(event) => { if (event.target === event.currentTarget) setShareOpen(false); }}>
