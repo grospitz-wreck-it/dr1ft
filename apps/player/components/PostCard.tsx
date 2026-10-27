@@ -41,7 +41,7 @@ export function PostCard({ item, userId, classInstanceId, initiallyLiked, onView
   const [shareRecipients, setShareRecipients] = useState<Array<{ id: string; displayName: string; username: string }>>([]);
   const [selectedRecipients, setSelectedRecipients] = useState<string[]>([]);
   const [feedback, setFeedback] = useState<string | null>(null);
-  const [comparison, setComparison] = useState<{ related: FeedItem | null; loading: boolean; selected?: "contradict" | "support"; assessmentOutcome?: "success" | "not_yet"; error?: string } | null>(null);
+  const [comparison, setComparison] = useState<{ related: FeedItem | null; loading: boolean; selected?: "contradict" | "support"; assessmentOutcome?: "success" | "not_yet" | "not_assessed"; error?: string } | null>(null);
   const [taskResponse, setTaskResponse] = useState("");
   const [taskResponseSaved, setTaskResponseSaved] = useState(false);
   const [taskResponseSaving, setTaskResponseSaving] = useState(false);
@@ -50,6 +50,7 @@ export function PostCard({ item, userId, classInstanceId, initiallyLiked, onView
   const commentCount = Number((item.extra as any)?.classCommentCount ?? (item.extra as any)?.baseCommentCount ?? 0);
   const extra = (item.extra ?? {}) as Record<string, unknown>;
   const learningTask = (extra.learningTask ?? {}) as { purpose?: string; learnerAction?: string; interactionType?: string; expectedResponse?: string; evaluationMethod?: string; successCriteria?: string; feedback?: string; interactions?: Array<{ id: string; label: string; instruction?: string; custom?: boolean }> };
+  const configuredLearningInteractions = new Set((learningTask.interactions ?? []).map((interaction) => interaction.id));
   useEffect(() => {
     setLiveCommentCount(commentCount);
   }, [commentCount]);
@@ -225,6 +226,10 @@ export function PostCard({ item, userId, classInstanceId, initiallyLiked, onView
     await track("compare_information", { ui: "comparison_experience", phase: "decision", result, comparedContentItemId: comparison?.related?.id ?? null });
 
     if (!comparison?.related?.id) return;
+    if (!configuredLearningInteractions.has("compare_information")) {
+      setComparison((current) => current ? { ...current, assessmentOutcome: "not_assessed" } : current);
+      return;
+    }
     const { data, error } = await supabase.rpc("record_comparison_assessment", {
       p_class_instance_id: classInstanceId,
       p_content_item_id: item.id,
@@ -396,7 +401,7 @@ export function PostCard({ item, userId, classInstanceId, initiallyLiked, onView
             <div className="rounded-xl border border-ink/10 bg-ink/[0.025] p-4"><p className="font-mono text-[10px] uppercase tracking-wider text-ink/40 mb-3">Aussage 2</p><AuthorRow creator={comparison.related.creator}/><p className="text-sm leading-relaxed">{comparison.related.body}</p></div>
           </div>
           <div className="mt-5 border-t border-ink/10 pt-5"><p className="text-sm font-medium mb-3">Wie verhalten sich die beiden Aussagen zueinander?</p><div className="grid grid-cols-1 sm:grid-cols-2 gap-3"><button onClick={() => chooseComparison("contradict")} className={`rounded-xl border px-4 py-3 text-left text-sm transition ${comparison.selected === "contradict" ? "border-ink bg-ink text-paper" : "border-ink/15 hover:bg-ink/5"}`}>Sie widersprechen sich.</button><button onClick={() => chooseComparison("support")} className={`rounded-xl border px-4 py-3 text-left text-sm transition ${comparison.selected === "support" ? "border-ink bg-ink text-paper" : "border-ink/15 hover:bg-ink/5"}`}>Sie stützen dieselbe Aussage.</button></div>
-            {comparison.selected && <div className="mt-4 rounded-xl bg-ink/5 px-4 py-3 text-sm leading-relaxed" role="status">{comparison.assessmentOutcome === "success" ? (checkFeedback("compare_information") || "Richtig eingeordnet. Deine Entscheidung wurde geprüft.") : comparison.assessmentOutcome === "not_yet" ? "Noch nicht richtig eingeordnet. Vergleiche die Aussagen noch einmal und prüfe, ob sie sich widersprechen oder gegenseitig stützen." : "Deine Entscheidung wurde ausgewählt. Die Bewertung wird geprüft."}</div>}
+            {comparison.selected && <div className="mt-4 rounded-xl bg-ink/5 px-4 py-3 text-sm leading-relaxed" role="status">{comparison.assessmentOutcome === "success" ? (checkFeedback("compare_information") || "Richtig eingeordnet. Deine Entscheidung wurde geprüft.") : comparison.assessmentOutcome === "not_yet" ? "Noch nicht richtig eingeordnet. Vergleiche die Aussagen noch einmal und prüfe, ob sie sich widersprechen oder gegenseitig stützen." : comparison.assessmentOutcome === "not_assessed" ? "Das ist eine allgemeine Vergleichshilfe. Für diesen Beitrag ist keine bewertete Lernanforderung eingerichtet." : "Deine Entscheidung wurde ausgewählt. Die Bewertung wird geprüft."}</div>}
           </div>
         </div>}
       </div>
