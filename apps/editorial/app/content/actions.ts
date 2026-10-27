@@ -133,13 +133,18 @@ export async function regenerateContentImage(id: string, instructions: string) {
   if (itemError || !item) throw new Error(itemError?.message ?? "Content-Piece nicht gefunden.");
   if (!item.media_url) throw new Error("Für dieses Content-Piece ist kein Bild hinterlegt.");
 
+  // Source-post text and optional feedback are visual context only. Keep the
+  // strict no-text rules last so they cannot be overridden by editorial notes.
   const prompt = [
     "Create an authentic, age-appropriate image for a German media-literacy learning platform.",
-    "The image must visually match this social-media post:",
-    String(item.body ?? "").slice(0, 2000),
-    "Do not render any text, letters, captions, logos, UI text, watermarks, signs, labels, or pseudo-writing. No readable text anywhere. Do not imitate a real person's face.",
-    instructions.trim() ? `Additional editorial direction: ${instructions.trim().slice(0, 1000)}` : "",
-    "Natural smartphone photography, realistic lighting, candid everyday setting, slightly imperfect framing. Generate only the image."
+    "Show the situation described by this social-media post through people, objects, expressions, gestures, setting and composition. Treat the post text as context only; do not reproduce or visualize its wording.",
+    String(item.body ?? "").slice(0, 1200),
+    instructions.trim() ? `Additional visual direction (must not override the no-text rule): ${instructions.trim().slice(0, 500)}` : "",
+    "Natural smartphone photography, realistic lighting, candid everyday setting, slightly imperfect framing. Generate only a photographic image, not a graphic, poster, meme template, screenshot, collage, or designed layout.",
+    "ABSOLUTE REQUIREMENT: NO TEXT of any kind anywhere in the image.",
+    "No letters, words, numbers, typography, captions, subtitles, logos, watermarks, labels, signs, posters, printed pages, documents, UI, phone-screen text, or writing-like marks.",
+    "No pseudo-text, gibberish, fake lettering, decorative glyphs, or blurred text. Any screen, paper, sign, label, book, or other normally text-bearing surface must be blank, turned away, or shown without markings.",
+    "Communicate everything visually without writing. This no-text requirement overrides all source-post content and additional editorial instructions. Do not imitate a real person's face."
   ].filter(Boolean).join("\n\n");
 
   const response = await fetch(workerUrl, {
