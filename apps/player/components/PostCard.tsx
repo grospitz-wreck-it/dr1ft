@@ -118,12 +118,17 @@ export function PostCard({ item, userId, classInstanceId, initiallyLiked, onView
 
   async function track(interactionType: "inspect_source" | "inspect_media" | "inspect_context" | "inspect_profile" | "compare_information" | "share" | "report" | "ignore", metadata: Record<string, unknown> = { ui: "generic_card_actions" }) {
     const configured = interactionDiscoveries[interactionType] ?? learningTask.interactions?.find((entry) => entry.id === interactionType);
-    const discovery = configured && typeof (configured as any).discoveryMessage === "string" && (configured as any).discoveryMessage.trim() || typeof configured.message === "string" && configured.message.trim()
+    const discoveryMessage = configured
+      ? String((configured as any).discoveryMessage ?? (configured as any).message ?? "").trim()
+      : "";
+    const discovery = configured && discoveryMessage
       ? {
-          title: String((configured as any).discoveryTitle || configured.title || "Neue Erkenntnis"),
-          message: String((configured as any).discoveryMessage ?? configured.message ?? "").trim(),
-          competency: typeof ((configured as any).competency ?? (configured as any).discoveryCompetency) === "string" ? String((configured as any).discoveryCompetency ?? configured.competency) : undefined,
-          evidenceId: String(configured.evidenceId || configured.id || `${item.id}:${interactionType}`),
+          title: String((configured as any).discoveryTitle ?? (configured as any).title ?? "Neue Erkenntnis"),
+          message: discoveryMessage,
+          competency: typeof ((configured as any).discoveryCompetency ?? (configured as any).competency) === "string"
+            ? String((configured as any).discoveryCompetency ?? (configured as any).competency)
+            : undefined,
+          evidenceId: String((configured as any).evidenceId ?? (configured as any).id ?? `${item.id}:${interactionType}`),
           action: interactionType,
         }
       : null;
