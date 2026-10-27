@@ -121,8 +121,7 @@ begin
     1,
     jsonb_build_object(
       'compared_content_item_id', p_compared_content_item_id,
-      'selected', p_selected,
-      'expected', v_expected
+      'selected', p_selected
     )
   )
   returning id into v_event_id;
