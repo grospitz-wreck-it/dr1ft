@@ -3,7 +3,7 @@
 // waren aber im Feed nirgends erreichbar. Diese Seite listet alle
 // ansprechbaren NPCs + aktive Gruppenchats der freigeschalteten Szenarien.
 
-import { ChevronLeft, MessageSquare, Send, Circle, Sparkles, Users, Inbox } from "lucide-react";
+import MessagesWorkspace from "./MessagesWorkspace";
 import { supabaseServerClient } from "../../lib/supabaseServerClient";
 
 export default async function MessagesInboxPage() {
@@ -80,98 +80,58 @@ export default async function MessagesInboxPage() {
     (pending ?? []).map((p) => [p.creator_id, p.pending_resume_at])
   );
 
-  return (
-    <main className="relative isolate min-h-screen overflow-hidden bg-ink">
-      <img src="/branding/bg-neon-circle.webp" alt="" aria-hidden="true" className="pointer-events-none absolute -top-20 -right-36 z-[-1] w-[28rem] max-w-none opacity-25 dark:opacity-30" />
-      <header className="sticky top-0 z-10 flex items-center justify-between border-b border-ink-border/70 bg-ink/80 px-4 py-3 backdrop-blur-xl safe-top">
-        <a href="/feed" className="touch-target inline-flex items-center gap-1 font-mono text-xs text-ash">
-          <ChevronLeft className="w-4 h-4" /> Feed
-        </a>
-        <p className="font-display text-paper text-sm">Nachrichten</p>
-        <span className="w-11" />
-      </header>
+  const contacts = (npcCreators ?? []).map((creator) => {
+    const resumeAt = pendingByCreator.get(creator.id);
+    return {
+      id: creator.id,
+      display_name: creator.display_name,
+      handle: creator.handle,
+      isDue: Boolean(resumeAt && new Date(resumeAt) <= new Date()),
+    };
+  });
 
-      <div className="mx-auto max-w-2xl space-y-7 px-4 py-6 sm:px-6 sm:py-8">
-        <section className="relative overflow-hidden rounded-[1.75rem] border border-white/10 bg-gradient-to-br from-paper/[0.09] via-paper/[0.04] to-transparent p-5 shadow-xl shadow-black/10 sm:p-7">
-          <div className="pointer-events-none absolute -right-5 -top-8 h-32 w-32 rounded-full bg-fuchsia-500/10 blur-2xl" />
-          <div className="relative flex items-start gap-4">
-            <div className="grid h-12 w-12 shrink-0 place-items-center rounded-2xl bg-accent/15 text-accent ring-1 ring-accent/20"><Inbox className="h-5 w-5" /></div>
-            <div className="min-w-0">
-              <p className="text-[10px] font-semibold uppercase tracking-[0.22em] text-accent">Dein DR1FT-Postfach</p>
-              <h1 className="mt-1 font-display text-2xl font-semibold tracking-tight text-paper sm:text-3xl">Alles im Gespräch.</h1>
-              <p className="mt-2 max-w-md text-sm leading-6 text-ash">Nachrichten aus Szenarien, Gruppenchats und Beiträge, die mit dir geteilt wurden – alles an einem Ort.</p>
-            </div>
-          </div>
-        </section>
-        {receivedShares && receivedShares.length > 0 && (
-          <section>
-            <div className="mb-3 flex items-center gap-2"><span className="grid h-8 w-8 place-items-center rounded-xl bg-accent/10 text-accent"><Sparkles className="h-4 w-4" /></span><p className="text-xs font-semibold uppercase tracking-[0.16em] text-paper">Mit dir geteilt</p></div>
-            <div className="space-y-3">
-              {receivedShares.map((share) => {
-                const sender = sharedSenderById.get(share.user_id);
-                const post = sharedPostById.get(share.content_item_id);
-                if (!post) return null;
-                const senderName = sender?.display_name || sender?.username || "Ein Klassenkamerad";
-                return <article key={share.id} className="rounded-3xl border border-white/10 bg-paper p-4 text-ink shadow-lg shadow-black/10 transition-transform duration-200 hover:-translate-y-0.5 sm:p-5">
-                  <div className="flex items-center gap-2 text-sm">
-                    <span className="grid h-9 w-9 shrink-0 place-items-center overflow-hidden rounded-xl bg-ink/5 text-xs font-semibold">{sender?.avatar_seed ? <img src={`https://api.dicebear.com/10.x/voxel-art/svg?seed=${encodeURIComponent(sender.avatar_seed)}&size=72`} alt="" className="h-full w-full object-cover"/> : senderName.slice(0,1).toUpperCase()}</span>
-                    <span><strong>{senderName}</strong> hat einen Beitrag mit dir geteilt.<span className="block text-xs text-ink/45">{new Date(share.created_at).toLocaleString("de-DE", { dateStyle: "medium", timeStyle: "short" })}</span></span>
-                  </div>
-                  <p className="mt-3 text-sm leading-6">{post.body || post.title || "Geteilter Beitrag"}</p>
-                  {post.media_url && post.media_type === "image" && <img src={post.media_url} alt="" className="mt-3 max-h-56 w-full rounded-xl object-cover"/>}
-                  <a href={`/feed#post-${post.id}`} className="mt-3 inline-flex rounded-xl bg-ink px-3 py-2 text-xs font-semibold text-paper">Beitrag im Feed ansehen</a>
-                </article>;
-              })}
-            </div>
-          </section>
-        )}
-        {groupChats && groupChats.length > 0 && (
-          <section>
-            <div className="mb-3 flex items-center gap-2"><span className="grid h-8 w-8 place-items-center rounded-xl bg-sky-400/10 text-sky-300"><Users className="h-4 w-4" /></span><p className="text-xs font-semibold uppercase tracking-[0.16em] text-paper">Gruppenchats</p></div>
-            <div className="grid gap-3 sm:grid-cols-2">
-              {groupChats.map((gc) => (
-                <a
-                  key={gc.id}
-                  href={`/group-chat/${gc.id}`}
-                  className="group flex min-h-[4.5rem] items-center gap-3 rounded-2xl border border-white/10 bg-paper/[0.07] px-4 py-4 text-sm text-paper shadow-sm transition hover:border-accent/40 hover:bg-paper/[0.1] touch-target"
-                >
-                  <span className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-accent/15 text-accent"><MessageSquare className="h-4 w-4" /></span><span className="min-w-0 flex-1 font-medium">{gc.title}</span><span className="text-ash transition group-hover:translate-x-0.5">↗</span>
-                </a>
-              ))}
-            </div>
-          </section>
-        )}
+  const { data: deliveries } = await supabase
+    .from("scenario_message_deliveries")
+    .select("id, content_item_id, delivered_at")
+    .eq("class_instance_id", classInstanceId)
+    .not("delivered_at", "is", null)
+    .order("delivered_at", { ascending: false })
+    .limit(50);
+  const deliveryIds = (deliveries ?? []).map((delivery) => delivery.id);
+  const scenarioContentIds = Array.from(new Set((deliveries ?? []).map((delivery) => delivery.content_item_id)));
+  const { data: scenarioReads } = deliveryIds.length
+    ? await supabase.from("scenario_message_reads").select("delivery_id").eq("user_id", user.id).in("delivery_id", deliveryIds)
+    : { data: [] as { delivery_id: string }[] };
+  const { data: scenarioContent } = scenarioContentIds.length
+    ? await supabase.from("content_items").select("id, title, body, creator_id").in("id", scenarioContentIds)
+    : { data: [] as { id: string; title: string | null; body: string | null; creator_id: string | null }[] };
+  const scenarioCreatorIds = Array.from(new Set((scenarioContent ?? []).map((item) => item.creator_id).filter(Boolean))) as string[];
+  const { data: scenarioCreators } = scenarioCreatorIds.length
+    ? await supabase.from("creators").select("id, display_name").in("id", scenarioCreatorIds)
+    : { data: [] as { id: string; display_name: string }[] };
+  const scenarioContentById = new Map((scenarioContent ?? []).map((item) => [item.id, item]));
+  const scenarioCreatorById = new Map((scenarioCreators ?? []).map((creator) => [creator.id, creator]));
+  const readDeliveryIds = new Set((scenarioReads ?? []).map((read) => read.delivery_id));
+  const scenarioMessages = (deliveries ?? []).flatMap((delivery) => {
+    const item = scenarioContentById.get(delivery.content_item_id);
+    if (!item) return [];
+    const creator = item.creator_id ? scenarioCreatorById.get(item.creator_id) : null;
+    return [{ id: delivery.id, senderName: creator?.display_name || "DR1FT Szenario", title: item.title || "Neue Nachricht", preview: item.body || "Öffne die Nachricht, um sie zu lesen.", deliveredAt: delivery.delivered_at || "", isRead: readDeliveryIds.has(delivery.id) }];
+  });
+  const shares = (receivedShares ?? []).flatMap((share) => {
+    const post = sharedPostById.get(share.content_item_id);
+    if (!post) return [];
+    const sender = sharedSenderById.get(share.user_id);
+    return [{
+      id: share.id,
+      created_at: share.created_at,
+      senderName: sender?.display_name || sender?.username || "Ein Klassenkamerad",
+      senderSeed: sender?.avatar_seed ?? null,
+      text: post.body || post.title || "Geteilter Beitrag",
+      mediaUrl: post.media_url && post.media_type === "image" ? post.media_url : null,
+      postId: post.id,
+    }];
+  });
 
-        <section>
-          <div className="mb-3 flex items-center gap-2"><span className="grid h-8 w-8 place-items-center rounded-xl bg-violet-400/10 text-violet-300"><Send className="h-4 w-4" /></span><p className="text-xs font-semibold uppercase tracking-[0.16em] text-paper">Direktnachrichten</p></div>
-          <div className="space-y-2.5">
-            {npcCreators?.map((c) => {
-              const resumeAt = pendingByCreator.get(c.id);
-              const isDue = resumeAt && new Date(resumeAt) <= new Date();
-              return (
-                <a
-                  key={c.id}
-                  href={`/messages/${c.id}`}
-                  className="group flex items-center justify-between gap-3 rounded-2xl border border-white/10 bg-paper/[0.07] px-4 py-3.5 text-sm text-paper transition hover:border-accent/40 hover:bg-paper/[0.1] touch-target"
-                >
-                  <span className="flex items-center gap-2">
-                    <span className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-violet-400/10 text-violet-300"><Send className="h-4 w-4" /></span>
-                    <span className="min-w-0"><span className="block font-medium">{c.display_name}</span><span className="mt-0.5 block text-xs text-ash">{c.handle}</span></span>
-                  </span>
-                  {isDue && (
-                    <span className="flex items-center gap-1 text-xs text-red-500">
-                      <Circle className="w-2 h-2 fill-current" /> neu
-                    </span>
-                  )}
-                </a>
-              );
-            })}
-            {(!npcCreators || npcCreators.length === 0) && (
-              <div className="flex items-center gap-4 rounded-2xl border border-dashed border-white/15 bg-paper/[0.03] p-4"><div className="flex shrink-0 items-center -space-x-4"><img src="/branding/chat.webp" alt="" className="h-16 w-16 object-contain" /><img src="/branding/smiley-chat.webp" alt="" className="h-12 w-12 object-contain" /></div><div><p className="text-sm font-medium text-paper">Noch keine Kontakte</p><p className="mt-1 text-xs leading-5 text-ash">Sobald ein Szenario Gespräche freischaltet, tauchen sie hier auf.</p></div></div>
-            )}
-          </div>
-        </section>
-      </div>
-    </main>
-  );
+  return <MessagesWorkspace contacts={contacts} groupChats={groupChats ?? []} shares={shares} scenarioMessages={scenarioMessages} />;
 }

@@ -1,7 +1,7 @@
 "use client";
 // apps/player/app/login/page.tsx
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { supabaseBrowserClient } from "../../lib/supabaseBrowserClient";
 
@@ -15,11 +15,27 @@ export default function LoginPage() {
   const supabase = supabaseBrowserClient();
   const router = useRouter();
 
+  const [checkingSession, setCheckingSession] = useState(true);
   const [accessCode, setAccessCode] = useState("");
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [pending, setPending] = useState(false);
+
+  useEffect(() => {
+    let active = true;
+    supabase.auth.getUser().then(({ data: { user } }) => {
+      if (!active) return;
+      if (user) {
+        router.replace("/feed");
+        return;
+      }
+      setCheckingSession(false);
+    });
+    return () => {
+      active = false;
+    };
+  }, [router]);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -37,6 +53,8 @@ export default function LoginPage() {
 
     router.push("/feed");
   }
+
+  if (checkingSession) return null;
 
   return (
     <main className="dr1ft-login-screen relative isolate flex min-h-[100svh] items-center justify-center overflow-hidden px-4 py-8 sm:px-8 sm:py-10 lg:px-12">

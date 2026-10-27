@@ -1,6 +1,5 @@
 "use client";
 
-import Link from "next/link";
 import { useState } from "react";
 import { ArrowLeft, Building2, ChevronDown, LogOut, MoreHorizontal, Pencil, Plus, Save, Settings, UserRound, Users, School as SchoolIcon, BarChart3, LayoutDashboard, X } from "lucide-react";
 import { createBrowserClient } from "@supabase/ssr";
@@ -349,15 +348,10 @@ export function SchoolDetailWorkspace({ school: initialSchool, initialMembers, i
           </ul>
         </nav>
         <div className="mt-auto border-t border-slate-200/80 p-4">
-          {isPlatformAdmin && (
-            <a
-              href="/"
-              className="mb-3 flex items-center gap-2 rounded-xl px-3 py-2.5 text-sm font-medium text-slate-600 transition hover:bg-violet-50 hover:text-violet-700"
-            >
-              <ArrowLeft className="h-4 w-4" />
-              Zurück zum Editorial
-            </a>
-          )}
+          <a href="/" className="mb-3 flex items-center gap-2 rounded-xl px-3 py-2.5 text-sm font-medium text-slate-600 transition hover:bg-violet-50 hover:text-violet-700">
+            <ArrowLeft className="h-4 w-4" />
+            Zurück zum Editorial
+          </a>
           <div className="rounded-xl bg-slate-50 px-3 py-3">
             <div className="flex items-center gap-2"><span className="h-2 w-2 rounded-full bg-emerald-500" /><span className="text-xs font-semibold text-slate-700">Schulbereich</span></div>
             <p className="mt-1.5 text-[11px] leading-relaxed text-slate-500">Klassen, Personen und Schulprofil zentral verwalten.</p>

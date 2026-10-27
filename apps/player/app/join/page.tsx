@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { supabaseBrowserClient } from "../../lib/supabaseBrowserClient";
 
@@ -14,12 +14,24 @@ export default function JoinPage() {
   const supabase = supabaseBrowserClient();
   const router = useRouter();
 
+  const [checkingSession, setCheckingSession] = useState(true);
   const [accessCode, setAccessCode] = useState("");
   const [displayName, setDisplayName] = useState("");
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [pending, setPending] = useState(false);
+
+  useEffect(() => {
+    let active = true;
+    supabase.auth.getUser().then(({ data: { user } }) => {
+      if (!active) return;
+      router.replace(user ? "/feed" : "/login");
+    });
+    return () => {
+      active = false;
+    };
+  }, [router]);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -75,6 +87,8 @@ export default function JoinPage() {
 
     router.push("/feed");
   }
+
+  if (checkingSession) return null;
 
   return (
     <main className="min-h-screen px-4 py-8 text-paper sm:px-6 sm:py-12 safe-top safe-bottom">

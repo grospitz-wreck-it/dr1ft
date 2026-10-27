@@ -12,18 +12,18 @@ export default function HomePage() {
           <img src="/dr1ft-hero-w.webp" alt="" className="dr1ft-hero-image dr1ft-hero-image-a absolute inset-0 h-full w-full object-cover object-[62%_center] md:object-[70%_center]" />
           <img src="/dr1ft-hero-m.webp" alt="" className="dr1ft-hero-image dr1ft-hero-image-b absolute inset-0 h-full w-full object-cover object-[58%_center] md:object-[70%_center]" />
         </div>
-        <div className="absolute inset-0 -z-10 bg-[linear-gradient(90deg,rgba(5,10,25,.96)_0%,rgba(5,10,25,.84)_27%,rgba(5,10,25,.48)_48%,rgba(10,8,24,.08)_76%,rgba(10,8,24,.22)_100%)]" />
-        <div className="absolute inset-0 -z-10 bg-[radial-gradient(circle_at_28%_42%,rgba(0,218,255,.15),transparent_38%),linear-gradient(0deg,rgba(5,10,25,.22),transparent_36%)]" />
+        <div className="absolute inset-0 -z-10 bg-[linear-gradient(90deg,rgba(5,10,25,.97)_0%,rgba(5,10,25,.88)_25%,rgba(5,10,25,.58)_43%,rgba(10,8,24,.12)_68%,rgba(10,8,24,.22)_100%)]" />
+        <div className="absolute inset-0 -z-10 bg-[radial-gradient(circle_at_22%_42%,rgba(0,218,255,.15),transparent_38%),linear-gradient(0deg,rgba(5,10,25,.22),transparent_36%)]" />
 
-        <div className="mx-auto w-full max-w-6xl px-6 py-24 sm:py-28">
-          <div className="max-w-xl text-white">
+        <div className="mx-auto mt-auto w-full max-w-7xl px-6 pt-24 pb-8 sm:px-10 sm:pt-28 sm:pb-10">
+          <div className="max-w-[840px] text-white">
             <p className="inline-flex bg-cyan-300/10 border border-cyan-200/30 text-xs font-medium text-cyan-100 px-3 py-1 rounded-full mb-6 backdrop-blur">
               Medienkompetenz · NRW
             </p>
-            <h1 className="font-display text-4xl sm:text-5xl lg:text-6xl font-bold tracking-tight leading-[1.02]">
-              Medienkompetenz, die Schüler:innen wirklich erleben.
+            <h1 className="font-display text-3xl sm:text-4xl lg:text-[2.8rem] font-bold tracking-tight leading-[1.06]">
+              Medienkompetenz, die<br />Schüler:innen wirklich erleben.
             </h1>
-            <p className="text-base sm:text-lg text-slate-200 max-w-lg mt-5 leading-relaxed">
+            <p className="text-base sm:text-lg text-slate-200 max-w-md mt-5 leading-relaxed">
               DR1FT ist ein simulierter Social-Media-Feed, in dem Schüler:innen
               Manipulation selbst erkennen lernen — statt sie nur erklärt zu bekommen.
             </p>
