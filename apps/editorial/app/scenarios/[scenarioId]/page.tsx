@@ -8,6 +8,7 @@ import { LearningDesignStudio } from "./LearningDesignStudio";
 import { ScenarioWorkflowProgress } from "./ScenarioWorkflowProgress";
 import { LearningStepEditor } from "./LearningStepEditor";
 import { ContentComposer } from "./ContentComposer";
+import { PostEditForm } from "./PostEditForm";
 import { ContentAttachmentEditor } from "./ContentAttachmentEditor";
 import { regenerateLearningImage, rejectLearningImage } from "../learning-content-actions";
 
@@ -253,20 +254,11 @@ export default async function ScenarioDetailPage({ params, searchParams = {} }: 
                           </div>
                         )}
                         <div className="p-3">
-                          <details className="group">
-                            <summary className="cursor-pointer list-none text-xs font-semibold text-accent hover:underline">Beitrag bearbeiten</summary>
-                            <form action={updateContentItemBody.bind(null, item.id, scenarioId)} className="mt-3 space-y-2 rounded-xl border border-slate-200 bg-slate-50 p-3">
-                              <label className="block text-[11px] font-medium text-slate-500">Titel (optional)
-                                <input name="title" defaultValue={item.title ?? ""} className="mt-1 w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm" />
-                              </label>
-                              <label className="block text-[11px] font-medium text-slate-500">Beitragstext
-                                <textarea name="body" required defaultValue={item.body ?? ""} rows={5} className="mt-1 w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900" />
-                              </label>
-                              <div className="flex justify-end">
-                                <button type="submit" className="rounded-lg bg-accent px-3 py-2 text-xs font-semibold text-white hover:bg-accent-hover">Änderungen speichern</button>
-                              </div>
-                            </form>
-                          </details>
+                          <PostEditForm
+                            title={item.title ?? null}
+                            body={item.body ?? ""}
+                            action={updateContentItemBody.bind(null, item.id, scenarioId)}
+                          />
                           <p className="mt-2 whitespace-pre-wrap text-sm text-slate-900">{item.body}</p>
                           <p className="text-xs text-slate-400 mt-1">{item.type} · {item.age_rating} · Schwierigkeit {item.difficulty}</p>
 
