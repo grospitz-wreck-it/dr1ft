@@ -1,6 +1,6 @@
 "use client";
 
-import { Children, useState, type ReactNode } from "react";
+import { Children, Fragment, isValidElement, useState, type ReactNode } from "react";
 import { ArrowLeft, ArrowRight, Check } from "lucide-react";
 
 type Step = {
@@ -17,7 +17,7 @@ export function ScenarioWizard({
   children: ReactNode;
 }) {
   const [current, setCurrent] = useState(0);
-  const panels = Children.toArray(children);
+  const panels = Children.toArray(children).flatMap((child) => isValidElement(child) && child.type === Fragment ? Children.toArray(child.props.children) : [child]);
   const active = steps[current];
   const completed = steps.filter((step) => step.complete).length;
   const progress = Math.round(((current + 1) / steps.length) * 100);
