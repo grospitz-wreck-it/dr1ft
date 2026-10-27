@@ -117,12 +117,12 @@ export function PostCard({ item, userId, classInstanceId, initiallyLiked, onView
   function showFeedback(message: string) { setFeedback(message); window.setTimeout(() => setFeedback(null), 2800); }
 
   async function track(interactionType: "inspect_source" | "inspect_media" | "inspect_context" | "inspect_profile" | "compare_information" | "share" | "report" | "ignore", metadata: Record<string, unknown> = { ui: "generic_card_actions" }) {
-    const configured = interactionDiscoveries[interactionType];
-    const discovery = configured && typeof configured.message === "string" && configured.message.trim()
+    const configured = interactionDiscoveries[interactionType] ?? learningTask.interactions?.find((entry) => entry.id === interactionType);
+    const discovery = configured && typeof (configured as any).discoveryMessage === "string" && (configured as any).discoveryMessage.trim() || typeof configured.message === "string" && configured.message.trim()
       ? {
-          title: String(configured.title || "Neue Erkenntnis"),
-          message: configured.message.trim(),
-          competency: typeof configured.competency === "string" ? configured.competency : undefined,
+          title: String((configured as any).discoveryTitle || configured.title || "Neue Erkenntnis"),
+          message: String((configured as any).discoveryMessage ?? configured.message ?? "").trim(),
+          competency: typeof ((configured as any).competency ?? (configured as any).discoveryCompetency) === "string" ? String((configured as any).discoveryCompetency ?? configured.competency) : undefined,
           evidenceId: String(configured.evidenceId || configured.id || `${item.id}:${interactionType}`),
           action: interactionType,
         }
