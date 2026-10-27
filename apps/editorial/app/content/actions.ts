@@ -145,7 +145,7 @@ export async function regenerateContentImage(id: string, instructions: string) {
     "No letters, words, numbers, typography, captions, subtitles, logos, watermarks, labels, signs, posters, printed pages, documents, UI, phone-screen text, or writing-like marks.",
     "No pseudo-text, gibberish, fake lettering, decorative glyphs, or blurred text. Any screen, paper, sign, label, book, or other normally text-bearing surface must be blank, turned away, or shown without markings.",
     "Communicate everything visually without writing. This no-text requirement overrides all source-post content and additional editorial instructions. Do not imitate a real person's face."
-  ].filter(Boolean).join("\\n\\n");
+  ].filter(Boolean).join("\n\n");
 
   const response = await fetch(workerUrl, {
     method: "POST",
