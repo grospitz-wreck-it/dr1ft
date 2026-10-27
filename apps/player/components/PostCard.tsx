@@ -142,7 +142,6 @@ export function PostCard({ item, userId, classInstanceId, initiallyLiked, onView
             id: discovery.evidenceId,
             title: discovery.title,
             message: discovery.message,
-            competency: discovery.competency ?? null,
             action: interactionType,
             status: "discovered",
             discoveredAt: new Date().toISOString(),
