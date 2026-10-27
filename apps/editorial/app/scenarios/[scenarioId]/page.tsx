@@ -1,12 +1,14 @@
 import type { ReactNode } from "react";
 import { ArrowLeft, FileText, Flag, Route, Sparkles, Users } from "lucide-react";
 import { supabaseServerClient } from "../../../lib/supabaseServerClient";
-import { createContentItem, generateScenarioContent, optimizeScenarioBasics, toggleScenarioActive, updateScenarioBasics } from "../actions";
+import { createContentItem, generateScenarioContent, optimizeScenarioBasics, toggleScenarioActive, updateContentItemBody, updateScenarioBasics } from "../actions";
 import { ContentStatusControl } from "./ContentStatusControl";
 import { AiGenerationButton } from "../../components/AiGenerationButton";
 import { LearningDesignStudio } from "./LearningDesignStudio";
+import { ScenarioWizard } from "./ScenarioWizard";
 import { LearningStepEditor } from "./LearningStepEditor";
 import { ContentComposer } from "./ContentComposer";
+import { PostEditForm } from "./PostEditForm";
 import { ContentAttachmentEditor } from "./ContentAttachmentEditor";
 import { regenerateLearningImage, rejectLearningImage } from "../learning-content-actions";
 
@@ -116,243 +118,296 @@ export default async function ScenarioDetailPage({ params, searchParams = {} }: 
           <ArrowLeft className="w-3.5 h-3.5" /> Zurück zu Szenarien
         </a>
 
-        <header className="bg-white border border-slate-200 rounded-2xl p-6 shadow-sm">
-          <div className="flex flex-col xl:flex-row xl:justify-between gap-5">
-            <div>
-              <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-accent">
-                <Sparkles className="w-3.5 h-3.5" /> Szenario
-                <span className="text-slate-300">·</span>
-                {AGE_LABELS[scenario.age_band] ?? scenario.age_rating}
-              </div>
-              <h1 className="text-2xl font-semibold text-slate-900 mt-2">{scenario.title}</h1>
-              <p className="text-sm text-slate-500 mt-2 max-w-3xl">{scenario.description}</p>
-              <div className="mt-3 inline-flex items-center gap-2 rounded-lg bg-accent/5 px-2.5 py-1.5 text-[11px] font-medium text-accent">
-                <Sparkles className="w-3 h-3" /> KI-Assistent für Grundlage, Lernschritt und Inhalte aktiv
-              </div>
-              <div className="mt-4 flex flex-wrap items-center gap-2">
-                <details>
-                  <summary className="cursor-pointer text-xs font-semibold text-accent">Szenario-Grundlage bearbeiten</summary>
-                  <form action={updateScenarioBasics.bind(null, scenarioId)} className="mt-3 grid gap-2 max-w-2xl">
-                    <input name="title" defaultValue={scenario.title} className="rounded-xl border border-slate-200 px-3 py-2 text-sm" />
-                    <textarea name="description" defaultValue={scenario.description ?? ""} rows={4} className="rounded-xl border border-slate-200 px-3 py-2 text-sm" />
-                    <button className="justify-self-start rounded-xl bg-slate-900 text-white px-3 py-2 text-xs font-semibold">Änderungen speichern</button>
-                  </form>
-                </details>
-                <form action={optimizeScenarioBasics.bind(null, scenarioId)}>
-                  <AiGenerationButton
-                    idleLabel="Mit KI verbessern"
-                    pendingLabel="Grundlage wird verbessert …"
-                    className="inline-flex items-center gap-1.5 rounded-lg border border-accent/30 bg-accent/5 px-3 py-2 text-xs font-semibold text-accent hover:bg-accent/10"
-                    pendingSteps={["Grundlage analysieren …", "Titel und Beschreibung schärfen …", "Entwurf speichern …"]}
-                  />
-                </form>
-              </div>
-            </div>
-            <form>
-              <button
-                formAction={async () => {
-                  "use server";
-                  await toggleScenarioActive(scenarioId, !scenario.is_active);
-                }}
-                className="rounded-xl border border-slate-200 px-4 py-2.5 text-sm font-medium hover:bg-slate-50"
-              >
-                {scenario.is_active ? "Aktiv" : "Als Entwurf belassen"}
-              </button>
-            </form>
-          </div>
-
-          <div className="mt-5 pt-4 border-t border-slate-100 flex flex-wrap gap-2">
-            {(variants ?? []).map((variant) => (
-              <a
-                key={variant.id}
-                href={`/scenarios/${variant.id}`}
-                className={`rounded-xl border px-3 py-2 ${variant.id === scenarioId ? "border-accent bg-accent/5" : "border-slate-200 hover:border-accent"}`}
-              >
-                <div className="text-xs font-semibold text-slate-800">{AGE_LABELS[variant.age_band] ?? variant.age_rating}</div>
-                <div className="text-[11px] text-slate-400 mt-0.5">{STATUS_LABELS[variant.status ?? "draft"] ?? "Entwurf"}</div>
-              </a>
-            ))}
-          </div>
-        </header>
-
-        {(searchParams.ai || searchParams.aiError) && (
-          <section className={`rounded-2xl border px-5 py-4 ${searchParams.aiError ? "border-red-200 bg-red-50" : "border-accent/20 bg-accent/5"}`}>
-            <div className={`text-xs font-semibold uppercase tracking-wider ${searchParams.aiError ? "text-red-700" : "text-accent"}`}>
-              {searchParams.aiError ? "KI-Assistent" : "KI-Assistent abgeschlossen"}
-            </div>
-            <div className={`mt-1 text-sm ${searchParams.aiError ? "text-red-800" : "text-slate-700"} break-words`}>
-              {searchParams.aiError ?? searchParams.ai}
-            </div>
-          </section>
-        )}
-
-        <LearningDesignStudio scenarioId={scenarioId} latestDesign={latestLearningDesign} />
-
-        {latestLearningDesign && (
-          <LearningStepEditor
-            scenarioId={scenarioId}
-            designId={latestLearningDesign.id}
-            steps={learningSteps ?? []}
-            mappings={frameworkMappings ?? []}
-            competencyLabels={learningCompetencyLabels}
-            objectiveLabels={learningObjectiveLabels}
-            availableObjectives={learningObjectives ?? []}
-            availableCompetencies={competencies ?? []}
-            availableMissions={missions ?? []}
-            objectiveMappings={learningStepObjectiveMappings ?? []}
-            competencyMappings={learningStepCompetencyMappings ?? []}
-            missionMappings={learningStepMissionMappings ?? []}
-            evidenceIndicators={learningEvidenceIndicators ?? []}
-            contentMappings={learningStepContentMappings ?? []}
-            contentItems={contentItems ?? []}
-          />
-        )}
-
-        <section className="grid md:grid-cols-4 gap-3">
-          <SummaryCard icon={<Route className="w-4 h-4" />} label="Lernschritte" value={learningSteps?.length ? `${learningSteps.length} Schritte` : "Noch leer"} />
-          <SummaryCard icon={<Flag className="w-4 h-4" />} label="Missionen" value={`${missions?.length ?? 0}`} />
-          <SummaryCard icon={<FileText className="w-4 h-4" />} label="Inhalte" value={`${contentItems?.length ?? 0}`} />
-          <SummaryCard icon={<Users className="w-4 h-4" />} label="Status" value={scenario.is_active ? "Aktiv" : "Entwurf"} />
-        </section>
-
-                <section className="bg-white border border-slate-200 rounded-2xl p-6 shadow-sm">
-          <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3">
-            <SectionHeader icon={<FileText className="w-4 h-4" />} title="Inhalte" subtitle="Posts, Kommentare, DMs und Reflexionen für diese Altersvariante." />
-            <ContentComposer scenarioId={scenarioId} />
-          </div>
-
-          {grouped.length > 0 ? (
-            <div className="mt-5 space-y-5">
-              {grouped.map((group) => (
-                <div key={group.status}>
-                  <div className="text-xs font-semibold uppercase tracking-wider text-slate-500 mb-2">{STATUS_LABELS[group.status] ?? group.status} · {group.items.length}</div>
-                  <ul className="space-y-2">
-                    {group.items.map((item) => (
-                      <li key={item.id} className="border border-slate-200 rounded-xl overflow-hidden">
-                        {item.media_url && item.media_type === "image" && (
-                          <div className="bg-slate-100">
-                            <img src={item.media_url} alt="" className="w-full max-h-[420px] object-cover" />
+        <ScenarioWizard
+          steps={[
+            { title: "Thema & Ziel", description: "Grundlage des Szenarios", complete: true },
+            { title: "Lernplan", description: "Lernziel und Lernschritte", complete: Boolean(latestLearningDesign && (learningSteps?.length ?? 0) > 0) },
+            { title: "Posts erstellen", description: "Beiträge für den Feed", complete: (contentItems ?? []).some((item) => item.type === "post") && (missions ?? []).length > 0 },
+            { title: "Prüfen & freigeben", description: "Abschluss und Aktivierung", complete: Boolean(scenario.is_active) },
+          ]}
+        >
+          <div className="space-y-5">
+                    <header id="workflow-basics" className="scroll-mt-6 bg-white border border-slate-200 rounded-2xl p-6 shadow-sm">
+                      <div className="flex flex-col xl:flex-row xl:justify-between gap-5">
+                        <div>
+                          <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-accent">
+                            <Sparkles className="w-3.5 h-3.5" /> Szenario
+                            <span className="text-slate-300">·</span>
+                            {AGE_LABELS[scenario.age_band] ?? scenario.age_rating}
                           </div>
-                        )}
-                        {item.media_url && item.media_type === "video" && videoEmbedUrl(item.media_url) ? (
-                          <div className="aspect-video bg-slate-100">
-                            <iframe src={videoEmbedUrl(item.media_url)!} title="Video" className="w-full h-full" allow="autoplay; encrypted-media; picture-in-picture" allowFullScreen />
+                          <h1 className="text-2xl font-semibold text-slate-900 mt-2">{scenario.title}</h1>
+                          <p className="text-sm text-slate-500 mt-2 max-w-3xl">{scenario.description}</p>
+                          <div className="mt-3 inline-flex items-center gap-2 rounded-lg bg-accent/5 px-2.5 py-1.5 text-[11px] font-medium text-accent">
+                            <Sparkles className="w-3 h-3" /> KI-Assistent für Grundlage, Lernschritt und Inhalte aktiv
                           </div>
-                        ) : item.media_url && item.media_type === "video" ? (
-                          <div className="bg-black">
-                            <video src={item.media_url} controls playsInline preload="metadata" className="w-full max-h-[420px]" />
-                          </div>
-                        ) : null}
-                        {item.extra?.embed?.url && (
-                          <div className="aspect-video bg-slate-100">
-                            <iframe src={item.extra.embed.url} title="Eingebettetes Video" className="w-full h-full" allowFullScreen />
-                          </div>
-                        )}
-                        <div className="p-3">
-                          <p className="text-sm text-slate-900">{item.body}</p>
-                          <p className="text-xs text-slate-400 mt-1">{item.type} · {item.age_rating} · Schwierigkeit {item.difficulty}</p>
-
-                          {item.media_url && item.media_type === "image" && (
-                            <div className="mt-3 rounded-xl bg-slate-50 border border-slate-200 p-3">
-                              <div className="flex items-center justify-between gap-3">
-                                <div>
-                                  <div className="text-xs font-semibold text-slate-700">Bildredaktion</div>
-                                  <div className="text-[11px] text-slate-500 mt-0.5">
-                                    {item.extra?.imageGeneration?.editorialReview === "rejected"
-                                      ? "Bild abgelehnt · Neugenerierung möglich"
-                                      : "Bild wartet auf redaktionelle Prüfung"}
-                                    {item.extra?.imageGeneration?.generationCount
-                                      ? " · Generation " + item.extra.imageGeneration.generationCount
-                                      : ""}
-                                  </div>
-                                </div>
-                                <div className="text-[10px] text-slate-400">
-                                  {item.extra?.imageGeneration?.provider ?? "AI"}
-                                </div>
-                              </div>
-
-                              <form action={regenerateLearningImage.bind(null, item.id, scenarioId)} className="mt-3 flex flex-col sm:flex-row gap-2">
-                                <input
-                                  name="feedback"
-                                  placeholder="Optional: Was soll beim neuen Bild anders sein?"
-                                  className="flex-1 rounded-lg border border-slate-200 bg-white px-2.5 py-2 text-[11px]"
-                                />
-                                <button type="submit" className="rounded-lg bg-slate-900 text-white px-3 py-2 text-[11px] font-semibold">
-                                  Bild neu generieren
-                                </button>
+                          <div className="mt-4 flex flex-wrap items-center gap-2">
+                            <details>
+                              <summary className="cursor-pointer text-xs font-semibold text-accent">Szenario-Grundlage bearbeiten</summary>
+                              <form action={updateScenarioBasics.bind(null, scenarioId)} className="mt-3 grid gap-2 max-w-2xl">
+                                <input name="title" defaultValue={scenario.title} className="rounded-xl border border-slate-200 px-3 py-2 text-sm" />
+                                <textarea name="description" defaultValue={scenario.description ?? ""} rows={4} className="rounded-xl border border-slate-200 px-3 py-2 text-sm" />
+                                <button className="justify-self-start rounded-xl bg-slate-900 text-white px-3 py-2 text-xs font-semibold">Änderungen speichern</button>
                               </form>
-
-                              <form action={rejectLearningImage.bind(null, item.id, scenarioId)} className="mt-2">
-                                <input
-                                  name="editorialFeedback"
-                                  placeholder="Bei Ablehnung Feedback eintragen"
-                                  className="w-full rounded-lg border border-slate-200 bg-white px-2.5 py-2 text-[11px]"
-                                />
-                                <p className="text-[10px] text-slate-400 mt-1">
-                                  Die Ablehnung wird gespeichert; anschließend kann das Bild mit neuem Feedback erzeugt werden.
-                                </p>
-                              </form>
-                            </div>
-                          )}
-
-                          <ContentAttachmentEditor scenarioId={scenarioId} contentItemId={item.id} />
-                          <div className="mt-2"><ContentStatusControl contentItemId={item.id} status={item.status} /></div>
+                            </details>
+                            <form action={optimizeScenarioBasics.bind(null, scenarioId)}>
+                              <AiGenerationButton
+                                idleLabel="Mit KI verbessern"
+                                pendingLabel="Grundlage wird verbessert …"
+                                className="inline-flex items-center gap-1.5 rounded-lg border border-accent/30 bg-accent/5 px-3 py-2 text-xs font-semibold text-accent hover:bg-accent/10"
+                                pendingSteps={["Grundlage analysieren …", "Titel und Beschreibung schärfen …", "Entwurf speichern …"]}
+                              />
+                            </form>
+                          </div>
                         </div>
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-              ))}
-            </div>
-          ) : (
-            <div className="mt-5 rounded-xl border border-dashed border-slate-300 p-7 text-center text-sm text-slate-500">
-              Noch keine Inhalte. Du kannst sie jetzt Schritt für Schritt ergänzen.
-            </div>
-          )}
-        </section>
-
-        <details className="bg-white border border-slate-200 rounded-2xl shadow-sm">
-          <summary className="cursor-pointer px-6 py-4 text-sm font-semibold text-slate-700">Inhalt manuell hinzufügen</summary>
-          <form action={createContentItem.bind(null, scenarioId)} encType="multipart/form-data" className="px-6 pb-6 pt-2 space-y-3">
-            <select name="type" className="border border-slate-200 rounded-xl px-3 py-2 w-full text-sm">
-              <option value="post">Post</option>
-              <option value="comment">Kommentar</option>
-              <option value="dm_message">DM-Nachricht</option>
-              <option value="reflection_prompt">Reflexions-Prompt</option>
-            </select>
-            <textarea name="body" placeholder="Inhalt" required className="border border-slate-200 rounded-xl px-3 py-3 w-full text-sm" />
-            <div>
-              <label className="text-xs text-slate-500 block mb-1">Bild/Video (optional)</label>
-              <input name="media" type="file" accept="image/*,video/*" className="border border-slate-200 rounded-xl px-3 py-2 w-full text-sm" />
-            </div>
-            <select name="creatorId" className="border border-slate-200 rounded-xl px-3 py-2 w-full text-sm">
-              <option value="">Kein Creator</option>
-              {creators?.map((creator) => <option key={creator.id} value={creator.id}>{creator.display_name} {creator.creator_role ? `(${creator.creator_role})` : ""}</option>)}
-            </select>
-            <select name="parentContentId" className="border border-slate-200 rounded-xl px-3 py-2 w-full text-sm">
-              <option value="">Kein Bezug</option>
-              {possibleParents?.map((parent) => <option key={parent.id} value={parent.id}>Kommentar zu: {parent.body.slice(0, 60)}…</option>)}
-            </select>
-            <div className="flex gap-3">
-              <input name="baseEngagement" type="number" min={0} placeholder="Basis-Likes" className="border border-slate-200 rounded-xl px-3 py-2 text-sm flex-1" />
-              <input name="baseCommentCount" type="number" min={0} placeholder="Basis-Kommentare" className="border border-slate-200 rounded-xl px-3 py-2 text-sm flex-1" />
-            </div>
-            <input name="manipulationTechniques" placeholder="Manipulationstechniken, kommagetrennt" className="border border-slate-200 rounded-xl px-3 py-2 w-full text-sm" />
-            <div>
-              <p className="mb-2 text-xs text-slate-500">Ziel-Kompetenzen</p>
-              <div className="grid md:grid-cols-2 gap-1">
-                {competencies?.map((competency) => (
-                  <label key={competency.id} className="flex items-center gap-2 text-xs text-slate-600"><input type="checkbox" name="targetCompetencies" value={competency.id} />{competency.title}</label>
-                ))}
-              </div>
-            </div>
-            <div className="flex gap-3">
-              <select name="difficulty" className="border border-slate-200 rounded-xl px-3 py-2 text-sm"><option value="1">Schwierigkeit 1</option><option value="2">Schwierigkeit 2</option><option value="3">Schwierigkeit 3</option><option value="4">Schwierigkeit 4</option><option value="5">Schwierigkeit 5</option></select>
-              <select name="ageRating" className="border border-slate-200 rounded-xl px-3 py-2 text-sm"><option value="all_ages">Alle Altersgruppen</option><option value="12_plus">12+</option><option value="16_plus">16+</option></select>
-            </div>
-            <button type="submit" className="bg-accent hover:bg-accent-hover text-white text-sm px-4 py-2 rounded-xl">Als Entwurf anlegen</button>
-          </form>
-        </details>
+                        <div className="rounded-xl bg-slate-50 px-3 py-2.5 text-xs text-slate-500">
+                          Status: <span className="font-semibold text-slate-700">{scenario.is_active ? "Aktiv" : "Entwurf"}</span>
+                          <span className="mt-1 block">Die Freigabe erfolgt im letzten Schritt.</span>
+                        </div>
+                      </div>
+            
+                      <div className="mt-5 pt-4 border-t border-slate-100 flex flex-wrap gap-2">
+                        {(variants ?? []).map((variant) => (
+                          <a
+                            key={variant.id}
+                            href={`/scenarios/${variant.id}`}
+                            className={`rounded-xl border px-3 py-2 ${variant.id === scenarioId ? "border-accent bg-accent/5" : "border-slate-200 hover:border-accent"}`}
+                          >
+                            <div className="text-xs font-semibold text-slate-800">{AGE_LABELS[variant.age_band] ?? variant.age_rating}</div>
+                            <div className="text-[11px] text-slate-400 mt-0.5">{STATUS_LABELS[variant.status ?? "draft"] ?? "Entwurf"}</div>
+                          </a>
+                        ))}
+                      </div>
+                    </header>
+                    {(searchParams.ai || searchParams.aiError) && (
+                      <section className={`rounded-2xl border px-5 py-4 ${searchParams.aiError ? "border-red-200 bg-red-50" : "border-accent/20 bg-accent/5"}`}>
+                        <div className={`text-xs font-semibold uppercase tracking-wider ${searchParams.aiError ? "text-red-700" : "text-accent"}`}>
+                          {searchParams.aiError ? "KI-Assistent" : "KI-Assistent abgeschlossen"}
+                        </div>
+                        <div className={`mt-1 text-sm ${searchParams.aiError ? "text-red-800" : "text-slate-700"} break-words`}>
+                          {searchParams.aiError ?? searchParams.ai}
+                        </div>
+                      </section>
+                    )}
+          </div>
+          <div className="space-y-5">
+                    <div id="workflow-plan" className="scroll-mt-6 space-y-5">
+                      <LearningDesignStudio scenarioId={scenarioId} latestDesign={latestLearningDesign} />
+            
+                    {latestLearningDesign && (
+                      <LearningStepEditor
+                        scenarioId={scenarioId}
+                        designId={latestLearningDesign.id}
+                        steps={learningSteps ?? []}
+                        mappings={frameworkMappings ?? []}
+                        competencyLabels={learningCompetencyLabels}
+                        objectiveLabels={learningObjectiveLabels}
+                        availableObjectives={learningObjectives ?? []}
+                        availableCompetencies={competencies ?? []}
+                        availableMissions={missions ?? []}
+                        objectiveMappings={learningStepObjectiveMappings ?? []}
+                        competencyMappings={learningStepCompetencyMappings ?? []}
+                        missionMappings={learningStepMissionMappings ?? []}
+                        evidenceIndicators={learningEvidenceIndicators ?? []}
+                        contentMappings={learningStepContentMappings ?? []}
+                        contentItems={contentItems ?? []}
+                      />
+                    )}
+                    </div>
+          </div>
+          <div className="space-y-5">
+                    <section className="grid md:grid-cols-4 gap-3">
+                      <SummaryCard icon={<Route className="w-4 h-4" />} label="Lernschritte" value={learningSteps?.length ? `${learningSteps.length} Schritte` : "Noch leer"} />
+                      <SummaryCard icon={<Flag className="w-4 h-4" />} label="Missionen" value={`${missions?.length ?? 0}`} />
+                      <SummaryCard icon={<FileText className="w-4 h-4" />} label="Inhalte" value={`${contentItems?.length ?? 0}`} />
+                      <SummaryCard icon={<Users className="w-4 h-4" />} label="Status" value={scenario.is_active ? "Aktiv" : "Entwurf"} />
+                    </section>
+            
+                            <section id="workflow-posts" className="scroll-mt-6 relative overflow-hidden rounded-3xl border border-violet-100 bg-gradient-to-br from-white via-white to-violet-50/70 p-4 shadow-sm sm:p-6">
+                      <div className="mb-5 flex flex-col gap-3 rounded-2xl border border-violet-100 bg-white/80 p-4 sm:flex-row sm:items-center sm:justify-between">
+                        <SectionHeader icon={<FileText className="w-4 h-4" />} title="Posts im Feed" subtitle="Baue den Feed deiner Mission – starte mit einem Post und ergänze Medien, Reaktionen und Chats." />
+                        <span className="inline-flex w-fit shrink-0 items-center gap-2 rounded-full bg-violet-100 px-3 py-1.5 text-[11px] font-semibold text-violet-800">✦ Content-Atelier</span>
+                      </div>
+                      <ContentComposer scenarioId={scenarioId} />
+            
+                      {grouped.length > 0 ? (
+                        <div className="mt-5 space-y-5">
+                          {grouped.map((group) => (
+                            <div key={group.status}>
+                              <div className="text-xs font-semibold uppercase tracking-wider text-slate-500 mb-2">{STATUS_LABELS[group.status] ?? group.status} · {group.items.length}</div>
+                              <ul className="space-y-2">
+                                {group.items.map((item) => (
+                                  <li key={item.id} className="border border-slate-200 rounded-xl overflow-hidden">
+                                    {item.media_url && item.media_type === "image" && (
+                                      <div className="bg-slate-100">
+                                        <img src={item.media_url} alt="" className="mx-auto block h-auto w-auto max-h-[560px] max-w-full object-contain" />
+                                      </div>
+                                    )}
+                                    {item.media_url && item.media_type === "video" && videoEmbedUrl(item.media_url) ? (
+                                      <div className="aspect-video bg-slate-100">
+                                        <iframe src={videoEmbedUrl(item.media_url)!} title="Video" className="w-full h-full" allow="autoplay; encrypted-media; picture-in-picture" allowFullScreen />
+                                      </div>
+                                    ) : item.media_url && item.media_type === "video" ? (
+                                      <div className="bg-black">
+                                        <video src={item.media_url} controls playsInline preload="metadata" className="w-full max-h-[420px]" />
+                                      </div>
+                                    ) : null}
+                                    {item.extra?.embed?.url && (
+                                      <div className="aspect-video bg-slate-100">
+                                        <iframe src={item.extra.embed.url} title="Eingebettetes Video" className="w-full h-full" allowFullScreen />
+                                      </div>
+                                    )}
+                                    <div className="p-3">
+                                      <PostEditForm
+                                        title={item.title ?? null}
+                                        body={item.body ?? ""}
+                                        action={updateContentItemBody.bind(null, item.id, scenarioId)}
+                                      />
+                                      <p className="mt-2 whitespace-pre-wrap text-sm text-slate-900">{item.body}</p>
+                                      <p className="text-xs text-slate-400 mt-1">{item.type} · {item.age_rating} · Schwierigkeit {item.difficulty}</p>
+            
+                                      {item.media_url && item.media_type === "image" && (
+                                        <div className="mt-3 rounded-xl bg-slate-50 border border-slate-200 p-3">
+                                          <div className="flex items-center justify-between gap-3">
+                                            <div>
+                                              <div className="text-xs font-semibold text-slate-700">Bildredaktion</div>
+                                              <div className="text-[11px] text-slate-500 mt-0.5">
+                                                {item.extra?.imageGeneration?.editorialReview === "rejected"
+                                                  ? "Bild abgelehnt · Neugenerierung möglich"
+                                                  : "Bild wartet auf redaktionelle Prüfung"}
+                                                {item.extra?.imageGeneration?.generationCount
+                                                  ? " · Generation " + item.extra.imageGeneration.generationCount
+                                                  : ""}
+                                              </div>
+                                            </div>
+                                            <div className="text-[10px] text-slate-400">
+                                              {item.extra?.imageGeneration?.provider ?? "AI"}
+                                            </div>
+                                          </div>
+            
+                                          <form action={regenerateLearningImage.bind(null, item.id, scenarioId)} className="mt-3 flex flex-col sm:flex-row gap-2">
+                                            <input
+                                              name="feedback"
+                                              placeholder="Optional: Was soll beim neuen Bild anders sein?"
+                                              className="flex-1 rounded-lg border border-slate-200 bg-white px-2.5 py-2 text-[11px]"
+                                            />
+                                            <button type="submit" className="rounded-lg bg-slate-900 text-white px-3 py-2 text-[11px] font-semibold">
+                                              Bild neu generieren
+                                            </button>
+                                          </form>
+            
+                                          <form action={rejectLearningImage.bind(null, item.id, scenarioId)} className="mt-2">
+                                            <input
+                                              name="editorialFeedback"
+                                              placeholder="Bei Ablehnung Feedback eintragen"
+                                              className="w-full rounded-lg border border-slate-200 bg-white px-2.5 py-2 text-[11px]"
+                                            />
+                                            <p className="text-[10px] text-slate-400 mt-1">
+                                              Die Ablehnung wird gespeichert; anschließend kann das Bild mit neuem Feedback erzeugt werden.
+                                            </p>
+                                          </form>
+                                        </div>
+                                      )}
+            
+                                      <ContentAttachmentEditor scenarioId={scenarioId} contentItemId={item.id} />
+                                      <div className="mt-2"><ContentStatusControl contentItemId={item.id} status={item.status} /></div>
+                                    </div>
+                                  </li>
+                                ))}
+                              </ul>
+                            </div>
+                          ))}
+                        </div>
+                      ) : (
+                        <div className="mt-5 rounded-xl border border-dashed border-slate-300 p-7 text-center text-sm text-slate-500">
+                          Noch keine Inhalte. Du kannst sie jetzt Schritt für Schritt ergänzen.
+                        </div>
+                      )}
+                    </section>
+            
+                    <details className="bg-white border border-slate-200 rounded-2xl shadow-sm">
+                      <summary className="cursor-pointer px-6 py-4 text-sm font-semibold text-slate-700">Erweiterte manuelle Anlage (optional)</summary>
+                      <form action={createContentItem.bind(null, scenarioId)} encType="multipart/form-data" className="px-6 pb-6 pt-2 space-y-3">
+                        <select name="type" className="border border-slate-200 rounded-xl px-3 py-2 w-full text-sm">
+                          <option value="post">Post</option>
+                          <option value="comment">Kommentar</option>
+                          <option value="dm_message">DM-Nachricht</option>
+                          <option value="reflection_prompt">Reflexions-Prompt</option>
+                        </select>
+                        <textarea name="body" placeholder="Inhalt" required className="border border-slate-200 rounded-xl px-3 py-3 w-full text-sm" />
+                        <div>
+                          <label className="text-xs text-slate-500 block mb-1">Bild/Video (optional)</label>
+                          <input name="media" type="file" accept="image/*,video/*" className="border border-slate-200 rounded-xl px-3 py-2 w-full text-sm" />
+                        </div>
+                        <select name="creatorId" className="border border-slate-200 rounded-xl px-3 py-2 w-full text-sm">
+                          <option value="">Kein Creator</option>
+                          {creators?.map((creator) => <option key={creator.id} value={creator.id}>{creator.display_name} {creator.creator_role ? `(${creator.creator_role})` : ""}</option>)}
+                        </select>
+                        <select name="parentContentId" className="border border-slate-200 rounded-xl px-3 py-2 w-full text-sm">
+                          <option value="">Kein Bezug</option>
+                          {possibleParents?.map((parent) => <option key={parent.id} value={parent.id}>Kommentar zu: {parent.body.slice(0, 60)}…</option>)}
+                        </select>
+                        <div className="flex gap-3">
+                          <input name="baseEngagement" type="number" min={0} placeholder="Basis-Likes" className="border border-slate-200 rounded-xl px-3 py-2 text-sm flex-1" />
+                          <input name="baseCommentCount" type="number" min={0} placeholder="Basis-Kommentare" className="border border-slate-200 rounded-xl px-3 py-2 text-sm flex-1" />
+                        </div>
+                        <input name="manipulationTechniques" placeholder="Manipulationstechniken, kommagetrennt" className="border border-slate-200 rounded-xl px-3 py-2 w-full text-sm" />
+                        <div>
+                          <p className="mb-2 text-xs text-slate-500">Ziel-Kompetenzen</p>
+                          <div className="grid md:grid-cols-2 gap-1">
+                            {competencies?.map((competency) => (
+                              <label key={competency.id} className="flex items-center gap-2 text-xs text-slate-600"><input type="checkbox" name="targetCompetencies" value={competency.id} />{competency.title}</label>
+                            ))}
+                          </div>
+                        </div>
+                        <div className="flex gap-3">
+                          <select name="difficulty" className="border border-slate-200 rounded-xl px-3 py-2 text-sm"><option value="1">Schwierigkeit 1</option><option value="2">Schwierigkeit 2</option><option value="3">Schwierigkeit 3</option><option value="4">Schwierigkeit 4</option><option value="5">Schwierigkeit 5</option></select>
+                          <select name="ageRating" className="border border-slate-200 rounded-xl px-3 py-2 text-sm"><option value="all_ages">Alle Altersgruppen</option><option value="12_plus">12+</option><option value="16_plus">16+</option></select>
+                        </div>
+                        <button type="submit" className="bg-accent hover:bg-accent-hover text-white text-sm px-4 py-2 rounded-xl">Als Entwurf anlegen</button>
+                      </form>
+                    </details>
+            
+            
+          </div>
+          <div className="space-y-5">
+                    <section id="workflow-review" className="scroll-mt-6 rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+                      <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+                        <div>
+                          <div className="text-[11px] font-bold uppercase tracking-[0.14em] text-accent">Letzter Schritt</div>
+                          <h2 className="mt-1 text-lg font-semibold text-slate-900">Prüfen und freigeben</h2>
+                          <p className="mt-1 max-w-2xl text-sm text-slate-500">Kontrolliere, ob Lernplan, Missionen und Posts vorhanden sind. Die Aktivierung bleibt eine bewusste redaktionelle Entscheidung.</p>
+                        </div>
+                        <form>
+                          <button
+                            formAction={async () => {
+                              "use server";
+                              await toggleScenarioActive(scenarioId, !scenario.is_active);
+                            }}
+                            className={`rounded-xl px-4 py-2.5 text-sm font-semibold ${scenario.is_active ? "border border-emerald-200 bg-emerald-50 text-emerald-800" : "bg-accent text-white hover:bg-accent-hover"}`}
+                          >
+                            {scenario.is_active ? "Szenario deaktivieren" : "Szenario aktivieren"}
+                          </button>
+                        </form>
+                      </div>
+                      <div className="mt-4 grid gap-2 sm:grid-cols-2 lg:grid-cols-4">
+                        {[
+                          { label: "Thema angelegt", ok: true },
+                          { label: "Lernplan vorhanden", ok: Boolean(latestLearningDesign && (learningSteps?.length ?? 0) > 0) },
+                          { label: "Mindestens ein Post", ok: (contentItems ?? []).some((item) => item.type === "post") },
+                          { label: "Mindestens eine Mission", ok: (missions ?? []).length > 0 },
+                        ].map((check) => (
+                          <div key={check.label} className={`flex items-center gap-2 rounded-xl border px-3 py-2.5 text-xs ${check.ok ? "border-emerald-200 bg-emerald-50 text-emerald-800" : "border-amber-200 bg-amber-50 text-amber-800"}`}>
+                            <span className="font-bold">{check.ok ? "✓" : "!"}</span>
+                            <span>{check.label}</span>
+                          </div>
+                        ))}
+                      </div>
+                      {!scenario.is_active && (
+                        <p className="mt-3 text-xs text-slate-500">Das Szenario bleibt ein Entwurf, bis du es aktivierst. Fehlende Punkte lassen sich über die Schritte oben ergänzen.</p>
+                      )}
+                    </section>
+          </div>
+        </ScenarioWizard>
       </div>
     </div>
   );
