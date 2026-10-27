@@ -170,6 +170,17 @@ const ALLOWED_TRANSITIONS: Record<string, string[]> = {
  * dass nur erlaubte Übergänge stattfinden (siehe ALLOWED_TRANSITIONS) —
  * verhindert z.B. einen Sprung von 'draft' direkt zu 'live' ohne Review.
  */
+/** Speichert den redaktionellen Text eines bestehenden Beitrags. */
+export async function updateContentItemBody(contentItemId: string, scenarioId: string, formData: FormData) {
+  const supabase = supabaseServerClient();
+  const body = String(formData.get("body") ?? "").trim();
+  const title = String(formData.get("title") ?? "").trim() || null;
+  if (!body) throw new Error("Der Beitragstext darf nicht leer sein.");
+  const { error } = await supabase.from("content_items").update({ body, title, updated_at: new Date().toISOString() }).eq("id", contentItemId).eq("scenario_id", scenarioId);
+  if (error) throw new Error(error.message);
+  revalidatePath("/scenarios/" + scenarioId);
+}
+
 export async function updateContentItemStatus(
   contentItemId: string,
   currentStatus: string,
