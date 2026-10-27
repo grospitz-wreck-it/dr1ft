@@ -511,6 +511,7 @@ export type ContentLearningTask = {
   evaluationMethod: "completion" | "criteria" | "choice" | "reflection" | "discussion";
   successCriteria: string;
   feedback: string;
+  interactions?: Array<{ id: string; label: string; instruction?: string; custom?: boolean }>;
 };
 
 const TASK_INTERACTIONS = ["view", "react", "comment", "choose", "classify", "compare", "reflect", "create"] as const;
@@ -543,6 +544,14 @@ export async function updateContentLearningTask(
     evaluationMethod: task.evaluationMethod,
     successCriteria: String(task.successCriteria || "").trim().slice(0, 1500),
     feedback: String(task.feedback || "").trim().slice(0, 1000),
+    interactions: Array.isArray(task.interactions)
+      ? task.interactions.slice(0, 20).map((interaction) => ({
+          id: String(interaction.id || "").trim().slice(0, 100),
+          label: String(interaction.label || "").trim().slice(0, 80),
+          instruction: String(interaction.instruction || "").trim().slice(0, 500),
+          custom: interaction.custom === true,
+        })).filter((interaction) => interaction.id && interaction.label)
+      : [],
   };
 
   const previousExtra = item.extra && typeof item.extra === "object" && !Array.isArray(item.extra)

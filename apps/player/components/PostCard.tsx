@@ -49,7 +49,7 @@ export function PostCard({ item, userId, classInstanceId, initiallyLiked, onView
   const baseLikeCount = Number((item.extra as any)?.baseEngagement ?? 0);
   const commentCount = Number((item.extra as any)?.classCommentCount ?? (item.extra as any)?.baseCommentCount ?? 0);
   const extra = (item.extra ?? {}) as Record<string, unknown>;
-  const learningTask = (extra.learningTask ?? {}) as { purpose?: string; learnerAction?: string; interactionType?: string; expectedResponse?: string; evaluationMethod?: string; successCriteria?: string; feedback?: string };
+  const learningTask = (extra.learningTask ?? {}) as { purpose?: string; learnerAction?: string; interactionType?: string; expectedResponse?: string; evaluationMethod?: string; successCriteria?: string; feedback?: string; interactions?: Array<{ id: string; label: string; instruction?: string; custom?: boolean }> };
   useEffect(() => {
     setLiveCommentCount(commentCount);
   }, [commentCount]);
@@ -57,7 +57,23 @@ export function PostCard({ item, userId, classInstanceId, initiallyLiked, onView
   const mediaContext = (extra.media_context ?? {}) as Record<string, unknown>;
   const interactionChecks = (extra.interaction_checks ?? {}) as Record<string, { enabled?: boolean; feedback?: string }>;
   const hasConfiguredChecks = Object.keys(interactionChecks).length > 0;
-  const showCheck = (key: string) => !hasConfiguredChecks || interactionChecks[key]?.enabled === true;
+  const configuredLearningInteractions = Array.isArray(learningTask.interactions) && learningTask.interactions.length > 0
+    ? new Set(learningTask.interactions.map((interaction) => interaction.id))
+    : null;
+  const interactionAliases: Record<string, string[]> = {
+    inspect_source: ["inspect_source"],
+    inspect_media: ["inspect_media"],
+    inspect_context: ["inspect_context", "fact_check"],
+    inspect_profile: ["inspect_profile"],
+    compare_information: ["compare_information"],
+  };
+  const showCheck = (key: string) => {
+    if (configuredLearningInteractions) {
+      const configured = interactionAliases[key] ?? [key];
+      return configured.some((id) => configuredLearningInteractions.has(id));
+    }
+    return !hasConfiguredChecks || interactionChecks[key]?.enabled === true;
+  };
   const checkFeedback = (key: string) => typeof interactionChecks[key]?.feedback === "string" ? interactionChecks[key].feedback!.trim() : "";
 
   useEffect(() => {
@@ -299,7 +315,7 @@ export function PostCard({ item, userId, classInstanceId, initiallyLiked, onView
           <button onClick={toggleComments} className="touch-target flex items-center gap-1.5 rounded-xl px-3 text-sm font-body text-ink/60 transition-colors hover:bg-ink/5" aria-label="Kommentare anzeigen"><MessageCircle className="w-[18px] h-[18px]" strokeWidth={2}/>{comments ? comments.length : liveCommentCount}</button>
           <button onClick={() => void share()} className="touch-target ml-auto inline-flex items-center gap-2 rounded-xl bg-violet-600 px-4 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-violet-700" aria-label="Beitrag teilen"><Share2 className="h-4 w-4"/><span>Teilen</span></button>
           <button onClick={() => setMenuOpen((open) => !open)} className="touch-target grid w-11 place-items-center rounded-xl text-ink/60 transition-colors hover:bg-ink/5" aria-label="Weitere Optionen" aria-expanded={menuOpen}><MoreHorizontal className="w-5 h-5"/></button>
-          {menuOpen && <div className="absolute z-20 right-0 bottom-12 w-60 rounded-xl border border-ink/15 bg-paper text-ink shadow-xl p-1.5 dark-post-menu">{showCheck("inspect_source") && <ActionButton icon={<Search/>} label="Quelle ansehen" onClick={inspectSource}/>}{showCheck("inspect_media") && <ActionButton icon={<ImageIcon/>} label="Bild prüfen" onClick={inspectMedia}/>}{showCheck("inspect_context") && <ActionButton icon={<Eye/>} label="Kontext prüfen" onClick={inspectContext}/>}{showCheck("inspect_profile") && <ActionButton icon={<UserRound/>} label="Profil ansehen" onClick={inspectProfile}/>}{showCheck("compare_information") && <ActionButton icon={<Search/>} label="Informationen vergleichen" onClick={compareInformation}/>}<div className="my-1 border-t border-ink/10"/><ActionButton icon={<Share2/>} label="Teilen" onClick={share}/><ActionButton icon={<Flag/>} label="Melden" onClick={report}/><ActionButton icon={<X/>} label="Ignorieren" onClick={ignore}/></div>}
+          {menuOpen && <div className="absolute z-20 right-0 bottom-12 w-60 rounded-xl border border-ink/15 bg-paper text-ink shadow-xl p-1.5 dark-post-menu">{showCheck("inspect_source") && <ActionButton icon={<Search/>} label="Quelle ansehen" onClick={inspectSource}/>}{showCheck("inspect_media") && <ActionButton icon={<ImageIcon/>} label="Bild prüfen" onClick={inspectMedia}/>}{showCheck("inspect_context") && <ActionButton icon={<Eye/>} label={configuredLearningInteractions?.has("fact_check") ? "Fakten checken" : "Kontext prüfen"} onClick={inspectContext}/>}{showCheck("inspect_profile") && <ActionButton icon={<UserRound/>} label="Profil ansehen" onClick={inspectProfile}/>}{showCheck("compare_information") && <ActionButton icon={<Search/>} label="Informationen vergleichen" onClick={compareInformation}/>}<div className="my-1 border-t border-ink/10"/><ActionButton icon={<Share2/>} label="Teilen" onClick={share}/>{(!configuredLearningInteractions || configuredLearningInteractions.has("report")) && <ActionButton icon={<Flag/>} label="Melden" onClick={report} />}{(!configuredLearningInteractions || configuredLearningInteractions.has("ignore")) && <ActionButton icon={<X/>} label="Ignorieren" onClick={ignore} />}</div>}
         </div>
         {shareOpen && <div className="fixed inset-0 z-[100] flex items-center justify-center bg-slate-950/60 p-4 backdrop-blur-sm" onPointerDown={(event) => { if (event.target === event.currentTarget) setShareOpen(false); }}>
           <section role="dialog" aria-modal="true" aria-labelledby={`share-title-${item.id}`} className="w-full max-w-md rounded-3xl border border-slate-200 bg-white p-5 text-slate-900 shadow-2xl dark-share-dialog">

@@ -2,55 +2,130 @@
 
 import { useState, useTransition, type FormEvent } from "react";
 import { updateContentLearningTask } from "../learning-content-actions";
+import { Check, Plus, Sparkles, X } from "lucide-react";
 
+type Interaction = { id: string; label: string; instruction?: string; custom?: boolean };
 type Task = {
   purpose: string;
   learnerAction: string;
-  interactionType: string;
-  expectedResponse: string;
-  evaluationMethod: string;
-  successCriteria: string;
+  interactions: Interaction[];
   feedback: string;
+  successCriteria: string;
 };
 
-const defaults: Task = { purpose: "", learnerAction: "", interactionType: "reflect", expectedResponse: "", evaluationMethod: "criteria", successCriteria: "", feedback: "" };
-const interactions = [["view","Ansehen / wahrnehmen"],["react","Reagieren"],["comment","Kommentieren"],["choose","Antwort auswählen"],["classify","Einordnen"],["compare","Vergleichen"],["reflect","Reflektieren"],["create","Etwas erstellen"]];
-const methods = [["completion","Abschluss prüfen"],["criteria","Kriterienbasiert auswerten"],["choice","Auswahl auswerten"],["reflection","Reflexion auswerten"],["discussion","Diskussion / Peer-Feedback"]];
+const DEFAULT_INTERACTIONS: Interaction[] = [
+  { id: "like", label: "Reagieren" },
+  { id: "comment", label: "Kommentieren" },
+];
+const AVAILABLE_INTERACTIONS: Interaction[] = [
+  { id: "compare_information", label: "Quelle vergleichen", instruction: "Vergleiche die Aussage mit einer unabhängigen Quelle." },
+  { id: "fact_check", label: "Fakten checken", instruction: "Prüfe, ob sich die zentrale Behauptung belegen lässt." },
+  { id: "inspect_source", label: "Quelle prüfen", instruction: "Untersuche, wer die Aussage veröffentlicht hat und worauf sie sich stützt." },
+  { id: "inspect_media", label: "Bild prüfen", instruction: "Prüfe Herkunft und Kontext des Bildes." },
+  { id: "inspect_context", label: "Kontext prüfen", instruction: "Prüfe, ob wichtige Informationen fehlen oder aus dem Zusammenhang gerissen wurden." },
+  { id: "inspect_profile", label: "Profil prüfen", instruction: "Sieh dir das Profil und seine bisherigen Beiträge kritisch an." },
+  { id: "report", label: "Melden", instruction: "Entscheide, ob der Beitrag gegen Regeln verstößt und gemeldet werden sollte." },
+  { id: "ignore", label: "Ignorieren", instruction: "Entscheide bewusst, ob du dem Beitrag keine weitere Aufmerksamkeit gibst." },
+  { id: "share", label: "Teilen", instruction: "Überlege, ob du den Beitrag weiterverbreiten würdest." },
+];
+const area = "mt-1.5 w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm font-normal outline-none focus:border-violet-400 focus:ring-4 focus:ring-violet-100";
+const labelClass = "block text-xs font-semibold text-slate-700";
 
 export function ContentLearningTaskEditor({ scenarioId, contentItemId, initialTask }: { scenarioId: string; contentItemId: string; initialTask?: Partial<Task> | null }) {
-  const [open, setOpen] = useState(Boolean(initialTask && Object.values(initialTask).some(v => String(v ?? "").trim())));
-  const [task, setTask] = useState<Task>({ ...defaults, ...(initialTask ?? {}) } as Task);
+  const [open, setOpen] = useState(Boolean(initialTask && Object.values(initialTask).some(v => Array.isArray(v) ? v.length > 0 : String(v ?? "").trim())));
+  const [task, setTask] = useState<Task>(() => {
+    const saved = (initialTask ?? {}) as Partial<Task>;
+    return {
+      purpose: saved.purpose ?? "",
+      learnerAction: saved.learnerAction ?? "",
+      interactions: Array.isArray(saved.interactions) ? saved.interactions : DEFAULT_INTERACTIONS,
+      feedback: saved.feedback ?? "",
+      successCriteria: saved.successCriteria ?? "",
+    };
+  });
+  const [showPicker, setShowPicker] = useState(false);
+  const [customLabel, setCustomLabel] = useState("");
+  const [customInstruction, setCustomInstruction] = useState("");
   const [pending, startTransition] = useTransition();
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
-  function field<K extends keyof Task>(key: K, value: Task[K]) { setTask(t => ({ ...t, [key]: value })); setMessage(""); setError(""); }
-  function submit(e: FormEvent<HTMLFormElement>) {
-    e.preventDefault(); setError(""); setMessage("");
+
+  function update<K extends keyof Task>(key: K, value: Task[K]) {
+    setTask(current => ({ ...current, [key]: value }));
+    setMessage("");
+    setError("");
+  }
+  function toggleInteraction(interaction: Interaction) {
+    const exists = task.interactions.some(item => item.id === interaction.id);
+    update("interactions", exists
+      ? task.interactions.filter(item => item.id !== interaction.id)
+      : [...task.interactions, interaction]);
+  }
+  function addCustomInteraction() {
+    const name = customLabel.trim();
+    if (!name) return;
+    update("interactions", [...task.interactions, { id: "custom-" + crypto.randomUUID(), label: name.slice(0, 80), instruction: customInstruction.trim().slice(0, 500), custom: true }]);
+    setCustomLabel("");
+    setCustomInstruction("");
+    setShowPicker(false);
+  }
+  function submit(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    setError("");
+    setMessage("");
     startTransition(async () => {
       try {
-        await updateContentLearningTask(scenarioId, contentItemId, task as any);
-        setMessage("Aufgabe gespeichert");
-      } catch (err) { setError(err instanceof Error ? err.message : "Speichern fehlgeschlagen."); }
+        await updateContentLearningTask(scenarioId, contentItemId, {
+          ...task,
+          interactionType: task.interactions[0]?.id === "comment" ? "comment" : "reflect",
+          expectedResponse: "",
+          evaluationMethod: "criteria",
+        } as any);
+        setMessage("Gespeichert");
+      } catch (err) {
+        setError(err instanceof Error ? err.message : "Speichern fehlgeschlagen.");
+      }
     });
   }
-  const area = "mt-1.5 w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm font-normal outline-none focus:border-violet-400 focus:ring-4 focus:ring-violet-100";
-  const label = "block text-xs font-semibold text-slate-700";
+
+  const selectedIds = new Set(task.interactions.map(item => item.id));
   return <section className="mt-3 overflow-hidden rounded-2xl border border-violet-200 bg-gradient-to-br from-white to-violet-50/60">
-    <button type="button" onClick={() => setOpen(v => !v)} aria-expanded={open} className="flex w-full items-center justify-between gap-3 p-4 text-left hover:bg-violet-50">
-      <span><span className="block text-sm font-bold text-slate-900">✦ Lernaufgabe &amp; Auswertung</span><span className="mt-1 block text-xs text-slate-500">Was soll der User tun – und woran erkennen wir den Lernerfolg?</span></span><span className="text-violet-700">{open ? "−" : "+"}</span>
+    <button type="button" onClick={() => setOpen(value => !value)} aria-expanded={open} className="flex w-full items-center justify-between gap-3 p-4 text-left transition hover:bg-violet-50/70">
+      <span className="flex min-w-0 items-center gap-3">
+        <span className="grid h-9 w-9 shrink-0 place-items-center rounded-xl bg-violet-600 text-white"><Sparkles className="h-4 w-4" /></span>
+        <span><span className="block text-sm font-bold text-slate-900">Lernaufgabe &amp; Interaktionen</span><span className="mt-1 block text-xs text-slate-500">Mit Standardaktionen starten und nur bei Bedarf erweitern.</span></span>
+      </span>
+      <span className="text-violet-700">{open ? "−" : "+"}</span>
     </button>
-    {open && <form onSubmit={submit} className="space-y-4 border-t border-violet-100 p-4">
-      <div className="grid gap-4 lg:grid-cols-2">
-        <label className={label}>1. Zweck des Posts<textarea className={area} rows={3} value={task.purpose} onChange={e => field("purpose",e.target.value)} placeholder="Was soll der Post im Lernprozess bewirken?" /></label>
-        <label className={label}>2. Konkrete Aufgabe für den User<textarea className={area} rows={3} value={task.learnerAction} onChange={e => field("learnerAction",e.target.value)} placeholder="Was genau soll der Lernende tun?" /></label>
-        <label className={label}>3. Erwartete Interaktion<select className={area} value={task.interactionType} onChange={e => field("interactionType",e.target.value)}>{interactions.map(([v,l]) => <option key={v} value={v}>{l}</option>)}</select></label>
-        <label className={label}>4. Erwartete Reaktion / Antwort<textarea className={area} rows={3} value={task.expectedResponse} onChange={e => field("expectedResponse",e.target.value)} placeholder="Welche Antworten oder Verhaltensweisen erwarten wir?" /></label>
-        <label className={label}>5. Auswertungsmethode<select className={area} value={task.evaluationMethod} onChange={e => field("evaluationMethod",e.target.value)}>{methods.map(([v,l]) => <option key={v} value={v}>{l}</option>)}</select></label>
-        <label className={label}>6. Erfolgskriterien<textarea className={area} rows={3} value={task.successCriteria} onChange={e => field("successCriteria",e.target.value)} placeholder="Woran erkennen wir eine gute Antwort oder einen Lernfortschritt?" /></label>
+    {open && <form onSubmit={submit} className="space-y-5 border-t border-violet-100 p-4">
+      <div>
+        <label className={labelClass}>Worum geht es bei diesem Post? <span className="font-normal text-slate-400">(optional)</span></label>
+        <textarea className={area} rows={2} value={task.purpose} onChange={event => update("purpose", event.target.value)} placeholder="z. B. Der Post soll dazu anregen, eine Behauptung nicht ungeprüft weiterzuverbreiten." />
       </div>
-      <label className={label}>7. Feedback an den User<textarea className={area} rows={2} value={task.feedback} onChange={e => field("feedback",e.target.value)} placeholder="Welche Rückmeldung soll nach der Interaktion erscheinen?" /></label>
-      <div className="flex flex-wrap items-center justify-end gap-3 border-t border-violet-100 pt-3">{message && <span role="status" className="text-xs font-semibold text-emerald-700">{message}</span>}{error && <span role="alert" className="text-xs font-semibold text-red-600">{error}</span>}<button disabled={pending} className="rounded-xl bg-violet-600 px-4 py-2.5 text-xs font-bold text-white hover:bg-violet-700 disabled:opacity-50">{pending ? "Speichert …" : "Aufgabe speichern"}</button></div>
-      <p className="text-[11px] leading-4 text-slate-500">Die Angaben werden am Content-Piece gespeichert. Damit die Aufgabe im Schüler-Player ausgeführt und ausgewertet wird, muss die Player-Logik diese Konfiguration anschließend auslesen.</p>
+      <div>
+        <div className="mb-2 flex items-center justify-between gap-3"><div><h3 className="text-sm font-bold text-slate-900">Was kann der Lernende damit machen?</h3><p className="mt-0.5 text-xs text-slate-500">Standardaktionen sind vorausgewählt. Klicke auf eine Aktion, um sie an- oder abzuwählen.</p></div><span className="shrink-0 rounded-full bg-violet-100 px-2.5 py-1 text-[11px] font-bold text-violet-700">{task.interactions.length} aktiv</span></div>
+        <div className="flex flex-wrap gap-2">
+          {DEFAULT_INTERACTIONS.map(item => <span key={item.id} className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-slate-100 px-3.5 py-2 text-sm font-semibold text-slate-600"><Check className="h-3.5 w-3.5" />{item.label}<span className="text-[10px] font-bold uppercase tracking-wide text-slate-400">Standard</span></span>)}
+          {task.interactions.filter(item => !DEFAULT_INTERACTIONS.some(def => def.id === item.id)).map(item => <span key={item.id} className="inline-flex items-center gap-1 rounded-full border border-violet-300 bg-violet-50 pl-3 pr-1.5 py-1.5 text-sm font-semibold text-violet-800">{item.label}<button type="button" onClick={() => toggleInteraction(item)} aria-label={item.label + " entfernen"} className="grid h-6 w-6 place-items-center rounded-full hover:bg-violet-100"><X className="h-3.5 w-3.5" /></button></span>)}
+          <button type="button" onClick={() => setShowPicker(value => !value)} className="inline-flex items-center gap-1.5 rounded-full border border-dashed border-violet-400 bg-white px-3.5 py-2 text-sm font-bold text-violet-700 hover:bg-violet-50"><Plus className="h-4 w-4" /> Interaktion</button>
+        </div>
+        {showPicker && <div className="mt-3 rounded-2xl border border-violet-200 bg-white p-3 sm:p-4">
+          <p className="mb-2 text-xs font-bold uppercase tracking-wide text-slate-500">Aktion hinzufügen</p>
+          <div className="grid gap-2 sm:grid-cols-2">
+            {AVAILABLE_INTERACTIONS.filter(item => !selectedIds.has(item.id)).map(item => <button key={item.id} type="button" onClick={() => toggleInteraction(item)} className="rounded-xl border border-slate-200 p-3 text-left transition hover:border-violet-400 hover:bg-violet-50"><span className="block text-sm font-semibold text-slate-800">＋ {item.label}</span><span className="mt-1 block text-xs leading-relaxed text-slate-500">{item.instruction}</span></button>)}
+          </div>
+          <div className="mt-4 border-t border-slate-100 pt-3"><p className="mb-2 text-xs font-bold text-slate-600">Eigene Interaktion (optional)</p><div className="grid gap-2 sm:grid-cols-2"><input value={customLabel} onChange={event => setCustomLabel(event.target.value)} maxLength={80} placeholder="Name, z. B. Perspektive wechseln" className="rounded-xl border border-slate-200 px-3 py-2.5 text-sm outline-none focus:border-violet-400" /><input value={customInstruction} onChange={event => setCustomInstruction(event.target.value)} maxLength={500} placeholder="Was soll der User tun? (optional)" className="rounded-xl border border-slate-200 px-3 py-2.5 text-sm outline-none focus:border-violet-400" /></div><button type="button" onClick={addCustomInteraction} disabled={!customLabel.trim()} className="mt-2 rounded-lg bg-slate-900 px-3 py-2 text-xs font-bold text-white disabled:opacity-40">Eigene Interaktion hinzufügen</button></div>
+        </div>}
+      </div>
+      <details className="rounded-xl border border-slate-200 bg-white">
+        <summary className="cursor-pointer px-3 py-3 text-xs font-bold text-slate-600">Erweiterte Lernsteuerung (optional)</summary>
+        <div className="space-y-3 border-t border-slate-100 p-3">
+          <label className={labelClass}>Konkrete Aufgabe für den Lernenden<textarea className={area} rows={2} value={task.learnerAction} onChange={event => update("learnerAction", event.target.value)} placeholder="Nur ausfüllen, wenn die Standardaktionen nicht ausreichen." /></label>
+          <label className={labelClass}>Erfolgskriterien<textarea className={area} rows={2} value={task.successCriteria} onChange={event => update("successCriteria", event.target.value)} placeholder="Woran erkennen wir einen Lernfortschritt?" /></label>
+          <label className={labelClass}>Feedback nach der Interaktion<textarea className={area} rows={2} value={task.feedback} onChange={event => update("feedback", event.target.value)} placeholder="Optional: spezifische Rückmeldung statt Standardfeedback." /></label>
+        </div>
+      </details>
+      <div className="flex flex-wrap items-center justify-end gap-3 border-t border-violet-100 pt-3">{message && <span role="status" className="text-xs font-semibold text-emerald-700">{message}</span>}{error && <span role="alert" className="text-xs font-semibold text-red-600">{error}</span>}<button disabled={pending} className="rounded-xl bg-violet-600 px-4 py-2.5 text-xs font-bold text-white hover:bg-violet-700 disabled:opacity-50">{pending ? "Speichert …" : "Änderungen speichern"}</button></div>
     </form>}
   </section>;
 }
