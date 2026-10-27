@@ -1,6 +1,6 @@
 "use client";
 
-import { Check, Circle, FileText, Flag, Layers3, ListChecks } from "lucide-react";
+import { Check } from "lucide-react";
 
 type WorkflowStep = {
   number: number;
