@@ -149,17 +149,10 @@ export default async function ScenarioDetailPage({ params, searchParams = {} }: 
                 </form>
               </div>
             </div>
-            <form>
-              <button
-                formAction={async () => {
-                  "use server";
-                  await toggleScenarioActive(scenarioId, !scenario.is_active);
-                }}
-                className="rounded-xl border border-slate-200 px-4 py-2.5 text-sm font-medium hover:bg-slate-50"
-              >
-                {scenario.is_active ? "Aktiv" : "Als Entwurf belassen"}
-              </button>
-            </form>
+            <div className="rounded-xl bg-slate-50 px-3 py-2.5 text-xs text-slate-500">
+              Status: <span className="font-semibold text-slate-700">{scenario.is_active ? "Aktiv" : "Entwurf"}</span>
+              <span className="mt-1 block">Die Freigabe erfolgt im letzten Schritt.</span>
+            </div>
           </div>
 
           <div className="mt-5 pt-4 border-t border-slate-100 flex flex-wrap gap-2">
