@@ -126,7 +126,7 @@ export default async function ScenarioDetailPage({ params, searchParams = {} }: 
             { title: "Prüfen & freigeben", description: "Abschluss und Aktivierung", complete: Boolean(scenario.is_active) },
           ]}
         >
-          <>
+          <div className="space-y-5">
                     <header id="workflow-basics" className="scroll-mt-6 bg-white border border-slate-200 rounded-2xl p-6 shadow-sm">
                       <div className="flex flex-col xl:flex-row xl:justify-between gap-5">
                         <div>
@@ -188,8 +188,8 @@ export default async function ScenarioDetailPage({ params, searchParams = {} }: 
                         </div>
                       </section>
                     )}
-          </>
-          <>
+          </div>
+          <div className="space-y-5">
                     <div id="workflow-plan" className="scroll-mt-6 space-y-5">
                       <LearningDesignStudio scenarioId={scenarioId} latestDesign={latestLearningDesign} />
             
@@ -213,8 +213,8 @@ export default async function ScenarioDetailPage({ params, searchParams = {} }: 
                       />
                     )}
                     </div>
-          </>
-          <>
+          </div>
+          <div className="space-y-5">
                     <section className="grid md:grid-cols-4 gap-3">
                       <SummaryCard icon={<Route className="w-4 h-4" />} label="Lernschritte" value={learningSteps?.length ? `${learningSteps.length} Schritte` : "Noch leer"} />
                       <SummaryCard icon={<Flag className="w-4 h-4" />} label="Missionen" value={`${missions?.length ?? 0}`} />
@@ -367,8 +367,8 @@ export default async function ScenarioDetailPage({ params, searchParams = {} }: 
                     </details>
             
             
-          </>
-          <>
+          </div>
+          <div className="space-y-5">
                     <section id="workflow-review" className="scroll-mt-6 rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
                       <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
                         <div>
@@ -405,7 +405,7 @@ export default async function ScenarioDetailPage({ params, searchParams = {} }: 
                         <p className="mt-3 text-xs text-slate-500">Das Szenario bleibt ein Entwurf, bis du es aktivierst. Fehlende Punkte lassen sich über die Schritte oben ergänzen.</p>
                       )}
                     </section>
-          </>
+          </div>
         </ScenarioWizard>
       </div>
     </div>
