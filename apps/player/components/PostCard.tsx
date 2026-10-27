@@ -14,6 +14,7 @@ import { mapCreatorRow } from "../lib/types";
 import { recordInteraction } from "@dr1ft/engine-core";
 import { supabaseBrowserClient } from "../lib/supabaseBrowserClient";
 import { CommentSkeleton } from "./Skeleton";
+import { Send, Sparkles } from "lucide-react";
 
 function initials(name: string): string { return name.split(" ").map((p) => p[0]).slice(0, 2).join("").toUpperCase(); }
 function getString(value: unknown): string | undefined { return typeof value === "string" ? value : undefined; }
@@ -41,10 +42,14 @@ export function PostCard({ item, userId, classInstanceId, initiallyLiked, onView
   const [selectedRecipients, setSelectedRecipients] = useState<string[]>([]);
   const [feedback, setFeedback] = useState<string | null>(null);
   const [comparison, setComparison] = useState<{ related: FeedItem | null; loading: boolean; selected?: "contradict" | "support"; error?: string } | null>(null);
+  const [taskResponse, setTaskResponse] = useState("");
+  const [taskResponseSaved, setTaskResponseSaved] = useState(false);
+  const [taskResponseSaving, setTaskResponseSaving] = useState(false);
 
   const baseLikeCount = Number((item.extra as any)?.baseEngagement ?? 0);
   const commentCount = Number((item.extra as any)?.classCommentCount ?? (item.extra as any)?.baseCommentCount ?? 0);
   const extra = (item.extra ?? {}) as Record<string, unknown>;
+  const learningTask = (extra.learningTask ?? {}) as { purpose?: string; learnerAction?: string; interactionType?: string; expectedResponse?: string; evaluationMethod?: string; successCriteria?: string; feedback?: string };
   useEffect(() => {
     setLiveCommentCount(commentCount);
   }, [commentCount]);
@@ -111,6 +116,32 @@ export function PostCard({ item, userId, classInstanceId, initiallyLiked, onView
     const nextComments = (data ?? []).map((row: any) => ({ ...row, creator: mapCreatorRow(row.creators) }));
     setComments(nextComments);
     setLiveCommentCount(nextComments.length);
+  }
+
+  async function submitLearningTaskResponse() {
+    const response = taskResponse.trim();
+    if (!response || taskResponseSaving || taskResponseSaved) return;
+    setTaskResponseSaving(true);
+    try {
+      await recordInteraction(supabase, {
+        userId,
+        contentItemId: item.id,
+        interactionType: "learning_task_response",
+        classInstanceId,
+        metadata: {
+          response,
+          interactionType: learningTask.interactionType ?? "reflect",
+          evaluationMethod: learningTask.evaluationMethod ?? "criteria",
+          submittedAt: new Date().toISOString(),
+        },
+      });
+      setTaskResponseSaved(true);
+      showFeedback(learningTask.feedback?.trim() || "Danke für deine Antwort. Sie wurde gespeichert und kann in der Auswertung berücksichtigt werden.");
+    } catch {
+      showFeedback("Deine Antwort konnte nicht gespeichert werden. Bitte versuche es erneut.");
+    } finally {
+      setTaskResponseSaving(false);
+    }
   }
 
   async function toggleComments() {
@@ -248,6 +279,21 @@ export function PostCard({ item, userId, classInstanceId, initiallyLiked, onView
       {item.mediaUrl && item.mediaType === "video" && <video src={item.mediaUrl} controls className="w-full max-h-96 object-cover bg-black"/>}
       <div className="p-4 pt-3">
         <p className="font-body text-[15px] leading-relaxed">{item.body}</p>
+        {learningTask.learnerAction?.trim() && <section className="mt-4 rounded-2xl border border-violet-200 bg-gradient-to-br from-violet-50 to-fuchsia-50/60 p-4">
+          <div className="flex items-start gap-2.5">
+            <span className="grid h-8 w-8 shrink-0 place-items-center rounded-xl bg-violet-600 text-white"><Sparkles className="h-4 w-4" /></span>
+            <div className="min-w-0 flex-1">
+              <p className="text-[10px] font-bold uppercase tracking-[0.16em] text-violet-700">Deine Aufgabe</p>
+              {learningTask.purpose?.trim() && <p className="mt-1 text-xs leading-relaxed text-violet-900/75">{learningTask.purpose}</p>}
+              <p className="mt-2 text-sm font-semibold leading-relaxed text-slate-900">{learningTask.learnerAction}</p>
+              {!taskResponseSaved ? <>
+                <label htmlFor={`learning-task-response-${item.id}`} className="mt-3 block text-xs font-semibold text-slate-700">Deine Antwort</label>
+                <textarea id={`learning-task-response-${item.id}`} value={taskResponse} onChange={event => setTaskResponse(event.target.value)} rows={3} maxLength={3000} placeholder="Schreibe deine Überlegung auf …" className="mt-1.5 w-full rounded-xl border border-violet-200 bg-white px-3 py-2.5 text-sm text-slate-900 outline-none focus:border-violet-400 focus:ring-4 focus:ring-violet-100" />
+                <button type="button" disabled={!taskResponse.trim() || taskResponseSaving} onClick={() => void submitLearningTaskResponse()} className="mt-2 inline-flex items-center gap-2 rounded-xl bg-violet-600 px-4 py-2.5 text-xs font-bold text-white transition hover:bg-violet-700 disabled:cursor-not-allowed disabled:opacity-50">{taskResponseSaving ? "Wird gespeichert …" : "Antwort abgeben"}<Send className="h-3.5 w-3.5" /></button>
+              </> : <p role="status" className="mt-3 rounded-xl bg-emerald-100 px-3 py-2 text-xs font-semibold text-emerald-800">Antwort abgegeben</p>}
+            </div>
+          </div>
+        </section>}
         <div data-post-menu className="relative flex items-center gap-2 mt-3 pt-3 border-t border-ink/10">
           <button onClick={toggleLike} className={`tap-pulse touch-target flex items-center gap-1.5 rounded-xl px-3 text-sm font-body transition-colors hover:bg-ink/5 ${liked ? "text-social-pink" : "text-ink/60"}`} aria-label="Gefällt mir"><Heart className="w-5 h-5" fill={liked ? "currentColor" : "none"} strokeWidth={2}/>{baseLikeCount + (liked ? 1 : 0)}</button>
           <button onClick={toggleComments} className="touch-target flex items-center gap-1.5 rounded-xl px-3 text-sm font-body text-ink/60 transition-colors hover:bg-ink/5" aria-label="Kommentare anzeigen"><MessageCircle className="w-[18px] h-[18px]" strokeWidth={2}/>{comments ? comments.length : liveCommentCount}</button>
