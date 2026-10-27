@@ -112,7 +112,7 @@ export function ContentLearningTaskEditor({ scenarioId, contentItemId, initialTa
           <div className="grid gap-2 sm:grid-cols-2">
             {AVAILABLE_INTERACTIONS.filter(item => !selectedIds.has(item.id)).map(item => <button key={item.id} type="button" onClick={() => toggleInteraction(item)} className="rounded-xl border border-slate-200 p-3 text-left transition hover:border-violet-400 hover:bg-violet-50"><span className="block text-sm font-semibold text-slate-800">＋ {item.label}</span><span className="mt-1 block text-xs leading-relaxed text-slate-500">{item.instruction}</span></button>)}
           </div>
-}
+        </div>}
       </div>
       <details className="rounded-xl border border-slate-200 bg-white">
         <summary className="cursor-pointer px-3 py-3 text-xs font-bold text-slate-600">Erweiterte Lernsteuerung (optional)</summary>
