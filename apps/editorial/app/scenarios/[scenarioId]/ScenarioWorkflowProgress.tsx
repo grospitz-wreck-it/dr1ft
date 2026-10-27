@@ -60,6 +60,7 @@ export function ScenarioWorkflowProgress({
   ];
 
   const completedCount = steps.filter((step) => step.complete).length;
+  const nextStepNumber = steps.find((step) => !step.complete)?.number ?? steps[steps.length - 1].number;
   const progress = Math.round((completedCount / steps.length) * 100);
 
   return (
@@ -83,7 +84,7 @@ export function ScenarioWorkflowProgress({
           <a
             key={step.number}
             href={step.href}
-            className={`group flex min-w-0 items-start gap-3 rounded-xl border p-3 transition hover:border-accent/50 hover:bg-accent/5 ${step.complete ? "border-emerald-200 bg-emerald-50/60" : "border-slate-200 bg-white"}`}
+            className={`group flex min-w-0 items-start gap-3 rounded-xl border p-3 transition hover:border-accent/50 hover:bg-accent/5 ${step.complete ? "border-emerald-200 bg-emerald-50/60" : step.number === nextStepNumber ? "border-accent/50 bg-accent/5 ring-1 ring-accent/10" : "border-slate-200 bg-white"}`}
           >
             <span className={`mt-0.5 grid h-8 w-8 shrink-0 place-items-center rounded-full ${step.complete ? "bg-emerald-600 text-white" : "bg-slate-100 text-slate-500 group-hover:bg-accent/10 group-hover:text-accent"}`}>
               {step.complete ? <Check className="h-4 w-4" /> : <span className="text-xs font-bold">{step.number}</span>}
@@ -91,7 +92,8 @@ export function ScenarioWorkflowProgress({
             <span className="min-w-0 flex-1">
               <span className="block text-sm font-semibold text-slate-900">{step.title}</span>
               <span className="mt-0.5 block text-[11px] text-slate-500">{step.description}</span>
-              <span className={`mt-2 block text-[11px] font-medium ${step.complete ? "text-emerald-700" : "text-slate-500"}`}>{step.currentHint}</span>
+              <span className={`mt-2 block text-[11px] font-medium ${step.complete ? "text-emerald-700" : step.number === nextStepNumber ? "text-accent" : "text-slate-500"}`}>{step.currentHint}</span>
+              {!step.complete && step.number === nextStepNumber && <span className="mt-1 inline-block rounded-full bg-accent/10 px-2 py-0.5 text-[10px] font-bold text-accent">Als Nächstes</span>}
             </span>
           </a>
         ))}
