@@ -179,7 +179,8 @@ export type InteractionType =
   | "inspect_media"
   | "inspect_context"
   | "inspect_profile"
-  | "compare_information";
+  | "compare_information"
+  | "learning_task_response";
 
 export interface UserInteraction {
   id: string;
