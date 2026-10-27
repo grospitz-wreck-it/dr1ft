@@ -41,6 +41,7 @@ export function PostCard({ item, userId, classInstanceId, initiallyLiked, onView
   const [shareRecipients, setShareRecipients] = useState<Array<{ id: string; displayName: string; username: string }>>([]);
   const [selectedRecipients, setSelectedRecipients] = useState<string[]>([]);
   const [feedback, setFeedback] = useState<string | null>(null);
+  const [learningFeedback, setLearningFeedback] = useState<{ title: string; message: string; action: string } | null>(null);
   const [comparison, setComparison] = useState<{ related: FeedItem | null; loading: boolean; selected?: "contradict" | "support"; assessmentOutcome?: "success" | "not_yet" | "not_assessed"; error?: string } | null>(null);
   const [taskResponse, setTaskResponse] = useState("");
   const [taskResponseSaved, setTaskResponseSaved] = useState(false);
@@ -57,6 +58,7 @@ export function PostCard({ item, userId, classInstanceId, initiallyLiked, onView
   const action = (extra.action ?? {}) as Record<string, unknown>;
   const mediaContext = (extra.media_context ?? {}) as Record<string, unknown>;
   const interactionChecks = (extra.interaction_checks ?? {}) as Record<string, { enabled?: boolean; feedback?: string }>;
+  const interactionDiscoveries = (extra.interaction_discoveries ?? {}) as Record<string, { title?: string; message?: string; discoveryMessage?: string }>;
   const checkFeedback = (key: string) => typeof interactionChecks[key]?.feedback === "string" ? interactionChecks[key].feedback!.trim() : "";
 
   useEffect(() => {
@@ -105,6 +107,33 @@ export function PostCard({ item, userId, classInstanceId, initiallyLiked, onView
       metadata,
       classInstanceId,
     });
+
+    // Learning feedback is shown only when this interaction was explicitly
+    // configured for the content. It is instructional feedback, not a score.
+    const aliases: Record<string, string[]> = {
+      inspect_context: ["inspect_context", "fact_check"],
+      inspect_source: ["inspect_source"],
+      inspect_media: ["inspect_media"],
+      inspect_profile: ["inspect_profile"],
+      compare_information: ["compare_information"],
+    };
+    const configured = (learningTask.interactions ?? []).find((entry) =>
+      (aliases[interactionType] ?? [interactionType]).includes(entry.id)
+    );
+    const discovery = interactionDiscoveries[interactionType];
+    const message = String(
+      (discovery?.discoveryMessage ?? discovery?.message) ??
+      (configured as any)?.discoveryMessage ??
+      (configured as any)?.message ??
+      ""
+    ).trim();
+    if (configured && message) {
+      setLearningFeedback({
+        title: String(discovery?.title ?? "Gut entdeckt!"),
+        message,
+        action: interactionType,
+      });
+    }
   }
 
   function toggleLike() { if (!liked) { setLiked(true); recordInteraction(supabase, { userId, contentItemId: item.id, interactionType: "like", classInstanceId }); } }
@@ -302,6 +331,17 @@ export function PostCard({ item, userId, classInstanceId, initiallyLiked, onView
       {item.mediaUrl && item.mediaType === "video" && <video src={item.mediaUrl} controls className="w-full max-h-96 object-cover bg-black"/>}
       <div className="p-4 pt-3">
         <p className="font-body text-[15px] leading-relaxed">{item.body}</p>
+        {learningFeedback && <section className="mt-3 overflow-hidden rounded-2xl border border-violet-200 bg-gradient-to-br from-violet-50 via-white to-sky-50 shadow-sm" aria-live="polite">
+          <div className="flex items-start gap-3 p-4">
+            <span className="grid h-9 w-9 shrink-0 place-items-center rounded-xl bg-gradient-to-br from-violet-600 to-sky-500 text-white"><Sparkles className="h-4 w-4" /></span>
+            <div className="min-w-0 flex-1">
+              <p className="text-[10px] font-bold uppercase tracking-[0.14em] text-violet-700">DR1FT · Erkenntnis</p>
+              <h3 className="mt-1 text-sm font-bold text-slate-900">{learningFeedback.title}</h3>
+              <p className="mt-1 text-sm leading-relaxed text-slate-700">{learningFeedback.message}</p>
+            </div>
+            <button type="button" onClick={() => setLearningFeedback(null)} aria-label="Rückmeldung schließen" className="rounded-lg p-1 text-violet-700 hover:bg-violet-100"><X className="h-4 w-4" /></button>
+          </div>
+        </section>}
         {learningTask.learnerAction?.trim() && <section className="mt-4 rounded-2xl border border-violet-200 bg-gradient-to-br from-violet-50 to-fuchsia-50/60 p-4">
           <div className="flex items-start gap-2.5">
             <span className="grid h-8 w-8 shrink-0 place-items-center rounded-xl bg-violet-600 text-white"><Sparkles className="h-4 w-4" /></span>
