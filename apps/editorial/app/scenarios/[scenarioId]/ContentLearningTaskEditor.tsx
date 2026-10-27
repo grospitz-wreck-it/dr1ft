@@ -94,19 +94,19 @@ export function ContentLearningTaskEditor({ scenarioId, contentItemId, initialTa
       </div>
       <div>
         <div className="mb-2 flex items-center justify-between gap-3"><div><h3 className="text-sm font-bold text-slate-900">Was kann der Lernende damit machen?</h3><p className="mt-0.5 text-xs text-slate-500">Standardaktionen sind vorausgewählt. Klicke auf eine Aktion, um sie an- oder abzuwählen.</p></div><span className="shrink-0 rounded-full bg-violet-100 px-2.5 py-1 text-[11px] font-bold text-violet-700">{task.interactions.length} aktiv</span></div>
-        <div className="flex flex-wrap gap-2">
-          {DEFAULT_INTERACTIONS.map(item => <span key={item.id} className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-slate-100 px-3.5 py-2 text-sm font-semibold text-slate-600"><Check className="h-3.5 w-3.5" />{item.label}<span className="text-[10px] font-bold uppercase tracking-wide text-slate-400">Standard</span></span>)}
-          {task.interactions.filter(item => !DEFAULT_INTERACTIONS.some(def => def.id === item.id)).map(item => <span key={item.id} className="inline-flex items-center gap-1 rounded-full border border-violet-300 bg-violet-50 pl-3 pr-1.5 py-1.5 text-sm font-semibold text-violet-800">{item.label}<button type="button" onClick={() => toggleInteraction(item)} aria-label={item.label + " entfernen"} className="grid h-6 w-6 place-items-center rounded-full hover:bg-violet-100"><X className="h-3.5 w-3.5" /></button></span>)}
-        {task.interactions.filter(item => !DEFAULT_INTERACTIONS.some(def => def.id === item.id)).map(item => <details key={item.id + "-discovery"} className="mt-3 rounded-xl border border-emerald-200 bg-emerald-50/50">
-          <summary className="cursor-pointer px-3 py-2.5 text-xs font-bold text-emerald-900">✦ Sofort-Erkenntnis für „{item.label}“ festlegen (optional)</summary>
-          <div className="grid gap-3 border-t border-emerald-100 p-3 sm:grid-cols-2">
-            <label className={labelClass}>Überschrift<input value={item.discoveryTitle ?? ""} onChange={event => update("interactions", task.interactions.map(entry => entry.id === item.id ? { ...entry, discoveryTitle: event.target.value } : entry))} placeholder="z. B. Du hast ein Warnsignal entdeckt" className={area} /></label>
-            <label className={labelClass}>Lernbereich<input value={item.discoveryCompetency ?? ""} onChange={event => update("interactions", task.interactions.map(entry => entry.id === item.id ? { ...entry, discoveryCompetency: event.target.value } : entry))} placeholder="z. B. Quellenkompetenz" className={area} /></label>
-            <label className={labelClass + " sm:col-span-2"}>Welche Erkenntnis soll direkt bestätigt werden?<textarea value={item.discoveryMessage ?? ""} onChange={event => update("interactions", task.interactions.map(entry => entry.id === item.id ? { ...entry, discoveryMessage: event.target.value } : entry))} rows={2} placeholder="Nur eine im Szenario belegte Erkenntnis formulieren." className={area} /></label>
+        <div className="flex flex-wrap items-start gap-2">
+          {DEFAULT_INTERACTIONS.map(item => <span key={item.id} className="inline-flex shrink-0 items-center gap-2 rounded-full border border-slate-200 bg-slate-100 px-3.5 py-2 text-sm font-semibold text-slate-600"><Check className="h-3.5 w-3.5" />{item.label}<span className="text-[10px] font-bold uppercase tracking-wide text-slate-400">Standard</span></span>)}
+          {task.interactions.filter(item => !DEFAULT_INTERACTIONS.some(def => def.id === item.id)).map(item => <span key={item.id} className="inline-flex max-w-full shrink-0 items-center gap-2 rounded-full border border-violet-300 bg-violet-50 px-3.5 py-2 text-sm font-semibold text-violet-800">{item.label}<button type="button" onClick={() => toggleInteraction(item)} aria-label={item.label + " entfernen"} className="grid h-5 w-5 shrink-0 place-items-center rounded-full hover:bg-violet-100"><X className="h-3.5 w-3.5" /></button></span>)}
+          <button type="button" onClick={() => setShowPicker(value => !value)} className="inline-flex shrink-0 items-center gap-1.5 rounded-full border border-dashed border-violet-400 bg-white px-3.5 py-2 text-sm font-bold text-violet-700 hover:bg-violet-50"><Plus className="h-4 w-4" /> Interaktion</button>
+        </div>
+        {task.interactions.filter(item => !DEFAULT_INTERACTIONS.some(def => def.id === item.id)).map(item => <details key={item.id + "-discovery"} className="mt-3 w-full rounded-xl border border-emerald-200 bg-emerald-50/50">
+          <summary className="cursor-pointer px-3 py-3 text-sm font-semibold text-emerald-900">✦ Nutzer-Feedback für „{item.label}“ festlegen <span className="font-normal text-emerald-700">(optional)</span></summary>
+          <div className="border-t border-emerald-100 p-3">
+            <label className={labelClass}>Nutzer-Feedback <span className="font-normal text-slate-500">— dieser Text erscheint dem Lernenden direkt nach der Aktion</span>
+              <textarea value={item.discoveryMessage ?? ""} onChange={event => update("interactions", task.interactions.map(entry => entry.id === item.id ? { ...entry, discoveryMessage: event.target.value } : entry))} rows={3} placeholder="z. B. Gut entdeckt! Das Profil wurde erst vor wenigen Tagen erstellt und nutzt kein erkennbares Impressum. Das sind wichtige Warnsignale." className={area} />
+            </label>
           </div>
         </details>)}
-          <button type="button" onClick={() => setShowPicker(value => !value)} className="inline-flex items-center gap-1.5 rounded-full border border-dashed border-violet-400 bg-white px-3.5 py-2 text-sm font-bold text-violet-700 hover:bg-violet-50"><Plus className="h-4 w-4" /> Interaktion</button>
-        </div>
         {showPicker && <div className="mt-3 rounded-2xl border border-violet-200 bg-white p-3 sm:p-4">
           <p className="mb-2 text-xs font-bold uppercase tracking-wide text-slate-500">Aktion hinzufügen</p>
           <div className="grid gap-2 sm:grid-cols-2">
