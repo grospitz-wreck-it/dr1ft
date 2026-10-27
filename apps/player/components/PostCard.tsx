@@ -41,8 +41,7 @@ export function PostCard({ item, userId, classInstanceId, initiallyLiked, onView
   const [shareRecipients, setShareRecipients] = useState<Array<{ id: string; displayName: string; username: string }>>([]);
   const [selectedRecipients, setSelectedRecipients] = useState<string[]>([]);
   const [feedback, setFeedback] = useState<string | null>(null);
-  const [discoveryFeedback, setDiscoveryFeedback] = useState<{ title: string; message: string; competency?: string; evidenceId: string; action: string } | null>(null);
-  const [comparison, setComparison] = useState<{ related: FeedItem | null; loading: boolean; selected?: "contradict" | "support"; assessmentOutcome?: "success" | "not_yet"; error?: string } | null>(null);
+  const [comparison, setComparison] = useState<{ related: FeedItem | null; loading: boolean; selected?: "contradict" | "support"; assessmentOutcome?: "success" | "not_yet" | "not_assessed"; error?: string } | null>(null);
   const [taskResponse, setTaskResponse] = useState("");
   const [taskResponseSaved, setTaskResponseSaved] = useState(false);
   const [taskResponseSaving, setTaskResponseSaving] = useState(false);
@@ -51,31 +50,13 @@ export function PostCard({ item, userId, classInstanceId, initiallyLiked, onView
   const commentCount = Number((item.extra as any)?.classCommentCount ?? (item.extra as any)?.baseCommentCount ?? 0);
   const extra = (item.extra ?? {}) as Record<string, unknown>;
   const learningTask = (extra.learningTask ?? {}) as { purpose?: string; learnerAction?: string; interactionType?: string; expectedResponse?: string; evaluationMethod?: string; successCriteria?: string; feedback?: string; interactions?: Array<{ id: string; label: string; instruction?: string; custom?: boolean }> };
+  const configuredLearningInteractions = new Set((learningTask.interactions ?? []).map((interaction) => interaction.id));
   useEffect(() => {
     setLiveCommentCount(commentCount);
   }, [commentCount]);
   const action = (extra.action ?? {}) as Record<string, unknown>;
   const mediaContext = (extra.media_context ?? {}) as Record<string, unknown>;
   const interactionChecks = (extra.interaction_checks ?? {}) as Record<string, { enabled?: boolean; feedback?: string }>;
-  const interactionDiscoveries = (extra.interaction_discoveries ?? {}) as Record<string, { id?: string; title?: string; message?: string; competency?: string; evidenceId?: string; successCriteria?: string }>;
-  const hasConfiguredChecks = Object.keys(interactionChecks).length > 0;
-  const configuredLearningInteractions = Array.isArray(learningTask.interactions) && learningTask.interactions.length > 0
-    ? new Set(learningTask.interactions.map((interaction) => interaction.id))
-    : null;
-  const interactionAliases: Record<string, string[]> = {
-    inspect_source: ["inspect_source"],
-    inspect_media: ["inspect_media"],
-    inspect_context: ["inspect_context", "fact_check"],
-    inspect_profile: ["inspect_profile"],
-    compare_information: ["compare_information"],
-  };
-  const showCheck = (key: string) => {
-    if (configuredLearningInteractions) {
-      const configured = interactionAliases[key] ?? [key];
-      return configured.some((id) => configuredLearningInteractions.has(id));
-    }
-    return !hasConfiguredChecks || interactionChecks[key]?.enabled === true;
-  };
   const checkFeedback = (key: string) => typeof interactionChecks[key]?.feedback === "string" ? interactionChecks[key].feedback!.trim() : "";
 
   useEffect(() => {
@@ -117,41 +98,13 @@ export function PostCard({ item, userId, classInstanceId, initiallyLiked, onView
   function showFeedback(message: string) { setFeedback(message); window.setTimeout(() => setFeedback(null), 2800); }
 
   async function track(interactionType: "inspect_source" | "inspect_media" | "inspect_context" | "inspect_profile" | "compare_information" | "share" | "report" | "ignore", metadata: Record<string, unknown> = { ui: "generic_card_actions" }) {
-    const discoveryAliases: Record<string, string[]> = { inspect_context: ["inspect_context", "fact_check"], inspect_source: ["inspect_source"], inspect_media: ["inspect_media"], inspect_profile: ["inspect_profile"], compare_information: ["compare_information"] };
-    const configured = interactionDiscoveries[interactionType] ?? learningTask.interactions?.find((entry) => (discoveryAliases[interactionType] ?? [interactionType]).includes(entry.id));
-    const discoveryMessage = configured
-      ? String((configured as any).discoveryMessage ?? (configured as any).message ?? "").trim()
-      : "";
-    const discovery = configured && discoveryMessage
-      ? {
-          title: "Gut entdeckt!",
-          message: discoveryMessage,
-          
-          evidenceId: String((configured as any).evidenceId ?? (configured as any).id ?? `${item.id}:${interactionType}`),
-          action: interactionType,
-        }
-      : null;
     await recordInteraction(supabase, {
       userId,
       contentItemId: item.id,
       interactionType,
-      metadata: {
-        ...metadata,
-        ...(discovery ? {
-          discovery: {
-            id: discovery.evidenceId,
-            title: discovery.title,
-            message: discovery.message,
-            action: interactionType,
-            status: "discovered",
-            discoveredAt: new Date().toISOString(),
-          },
-        } : {}),
-      },
+      metadata,
       classInstanceId,
     });
-    if (discovery) setDiscoveryFeedback(discovery);
-    return discovery;
   }
 
   function toggleLike() { if (!liked) { setLiked(true); recordInteraction(supabase, { userId, contentItemId: item.id, interactionType: "like", classInstanceId }); } }
@@ -273,6 +226,10 @@ export function PostCard({ item, userId, classInstanceId, initiallyLiked, onView
     await track("compare_information", { ui: "comparison_experience", phase: "decision", result, comparedContentItemId: comparison?.related?.id ?? null });
 
     if (!comparison?.related?.id) return;
+    if (!configuredLearningInteractions.has("compare_information")) {
+      setComparison((current) => current ? { ...current, assessmentOutcome: "not_assessed" } : current);
+      return;
+    }
     const { data, error } = await supabase.rpc("record_comparison_assessment", {
       p_class_instance_id: classInstanceId,
       p_content_item_id: item.id,
@@ -345,18 +302,6 @@ export function PostCard({ item, userId, classInstanceId, initiallyLiked, onView
       {item.mediaUrl && item.mediaType === "video" && <video src={item.mediaUrl} controls className="w-full max-h-96 object-cover bg-black"/>}
       <div className="p-4 pt-3">
         <p className="font-body text-[15px] leading-relaxed">{item.body}</p>
-        {discoveryFeedback && <section className="mt-3 overflow-hidden rounded-2xl border border-emerald-200 bg-gradient-to-br from-emerald-50 to-white shadow-sm" aria-live="polite">
-          <div className="flex items-start gap-3 p-4">
-            <span className="grid h-9 w-9 shrink-0 place-items-center rounded-xl bg-emerald-600 text-white"><Sparkles className="h-4 w-4" /></span>
-            <div className="min-w-0 flex-1">
-              <p className="text-[10px] font-bold uppercase tracking-[0.14em] text-emerald-700">Neue Erkenntnis entdeckt</p>
-              <h3 className="mt-1 text-sm font-bold text-slate-900">{discoveryFeedback.title}</h3>
-              <p className="mt-1 text-sm leading-relaxed text-slate-700">{discoveryFeedback.message}</p>
-              <p className="mt-2 text-[11px] text-slate-500">Das ist ein Hinweis zur Einordnung. Ob die Lernanforderung erfüllt ist, wird separat bewertet.</p>
-            </div>
-            <button type="button" onClick={() => setDiscoveryFeedback(null)} aria-label="Erkenntnis schließen" className="rounded-lg p-1 text-emerald-800 hover:bg-emerald-100"><X className="h-4 w-4" /></button>
-          </div>
-        </section>}
         {learningTask.learnerAction?.trim() && <section className="mt-4 rounded-2xl border border-violet-200 bg-gradient-to-br from-violet-50 to-fuchsia-50/60 p-4">
           <div className="flex items-start gap-2.5">
             <span className="grid h-8 w-8 shrink-0 place-items-center rounded-xl bg-violet-600 text-white"><Sparkles className="h-4 w-4" /></span>
@@ -377,7 +322,7 @@ export function PostCard({ item, userId, classInstanceId, initiallyLiked, onView
           <button onClick={toggleComments} className="touch-target flex items-center gap-1.5 rounded-xl px-3 text-sm font-body text-ink/60 transition-colors hover:bg-ink/5" aria-label="Kommentare anzeigen"><MessageCircle className="w-[18px] h-[18px]" strokeWidth={2}/>{comments ? comments.length : liveCommentCount}</button>
           <button onClick={() => void share()} className="touch-target ml-auto inline-flex items-center gap-2 rounded-xl bg-violet-600 px-4 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-violet-700" aria-label="Beitrag teilen"><Share2 className="h-4 w-4"/><span>Teilen</span></button>
           <button onClick={() => setMenuOpen((open) => !open)} className="touch-target grid w-11 place-items-center rounded-xl text-ink/60 transition-colors hover:bg-ink/5" aria-label="Weitere Optionen" aria-expanded={menuOpen}><MoreHorizontal className="w-5 h-5"/></button>
-          {menuOpen && <div className="absolute z-20 right-0 bottom-12 w-60 rounded-xl border border-ink/15 bg-paper text-ink shadow-xl p-1.5 dark-post-menu">{showCheck("inspect_source") && <ActionButton icon={<Search/>} label="Quelle ansehen" onClick={inspectSource}/>}{showCheck("inspect_media") && <ActionButton icon={<ImageIcon/>} label="Bild prüfen" onClick={inspectMedia}/>}{showCheck("inspect_context") && <ActionButton icon={<Eye/>} label={configuredLearningInteractions?.has("fact_check") ? "Fakten checken" : "Kontext prüfen"} onClick={inspectContext}/>}{showCheck("inspect_profile") && <ActionButton icon={<UserRound/>} label="Profil ansehen" onClick={inspectProfile}/>}{showCheck("compare_information") && <ActionButton icon={<Search/>} label="Informationen vergleichen" onClick={compareInformation}/>}<div className="my-1 border-t border-ink/10"/><ActionButton icon={<Share2/>} label="Teilen" onClick={share}/>{(!configuredLearningInteractions || configuredLearningInteractions.has("report")) && <ActionButton icon={<Flag/>} label="Melden" onClick={report} />}{(!configuredLearningInteractions || configuredLearningInteractions.has("ignore")) && <ActionButton icon={<X/>} label="Ignorieren" onClick={ignore} />}</div>}
+          {menuOpen && <div className="absolute z-20 right-0 bottom-12 w-64 rounded-2xl border border-violet-200/80 bg-paper/95 text-ink shadow-[0_18px_50px_rgba(67,36,120,0.22)] p-1.5 backdrop-blur-xl dark-post-menu"><div className="px-3 pb-1 pt-2 text-[10px] font-bold uppercase tracking-[0.16em] text-violet-500">DR1FT · Prüfen</div><ActionButton icon={<Search/>} label="Quelle ansehen" onClick={inspectSource}/><ActionButton icon={<ImageIcon/>} label="Bild prüfen" onClick={inspectMedia}/><ActionButton icon={<Eye/>} label="Fakten & Kontext checken" onClick={inspectContext}/><ActionButton icon={<UserRound/>} label="Profil ansehen" onClick={inspectProfile}/><ActionButton icon={<Search/>} label="Informationen vergleichen" onClick={compareInformation}/><div className="my-1 border-t border-violet-200/70"/><div className="px-3 pb-1 pt-1 text-[10px] font-bold uppercase tracking-[0.16em] text-ink/40">Weiter</div><ActionButton icon={<Share2/>} label="Teilen" onClick={share}/><ActionButton icon={<Flag/>} label="Melden" onClick={report} /><ActionButton icon={<X/>} label="Ignorieren" onClick={ignore} /></div>}
         </div>
         {shareOpen && <div className="fixed inset-0 z-[100] flex items-center justify-center bg-slate-950/60 p-4 backdrop-blur-sm" onPointerDown={(event) => { if (event.target === event.currentTarget) setShareOpen(false); }}>
           <section role="dialog" aria-modal="true" aria-labelledby={`share-title-${item.id}`} className="w-full max-w-md rounded-3xl border border-slate-200 bg-white p-5 text-slate-900 shadow-2xl dark-share-dialog">
@@ -456,7 +401,7 @@ export function PostCard({ item, userId, classInstanceId, initiallyLiked, onView
             <div className="rounded-xl border border-ink/10 bg-ink/[0.025] p-4"><p className="font-mono text-[10px] uppercase tracking-wider text-ink/40 mb-3">Aussage 2</p><AuthorRow creator={comparison.related.creator}/><p className="text-sm leading-relaxed">{comparison.related.body}</p></div>
           </div>
           <div className="mt-5 border-t border-ink/10 pt-5"><p className="text-sm font-medium mb-3">Wie verhalten sich die beiden Aussagen zueinander?</p><div className="grid grid-cols-1 sm:grid-cols-2 gap-3"><button onClick={() => chooseComparison("contradict")} className={`rounded-xl border px-4 py-3 text-left text-sm transition ${comparison.selected === "contradict" ? "border-ink bg-ink text-paper" : "border-ink/15 hover:bg-ink/5"}`}>Sie widersprechen sich.</button><button onClick={() => chooseComparison("support")} className={`rounded-xl border px-4 py-3 text-left text-sm transition ${comparison.selected === "support" ? "border-ink bg-ink text-paper" : "border-ink/15 hover:bg-ink/5"}`}>Sie stützen dieselbe Aussage.</button></div>
-            {comparison.selected && <div className="mt-4 rounded-xl bg-ink/5 px-4 py-3 text-sm leading-relaxed" role="status">{comparison.assessmentOutcome === "success" ? (checkFeedback("compare_information") || "Richtig eingeordnet. Deine Entscheidung wurde geprüft.") : comparison.assessmentOutcome === "not_yet" ? "Noch nicht richtig eingeordnet. Vergleiche die Aussagen noch einmal und prüfe, ob sie sich widersprechen oder gegenseitig stützen." : "Deine Entscheidung wurde ausgewählt. Die Bewertung wird geprüft."}</div>}
+            {comparison.selected && <div className="mt-4 rounded-xl bg-ink/5 px-4 py-3 text-sm leading-relaxed" role="status">{comparison.assessmentOutcome === "success" ? (checkFeedback("compare_information") || "Richtig eingeordnet. Deine Entscheidung wurde geprüft.") : comparison.assessmentOutcome === "not_yet" ? "Noch nicht richtig eingeordnet. Vergleiche die Aussagen noch einmal und prüfe, ob sie sich widersprechen oder gegenseitig stützen." : comparison.assessmentOutcome === "not_assessed" ? "Das ist eine allgemeine Vergleichshilfe. Für diesen Beitrag ist keine bewertete Lernanforderung eingerichtet." : "Deine Entscheidung wurde ausgewählt. Die Bewertung wird geprüft."}</div>}
           </div>
         </div>}
       </div>
@@ -465,5 +410,5 @@ export function PostCard({ item, userId, classInstanceId, initiallyLiked, onView
 }
 
 function ActionButton({ icon, label, onClick }: { icon: React.ReactNode; label: string; onClick: () => void }) {
-  return <button onClick={onClick} className="w-full flex items-center gap-2.5 rounded-lg px-3 py-2.5 text-left text-sm font-body text-ink hover:bg-ink/5 active:bg-ink/10"><span className="w-4 h-4 flex items-center justify-center [&>svg]:w-4 [&>svg]:h-4 text-ink/60">{icon}</span>{label}</button>;
+  return <button onClick={onClick} className="w-full flex items-center gap-3 rounded-xl px-3 py-2.5 text-left text-sm font-body text-ink transition-colors hover:bg-violet-50 active:bg-violet-100"><span className="grid h-8 w-8 shrink-0 place-items-center rounded-xl bg-gradient-to-br from-violet-100 to-sky-100 text-violet-700 [&>svg]:w-4 [&>svg]:h-4">{icon}</span>{label}</button>;
 }
