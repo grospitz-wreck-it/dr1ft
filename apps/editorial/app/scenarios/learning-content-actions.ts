@@ -501,3 +501,63 @@ export async function regenerateLearningImage(contentItemId: string, scenarioId:
   revalidatePath("/scenarios/" + scenarioId);
   return { mediaUrl: image.url, generationCount: nextGeneration.generationCount };
 }
+
+
+export type ContentLearningTask = {
+  purpose: string;
+  learnerAction: string;
+  interactionType: "view" | "react" | "comment" | "choose" | "classify" | "compare" | "reflect" | "create";
+  expectedResponse: string;
+  evaluationMethod: "completion" | "criteria" | "choice" | "reflection" | "discussion";
+  successCriteria: string;
+  feedback: string;
+};
+
+const TASK_INTERACTIONS = ["view", "react", "comment", "choose", "classify", "compare", "reflect", "create"] as const;
+const TASK_EVALUATION_METHODS = ["completion", "criteria", "choice", "reflection", "discussion"] as const;
+
+export async function updateContentLearningTask(
+  scenarioId: string,
+  contentItemId: string,
+  task: ContentLearningTask,
+) {
+  const supabase = supabaseServerClient();
+  const { data: item, error: itemError } = await supabase
+    .from("content_items")
+    .select("id,extra")
+    .eq("id", contentItemId)
+    .eq("scenario_id", scenarioId)
+    .single();
+
+  if (itemError || !item) throw new Error(itemError?.message || "Content-Piece nicht gefunden.");
+
+  if (!TASK_INTERACTIONS.includes(task.interactionType) || !TASK_EVALUATION_METHODS.includes(task.evaluationMethod)) {
+    throw new Error("Bitte eine gültige Interaktion und Auswertungsmethode auswählen.");
+  }
+
+  const normalizedTask: ContentLearningTask = {
+    purpose: String(task.purpose || "").trim().slice(0, 1000),
+    learnerAction: String(task.learnerAction || "").trim().slice(0, 1500),
+    interactionType: task.interactionType,
+    expectedResponse: String(task.expectedResponse || "").trim().slice(0, 1500),
+    evaluationMethod: task.evaluationMethod,
+    successCriteria: String(task.successCriteria || "").trim().slice(0, 1500),
+    feedback: String(task.feedback || "").trim().slice(0, 1000),
+  };
+
+  const previousExtra = item.extra && typeof item.extra === "object" && !Array.isArray(item.extra)
+    ? item.extra as Record<string, unknown>
+    : {};
+  const { error } = await supabase
+    .from("content_items")
+    .update({
+      extra: { ...previousExtra, learningTask: normalizedTask },
+      updated_at: new Date().toISOString(),
+    })
+    .eq("id", contentItemId)
+    .eq("scenario_id", scenarioId);
+
+  if (error) throw new Error("Lernaufgabe konnte nicht gespeichert werden: " + error.message);
+  revalidatePath("/scenarios/" + scenarioId);
+  return { ok: true };
+}
