@@ -44,8 +44,6 @@ export function ContentLearningTaskEditor({ scenarioId, contentItemId, initialTa
     };
   });
   const [showPicker, setShowPicker] = useState(false);
-  const [customLabel, setCustomLabel] = useState("");
-  const [customInstruction, setCustomInstruction] = useState("");
   const [pending, startTransition] = useTransition();
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
@@ -60,14 +58,6 @@ export function ContentLearningTaskEditor({ scenarioId, contentItemId, initialTa
     update("interactions", exists
       ? task.interactions.filter(item => item.id !== interaction.id)
       : [...task.interactions, interaction]);
-  }
-  function addCustomInteraction() {
-    const name = customLabel.trim();
-    if (!name) return;
-    update("interactions", [...task.interactions, { id: "custom-" + crypto.randomUUID(), label: name.slice(0, 80), instruction: customInstruction.trim().slice(0, 500), custom: true }]);
-    setCustomLabel("");
-    setCustomInstruction("");
-    setShowPicker(false);
   }
   function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -122,8 +112,7 @@ export function ContentLearningTaskEditor({ scenarioId, contentItemId, initialTa
           <div className="grid gap-2 sm:grid-cols-2">
             {AVAILABLE_INTERACTIONS.filter(item => !selectedIds.has(item.id)).map(item => <button key={item.id} type="button" onClick={() => toggleInteraction(item)} className="rounded-xl border border-slate-200 p-3 text-left transition hover:border-violet-400 hover:bg-violet-50"><span className="block text-sm font-semibold text-slate-800">＋ {item.label}</span><span className="mt-1 block text-xs leading-relaxed text-slate-500">{item.instruction}</span></button>)}
           </div>
-          <div className="mt-4 border-t border-slate-100 pt-3"><p className="mb-2 text-xs font-bold text-slate-600">Eigene Interaktion (optional)</p><div className="grid gap-2 sm:grid-cols-2"><input value={customLabel} onChange={event => setCustomLabel(event.target.value)} maxLength={80} placeholder="Name, z. B. Perspektive wechseln" className="rounded-xl border border-slate-200 px-3 py-2.5 text-sm outline-none focus:border-violet-400" /><input value={customInstruction} onChange={event => setCustomInstruction(event.target.value)} maxLength={500} placeholder="Was soll der User tun? (optional)" className="rounded-xl border border-slate-200 px-3 py-2.5 text-sm outline-none focus:border-violet-400" /></div><button type="button" onClick={addCustomInteraction} disabled={!customLabel.trim()} className="mt-2 rounded-lg bg-slate-900 px-3 py-2 text-xs font-bold text-white disabled:opacity-40">Eigene Interaktion hinzufügen</button></div>
-        </div>}
+}
       </div>
       <details className="rounded-xl border border-slate-200 bg-white">
         <summary className="cursor-pointer px-3 py-3 text-xs font-bold text-slate-600">Erweiterte Lernsteuerung (optional)</summary>
