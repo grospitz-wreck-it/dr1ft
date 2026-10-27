@@ -23,8 +23,8 @@ export function ScenarioWizard({
   const progress = Math.round(((current + 1) / steps.length) * 100);
 
   return (
-    <div className="mx-auto w-full max-w-5xl space-y-5">
-      <section className="sticky top-[88px] z-30 rounded-2xl border border-slate-200 bg-white/95 p-4 shadow-lg shadow-slate-900/5 backdrop-blur-md sm:p-5">
+    <div className="w-full space-y-5">
+      <section className="relative z-10 rounded-3xl border border-violet-100 bg-gradient-to-br from-white via-white to-violet-50/80 p-4 shadow-md shadow-violet-900/5 sm:p-6">
         <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
           <div>
             <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-accent">DR1FT · Szenario-Studio</p>
@@ -41,7 +41,7 @@ export function ScenarioWizard({
           </div>
         </div>
 
-        <nav aria-label="Schritte der Szenario-Erstellung" className="mt-4 grid grid-cols-4 gap-1 sm:mt-5 sm:gap-3">
+        <nav aria-label="Schritte der Szenario-Erstellung" className="mt-4 grid grid-cols-2 gap-2 sm:mt-5 sm:grid-cols-4 sm:gap-3">
           {steps.map((step, index) => {
             const selected = index === current;
             return (
@@ -50,7 +50,7 @@ export function ScenarioWizard({
                 type="button"
                 onClick={() => setCurrent(index)}
                 aria-current={selected ? "step" : undefined}
-                className={"group min-w-0 rounded-xl border p-2 text-left transition sm:flex sm:items-center sm:gap-2.5 sm:p-3 " +
+                className={"group min-w-0 rounded-2xl border p-2.5 text-left transition hover:-translate-y-0.5 hover:shadow-md sm:flex sm:items-center sm:gap-2.5 sm:p-3 " +
                   (selected
                     ? "border-accent bg-accent text-white shadow-md shadow-accent/15"
                     : step.complete
@@ -71,13 +71,13 @@ export function ScenarioWizard({
         </nav>
       </section>
 
-      <div className="min-h-[320px]">
+      <div className="min-h-[320px] w-full">
         <div key={current} className="animate-in fade-in slide-in-from-right-2 duration-200">
           {panels[current]}
         </div>
       </div>
 
-      <footer className="flex items-center justify-between gap-3 rounded-2xl border border-slate-200 bg-white p-3 shadow-sm sm:p-4">
+      <footer className="flex items-center justify-between gap-3 rounded-2xl border border-violet-100 bg-white/90 p-3 shadow-md shadow-violet-900/5 sm:p-4">
         <button
           type="button"
           disabled={current === 0}
