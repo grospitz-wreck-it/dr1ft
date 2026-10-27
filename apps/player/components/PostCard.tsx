@@ -49,7 +49,7 @@ export function PostCard({ item, userId, classInstanceId, initiallyLiked, onView
   const baseLikeCount = Number((item.extra as any)?.baseEngagement ?? 0);
   const commentCount = Number((item.extra as any)?.classCommentCount ?? (item.extra as any)?.baseCommentCount ?? 0);
   const extra = (item.extra ?? {}) as Record<string, unknown>;
-  const learningTask = (extra.learningTask ?? {}) as { purpose?: string; learnerAction?: string; interactionType?: string; expectedResponse?: string; evaluationMethod?: string; successCriteria?: string; feedback?: string };
+  const learningTask = (extra.learningTask ?? {}) as { purpose?: string; learnerAction?: string; interactionType?: string; expectedResponse?: string; evaluationMethod?: string; successCriteria?: string; feedback?: string; interactions?: Array<{ id: string; label: string; instruction?: string; custom?: boolean }> };
   useEffect(() => {
     setLiveCommentCount(commentCount);
   }, [commentCount]);
@@ -57,7 +57,23 @@ export function PostCard({ item, userId, classInstanceId, initiallyLiked, onView
   const mediaContext = (extra.media_context ?? {}) as Record<string, unknown>;
   const interactionChecks = (extra.interaction_checks ?? {}) as Record<string, { enabled?: boolean; feedback?: string }>;
   const hasConfiguredChecks = Object.keys(interactionChecks).length > 0;
-  const showCheck = (key: string) => !hasConfiguredChecks || interactionChecks[key]?.enabled === true;
+  const configuredLearningInteractions = Array.isArray(learningTask.interactions) && learningTask.interactions.length > 0
+    ? new Set(learningTask.interactions.map((interaction) => interaction.id))
+    : null;
+  const interactionAliases: Record<string, string[]> = {
+    inspect_source: ["inspect_source", "fact_check"],
+    inspect_media: ["inspect_media", "fact_check"],
+    inspect_context: ["inspect_context", "fact_check"],
+    inspect_profile: ["inspect_profile"],
+    compare_information: ["compare_information"],
+  };
+  const showCheck = (key: string) => {
+    if (configuredLearningInteractions) {
+      const configured = interactionAliases[key] ?? [key];
+      return configured.some((id) => configuredLearningInteractions.has(id));
+    }
+    return !hasConfiguredChecks || interactionChecks[key]?.enabled === true;
+  };
   const checkFeedback = (key: string) => typeof interactionChecks[key]?.feedback === "string" ? interactionChecks[key].feedback!.trim() : "";
 
   useEffect(() => {
