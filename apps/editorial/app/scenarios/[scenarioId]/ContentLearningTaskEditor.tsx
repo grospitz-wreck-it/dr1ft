@@ -114,14 +114,6 @@ export function ContentLearningTaskEditor({ scenarioId, contentItemId, initialTa
           </div>
         </div>}
       </div>
-      <details className="rounded-xl border border-slate-200 bg-white">
-        <summary className="cursor-pointer px-3 py-3 text-xs font-bold text-slate-600">Erweiterte Lernsteuerung (optional)</summary>
-        <div className="space-y-3 border-t border-slate-100 p-3">
-          <label className={labelClass}>Konkrete Aufgabe für den Lernenden<textarea className={area} rows={2} value={task.learnerAction} onChange={event => update("learnerAction", event.target.value)} placeholder="Nur ausfüllen, wenn die Standardaktionen nicht ausreichen." /></label>
-          <label className={labelClass}>Erfolgskriterien<textarea className={area} rows={2} value={task.successCriteria} onChange={event => update("successCriteria", event.target.value)} placeholder="Woran erkennen wir einen Lernfortschritt?" /></label>
-          <label className={labelClass}>Feedback nach der Interaktion<textarea className={area} rows={2} value={task.feedback} onChange={event => update("feedback", event.target.value)} placeholder="Optional: spezifische Rückmeldung statt Standardfeedback." /></label>
-        </div>
-      </details>
       <div className="flex flex-wrap items-center justify-end gap-3 border-t border-violet-100 pt-3">{message && <span role="status" className="text-xs font-semibold text-emerald-700">{message}</span>}{error && <span role="alert" className="text-xs font-semibold text-red-600">{error}</span>}<button disabled={pending} className="rounded-xl bg-violet-600 px-4 py-2.5 text-xs font-bold text-white hover:bg-violet-700 disabled:opacity-50">{pending ? "Speichert …" : "Änderungen speichern"}</button></div>
     </form>}
   </section>;
