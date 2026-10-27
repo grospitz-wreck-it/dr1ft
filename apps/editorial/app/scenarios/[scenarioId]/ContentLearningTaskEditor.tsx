@@ -4,7 +4,7 @@ import { useState, useTransition, type FormEvent } from "react";
 import { updateContentLearningTask } from "../learning-content-actions";
 import { Check, Plus, Sparkles, X } from "lucide-react";
 
-type Interaction = { id: string; label: string; instruction?: string; custom?: boolean };
+type Interaction = { id: string; label: string; instruction?: string; custom?: boolean; discoveryTitle?: string; discoveryMessage?: string; discoveryCompetency?: string };
 type Task = {
   purpose: string;
   learnerAction: string;
@@ -44,8 +44,6 @@ export function ContentLearningTaskEditor({ scenarioId, contentItemId, initialTa
     };
   });
   const [showPicker, setShowPicker] = useState(false);
-  const [customLabel, setCustomLabel] = useState("");
-  const [customInstruction, setCustomInstruction] = useState("");
   const [pending, startTransition] = useTransition();
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
@@ -60,14 +58,6 @@ export function ContentLearningTaskEditor({ scenarioId, contentItemId, initialTa
     update("interactions", exists
       ? task.interactions.filter(item => item.id !== interaction.id)
       : [...task.interactions, interaction]);
-  }
-  function addCustomInteraction() {
-    const name = customLabel.trim();
-    if (!name) return;
-    update("interactions", [...task.interactions, { id: "custom-" + crypto.randomUUID(), label: name.slice(0, 80), instruction: customInstruction.trim().slice(0, 500), custom: true }]);
-    setCustomLabel("");
-    setCustomInstruction("");
-    setShowPicker(false);
   }
   function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -107,6 +97,14 @@ export function ContentLearningTaskEditor({ scenarioId, contentItemId, initialTa
         <div className="flex flex-wrap gap-2">
           {DEFAULT_INTERACTIONS.map(item => <span key={item.id} className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-slate-100 px-3.5 py-2 text-sm font-semibold text-slate-600"><Check className="h-3.5 w-3.5" />{item.label}<span className="text-[10px] font-bold uppercase tracking-wide text-slate-400">Standard</span></span>)}
           {task.interactions.filter(item => !DEFAULT_INTERACTIONS.some(def => def.id === item.id)).map(item => <span key={item.id} className="inline-flex items-center gap-1 rounded-full border border-violet-300 bg-violet-50 pl-3 pr-1.5 py-1.5 text-sm font-semibold text-violet-800">{item.label}<button type="button" onClick={() => toggleInteraction(item)} aria-label={item.label + " entfernen"} className="grid h-6 w-6 place-items-center rounded-full hover:bg-violet-100"><X className="h-3.5 w-3.5" /></button></span>)}
+        {task.interactions.filter(item => !DEFAULT_INTERACTIONS.some(def => def.id === item.id)).map(item => <details key={item.id + "-discovery"} className="mt-3 rounded-xl border border-emerald-200 bg-emerald-50/50">
+          <summary className="cursor-pointer px-3 py-2.5 text-xs font-bold text-emerald-900">✦ Sofort-Erkenntnis für „{item.label}“ festlegen (optional)</summary>
+          <div className="grid gap-3 border-t border-emerald-100 p-3 sm:grid-cols-2">
+            <label className={labelClass}>Überschrift<input value={item.discoveryTitle ?? ""} onChange={event => update("interactions", task.interactions.map(entry => entry.id === item.id ? { ...entry, discoveryTitle: event.target.value } : entry))} placeholder="z. B. Du hast ein Warnsignal entdeckt" className={area} /></label>
+            <label className={labelClass}>Lernbereich<input value={item.discoveryCompetency ?? ""} onChange={event => update("interactions", task.interactions.map(entry => entry.id === item.id ? { ...entry, discoveryCompetency: event.target.value } : entry))} placeholder="z. B. Quellenkompetenz" className={area} /></label>
+            <label className={labelClass + " sm:col-span-2"}>Welche Erkenntnis soll direkt bestätigt werden?<textarea value={item.discoveryMessage ?? ""} onChange={event => update("interactions", task.interactions.map(entry => entry.id === item.id ? { ...entry, discoveryMessage: event.target.value } : entry))} rows={2} placeholder="Nur eine im Szenario belegte Erkenntnis formulieren." className={area} /></label>
+          </div>
+        </details>)}
           <button type="button" onClick={() => setShowPicker(value => !value)} className="inline-flex items-center gap-1.5 rounded-full border border-dashed border-violet-400 bg-white px-3.5 py-2 text-sm font-bold text-violet-700 hover:bg-violet-50"><Plus className="h-4 w-4" /> Interaktion</button>
         </div>
         {showPicker && <div className="mt-3 rounded-2xl border border-violet-200 bg-white p-3 sm:p-4">
@@ -114,7 +112,6 @@ export function ContentLearningTaskEditor({ scenarioId, contentItemId, initialTa
           <div className="grid gap-2 sm:grid-cols-2">
             {AVAILABLE_INTERACTIONS.filter(item => !selectedIds.has(item.id)).map(item => <button key={item.id} type="button" onClick={() => toggleInteraction(item)} className="rounded-xl border border-slate-200 p-3 text-left transition hover:border-violet-400 hover:bg-violet-50"><span className="block text-sm font-semibold text-slate-800">＋ {item.label}</span><span className="mt-1 block text-xs leading-relaxed text-slate-500">{item.instruction}</span></button>)}
           </div>
-          <div className="mt-4 border-t border-slate-100 pt-3"><p className="mb-2 text-xs font-bold text-slate-600">Eigene Interaktion (optional)</p><div className="grid gap-2 sm:grid-cols-2"><input value={customLabel} onChange={event => setCustomLabel(event.target.value)} maxLength={80} placeholder="Name, z. B. Perspektive wechseln" className="rounded-xl border border-slate-200 px-3 py-2.5 text-sm outline-none focus:border-violet-400" /><input value={customInstruction} onChange={event => setCustomInstruction(event.target.value)} maxLength={500} placeholder="Was soll der User tun? (optional)" className="rounded-xl border border-slate-200 px-3 py-2.5 text-sm outline-none focus:border-violet-400" /></div><button type="button" onClick={addCustomInteraction} disabled={!customLabel.trim()} className="mt-2 rounded-lg bg-slate-900 px-3 py-2 text-xs font-bold text-white disabled:opacity-40">Eigene Interaktion hinzufügen</button></div>
         </div>}
       </div>
       <details className="rounded-xl border border-slate-200 bg-white">

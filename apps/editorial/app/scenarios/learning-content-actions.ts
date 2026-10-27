@@ -550,6 +550,9 @@ export async function updateContentLearningTask(
           label: String(interaction.label || "").trim().slice(0, 80),
           instruction: String(interaction.instruction || "").trim().slice(0, 500),
           custom: interaction.custom === true,
+          discoveryTitle: String((interaction as any).discoveryTitle || "").trim().slice(0, 120),
+          discoveryMessage: String((interaction as any).discoveryMessage || "").trim().slice(0, 1200),
+          discoveryCompetency: String((interaction as any).discoveryCompetency || "").trim().slice(0, 120),
         })).filter((interaction) => interaction.id && interaction.label)
       : [],
   };
