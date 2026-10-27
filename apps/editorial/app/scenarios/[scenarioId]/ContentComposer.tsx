@@ -52,7 +52,7 @@ export function ContentComposer({ scenarioId }: { scenarioId: string }) {
         <div className="absolute right-0 z-30 mt-2 w-80 rounded-2xl border border-slate-200 bg-white p-2 shadow-xl">
           <div className="px-3 py-2"><div className="text-sm font-semibold text-slate-900">Was möchtest du hinzufügen?</div><div className="text-[11px] text-slate-400 mt-0.5">Die KI kann den Entwurf passend zum Lernplan erstellen.</div></div>
           <div className="grid grid-cols-2 gap-1">
-            {formats.map(({ id, label, hint, icon: Icon }) => (
+            {formats.filter(({ id }) => ["post", "photo", "meme", "video", "embed"].includes(id)).map(({ id, label, hint, icon: Icon }) => (
               <button key={id} type="button" onClick={() => setFormat(id)} className="text-left rounded-xl p-2.5 hover:bg-slate-50">
                 <Icon className="w-4 h-4 text-accent mb-1" />
                 <div className="text-xs font-semibold text-slate-800">{label}</div>
@@ -60,6 +60,18 @@ export function ContentComposer({ scenarioId }: { scenarioId: string }) {
               </button>
             ))}
           </div>
+          <details className="mt-2 rounded-xl border border-slate-100">
+            <summary className="cursor-pointer px-3 py-2 text-[11px] font-semibold text-slate-500 hover:text-slate-800">Weitere Formate (später relevant)</summary>
+            <div className="grid grid-cols-2 gap-1 p-1">
+              {formats.filter(({ id }) => ["comment", "dm_message", "reflection_prompt"].includes(id)).map(({ id, label, hint, icon: Icon }) => (
+                <button key={id} type="button" onClick={() => setFormat(id)} className="text-left rounded-xl p-2.5 hover:bg-slate-50">
+                  <Icon className="w-4 h-4 text-slate-400 mb-1" />
+                  <div className="text-xs font-semibold text-slate-700">{label}</div>
+                  <div className="text-[10px] text-slate-400">{hint}</div>
+                </button>
+              ))}
+            </div>
+          </details>
         </div>
       )}
       {open && format && (
