@@ -117,7 +117,8 @@ export function PostCard({ item, userId, classInstanceId, initiallyLiked, onView
   function showFeedback(message: string) { setFeedback(message); window.setTimeout(() => setFeedback(null), 2800); }
 
   async function track(interactionType: "inspect_source" | "inspect_media" | "inspect_context" | "inspect_profile" | "compare_information" | "share" | "report" | "ignore", metadata: Record<string, unknown> = { ui: "generic_card_actions" }) {
-    const configured = interactionDiscoveries[interactionType] ?? learningTask.interactions?.find((entry) => entry.id === interactionType);
+    const discoveryAliases: Record<string, string[]> = { inspect_context: ["inspect_context", "fact_check"], inspect_source: ["inspect_source"], inspect_media: ["inspect_media"], inspect_profile: ["inspect_profile"], compare_information: ["compare_information"] };
+    const configured = interactionDiscoveries[interactionType] ?? learningTask.interactions?.find((entry) => (discoveryAliases[interactionType] ?? [interactionType]).includes(entry.id));
     const discoveryMessage = configured
       ? String((configured as any).discoveryMessage ?? (configured as any).message ?? "").trim()
       : "";
