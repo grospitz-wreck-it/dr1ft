@@ -72,7 +72,20 @@ export default {
     const rawPrompt = typeof body.prompt === "string" ? body.prompt.trim() : "";
     if (!rawPrompt) return json({ error: "prompt is required" }, 400);
 
-    const prompt = `${rawPrompt}\n\nGenerate a natural, ordinary social-media image. Avoid readable text, logos, celebrities, political messaging and advertising.`.slice(0, 2048);
+    // Keep the non-negotiable no-text instruction at the END of the prompt.
+    // FLUX may otherwise ignore it or have it truncated when a long user prompt
+    // is sliced to the model input limit. Editorial text is context only and
+    // must never override these image-content constraints.
+    const noTextRules = [
+      "ABSOLUTE REQUIREMENT: the image contains NO TEXT of any kind.",
+      "No letters, words, numbers, typography, captions, subtitles, watermarks, logos, labels, signage, posters, book pages, documents, UI, phone-screen text, or writing-like marks.",
+      "Do not generate pseudo-text, gibberish, fake lettering, decorative glyphs, or blurred text. All visible surfaces must be blank or show non-textual imagery.",
+      "If a scene would normally contain a sign, screen, paper, label, or printed object, make that surface blank, turned away, or replace it with a non-textual visual detail.",
+      "Communicate the scene only through people, objects, gestures, environment, composition, and lighting. Generate only the image, with no graphic-design or poster layout.",
+      "Natural, age-appropriate social-media photography. No logos, celebrities, political messaging, or advertising.",
+    ].join(" ");
+    const promptContext = rawPrompt.slice(0, 1100);
+    const prompt = `${promptContext}\\n\\n${noTextRules}`;
     const dimensions: Record<string, [number, number]> = {
     "1:1": [1024, 1024],
     "4:5": [1024, 1280],
