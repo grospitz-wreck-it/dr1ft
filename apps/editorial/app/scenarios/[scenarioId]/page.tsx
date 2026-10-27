@@ -222,11 +222,12 @@ export default async function ScenarioDetailPage({ params, searchParams = {} }: 
                       <SummaryCard icon={<Users className="w-4 h-4" />} label="Status" value={scenario.is_active ? "Aktiv" : "Entwurf"} />
                     </section>
             
-                            <section id="workflow-posts" className="scroll-mt-6 bg-white border border-slate-200 rounded-2xl p-6 shadow-sm">
-                      <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3">
-                        <SectionHeader icon={<FileText className="w-4 h-4" />} title="Posts im Feed" subtitle="Erstelle zuerst die Posts, an denen die Schüler das Lernziel anwenden. Weitere Formate bleiben optional." />
-                        <ContentComposer scenarioId={scenarioId} />
+                            <section id="workflow-posts" className="scroll-mt-6 relative overflow-hidden rounded-3xl border border-violet-100 bg-gradient-to-br from-white via-white to-violet-50/70 p-4 shadow-sm sm:p-6">
+                      <div className="mb-5 flex flex-col gap-3 rounded-2xl border border-violet-100 bg-white/80 p-4 sm:flex-row sm:items-center sm:justify-between">
+                        <SectionHeader icon={<FileText className="w-4 h-4" />} title="Posts im Feed" subtitle="Baue den Feed deiner Mission – starte mit einem Post und ergänze Medien, Reaktionen und Chats." />
+                        <span className="inline-flex w-fit shrink-0 items-center gap-2 rounded-full bg-violet-100 px-3 py-1.5 text-[11px] font-semibold text-violet-800">✦ Content-Atelier</span>
                       </div>
+                      <ContentComposer scenarioId={scenarioId} />
             
                       {grouped.length > 0 ? (
                         <div className="mt-5 space-y-5">
