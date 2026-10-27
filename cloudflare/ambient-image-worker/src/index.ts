@@ -85,7 +85,7 @@ export default {
       "Natural, age-appropriate social-media photography. No logos, celebrities, political messaging, or advertising.",
     ].join(" ");
     const promptContext = rawPrompt.slice(0, 1100);
-    const prompt = `${promptContext}\\n\\n${noTextRules}`;
+    const prompt = `${promptContext}\n\n${noTextRules}`;
     const dimensions: Record<string, [number, number]> = {
     "1:1": [1024, 1024],
     "4:5": [1024, 1280],
