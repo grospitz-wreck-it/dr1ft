@@ -42,7 +42,7 @@ export function PostCard({ item, userId, classInstanceId, initiallyLiked, onView
   const [selectedRecipients, setSelectedRecipients] = useState<string[]>([]);
   const [feedback, setFeedback] = useState<string | null>(null);
   const [discoveryFeedback, setDiscoveryFeedback] = useState<{ title: string; message: string; competency?: string; evidenceId: string; action: string } | null>(null);
-  const [comparison, setComparison] = useState<{ related: FeedItem | null; loading: boolean; selected?: "contradict" | "support"; error?: string } | null>(null);
+  const [comparison, setComparison] = useState<{ related: FeedItem | null; loading: boolean; selected?: "contradict" | "support"; assessmentOutcome?: "success" | "not_yet"; error?: string } | null>(null);
   const [taskResponse, setTaskResponse] = useState("");
   const [taskResponseSaved, setTaskResponseSaved] = useState(false);
   const [taskResponseSaving, setTaskResponseSaving] = useState(false);
@@ -273,20 +273,23 @@ export function PostCard({ item, userId, classInstanceId, initiallyLiked, onView
     await track("compare_information", { ui: "comparison_experience", phase: "decision", result, comparedContentItemId: comparison?.related?.id ?? null });
 
     if (!comparison?.related?.id) return;
-    const { error } = await supabase.rpc("record_comparison_assessment", {
+    const { data, error } = await supabase.rpc("record_comparison_assessment", {
       p_class_instance_id: classInstanceId,
       p_content_item_id: item.id,
       p_compared_content_item_id: comparison.related.id,
       p_selected: result,
     });
     if (error) {
+      setComparison((current) => current ? { ...current, assessmentOutcome: undefined } : current);
       showFeedback("Deine Entscheidung wurde angezeigt, konnte aber nicht als Lernnachweis gespeichert werden.");
+      return;
     }
+    const outcome = Array.isArray(data) ? data[0]?.outcome : undefined;
+    setComparison((current) => current ? {
+      ...current,
+      assessmentOutcome: outcome === "success" || outcome === "not_yet" ? outcome : undefined,
+    } : current);
   }
-  const relatedRelation = ((comparison?.related?.extra as Record<string, unknown> | undefined)?.relation ?? {}) as Record<string, unknown>;
-  const relationType = String(relatedRelation.type ?? "");
-  const expectedComparison = ["contradicts"].includes(relationType) ? "contradict" : ["supports", "corroborates"].includes(relationType) ? "support" : null;
-  const comparisonIsCorrect = Boolean(comparison?.selected && expectedComparison && comparison.selected === expectedComparison);
 
   async function share() {
     setMenuOpen(false);
@@ -453,7 +456,7 @@ export function PostCard({ item, userId, classInstanceId, initiallyLiked, onView
             <div className="rounded-xl border border-ink/10 bg-ink/[0.025] p-4"><p className="font-mono text-[10px] uppercase tracking-wider text-ink/40 mb-3">Aussage 2</p><AuthorRow creator={comparison.related.creator}/><p className="text-sm leading-relaxed">{comparison.related.body}</p></div>
           </div>
           <div className="mt-5 border-t border-ink/10 pt-5"><p className="text-sm font-medium mb-3">Wie verhalten sich die beiden Aussagen zueinander?</p><div className="grid grid-cols-1 sm:grid-cols-2 gap-3"><button onClick={() => chooseComparison("contradict")} className={`rounded-xl border px-4 py-3 text-left text-sm transition ${comparison.selected === "contradict" ? "border-ink bg-ink text-paper" : "border-ink/15 hover:bg-ink/5"}`}>Sie widersprechen sich.</button><button onClick={() => chooseComparison("support")} className={`rounded-xl border px-4 py-3 text-left text-sm transition ${comparison.selected === "support" ? "border-ink bg-ink text-paper" : "border-ink/15 hover:bg-ink/5"}`}>Sie stützen dieselbe Aussage.</button></div>
-            {comparison.selected && <div className="mt-4 rounded-xl bg-ink/5 px-4 py-3 text-sm leading-relaxed" role="status">{expectedComparison ? (comparisonIsCorrect ? (checkFeedback("compare_information") || "Richtig eingeordnet. Deine Entscheidung passt zur redaktionell hinterlegten Beziehung zwischen den Aussagen.") : "Das passt nicht zur redaktionell hinterlegten Beziehung. Vergleiche die Aussagen noch einmal und achte darauf, ob sie sich widersprechen oder gegenseitig stützen.") : "Für diese beiden Aussagen ist noch keine geprüfte Vergleichsbeziehung hinterlegt. Eine richtige oder falsche Einordnung kann deshalb nicht bewertet werden."}</div>}
+            {comparison.selected && <div className="mt-4 rounded-xl bg-ink/5 px-4 py-3 text-sm leading-relaxed" role="status">{comparison.assessmentOutcome === "success" ? (checkFeedback("compare_information") || "Richtig eingeordnet. Deine Entscheidung wurde geprüft.") : comparison.assessmentOutcome === "not_yet" ? "Noch nicht richtig eingeordnet. Vergleiche die Aussagen noch einmal und prüfe, ob sie sich widersprechen oder gegenseitig stützen." : "Deine Entscheidung wurde ausgewählt. Die Bewertung wird geprüft."}</div>}
           </div>
         </div>}
       </div>
