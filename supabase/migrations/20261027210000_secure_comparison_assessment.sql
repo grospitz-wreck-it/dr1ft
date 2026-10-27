@@ -59,6 +59,12 @@ begin
     and related.scenario_id = ci.scenario_id
     and exists (
       select 1
+      from public.class_instance_scenario_assignments cisa
+      where cisa.class_instance_id = p_class_instance_id
+        and cisa.scenario_id = ci.scenario_id
+    )
+    and exists (
+      select 1
       from jsonb_array_elements(
         case
           when jsonb_typeof(ci.extra #> '{learningTask,interactions}') = 'array'
