@@ -5,6 +5,7 @@ import { createContentItem, generateScenarioContent, optimizeScenarioBasics, tog
 import { ContentStatusControl } from "./ContentStatusControl";
 import { AiGenerationButton } from "../../components/AiGenerationButton";
 import { LearningDesignStudio } from "./LearningDesignStudio";
+import { ScenarioWorkflowProgress } from "./ScenarioWorkflowProgress";
 import { LearningStepEditor } from "./LearningStepEditor";
 import { ContentComposer } from "./ContentComposer";
 import { ContentAttachmentEditor } from "./ContentAttachmentEditor";
@@ -116,7 +117,7 @@ export default async function ScenarioDetailPage({ params, searchParams = {} }: 
           <ArrowLeft className="w-3.5 h-3.5" /> Zurück zu Szenarien
         </a>
 
-        <header className="bg-white border border-slate-200 rounded-2xl p-6 shadow-sm">
+        <header id="workflow-basics" className="scroll-mt-6 bg-white border border-slate-200 rounded-2xl p-6 shadow-sm">
           <div className="flex flex-col xl:flex-row xl:justify-between gap-5">
             <div>
               <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-accent">
@@ -175,6 +176,14 @@ export default async function ScenarioDetailPage({ params, searchParams = {} }: 
           </div>
         </header>
 
+        <ScenarioWorkflowProgress
+          hasLearningDesign={Boolean(latestLearningDesign)}
+          learningStepCount={learningSteps?.length ?? 0}
+          postCount={(contentItems ?? []).filter((item) => item.type === "post").length}
+          missionCount={missions?.length ?? 0}
+          isActive={Boolean(scenario.is_active)}
+        />
+
         {(searchParams.ai || searchParams.aiError) && (
           <section className={`rounded-2xl border px-5 py-4 ${searchParams.aiError ? "border-red-200 bg-red-50" : "border-accent/20 bg-accent/5"}`}>
             <div className={`text-xs font-semibold uppercase tracking-wider ${searchParams.aiError ? "text-red-700" : "text-accent"}`}>
@@ -186,7 +195,8 @@ export default async function ScenarioDetailPage({ params, searchParams = {} }: 
           </section>
         )}
 
-        <LearningDesignStudio scenarioId={scenarioId} latestDesign={latestLearningDesign} />
+        <div id="workflow-plan" className="scroll-mt-6 space-y-5">
+          <LearningDesignStudio scenarioId={scenarioId} latestDesign={latestLearningDesign} />
 
         {latestLearningDesign && (
           <LearningStepEditor
@@ -207,6 +217,7 @@ export default async function ScenarioDetailPage({ params, searchParams = {} }: 
             contentItems={contentItems ?? []}
           />
         )}
+        </div>
 
         <section className="grid md:grid-cols-4 gap-3">
           <SummaryCard icon={<Route className="w-4 h-4" />} label="Lernschritte" value={learningSteps?.length ? `${learningSteps.length} Schritte` : "Noch leer"} />
@@ -215,7 +226,7 @@ export default async function ScenarioDetailPage({ params, searchParams = {} }: 
           <SummaryCard icon={<Users className="w-4 h-4" />} label="Status" value={scenario.is_active ? "Aktiv" : "Entwurf"} />
         </section>
 
-                <section className="bg-white border border-slate-200 rounded-2xl p-6 shadow-sm">
+                <section id="workflow-posts" className="scroll-mt-6 bg-white border border-slate-200 rounded-2xl p-6 shadow-sm">
           <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3">
             <SectionHeader icon={<FileText className="w-4 h-4" />} title="Inhalte" subtitle="Posts, Kommentare, DMs und Reflexionen für diese Altersvariante." />
             <ContentComposer scenarioId={scenarioId} />
@@ -353,6 +364,43 @@ export default async function ScenarioDetailPage({ params, searchParams = {} }: 
             <button type="submit" className="bg-accent hover:bg-accent-hover text-white text-sm px-4 py-2 rounded-xl">Als Entwurf anlegen</button>
           </form>
         </details>
+
+        <section id="workflow-review" className="scroll-mt-6 rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+          <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+            <div>
+              <div className="text-[11px] font-bold uppercase tracking-[0.14em] text-accent">Letzter Schritt</div>
+              <h2 className="mt-1 text-lg font-semibold text-slate-900">Prüfen und freigeben</h2>
+              <p className="mt-1 max-w-2xl text-sm text-slate-500">Kontrolliere, ob Lernplan, Missionen und Posts vorhanden sind. Die Aktivierung bleibt eine bewusste redaktionelle Entscheidung.</p>
+            </div>
+            <form>
+              <button
+                formAction={async () => {
+                  "use server";
+                  await toggleScenarioActive(scenarioId, !scenario.is_active);
+                }}
+                className={`rounded-xl px-4 py-2.5 text-sm font-semibold ${scenario.is_active ? "border border-emerald-200 bg-emerald-50 text-emerald-800" : "bg-accent text-white hover:bg-accent-hover"}`}
+              >
+                {scenario.is_active ? "Szenario deaktivieren" : "Szenario aktivieren"}
+              </button>
+            </form>
+          </div>
+          <div className="mt-4 grid gap-2 sm:grid-cols-2 lg:grid-cols-4">
+            {[
+              { label: "Thema angelegt", ok: true },
+              { label: "Lernplan vorhanden", ok: Boolean(latestLearningDesign && (learningSteps?.length ?? 0) > 0) },
+              { label: "Mindestens ein Post", ok: (contentItems ?? []).some((item) => item.type === "post") },
+              { label: "Mindestens eine Mission", ok: (missions ?? []).length > 0 },
+            ].map((check) => (
+              <div key={check.label} className={`flex items-center gap-2 rounded-xl border px-3 py-2.5 text-xs ${check.ok ? "border-emerald-200 bg-emerald-50 text-emerald-800" : "border-amber-200 bg-amber-50 text-amber-800"}`}>
+                <span className="font-bold">{check.ok ? "✓" : "!"}</span>
+                <span>{check.label}</span>
+              </div>
+            ))}
+          </div>
+          {!scenario.is_active && (
+            <p className="mt-3 text-xs text-slate-500">Das Szenario bleibt ein Entwurf, bis du es aktivierst. Fehlende Punkte lassen sich über die Schritte oben ergänzen.</p>
+          )}
+        </section>
       </div>
     </div>
   );
