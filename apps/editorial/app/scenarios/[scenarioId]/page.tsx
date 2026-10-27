@@ -10,6 +10,7 @@ import { LearningStepEditor } from "./LearningStepEditor";
 import { ContentComposer } from "./ContentComposer";
 import { PostEditForm } from "./PostEditForm";
 import { ContentAttachmentEditor } from "./ContentAttachmentEditor";
+import { ContentLearningTaskEditor } from "./ContentLearningTaskEditor";
 import { regenerateLearningImage, rejectLearningImage } from "../learning-content-actions";
 
 interface Props {
@@ -309,6 +310,7 @@ export default async function ScenarioDetailPage({ params, searchParams = {} }: 
                                       )}
             
                                       <ContentAttachmentEditor scenarioId={scenarioId} contentItemId={item.id} />
+                                      <ContentLearningTaskEditor scenarioId={scenarioId} contentItemId={item.id} initialTask={item.extra?.learningTask ?? null} />
                                       <div className="mt-2"><ContentStatusControl contentItemId={item.id} status={item.status} /></div>
                                     </div>
                                   </li>
