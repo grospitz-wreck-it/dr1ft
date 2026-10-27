@@ -105,10 +105,7 @@ export function ContentLearningTaskEditor({ scenarioId, contentItemId, initialTa
       <div>
         <div className="mb-2 flex items-center justify-between gap-3"><div><h3 className="text-sm font-bold text-slate-900">Was kann der Lernende damit machen?</h3><p className="mt-0.5 text-xs text-slate-500">Standardaktionen sind vorausgewählt. Klicke auf eine Aktion, um sie an- oder abzuwählen.</p></div><span className="shrink-0 rounded-full bg-violet-100 px-2.5 py-1 text-[11px] font-bold text-violet-700">{task.interactions.length} aktiv</span></div>
         <div className="flex flex-wrap gap-2">
-          {DEFAULT_INTERACTIONS.map(item => {
-            const active = selectedIds.has(item.id);
-            return <button key={item.id} type="button" aria-pressed={active} onClick={() => toggleInteraction(item)} className={"inline-flex items-center gap-2 rounded-full border px-3.5 py-2 text-sm font-semibold transition " + (active ? "border-violet-500 bg-violet-600 text-white shadow-sm" : "border-slate-200 bg-white text-slate-600 hover:border-violet-300")}>{active && <Check className="h-3.5 w-3.5" />}{item.label}</button>;
-          })}
+          {DEFAULT_INTERACTIONS.map(item => <span key={item.id} className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-slate-100 px-3.5 py-2 text-sm font-semibold text-slate-600"><Check className="h-3.5 w-3.5" />{item.label}<span className="text-[10px] font-bold uppercase tracking-wide text-slate-400">Standard</span></span>)}
           {task.interactions.filter(item => !DEFAULT_INTERACTIONS.some(def => def.id === item.id)).map(item => <span key={item.id} className="inline-flex items-center gap-1 rounded-full border border-violet-300 bg-violet-50 pl-3 pr-1.5 py-1.5 text-sm font-semibold text-violet-800">{item.label}<button type="button" onClick={() => toggleInteraction(item)} aria-label={item.label + " entfernen"} className="grid h-6 w-6 place-items-center rounded-full hover:bg-violet-100"><X className="h-3.5 w-3.5" /></button></span>)}
           <button type="button" onClick={() => setShowPicker(value => !value)} className="inline-flex items-center gap-1.5 rounded-full border border-dashed border-violet-400 bg-white px-3.5 py-2 text-sm font-bold text-violet-700 hover:bg-violet-50"><Plus className="h-4 w-4" /> Interaktion</button>
         </div>
