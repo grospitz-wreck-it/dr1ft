@@ -338,7 +338,7 @@ export function PostCard({ item, userId, classInstanceId, initiallyLiked, onView
               <p className="text-[10px] font-bold uppercase tracking-[0.14em] text-emerald-700">Neue Erkenntnis entdeckt</p>
               <h3 className="mt-1 text-sm font-bold text-slate-900">{discoveryFeedback.title}</h3>
               <p className="mt-1 text-sm leading-relaxed text-slate-700">{discoveryFeedback.message}</p>
-              <p className="mt-2 text-[11px] text-slate-500">Diese Erkenntnis zählt bereits für deinen Lernfortschritt. Die gesamte Aufgabe kann weitere Schritte enthalten.</p>
+              <p className="mt-2 text-[11px] text-slate-500">Das ist ein Hinweis zur Einordnung. Ob die Lernanforderung erfüllt ist, wird separat bewertet.</p>
             </div>
             <button type="button" onClick={() => setDiscoveryFeedback(null)} aria-label="Erkenntnis schließen" className="rounded-lg p-1 text-emerald-800 hover:bg-emerald-100"><X className="h-4 w-4" /></button>
           </div>
