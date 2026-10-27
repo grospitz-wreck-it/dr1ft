@@ -124,11 +124,9 @@ export function PostCard({ item, userId, classInstanceId, initiallyLiked, onView
       : "";
     const discovery = configured && discoveryMessage
       ? {
-          title: String((configured as any).discoveryTitle ?? (configured as any).title ?? "Neue Erkenntnis"),
+          title: "Gut entdeckt!",
           message: discoveryMessage,
-          competency: typeof ((configured as any).discoveryCompetency ?? (configured as any).competency) === "string"
-            ? String((configured as any).discoveryCompetency ?? (configured as any).competency)
-            : undefined,
+          
           evidenceId: String((configured as any).evidenceId ?? (configured as any).id ?? `${item.id}:${interactionType}`),
           action: interactionType,
         }
@@ -341,7 +339,6 @@ export function PostCard({ item, userId, classInstanceId, initiallyLiked, onView
               <p className="text-[10px] font-bold uppercase tracking-[0.14em] text-emerald-700">Neue Erkenntnis entdeckt</p>
               <h3 className="mt-1 text-sm font-bold text-slate-900">{discoveryFeedback.title}</h3>
               <p className="mt-1 text-sm leading-relaxed text-slate-700">{discoveryFeedback.message}</p>
-              {discoveryFeedback.competency && <p className="mt-2 text-xs font-semibold text-emerald-800">Lernbereich: {discoveryFeedback.competency}</p>}
               <p className="mt-2 text-[11px] text-slate-500">Diese Erkenntnis zählt bereits für deinen Lernfortschritt. Die gesamte Aufgabe kann weitere Schritte enthalten.</p>
             </div>
             <button type="button" onClick={() => setDiscoveryFeedback(null)} aria-label="Erkenntnis schließen" className="rounded-lg p-1 text-emerald-800 hover:bg-emerald-100"><X className="h-4 w-4" /></button>
