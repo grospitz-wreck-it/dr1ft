@@ -8,3 +8,10 @@ supabase/.temp/
 .env.local
 .env.*.local
 !.env.example
+
+.vercel
+.env*
+
+# Generated TypeScript / Next.js files
+*.tsbuildinfo
+next-env.d.ts

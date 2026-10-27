@@ -223,7 +223,7 @@ export default function MessagesWorkspace({
           </div> : selectedGroup ? <div className="relative flex flex-1 flex-col items-center justify-center px-6 py-12 text-center"><div className="drift-orb drift-orb-top" /><ChatDoodle group={true} /><h2 className="relative text-2xl font-bold">Gruppenchat öffnen</h2><p className="relative mt-3 max-w-sm text-sm leading-6 text-white/55">Setze das Gespräch mit deiner Klasse fort.</p><a href={`/group-chat/${selectedGroup.id}`} className="drift-gradient-button relative mt-7 inline-flex items-center gap-2 rounded-2xl px-5 py-3.5 text-sm font-semibold"><Users className="h-4 w-4" /> Gruppenchat öffnen</a></div> : <div className="relative flex flex-1 flex-col items-center justify-center overflow-hidden px-6 py-14 text-center">
             <div className="drift-orb drift-orb-top" /><div className="drift-orb drift-orb-bottom" />
             <ChatDoodle large />
-            
+
             <button onClick={() => { setShowContacts(true); document.getElementById("contact-search")?.focus(); }} className="relative mt-7 inline-flex items-center gap-2 rounded-2xl border px-5 py-3.5 text-sm font-semibold drift-secondary-button"><UserRoundPlus className="h-4 w-4" /> Kontakt auswählen</button>
           </div>}
           <footer className="border-t px-5 py-3 text-center text-[10px] drift-muted">DR1FT · Gespräche deiner Klasse</footer>
