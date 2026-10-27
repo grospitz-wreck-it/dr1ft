@@ -271,6 +271,17 @@ export function PostCard({ item, userId, classInstanceId, initiallyLiked, onView
   async function chooseComparison(result: "contradict" | "support") {
     setComparison((current) => current ? { ...current, selected: result } : current);
     await track("compare_information", { ui: "comparison_experience", phase: "decision", result, comparedContentItemId: comparison?.related?.id ?? null });
+
+    if (!comparison?.related?.id) return;
+    const { error } = await supabase.rpc("record_comparison_assessment", {
+      p_class_instance_id: classInstanceId,
+      p_content_item_id: item.id,
+      p_compared_content_item_id: comparison.related.id,
+      p_selected: result,
+    });
+    if (error) {
+      showFeedback("Deine Entscheidung wurde angezeigt, konnte aber nicht als Lernnachweis gespeichert werden.");
+    }
   }
   const relatedRelation = ((comparison?.related?.extra as Record<string, unknown> | undefined)?.relation ?? {}) as Record<string, unknown>;
   const relationType = String(relatedRelation.type ?? "");
