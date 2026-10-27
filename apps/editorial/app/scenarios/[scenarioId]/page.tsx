@@ -221,7 +221,7 @@ export default async function ScenarioDetailPage({ params, searchParams = {} }: 
 
                 <section id="workflow-posts" className="scroll-mt-6 bg-white border border-slate-200 rounded-2xl p-6 shadow-sm">
           <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3">
-            <SectionHeader icon={<FileText className="w-4 h-4" />} title="Inhalte" subtitle="Posts, Kommentare, DMs und Reflexionen für diese Altersvariante." />
+            <SectionHeader icon={<FileText className="w-4 h-4" />} title="Posts im Feed" subtitle="Erstelle zuerst die Posts, an denen die Schüler das Lernziel anwenden. Weitere Formate bleiben optional." />
             <ContentComposer scenarioId={scenarioId} />
           </div>
 
@@ -316,7 +316,7 @@ export default async function ScenarioDetailPage({ params, searchParams = {} }: 
         </section>
 
         <details className="bg-white border border-slate-200 rounded-2xl shadow-sm">
-          <summary className="cursor-pointer px-6 py-4 text-sm font-semibold text-slate-700">Inhalt manuell hinzufügen</summary>
+          <summary className="cursor-pointer px-6 py-4 text-sm font-semibold text-slate-700">Erweiterte manuelle Anlage (optional)</summary>
           <form action={createContentItem.bind(null, scenarioId)} encType="multipart/form-data" className="px-6 pb-6 pt-2 space-y-3">
             <select name="type" className="border border-slate-200 rounded-xl px-3 py-2 w-full text-sm">
               <option value="post">Post</option>
