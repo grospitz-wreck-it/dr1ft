@@ -1,6 +1,6 @@
 "use client";
 
-import { Children, Fragment, isValidElement, useState, type ReactNode } from "react";
+import { Children, useState, type ReactNode } from "react";
 import { ArrowLeft, ArrowRight, Check } from "lucide-react";
 
 type Step = {
@@ -17,14 +17,14 @@ export function ScenarioWizard({
   children: ReactNode;
 }) {
   const [current, setCurrent] = useState(0);
-  const panels = Children.toArray(children).flatMap((child) => isValidElement(child) && child.type === Fragment ? Children.toArray(child.props.children) : [child]);
+  const panels = Children.toArray(children);
   const active = steps[current];
   const completed = steps.filter((step) => step.complete).length;
   const progress = Math.round(((current + 1) / steps.length) * 100);
 
   return (
     <div className="mx-auto w-full max-w-5xl space-y-5">
-      <section className="sticky top-2 z-30 rounded-2xl border border-slate-200 bg-white/95 p-4 shadow-lg shadow-slate-900/5 backdrop-blur-md sm:p-5">
+      <section className="sticky top-[88px] z-30 rounded-2xl border border-slate-200 bg-white/95 p-4 shadow-lg shadow-slate-900/5 backdrop-blur-md sm:p-5">
         <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
           <div>
             <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-accent">DR1FT · Szenario-Studio</p>
