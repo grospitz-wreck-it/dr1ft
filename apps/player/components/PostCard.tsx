@@ -56,10 +56,6 @@ export function PostCard({ item, userId, classInstanceId, initiallyLiked, onView
   const action = (extra.action ?? {}) as Record<string, unknown>;
   const mediaContext = (extra.media_context ?? {}) as Record<string, unknown>;
   const interactionChecks = (extra.interaction_checks ?? {}) as Record<string, { enabled?: boolean; feedback?: string }>;
-  const configuredLearningInteractions = Array.isArray(learningTask.interactions) && learningTask.interactions.length > 0
-    ? new Set(learningTask.interactions.map((interaction) => interaction.id))
-    : new Set<string>();
-  const showCheck = (_key: string) => true;
   const checkFeedback = (key: string) => typeof interactionChecks[key]?.feedback === "string" ? interactionChecks[key].feedback!.trim() : "";
 
   useEffect(() => {
