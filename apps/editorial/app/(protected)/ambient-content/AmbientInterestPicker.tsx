@@ -3,8 +3,15 @@
 import { useMemo, useState } from "react";
 import { X } from "lucide-react";
 
+type InterestOption = {
+  key: string;
+  label: string;
+  emoji: string | null;
+  category: string;
+};
+
 type Props = {
-  options: string[];
+  options: InterestOption[];
   initialValue?: string;
   placeholder?: string;
 };
@@ -12,93 +19,81 @@ type Props = {
 export function AmbientInterestPicker({
   options,
   initialValue = "",
-  placeholder = "z.B. Gaming, Musik, Sport",
+  placeholder = "Interesse suchen …",
 }: Props) {
-  const initial = useMemo(
+  const [selected, setSelected] = useState<string[]>(
     () => initialValue.split(",").map((value) => value.trim()).filter(Boolean).slice(0, 3),
-    [initialValue],
   );
-  const [selected, setSelected] = useState<string[]>(initial);
-  const [draft, setDraft] = useState("");
+  const [query, setQuery] = useState("");
 
-  function add(value: string) {
-    const clean = value.trim();
-    if (!clean || selected.length >= 3 || selected.includes(clean)) return;
-    setSelected((current) => [...current, clean]);
-    setDraft("");
+  const optionByKey = useMemo(
+    () => new Map(options.map((option) => [option.key, option])),
+    [options],
+  );
+  const filtered = useMemo(() => {
+    const normalized = query.trim().toLocaleLowerCase("de");
+    return options
+      .filter((option) => !selected.includes(option.key))
+      .filter((option) => !normalized || `${option.label} ${option.category} ${option.key}`.toLocaleLowerCase("de").includes(normalized))
+      .slice(0, 12);
+  }, [options, query, selected]);
+
+  function add(key: string) {
+    if (!optionByKey.has(key) || selected.length >= 3 || selected.includes(key)) return;
+    setSelected((current) => [...current, key]);
+    setQuery("");
   }
 
-  function remove(value: string) {
-    setSelected((current) => current.filter((item) => item !== value));
-  }
-
-  function onKeyDown(event: React.KeyboardEvent<HTMLInputElement>) {
-    if (event.key === "Enter" || event.key === ",") {
-      event.preventDefault();
-      add(draft);
-    }
-    if (event.key === "Backspace" && !draft && selected.length) {
-      remove(selected[selected.length - 1]);
-    }
+  function remove(key: string) {
+    setSelected((current) => current.filter((item) => item !== key));
   }
 
   return (
     <div>
-      <input type="hidden" name="interests" value={selected.join(", ")} />
-      <div className="min-h-[46px] w-full rounded-xl border border-slate-200 bg-white px-3 py-2 flex flex-wrap items-center gap-1.5 focus-within:border-accent">
-        {selected.map((interest) => (
-          <span
-            key={interest}
-            className="inline-flex items-center gap-1 rounded-full bg-violet-50 text-violet-700 border border-violet-100 px-2.5 py-1 text-xs font-medium"
-          >
-            {interest}
-            <button
-              type="button"
-              onClick={() => remove(interest)}
-              aria-label={`${interest} entfernen`}
-              className="rounded-full hover:bg-violet-100 p-0.5"
-            >
-              <X className="w-3 h-3" />
-            </button>
-          </span>
-        ))}
-        {selected.length < 3 && (
-          <input
-            value={draft}
-            onChange={(event) => setDraft(event.target.value)}
-            onKeyDown={onKeyDown}
-            onBlur={() => {
-              if (draft.trim()) add(draft);
-            }}
-            placeholder={selected.length ? "weiteres Interesse …" : placeholder}
-            className="min-w-[180px] flex-1 border-0 outline-none bg-transparent text-sm py-1"
-          />
-        )}
-        {selected.length >= 3 && (
-          <span className="text-[11px] text-slate-400 ml-1">max. 3 ausgewählt</span>
-        )}
-      </div>
-
-      <div className="flex flex-wrap gap-1.5 mt-2">
-        {options.map((interest) => {
-          const active = selected.includes(interest);
+      <input type="hidden" name="interests" value={selected.join(",")} />
+      <div className="flex flex-wrap gap-1.5 mb-2">
+        {selected.map((key) => {
+          const interest = optionByKey.get(key);
+          if (!interest) return null;
           return (
-            <button
-              key={interest}
-              type="button"
-              onClick={() => (active ? remove(interest) : add(interest))}
-              disabled={!active && selected.length >= 3}
-              className={`text-[11px] rounded-full border px-2.5 py-1.5 transition ${
-                active
-                  ? "bg-violet-100 border-violet-200 text-violet-800"
-                  : "bg-slate-100 border-slate-100 text-slate-600 hover:bg-slate-200"
-              } disabled:opacity-40 disabled:cursor-not-allowed`}
-            >
-              {interest}
-            </button>
+            <span key={key} className="inline-flex items-center gap-1 rounded-full bg-violet-50 text-violet-700 border border-violet-100 px-2.5 py-1 text-xs font-medium">
+              <span>{interest.emoji} {interest.label}</span>
+              <button type="button" onClick={() => remove(key)} aria-label={`${interest.label} entfernen`} className="rounded-full hover:bg-violet-100 p-0.5">
+                <X className="w-3 h-3" />
+              </button>
+            </span>
           );
         })}
+        <span className="text-[11px] text-slate-400 self-center">{selected.length}/3 ausgewählt</span>
       </div>
+      {selected.length < 3 && (
+        <>
+          <input
+            value={query}
+            onChange={(event) => setQuery(event.target.value)}
+            placeholder={placeholder}
+            aria-label="Interessen im gemeinsamen DR1FT-Katalog suchen"
+            className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm outline-none focus:border-accent"
+          />
+          {filtered.length > 0 && (
+            <div className="flex flex-wrap gap-1.5 mt-2">
+              {filtered.map((interest) => (
+                <button
+                  key={interest.key}
+                  type="button"
+                  onClick={() => add(interest.key)}
+                  className="text-[11px] rounded-full border border-slate-100 bg-slate-100 px-2.5 py-1.5 text-slate-600 transition hover:bg-violet-50 hover:border-violet-100 hover:text-violet-700"
+                >
+                  {interest.emoji} {interest.label}
+                </button>
+              ))}
+            </div>
+          )}
+          {query && filtered.length === 0 && (
+            <p className="mt-2 text-xs text-slate-500">Kein passendes Interesse im gemeinsamen Katalog. Neue Interessen müssen dort ergänzt werden.</p>
+          )}
+        </>
+      )}
     </div>
   );
 }
