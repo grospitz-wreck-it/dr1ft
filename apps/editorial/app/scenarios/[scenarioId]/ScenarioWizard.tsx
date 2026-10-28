@@ -1,6 +1,6 @@
 "use client";
 
-import { Children, useState, type ReactNode } from "react";
+import { useState, type ReactNode } from "react";
 import { ArrowLeft, ArrowRight, Check } from "lucide-react";
 
 type Step = {
@@ -17,7 +17,6 @@ export function ScenarioWizard({
   children: ReactNode;
 }) {
   const [current, setCurrent] = useState(0);
-  const panels = Children.toArray(children);
   const active = steps[current];
   const completed = steps.filter((step) => step.complete).length;
   const progress = Math.round((completed / Math.max(steps.length, 1)) * 100);
@@ -48,7 +47,12 @@ export function ScenarioWizard({
               <button
                 key={step.title}
                 type="button"
-                onClick={() => setCurrent(index)}
+                onClick={() => {
+                  setCurrent(index);
+                  const targetIds = ["workflow-basics", "workflow-posts", "workflow-plan", "workflow-review"];
+                  const target = document.getElementById(targetIds[index]);
+                  if (target) target.scrollIntoView({ behavior: "smooth", block: "start" });
+                }}
                 aria-current={selected ? "step" : undefined}
                 className={"group min-w-0 rounded-2xl border p-2.5 text-left transition hover:-translate-y-0.5 hover:shadow-md sm:flex sm:items-center sm:gap-2.5 sm:p-3 " +
                   (selected
@@ -72,16 +76,20 @@ export function ScenarioWizard({
       </section>
 
       <div className="min-h-[320px] w-full">
-        <div key={current} className="animate-in fade-in slide-in-from-right-2 duration-200">
-          {panels.length === steps.length ? panels[current] : children}
-        </div>
+        {children}
       </div>
 
       <footer className="flex items-center justify-between gap-3 rounded-2xl border border-violet-200 bg-gradient-to-r from-white via-violet-50/70 to-cyan-50/60 p-3 shadow-md shadow-violet-900/5 sm:p-4">
         <button
           type="button"
           disabled={current === 0}
-          onClick={() => { setCurrent((value) => Math.max(0, value - 1)); window.scrollTo({ top: 0, behavior: "smooth" }); }}
+          onClick={() => {
+            const next = Math.max(0, current - 1);
+            setCurrent(next);
+            const targetIds = ["workflow-basics", "workflow-posts", "workflow-plan", "workflow-review"];
+            const target = document.getElementById(targetIds[next]);
+            if (target) target.scrollIntoView({ behavior: "smooth", block: "start" });
+          }}
           className="inline-flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-xs font-semibold text-slate-700 transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-35 sm:px-4"
         >
           <ArrowLeft className="h-4 w-4" /> <span>Zurück</span>
@@ -93,7 +101,13 @@ export function ScenarioWizard({
         {current < steps.length - 1 ? (
           <button
             type="button"
-            onClick={() => { setCurrent((value) => Math.min(steps.length - 1, value + 1)); window.scrollTo({ top: 0, behavior: "smooth" }); }}
+            onClick={() => {
+              const next = Math.min(steps.length - 1, current + 1);
+              setCurrent(next);
+              const targetIds = ["workflow-basics", "workflow-posts", "workflow-plan", "workflow-review"];
+              const target = document.getElementById(targetIds[next]);
+              if (target) target.scrollIntoView({ behavior: "smooth", block: "start" });
+            }}
             className="inline-flex items-center gap-2 rounded-xl bg-accent px-3 py-2.5 text-xs font-semibold text-white shadow-sm transition hover:brightness-95 sm:px-4"
           >
             <span>Weiter</span> <ArrowRight className="h-4 w-4" />
