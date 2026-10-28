@@ -140,6 +140,7 @@ export async function updateExistingContentMedia(scenarioId: string, contentItem
 
   const format = String(input.format || "photo");
   const url = String(input.url || "").trim();
+  const creatorId = String(input.creatorId || "").trim() || null;
   const prompt = String(input.prompt || "").trim();
   const extra = { ...((item.extra || {}) as Record<string, unknown>) };
 
@@ -210,7 +211,7 @@ export async function updateExistingContentMedia(scenarioId: string, contentItem
   return { ok: true };
 }
 
-export async function createLearningContentItem(scenarioId: string, input: { format?: string; prompt?: string; url?: string; ai?: boolean }) {
+export async function createLearningContentItem(scenarioId: string, input: { format?: string; prompt?: string; url?: string; ai?: boolean; creatorId?: string | null }) {
   const supabase = supabaseServerClient();
   const format = String(input.format || "post");
   const userPrompt = String(input.prompt || "").trim();
@@ -274,7 +275,7 @@ export async function createLearningContentItem(scenarioId: string, input: { for
 
   const type = format === "comment" ? "comment" : format === "dm_message" ? "dm_message" : format === "reflection_prompt" ? "reflection_prompt" : "post";
   const { data: contentItem, error } = await supabase.from("content_items").insert({
-    scenario_id: scenarioId, type, body: body || labels[format] || "Entwurf", media_url: mediaUrl, media_type: mediaType,
+    scenario_id: scenarioId, creator_id: creatorId, type, body: body || labels[format] || "Entwurf", media_url: mediaUrl, media_type: mediaType,
     difficulty: 1, age_rating: scenario.age_band === "16_17" || scenario.age_band === "18_plus" ? "16_plus" : "12_plus",
     manipulation_techniques: [], target_competencies: [], status: "draft", extra,
   }).select("id").single();
@@ -285,7 +286,7 @@ export async function createLearningContentItem(scenarioId: string, input: { for
   return { ok: true, id: contentItem.id };
 }
 
-export async function generateLearningContent(scenarioId: string, learningDesignId?: string, contentFirst = false) {
+export async function generateLearningContent(scenarioId: string, learningDesignId?: string, contentFirst = false, creatorId?: string | null) {
   const supabase = supabaseServerClient();
 
   const { data: scenario } = await supabase
@@ -335,6 +336,7 @@ export async function generateLearningContent(scenarioId: string, learningDesign
       const type = piece.format === "comment" ? "comment" : piece.format === "reflection_prompt" ? "reflection_prompt" : "post";
       const { error } = await supabase.from("content_items").insert({
         scenario_id: scenarioId,
+        creator_id: creatorId || null,
         type,
         body,
         media_url: null,
