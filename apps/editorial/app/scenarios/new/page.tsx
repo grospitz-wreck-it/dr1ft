@@ -125,7 +125,7 @@ export default function NewScenarioPage({ searchParams = {} }: { searchParams?: 
                 className="w-full inline-flex items-center justify-center gap-2 rounded-xl bg-accent px-4 py-3 text-sm font-semibold text-white hover:bg-accent-hover"
               />
             </div>
-      </form
+      </form>
       </section>
       <aside className="rounded-2xl border border-slate-200 bg-slate-50 p-4 text-sm text-slate-600">
         <strong className="text-slate-800">Was passiert danach?</strong>
