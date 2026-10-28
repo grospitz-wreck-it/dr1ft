@@ -90,6 +90,23 @@ export function LearningDesignStudio({ scenarioId, latestDesign }: Props) {
   const selectedModel = MODEL_OPTIONS.find((option) => option.value === model) ?? MODEL_OPTIONS[0];
   const selectedBloom = BLOOM_OPTIONS.find((option) => option.value === bloom) ?? BLOOM_OPTIONS[3];
 
+  const previewStations = model === "kolb"
+    ? [
+        { title: "Erleben", detail: "Eine konkrete Situation oder einen Feed-Beitrag entdecken." },
+        { title: "Reflektieren & erkennen", detail: "Beobachtungen ordnen und Muster oder Zusammenhänge erkennen." },
+        { title: "Ausprobieren", detail: selectedBloom.value === "create" ? "Eine eigene Lösung oder Handlungsstrategie entwickeln." : selectedBloom.value === "evaluate" ? "Eine Entscheidung treffen und mit Hinweisen begründen." : "Das Gelernte auf einen neuen Fall übertragen." },
+      ]
+    : model === "constructive_alignment"
+      ? [
+          { title: "Lernziel sichtbar machen", detail: "Klären, woran man gutes Urteilen oder Handeln erkennen kann." },
+          { title: "Im Feed bearbeiten", detail: selectedBloom.value === "analyze" ? "Beiträge und Hinweise vergleichen, um Muster zu erkennen." : selectedBloom.value === "create" ? "Eine eigene Antwort oder Lösung entwerfen." : "Eine passende Aufgabe zum Thema bearbeiten." },
+          { title: "Lernen nachweisen", detail: selectedBloom.value === "evaluate" ? "Eine Entscheidung treffen und nachvollziehbar begründen." : selectedBloom.value === "understand" ? "Den Zusammenhang in eigenen Worten erklären." : "Die eigene Lösung oder Einschätzung mit Hinweisen belegen." },
+        ]
+      : [
+          { title: "Ziel klären", detail: "Festlegen, was Lernende am Ende verstehen oder können sollen." },
+          { title: "Hinweise entdecken", detail: selectedBloom.value === "analyze" ? "Informationen vergleichen und Zusammenhänge untersuchen." : "Einen Feed-Beitrag untersuchen und relevante Hinweise sammeln." },
+          { title: selectedBloom.value === "create" ? "Eigene Lösung entwickeln" : selectedBloom.value === "evaluate" ? "Urteil begründen" : selectedBloom.value === "apply" ? "Wissen anwenden" : "Erkenntnis festhalten", detail: selectedBloom.effect };
+
   function createDesign() {
     setMessage("");
     startTransition(async () => {
@@ -257,6 +274,29 @@ export function LearningDesignStudio({ scenarioId, latestDesign }: Props) {
             <SummaryItem label="Denk-Anforderung" value={selectedBloom.title} />
           </div>
           <p className="mt-3 text-xs leading-5 text-slate-500">Beim Erzeugen erstellt DR1FT einen neuen Lernplan-Entwurf mit Lernzielen, Lernschritten, Missionen, Content-Plan und pädagogischen Hinweisen. Die Auswahl ist eine Planungsgrundlage, keine automatische Qualitätsfreigabe.</p>
+        </div>
+
+        <div className="rounded-2xl border border-violet-200 bg-gradient-to-br from-violet-50/80 to-white p-4 sm:p-5">
+          <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
+            <div>
+              <p className="text-[11px] font-semibold uppercase tracking-wide text-violet-700">Vorschau · noch kein KI-Ergebnis</p>
+              <h3 className="mt-1 text-sm font-semibold text-slate-900">So könnte dein Lernweg aussehen</h3>
+              <p className="mt-1 max-w-2xl text-xs leading-5 text-slate-600">Ein vereinfachtes Beispiel, das sich an deinen Auswahlfeldern orientiert. Erst mit „Lernplan erstellen“ wird ein tatsächlicher Entwurf generiert.</p>
+            </div>
+            <span className="shrink-0 rounded-full border border-violet-200 bg-white px-3 py-1 text-xs font-medium text-violet-700">{stepCount} Stationen geplant</span>
+          </div>
+          <div className="mt-4 grid gap-2 md:grid-cols-3">
+            {previewStations.map((station, index) => (
+              <div key={station.title} className="relative min-w-0 rounded-xl border border-violet-100 bg-white p-3">
+                <div className="flex items-center gap-2">
+                  <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-lg bg-violet-100 text-xs font-semibold text-violet-700">{index + 1}</span>
+                  <p className="text-sm font-semibold text-slate-900">{station.title}</p>
+                </div>
+                <p className="mt-2 text-xs leading-5 text-slate-600">{station.detail}</p>
+              </div>
+            ))}
+          </div>
+          <p className="mt-3 text-[11px] leading-4 text-slate-500">Die drei Karten zeigen den didaktischen Verlauf beispielhaft – sie stehen nicht für exakt drei Beiträge. Der erzeugte Lernplan kann die {stepCount} Stationen detaillierter aufteilen und weitere Aufgaben oder Content-Elemente vorsehen.</p>
         </div>
 
         <div className="flex flex-col gap-3 border-t border-slate-100 pt-5 sm:flex-row sm:items-center sm:justify-between">
