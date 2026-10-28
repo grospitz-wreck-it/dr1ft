@@ -114,8 +114,8 @@ export function LearningStepEditor({
       <div className="flex flex-col lg:flex-row lg:items-start lg:justify-between gap-3">
         <div>
           <div className="text-[10px] font-semibold uppercase tracking-wider text-accent">Redaktion</div>
-          <h2 className="text-lg font-semibold text-slate-900 mt-1">Lernschritte</h2>
-          <p className="text-xs text-slate-500 mt-1 max-w-2xl">Prüfe den KI-Entwurf und ändere nur, was für den Unterricht wichtig ist. Pädagogische Details werden automatisch gepflegt.</p>
+          <h2 className="text-lg font-semibold text-slate-900 mt-1">Lernplan-Stationen</h2>
+          <p className="text-xs text-slate-500 mt-1 max-w-2xl">Jede Station ist ein Abschnitt des Lernwegs – zum Beispiel etwas entdecken, Hinweise prüfen oder ein Urteil begründen. Eine Station kann mehrere Feed-Beiträge und Aufgaben enthalten.</p>
         </div>
         <button type="button" disabled={busy} onClick={qa} className="inline-flex items-center justify-center gap-2 rounded-xl border border-amber-200 bg-amber-50 text-amber-800 px-3 py-2 text-xs font-semibold">
           <CircleAlert className="w-3.5 h-3.5" /> Entwurf prüfen
@@ -137,6 +137,23 @@ export function LearningStepEditor({
       )}
 
       <div className="mt-4 space-y-3">
+        {steps.length > 0 && (
+          <div className="grid gap-2 sm:grid-cols-3">
+            {[
+              ["1", "Situation", "Was erleben oder entdecken die Lernenden?"],
+              ["2", "Aktivität", "Was tun sie konkret mit dem Inhalt?"],
+              ["3", "Reflexion", "Was sollen sie daraus mitnehmen?"],
+            ].map(([number, title, description]) => (
+              <div key={number} className="flex gap-2 rounded-xl border border-violet-100 bg-violet-50/50 p-3">
+                <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-lg bg-violet-100 text-xs font-semibold text-violet-700">{number}</span>
+                <div className="min-w-0">
+                  <div className="text-xs font-semibold text-slate-800">{title}</div>
+                  <div className="mt-0.5 text-[11px] leading-4 text-slate-500">{description}</div>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
         {steps.map((step, index) => {
           const objectiveIds = new Set([
             ...(Array.isArray(step.objective_ids) ? step.objective_ids : []),
@@ -156,22 +173,26 @@ export function LearningStepEditor({
               <summary className="list-none cursor-pointer px-4 py-3 bg-slate-50 flex items-center gap-3">
                 <span className="w-7 h-7 rounded-full bg-slate-900 text-white flex items-center justify-center text-xs font-semibold shrink-0">{step.step_index}</span>
                 <div className="flex-1 min-w-0">
-                  <div className="text-sm font-semibold text-slate-900 truncate">{step.title}</div>
-                  <div className="text-[11px] text-slate-500 mt-0.5">{PHASE_LABELS[step.experiential_phase] || step.experiential_phase} · {BLOOM_LABELS[step.bloom_level] || step.bloom_level} · {step.estimated_minutes} Min.</div>
+                  <div className="text-[10px] font-semibold uppercase tracking-wide text-violet-700">Station {step.step_index}</div>
+                  <div className="text-sm font-semibold text-slate-900">{step.title}</div>
+                  <div className="text-[11px] text-slate-500 mt-0.5">{PHASE_LABELS[step.experiential_phase] || step.experiential_phase} · {BLOOM_LABELS[step.bloom_level] || step.bloom_level} · ca. {step.estimated_minutes} Min.</div>
                 </div>
                 <ChevronDown className="w-4 h-4 text-slate-400 group-open:rotate-180 transition-transform" />
               </summary>
 
               <form action={updateLearningStep.bind(null, step.id, scenarioId)} className="p-4 space-y-4">
-                <div className="grid lg:grid-cols-2 gap-3">
-                  <label className="text-xs font-medium text-slate-600 lg:col-span-2">
-                    Was passiert hier?
-                    <textarea name="description" defaultValue={step.description || ""} rows={3} className="mt-1 w-full rounded-xl border border-slate-200 px-3 py-2 text-sm text-slate-900" />
-                  </label>
-                  <label className="text-xs font-medium text-slate-600 lg:col-span-2">
-                    Titel
+                <div className="grid gap-4">
+                  <label className="text-xs font-medium text-slate-600">
+                    Stationstitel
                     <input name="title" defaultValue={step.title} className="mt-1 w-full rounded-xl border border-slate-200 px-3 py-2 text-sm text-slate-900" />
+                    <span className="mt-1 block text-[11px] font-normal leading-4 text-slate-400">Kurz und konkret: Was ist der Abschnitt dieses Lernwegs?</span>
                   </label>
+                  <label className="text-xs font-medium text-slate-600">
+                    Was erleben oder tun die Lernenden?
+                    <textarea name="description" defaultValue={step.description || ""} rows={3} placeholder="Beschreibe die Situation aus Sicht der Lernenden – was sehen, lesen oder erleben sie?" className="mt-1 w-full rounded-xl border border-slate-200 px-3 py-2 text-sm text-slate-900" />
+                    <span className="mt-1 block text-[11px] font-normal leading-4 text-slate-400">Beschreibe die Situation. Die konkrete Aufgabe und die Reflexion werden separat festgelegt.</span>
+                  </label>
+                  <div className="grid gap-3 sm:grid-cols-2">
                   <label className="text-xs font-medium text-slate-600">
                     Was sollen die Lernenden tun?
                     <select name="activity_type" defaultValue={step.activity_type} className="mt-1 w-full rounded-xl border border-slate-200 px-3 py-2 text-sm">
@@ -195,6 +216,7 @@ export function LearningStepEditor({
                     Wie lange?
                     <input name="estimated_minutes" type="number" min="0.5" step="0.5" defaultValue={step.estimated_minutes} className="mt-1 w-full rounded-xl border border-slate-200 px-3 py-2 text-sm" />
                   </label>
+                  </div>
                 </div>
 
                 <div>
