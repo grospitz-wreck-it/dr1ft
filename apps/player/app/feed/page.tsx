@@ -156,9 +156,39 @@ export default async function FeedPage() {
     }
   }
 
-  const items = learningSequenceItems !== null
+  const baseItems = learningSequenceItems !== null
     ? learningSequenceItems
     : selectNextFeedItems(mappedPool, ctx, 20) as FeedItem[];
+
+  // Keep the learning sequence intact, but always supplement it with a small
+  // set of live ambient posts that match this learner's chosen interests.
+  // This guarantees personalization even when a generated learning design
+  // would otherwise replace the generic recommendation feed entirely.
+  const selectedInterestHierarchyKeys = new Set(addInterestAncestors(selectedInterestKeys));
+  const personalizedAmbientItems = selectedInterestHierarchyKeys.size
+    ? mappedPool
+        .filter((item) => {
+          if (item.manipulationTechniques.length > 0) return false;
+          const itemKeys = Array.isArray(item.extra?.interestKeys)
+            ? item.extra.interestKeys.filter((key: unknown): key is string => typeof key === "string")
+            : [];
+          return itemKeys.some((key) => selectedInterestHierarchyKeys.has(key));
+        })
+        .sort((a, b) => {
+          const countMatches = (item: FeedItem) => {
+            const keys = Array.isArray(item.extra?.interestKeys)
+              ? item.extra.interestKeys.filter((key: unknown): key is string => typeof key === "string")
+              : [];
+            return keys.filter((key) => selectedInterestHierarchyKeys.has(key)).length;
+          };
+          return countMatches(b) - countMatches(a) ||
+            new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
+        })
+        .filter((item) => !baseItems.some((baseItem) => baseItem.id === item.id))
+        .slice(0, 3)
+    : [];
+
+  const items = [...baseItems, ...personalizedAmbientItems];
   const likedContentIds = new Set((recentInteractions ?? []).filter((i) => i.interaction_type === "like").map((i) => i.content_item_id));
 
   return <FeedClient initialItems={items} userId={user.id} classInstanceId={classInstanceId} likedContentIds={likedContentIds} scenarioIntro={scenarioIntro} scenarioMissionCount={scenarioMissionIds.length} completedScenarioMissionCount={new Set((completedScenarioMissions ?? []).map((mission) => mission.mission_id)).size} profile={{ displayName: currentProfile?.display_name ?? "DR1FT User", username: currentProfile?.username ?? "user", avatarSeed: currentProfile?.avatar_seed ?? user.id }} />;
