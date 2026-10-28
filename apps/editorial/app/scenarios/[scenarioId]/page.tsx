@@ -246,7 +246,7 @@ export default async function ScenarioDetailPage({ params, searchParams = {} }: 
                         <SectionHeader icon={<FileText className="w-4 h-4" />} title="Lernerlebnisse & Content-Pieces" subtitle="Gestalte direkt die Erlebnisse im Feed: Posts, Kommentare, Chats, Entscheidungen und Reflexionsimpulse. Die didaktische Struktur ist optional." />
                         <span className="inline-flex w-fit shrink-0 items-center gap-2 rounded-full bg-violet-100 px-3 py-1.5 text-[11px] font-semibold text-violet-800">✦ Content-Atelier</span>
                       </div>
-                      <ContentComposer scenarioId={scenarioId} />
+                      <ContentComposer scenarioId={scenarioId} creators={creators ?? []} />
             
                       {grouped.length > 0 ? (
                         <div className="mt-5 space-y-5">
