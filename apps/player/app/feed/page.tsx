@@ -69,6 +69,8 @@ export default async function FeedPage() {
     contentCount: number;
     viewedCount: number;
     allViewed: boolean;
+    requiredContentIds: string[];
+    viewedContentIds: string[];
   } | null = null;
   let learningSequenceItems: FeedItem[] | null = null;
 
@@ -138,6 +140,8 @@ export default async function FeedPage() {
           contentCount: requiredIds.length,
           viewedCount,
           allViewed: requiredIds.length > 0 && viewedCount === requiredIds.length,
+          requiredContentIds: requiredIds,
+          viewedContentIds: requiredIds.filter((id) => viewedIds.has(id)),
         };
       } else if (stepsWithLiveContent.length > 0) {
         // All linked learning steps have been viewed. Do not silently replay
@@ -151,6 +155,8 @@ export default async function FeedPage() {
           contentCount: 0,
           viewedCount: 0,
           allViewed: true,
+          requiredContentIds: [],
+          viewedContentIds: [],
         };
       }
     }
