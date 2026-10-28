@@ -160,7 +160,7 @@ export function LearningDesignStudio({ scenarioId, latestDesign }: Props) {
             <p className="text-xs font-semibold uppercase tracking-[0.12em] text-violet-700">Lernplan gestalten</p>
             <h2 className="mt-1 text-lg font-semibold tracking-tight text-slate-950">Wie sollen die Lernenden lernen?</h2>
             <p className="mt-1 max-w-2xl text-sm leading-5 text-slate-500">
-              Wähle einen Lernweg und die Art des Denkens. DR1FT nutzt beides, um Lernplan-Stationen, Aufgaben und Nachweise vorzuschlagen. Du behältst die redaktionelle Kontrolle.
+              Diese didaktische Planung ist optional. Für den normalen Workflow kannst du Content-Pieces direkt erstellen; hier kannst du bei Bedarf Lernziele, Aufgaben, Nachweise und einen strukturierten Lernverlauf für komplexe Szenarien planen.
             </p>
           </div>
         </div>
@@ -192,8 +192,8 @@ export function LearningDesignStudio({ scenarioId, latestDesign }: Props) {
               </select>
             </label>
             <label className="text-sm font-medium text-slate-700">
-              Wie viele Stationen soll der Lernplan haben?
-              <InfoTip>Eine Station ist ein didaktischer Abschnitt – nicht zwingend ein einzelner Feed-Post. Sie kann einen oder mehrere Beiträge und Aufgaben bündeln. Die Zahl ist ein Vorschlag und lässt sich danach redaktionell anpassen.</InfoTip>
+              Wie detailliert soll der interne Lernverlauf sein?
+              <InfoTip>Diese Zahl steuert nur die optionale interne Lernstruktur. Sie ist keine Vorgabe dafür, wie viele Feed-Beiträge du erstellen musst.</InfoTip>
               <select value={stepCount} onChange={(e) => setStepCount(Number(e.target.value))} className="mt-2 w-full rounded-xl border border-slate-200 bg-white px-3.5 py-3 text-sm font-normal text-slate-800 outline-none transition focus:border-violet-400 focus:ring-4 focus:ring-violet-100">
                 {[3, 4, 5, 6, 7, 8, 9, 10, 12, 14, 16].map((count) => <option key={count} value={count}>{count} Stationen</option>)}
               </select>
@@ -282,7 +282,7 @@ export function LearningDesignStudio({ scenarioId, latestDesign }: Props) {
             <div>
               <p className="text-[11px] font-semibold uppercase tracking-wide text-violet-700">Vorschau · noch kein KI-Ergebnis</p>
               <h3 className="mt-1 text-sm font-semibold text-slate-900">So könnte dein Lernweg aussehen</h3>
-              <p className="mt-1 max-w-2xl text-xs leading-5 text-slate-600">Ein vereinfachtes Beispiel, das sich an deinen Auswahlfeldern orientiert. Erst mit „Lernplan erstellen“ wird ein tatsächlicher Entwurf generiert.</p>
+              <p className="mt-1 max-w-2xl text-xs leading-5 text-slate-600">Ein vereinfachtes Beispiel, das sich an deinen Auswahlfeldern orientiert. Erst mit „Didaktische Struktur erzeugen“ wird ein tatsächlicher Entwurf generiert.</p>
             </div>
             <span className="shrink-0 rounded-full border border-violet-200 bg-white px-3 py-1 text-xs font-medium text-violet-700">{stepCount} Stationen geplant</span>
           </div>
@@ -315,8 +315,8 @@ export function LearningDesignStudio({ scenarioId, latestDesign }: Props) {
           <div className="flex items-start gap-3">
             <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-slate-100 text-slate-600"><ImageIcon className="h-4 w-4" /></div>
             <div>
-              <p className="text-sm font-semibold text-slate-800">Content aus einem Lernplan erzeugen</p>
-              <p className="mt-1 text-xs leading-5 text-slate-500">{latestDesign ? "Erzeugt passende Content-Entwürfe auf Basis der gespeicherten Lernplan-Version." : "Erst einen Lernplan erstellen. Danach kannst du passende Content-Entwürfe daraus ableiten."}</p>
+              <p className="text-sm font-semibold text-slate-800">Content-Pieces direkt erstellen</p>
+              <p className="mt-1 text-xs leading-5 text-slate-500">{latestDesign ? "Erzeugt Content-Entwürfe aus der gespeicherten didaktischen Struktur. Für einzelne Content-Pieces nutze das Content-Atelier im Feed-Bereich." : "Dieser optionale Generator benötigt eine gespeicherte didaktische Struktur. Du kannst unabhängig davon jederzeit einzelne Content-Pieces erstellen."}</p>
             </div>
           </div>
           <button type="button" disabled={busy || !latestDesign} onClick={createContent} className="inline-flex shrink-0 items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-semibold text-slate-700 transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-40">
