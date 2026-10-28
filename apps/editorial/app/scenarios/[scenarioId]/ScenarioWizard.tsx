@@ -28,11 +28,11 @@ export function ScenarioWizard({
           <div>
             <p className="inline-flex items-center gap-2 rounded-full border border-violet-300/25 bg-violet-300/10 px-3 py-1 text-[10px] font-bold uppercase tracking-[0.2em] text-[#bcb2ff]"><span className="h-1.5 w-1.5 rounded-full bg-[#7cf7d4] shadow-[0_0_10px_#7cf7d4]" /> DR1FT · Szenario-Studio</p>
             <h2 className="mt-2 text-xl font-extrabold tracking-tight text-white sm:text-2xl">Szenario einrichten</h2>
-            <p className="mt-1 text-xs text-slate-300">Schritt {current + 1} von {steps.length} · {completed} von {steps.length} erledigt</p>
+            <p className="mt-1 text-xs text-slate-300">Schritt {current + 1} von {steps.length}</p>
           </div>
           <div className="sm:w-44">
             <div className="mb-1.5 flex justify-between text-[10px] font-semibold text-slate-300">
-              <span>Dein Fortschritt</span><span>{progress}%</span>
+              <span>Bereits erledigt</span><span>{completed} / {steps.length}</span>
             </div>
             <div className="h-2 overflow-hidden rounded-full bg-white/10">
               <div className="h-full rounded-full bg-gradient-to-r from-[#7c3aed] via-[#a855f7] to-[#7cf7d4] shadow-[0_0_12px_rgba(124,247,212,0.4)] transition-all duration-500" style={{ width: progress + "%" }} />
@@ -49,7 +49,7 @@ export function ScenarioWizard({
                 type="button"
                 onClick={() => {
                   setCurrent(index);
-                  const targetIds = ["workflow-basics", "workflow-posts", "workflow-plan", "workflow-review"];
+                  const targetIds = ["workflow-basics", "workflow-plan", "workflow-posts", "workflow-review"];
                   const target = document.getElementById(targetIds[index]);
                   if (target) target.scrollIntoView({ behavior: "smooth", block: "start" });
                 }}
@@ -79,7 +79,7 @@ export function ScenarioWizard({
         {children}
       </div>
 
-      <footer className="flex items-center justify-between gap-3 rounded-2xl border border-violet-200 bg-gradient-to-r from-white via-violet-50/70 to-cyan-50/60 p-3 shadow-md shadow-violet-900/5 sm:p-4">
+      <footer className="flex items-center justify-between gap-3 border-t border-slate-200 bg-white px-1 py-4 sm:p-4">
         <button
           type="button"
           disabled={current === 0}
