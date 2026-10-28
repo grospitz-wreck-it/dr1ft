@@ -163,15 +163,7 @@ export default function NewScenarioPage({ searchParams = {} }: { searchParams?: 
             </div>
       </form>
       </section>
-      <aside className="rounded-2xl border border-slate-200 bg-slate-50 p-4 text-sm text-slate-600">
-        <strong className="text-slate-800">Was passiert danach?</strong>
-        <div className="mt-2 grid gap-2 sm:grid-cols-3">
-          <div className="flex items-center gap-2"><FilePlus2 className="h-4 w-4 text-violet-600" /> Altersvarianten anlegen</div>
-          <div className="flex items-center gap-2"><Route className="h-4 w-4 text-violet-600" /> Lernweg und Missionen prüfen</div>
-          <div className="flex items-center gap-2"><Users className="h-4 w-4 text-violet-600" /> Feed-Inhalte ergänzen</div>
-        </div>
-        <p className="mt-3 text-xs text-slate-500"><Clock3 className="mr-1 inline h-3.5 w-3.5" /> Alles bleibt zunächst Entwurf. Es wird nichts automatisch veröffentlicht.</p>
-      </aside>
+aside>
     </div>
   );
 }
