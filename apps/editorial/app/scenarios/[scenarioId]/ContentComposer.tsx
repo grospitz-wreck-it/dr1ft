@@ -23,6 +23,7 @@ export function ContentComposer({ scenarioId }: { scenarioId: string }) {
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState("");
   const [showMore, setShowMore] = useState(false);
+  const [generatingSet, setGeneratingSet] = useState(false);
 
   async function create(ai: boolean) {
     setBusy(true);
@@ -44,6 +45,26 @@ export function ContentComposer({ scenarioId }: { scenarioId: string }) {
     }
   }
 
+  async function generateExperienceSet() {
+    setGeneratingSet(true);
+    setMessage("");
+    try {
+      const response = await fetch("/api/scenarios/" + scenarioId + "/learning-content", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ contentFirst: true }),
+      });
+      const result = await response.json().catch(() => ({}));
+      if (!response.ok) throw new Error(result.error || "Lernerlebnisse konnten nicht generiert werden.");
+      setMessage((result.created ?? 0) + " Content-Pieces als Entwurf erstellt. Die Seite wird aktualisiert …");
+      window.location.reload();
+    } catch (error) {
+      setMessage(error instanceof Error ? error.message : "KI-Generierung fehlgeschlagen.");
+    } finally {
+      setGeneratingSet(false);
+    }
+  }
+
   const visibleFormats = formats.filter(({ id }) => showMore || ["post", "photo", "meme", "video", "embed"].includes(id));
   const active = formats.find((item) => item.id === format)!;
   const ActiveIcon = active.icon;
@@ -53,7 +74,17 @@ export function ContentComposer({ scenarioId }: { scenarioId: string }) {
       <div className="relative overflow-hidden bg-gradient-to-br from-violet-700 via-violet-600 to-fuchsia-500 px-5 py-6 text-white sm:px-7 sm:py-8">
         <div className="pointer-events-none absolute -right-8 -top-12 h-44 w-44 rounded-full border-[28px] border-white/10" />
         <div className="pointer-events-none absolute right-28 top-20 h-12 w-12 rounded-full bg-fuchsia-300/20 blur-xl" />
-        <div className="relative flex items-start gap-3">
+        <div className="relative mb-5 flex flex-col gap-3 rounded-2xl border border-white/20 bg-white/10 p-4 sm:flex-row sm:items-center sm:justify-between">
+        <div className="min-w-0">
+          <div className="text-sm font-semibold">Ein zusammenhängendes Lernerlebnis entwerfen</div>
+          <p className="mt-1 max-w-2xl text-xs leading-5 text-violet-100">Die KI erstellt einen ersten Ablauf aus Einstieg, sozialer Reaktion, Wendepunkt und Reflexion – direkt aus dem Szenario, ohne dass ein Lernplan angelegt sein muss.</p>
+        </div>
+        <button type="button" onClick={generateExperienceSet} disabled={generatingSet || busy} className="inline-flex shrink-0 items-center justify-center gap-2 rounded-xl bg-white px-4 py-2.5 text-sm font-semibold text-violet-700 transition hover:bg-violet-50 disabled:cursor-not-allowed disabled:opacity-60">
+          {generatingSet ? <LoaderCircle className="h-4 w-4 animate-spin" /> : <Sparkles className="h-4 w-4" />}
+          {generatingSet ? "Erlebnisse werden erstellt …" : "Lernerlebnis mit KI entwerfen"}
+        </button>
+      </div>
+      <div className="relative flex items-start gap-3">
           <div className="grid h-11 w-11 shrink-0 place-items-center rounded-2xl bg-white/15 shadow-inner"><Sparkles className="h-5 w-5" /></div>
           <div>
             <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-violet-100">Dein Content-Studio</p>
