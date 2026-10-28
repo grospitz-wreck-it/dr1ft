@@ -40,15 +40,25 @@ set label = excluded.label,
 update public.ambient_interests set parent_key = 'gaming' where key in ('minecraft', 'fortnite', 'roblox', 'indie-games', 'gaming-news', 'game-design');
 update public.ambient_interests set parent_key = 'sports' where key in ('football', 'basketball', 'handball', 'volleyball', 'tennis', 'skateboarding', 'cycling', 'running', 'fitness', 'motorsport');
 update public.ambient_interests set parent_key = 'music' where key in ('pop', 'hip-hop', 'rock', 'electronic', 'indie-music', 'classical-music', 'concerts');
-update public.ambient_interests set parent_key = 'movies' where key in ('series', 'comedy', 'horror', 'scifi', 'fantasy', 'anime');
+-- Structural grouping node for genres that cut across books, series, games and film.
+insert into public.ambient_interests
+  (key, label, emoji, category, sort_order, is_selectable, taxonomy_status)
+values ('genres', 'Genres', '🎭', 'Film & Entertainment', 29, false, 'hidden')
+on conflict (key) do update
+set label = excluded.label,
+    is_selectable = false,
+    taxonomy_status = 'hidden';
+
+update public.ambient_interests set parent_key = 'genres' where key in ('comedy', 'horror', 'scifi', 'fantasy');
+update public.ambient_interests set parent_key = null where key = 'series';
 update public.ambient_interests set parent_key = 'animals' where key in ('dogs', 'cats', 'wildlife');
 update public.ambient_interests set parent_key = 'nature' where key in ('oceans', 'hiking', 'camping', 'climate');
 update public.ambient_interests set parent_key = 'food' where key in ('cooking', 'baking', 'street-food');
-update public.ambient_interests set parent_key = 'technology' where key in ('programming', 'ai', 'space', 'science', 'psychology', 'history', 'geography', 'inventions');
+update public.ambient_interests set parent_key = 'technology' where key in ('programming', 'ai');
 update public.ambient_interests set parent_key = 'books' where key = 'comics';
-update public.ambient_interests set parent_key = 'art' where key in ('drawing', 'painting', 'photography', 'video', 'writing', 'design', 'crafts', 'dance', 'fashion');
+update public.ambient_interests set parent_key = 'art' where key in ('drawing', 'painting', 'photography', 'design');
 update public.ambient_interests set parent_key = 'friends' where key = 'relationships';
-update public.ambient_interests set parent_key = 'news' where key in ('politics', 'society', 'justice', 'human-rights', 'future');
+-- News is a format/topic feed, not a parent category for politics or society.
 
 -- Add IAB mappings for the new DR1FT-only interest extensions.
 insert into public.ambient_interest_iab_categories
