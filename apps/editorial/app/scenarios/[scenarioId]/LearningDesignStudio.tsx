@@ -26,7 +26,7 @@ const MODEL_OPTIONS: { value: LearningModel; title: string; short: string; effec
     title: "Vom Lernziel ausgehen",
     short: "Ziel → Nachweis → Lernweg",
     effect: "DR1FT plant rückwärts: erst das gewünschte Können, dann ein sichtbarer Nachweis und daraus passende Lernschritte.",
-    result: "Die Schritte arbeiten auf ein klares Lernziel hin. Die Redaktion kann prüfen, woran sich der Lernerfolg erkennen lässt.",
+    result: "Die Stationen arbeiten auf ein klares Lernziel hin. Die Redaktion kann prüfen, woran sich der Lernerfolg erkennen lässt.",
     visual: ["Lernziel", "Nachweis", "Feed & Aufgaben"],
   },
   {
@@ -57,10 +57,10 @@ const BLOOM_OPTIONS: { value: BloomLevel; title: string; prompt: string; effect:
 
 function MiniFlow({ items }: { items: string[] }) {
   return (
-    <div className="mt-3 flex items-center gap-1" aria-label={"Ablauf: " + items.join(" → ")}>
+    <div className="mt-3 flex flex-wrap items-center gap-1" aria-label={"Ablauf: " + items.join(" → ")}>
       {items.map((item, index) => (
         <span key={item} className="contents">
-          <span className="flex min-h-8 flex-1 items-center justify-center rounded-lg border border-violet-100 bg-white px-2 py-1 text-center text-[10px] font-semibold leading-3 text-slate-700">{item}</span>
+          <span className="flex min-h-8 min-w-0 flex-1 basis-0 items-center justify-center rounded-lg border border-violet-100 bg-white px-1.5 py-1 text-center text-[10px] font-semibold leading-3 text-slate-700">{item}</span>
           {index < items.length - 1 && <ArrowRight className="h-3 w-3 shrink-0 text-violet-400" aria-hidden="true" />}
         </span>
       ))}
@@ -142,7 +142,7 @@ export function LearningDesignStudio({ scenarioId, latestDesign }: Props) {
             <p className="text-xs font-semibold uppercase tracking-[0.12em] text-violet-700">Lernplan gestalten</p>
             <h2 className="mt-1 text-lg font-semibold tracking-tight text-slate-950">Wie sollen die Lernenden lernen?</h2>
             <p className="mt-1 max-w-2xl text-sm leading-5 text-slate-500">
-              Wähle einen Lernweg und die Art des Denkens. DR1FT nutzt beides, um Lernschritte, Aufgaben und Nachweise vorzuschlagen. Du behältst die redaktionelle Kontrolle.
+              Wähle einen Lernweg und die Art des Denkens. DR1FT nutzt beides, um Lernplan-Stationen, Aufgaben und Nachweise vorzuschlagen. Du behältst die redaktionelle Kontrolle.
             </p>
           </div>
         </div>
@@ -174,10 +174,10 @@ export function LearningDesignStudio({ scenarioId, latestDesign }: Props) {
               </select>
             </label>
             <label className="text-sm font-medium text-slate-700">
-              Anzahl der Lernschritte
-              <InfoTip>Die Zahl ist eine Orientierung für die Generierung. Du kannst die erzeugten Schritte anschließend redaktionell bearbeiten.</InfoTip>
+              Wie viele Stationen soll der Lernplan haben?
+              <InfoTip>Eine Station ist ein didaktischer Abschnitt – nicht zwingend ein einzelner Feed-Post. Sie kann einen oder mehrere Beiträge und Aufgaben bündeln. Die Zahl ist ein Vorschlag und lässt sich danach redaktionell anpassen.</InfoTip>
               <select value={stepCount} onChange={(e) => setStepCount(Number(e.target.value))} className="mt-2 w-full rounded-xl border border-slate-200 bg-white px-3.5 py-3 text-sm font-normal text-slate-800 outline-none transition focus:border-violet-400 focus:ring-4 focus:ring-violet-100">
-                {[3, 4, 5, 6, 7, 8, 9, 10, 12, 14, 16].map((count) => <option key={count} value={count}>{count} Lernschritte</option>)}
+                {[3, 4, 5, 6, 7, 8, 9, 10, 12, 14, 16].map((count) => <option key={count} value={count}>{count} Stationen</option>)}
               </select>
             </label>
           </div>
@@ -224,8 +224,9 @@ export function LearningDesignStudio({ scenarioId, latestDesign }: Props) {
           <div className="mb-3 rounded-2xl border border-slate-200 bg-slate-50/70 p-3">
             <p className="mb-2 text-[11px] font-semibold uppercase tracking-wide text-slate-500">Bloom: vom einfachen zum komplexen Denken</p>
             <div className="flex items-end gap-1.5" aria-label="Bloom-Taxonomie: Verstehen, Anwenden, Analysieren, Bewerten, Eigenes entwickeln">
-              {[{ label: "Verstehen", height: "h-7" }, { label: "Anwenden", height: "h-9" }, { label: "Analysieren", height: "h-11" }, { label: "Bewerten", height: "h-13" }, { label: "Entwickeln", height: "h-15" }].map((level) => <div key={level.label} className={"flex flex-1 items-end justify-center rounded-t-lg border border-violet-200 bg-gradient-to-t from-violet-100 to-fuchsia-50 px-1 pb-1 text-center text-[9px] font-semibold leading-3 text-violet-800 " + level.height}>{level.label}</div>)}
+              {[{ label: "Verstehen", height: "h-7" }, { label: "Anwenden", height: "h-9" }, { label: "Analysieren", height: "h-11" }, { label: "Bewerten", height: "h-12" }, { label: "Entwickeln", height: "h-14" }].map((level) => <div key={level.label} className={"min-w-0 flex-1 rounded-t-lg border border-violet-200 bg-gradient-to-t from-violet-100 to-fuchsia-50 " + level.height} aria-label={level.label} title={level.label} />)}
             </div>
+            <div className="mt-1 grid grid-cols-5 gap-1 text-center text-[9px] font-medium leading-3 text-slate-600">{["Verstehen", "Anwenden", "Analysieren", "Bewerten", "Entwickeln"].map((label) => <span key={label} className="min-w-0 break-words">{label}</span>)}</div>
             <p className="mt-2 text-[11px] leading-4 text-slate-500">Je höher die Anforderung, desto mehr soll der Feed zu begründetem Urteilen oder eigenem Gestalten anregen – nicht nur Informationen zeigen.</p>
           </div>
           <div className="grid gap-2 sm:grid-cols-2 xl:grid-cols-5">
