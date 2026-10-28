@@ -219,10 +219,6 @@ export async function createLearningContentItem(scenarioId: string, input: { for
   const { data: scenario } = await supabase.from("scenarios").select("id,title,description,age_band,age_rating").eq("id", scenarioId).single();
   if (!scenario) throw new Error("Szenario nicht gefunden.");
 
-  // Content-first authoring: a new piece must not depend on a generated learning design or be
-  // implicitly attached to the first learning step. Legacy links remain untouched.
-  const step = null;
-
   const labels: Record<string,string> = { post:"Textbeitrag", photo:"Foto", meme:"Meme", video:"Video", embed:"Embed", comment:"Kommentar", dm_message:"DM", reflection_prompt:"Reflexionsimpuls" };
   let body = userPrompt;
   let mediaUrl: string | null = null;
@@ -241,7 +237,7 @@ export async function createLearningContentItem(scenarioId: string, input: { for
       "Format: " + (labels[format] || format),
       "Szenario: " + scenario.title,
       "Altersgruppe: " + scenario.age_band,
-      "Lernschritt: " + (step?.title || "nicht angegeben"),
+      "Arbeitsweise: Content-Piece wird direkt aus dem Szenario-Kontext entwickelt.",
       "Szenario-Kontext: " + (scenario.description || "nicht angegeben"),
       "Lernziel und pädagogischer Zweck: Leite einen passenden, altersgerechten Lernimpuls aus dem Szenario ab. Keine Lernschritt-Vorgabe.",
       "Zusätzlicher Wunsch der Redaktion: " + (userPrompt || "keiner"),
@@ -256,7 +252,7 @@ export async function createLearningContentItem(scenarioId: string, input: { for
       );
       mediaUrl = image.url;
       mediaType = "image";
-      body = format === "meme" ? (await geminiText(prompt + "\nGive a short meme caption for the generated image.")) : (userPrompt || "Bild für den Lernschritt");
+      body = format === "meme" ? (await geminiText(prompt + "\nGive a short meme caption for the generated image.")) : (userPrompt || "Bild für das Szenario");
       extra.imageGeneration = {
         status: "generated", provider: image.provider, model: image.model, fullPrompt: prompt,
         aspectRatio: "4:5", generationCount: 1, editorialReview: "pending", generatedAt: new Date().toISOString(),
