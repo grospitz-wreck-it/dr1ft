@@ -152,7 +152,7 @@ export default function MessagesWorkspace({
             <div className="space-y-2">
               <p className="px-2 pb-1 text-[10px] font-bold uppercase tracking-[.2em] text-white/35">Direktnachrichten</p>
               {filteredContacts.map((contact) => (
-                <button key={contact.id} onClick={() => { setSelected(contact.id); setShowContacts(false); }} className={`group flex w-full items-center gap-3 rounded-2xl border p-3 text-left transition ${selected === contact.id ? "border-cyan-300/25 bg-gradient-to-r from-fuchsia-500/15 via-violet-500/10 to-cyan-400/10" : "border-transparent hover:border-white/10 hover:bg-white/[.045]"}`}>
+                <button key={contact.id} onClick={() => { setDirectMessages([]); setMessageError(""); setMessageLoading(true); setSelected(contact.id); setShowContacts(false); }} className={`group flex w-full items-center gap-3 rounded-2xl border p-3 text-left transition ${selected === contact.id ? "border-cyan-300/25 bg-gradient-to-r from-fuchsia-500/15 via-violet-500/10 to-cyan-400/10" : "border-transparent hover:border-white/10 hover:bg-white/[.045]"}`}>
                   <span className="relative grid h-11 w-11 shrink-0 place-items-center rounded-[15px] bg-gradient-to-br from-fuchsia-500/30 via-violet-500/25 to-cyan-400/25 text-sm font-bold ring-1 ring-white/10">{contact.display_name.slice(0, 1).toUpperCase()}{contact.isDue && <span className="absolute -right-0.5 -top-0.5 h-2.5 w-2.5 rounded-full bg-pink-400 shadow-[0_0_10px_rgba(236,72,153,.75)]" />}</span>
                   <span className="min-w-0 flex-1"><span className="block truncate text-sm font-semibold text-white/90">{contact.display_name}</span><span className="mt-1 block truncate text-xs text-white/50">{contact.lastMessage ? `${contact.lastMessageFromMe ? "Du: " : ""}${contact.lastMessage}` : contact.handle}</span></span>
                   <MessageCircle className="h-4 w-4 shrink-0 text-white/25 group-hover:text-cyan-200" />
@@ -163,7 +163,7 @@ export default function MessagesWorkspace({
 
             {groupChats.length > 0 && <div className="space-y-2 pt-2">
               <p className="px-2 pb-1 text-[10px] font-bold uppercase tracking-[.2em] text-white/35">Gruppenchats</p>
-              {groupChats.map((chat) => <button key={chat.id} onClick={() => { setSelected(chat.id); setShowContacts(false); }} className={`flex w-full items-center gap-3 rounded-2xl border p-3 text-left transition ${selected === chat.id ? "border-cyan-300/25 bg-white/[.08]" : "border-transparent hover:border-white/10 hover:bg-white/[.045]"}`}><span className="grid h-11 w-11 shrink-0 place-items-center rounded-[15px] bg-cyan-300/10 text-cyan-200"><Users className="h-5 w-5" /></span><span className="min-w-0 flex-1 truncate text-sm font-medium">{chat.title}</span></button>)}
+              {groupChats.map((chat) => <button key={chat.id} onClick={() => { setDirectMessages([]); setMessageError(""); setMessageLoading(false); setSelected(chat.id); setShowContacts(false); }} className={`flex w-full items-center gap-3 rounded-2xl border p-3 text-left transition ${selected === chat.id ? "border-cyan-300/25 bg-white/[.08]" : "border-transparent hover:border-white/10 hover:bg-white/[.045]"}`}><span className="grid h-11 w-11 shrink-0 place-items-center rounded-[15px] bg-cyan-300/10 text-cyan-200"><Users className="h-5 w-5" /></span><span className="min-w-0 flex-1 truncate text-sm font-medium">{chat.title}</span></button>)}
             </div>}
 
             {scenarioMessages.length > 0 && <div className="space-y-2 pt-2">
