@@ -216,6 +216,7 @@ export async function createLearningContentItem(scenarioId: string, input: { for
   const format = String(input.format || "post");
   const userPrompt = String(input.prompt || "").trim();
   const url = String(input.url || "").trim();
+  const creatorId = String(input.creatorId || "").trim() || null;
 
   const { data: scenario } = await supabase.from("scenarios").select("id,title,description,age_band,age_rating").eq("id", scenarioId).single();
   if (!scenario) throw new Error("Szenario nicht gefunden.");
