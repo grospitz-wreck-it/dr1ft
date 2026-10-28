@@ -1,7 +1,6 @@
 import type { ReactNode } from "react";
-import { BookOpen, ChevronRight, Route, Users, Building2, CheckCircle2, Sparkles } from "lucide-react";
+import { BookOpen, ChevronRight, Users, Building2, CheckCircle2, Sparkles } from "lucide-react";
 import { supabaseServerClient } from "../../lib/supabaseServerClient";
-import { createScenario } from "./actions";
 
 const AGE_BANDS = [
   ["9_11", "9–11", "Kinder / frühe Lernende"],
@@ -171,17 +170,7 @@ export default async function ScenariosPage() {
           </div>
         </section>
 
-        <details className="rounded-2xl border border-slate-200 bg-white">
-          <summary className="cursor-pointer px-5 py-4 text-sm font-medium text-slate-700">Szenario ohne KI manuell anlegen</summary>
-          <form action={createScenario} className="grid gap-3 px-5 pb-5 pt-1 md:grid-cols-3">
-            <input name="title" placeholder="Titel" required className="rounded-xl border border-slate-200 px-3 py-2 text-sm md:col-span-2" />
-            <select name="ageRating" defaultValue="12_plus" className="rounded-xl border border-slate-200 px-3 py-2 text-sm">
-              <option value="all_ages">Alle Altersgruppen</option><option value="12_plus">12+</option><option value="16_plus">16+</option>
-            </select>
-            <textarea name="description" placeholder="Kurzbeschreibung" className="rounded-xl border border-slate-200 px-3 py-2 text-sm md:col-span-3" />
-            <button type="submit" className="rounded-xl bg-slate-900 px-4 py-2 text-sm font-medium text-white md:col-span-3">Anlegen</button>
-          </form>
-        </details>
+
       </div>
     </div>
   );
