@@ -11,7 +11,7 @@ export default async function StudentReportPage({ params }: { params: { classId:
   const { data: session } = await supabase.auth.getSession();
   const response = await fetch(`${process.env.NEXT_PUBLIC_SUPABASE_URL}/functions/v1/teacher-dashboard`, { method: "POST", headers: { Authorization: `Bearer ${session.session?.access_token}`, "Content-Type": "application/json" }, body: JSON.stringify({ classId }), cache: "no-store" });
   const dashboard = await response.json();
-  const competencies = (dashboard.studentCompetencyProgress ?? []).filter((r: any) => r.user_id === studentId);
+  const competencies = (dashboard.studentCompetencyProgress ?? []).filter((r: any) => r.user_id === studentId && r.competency_id != null);
   const missions = (dashboard.studentMissionProgress ?? []).filter((r: any) => r.user_id === studentId);
   const missionTotal = missions.reduce((sum: number, row: any) => sum + Number(row.missions_total ?? 0), 0);
   const missionCompleted = missions.reduce((sum: number, row: any) => sum + Number(row.missions_completed ?? 0), 0);
