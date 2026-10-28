@@ -19,6 +19,12 @@ const STATUS: Record<string, string> = {
   archived: "Archiv",
 };
 
+function displayScenarioStatus(scenario: any) {
+  // is_active controls availability; status is the editorial workflow state.
+  if (scenario.is_active) return "Aktiv";
+  return STATUS[scenario.status ?? "draft"] ?? "Entwurf";
+}
+
 function groupKey(scenario: any) {
   return scenario.scenario_group || scenario.slug || scenario.id;
 }
@@ -159,7 +165,7 @@ export default async function ScenariosPage() {
                     {family.variants.map((variant) => (
                       <a key={variant.id} href={`/scenarios/${variant.id}`} className="group min-w-[112px] rounded-xl border border-slate-200 bg-white px-3 py-2.5 transition hover:border-violet-300 hover:bg-violet-50/70">
                         <div className="text-xs font-semibold text-slate-800">{AGE_BANDS.find(([value]) => value === variant.age_band)?.[1] ?? variant.age_rating}</div>
-                        <div className="mt-1 text-[11px] text-slate-500">{STATUS[variant.status ?? "draft"] ?? "Entwurf"}</div>
+                        <div className="mt-1 text-[11px] text-slate-500">{displayScenarioStatus(variant)}</div>
                         <div className="mt-1 flex items-center gap-1 text-xs text-accent">Bearbeiten <ChevronRight className="h-3 w-3 transition-transform group-hover:translate-x-0.5" /></div>
                       </a>
                     ))}
