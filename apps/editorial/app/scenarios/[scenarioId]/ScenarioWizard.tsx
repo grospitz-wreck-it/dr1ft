@@ -20,7 +20,7 @@ export function ScenarioWizard({
   const panels = Children.toArray(children);
   const active = steps[current];
   const completed = steps.filter((step) => step.complete).length;
-  const progress = Math.round(((current + 1) / steps.length) * 100);
+  const progress = Math.round((completed / Math.max(steps.length, 1)) * 100);
 
   return (
     <div className="w-full space-y-5">
@@ -29,7 +29,7 @@ export function ScenarioWizard({
           <div>
             <p className="inline-flex items-center gap-2 rounded-full border border-violet-300/25 bg-violet-300/10 px-3 py-1 text-[10px] font-bold uppercase tracking-[0.2em] text-[#bcb2ff]"><span className="h-1.5 w-1.5 rounded-full bg-[#7cf7d4] shadow-[0_0_10px_#7cf7d4]" /> DR1FT · Szenario-Studio</p>
             <h2 className="mt-2 text-xl font-extrabold tracking-tight text-white sm:text-2xl">Szenario einrichten</h2>
-            <p className="mt-1 text-xs text-slate-300">Schritt {current + 1} von {steps.length} · {completed} bereits erledigt</p>
+            <p className="mt-1 text-xs text-slate-300">Schritt {current + 1} von {steps.length} · {completed} von {steps.length} erledigt</p>
           </div>
           <div className="sm:w-44">
             <div className="mb-1.5 flex justify-between text-[10px] font-semibold text-slate-300">
