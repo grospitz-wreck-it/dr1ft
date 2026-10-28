@@ -190,7 +190,7 @@ export async function updateExistingContentMedia(scenarioId: string, contentItem
     "Szenario: " + scenario.title,
     "Altersgruppe: " + scenario.age_band,
     "Bestehender Beitrag: " + item.body,
-    "Lernschritt: " + (step?.title || "nicht angegeben"),
+    "Didaktischer Kontext: Content-Piece wird eigenständig im Szenario gestaltet.",
     "Lernkontext: " + (step?.description || ""),
     "Redaktionswunsch: " + (prompt || "passend zum bestehenden Beitrag"),
   ].join("\n");
@@ -219,16 +219,15 @@ export async function createLearningContentItem(scenarioId: string, input: { for
   const { data: scenario } = await supabase.from("scenarios").select("id,title,description,age_band,age_rating").eq("id", scenarioId).single();
   if (!scenario) throw new Error("Szenario nicht gefunden.");
 
-  const { data: design } = await supabase.from("learning_designs").select("id").eq("scenario_id", scenarioId).order("version", { ascending: false }).limit(1).maybeSingle();
-  const { data: step } = design
-    ? await supabase.from("learning_steps").select("id,title,description,activity_type,activity_config,reflection_prompt").eq("learning_design_id", design.id).order("step_index").limit(1).maybeSingle()
-    : { data: null };
+  // Content-first authoring: a new piece must not depend on a generated learning design or be
+  // implicitly attached to the first learning step. Legacy links remain untouched.
+  const step = null;
 
   const labels: Record<string,string> = { post:"Textbeitrag", photo:"Foto", meme:"Meme", video:"Video", embed:"Embed", comment:"Kommentar", dm_message:"DM", reflection_prompt:"Reflexionsimpuls" };
   let body = userPrompt;
   let mediaUrl: string | null = null;
   let mediaType: string | null = null;
-  let extra: Record<string, unknown> = { generatedBy: "content-composer-v1", contentFormat: format, learningStepId: step?.id ?? null };
+  let extra: Record<string, unknown> = { generatedBy: "content-composer-v1", contentFormat: format, learningStepId: null };
 
   if (format === "embed") {
     if (!url) throw new Error("Für einen Embed wird eine URL oder ein Embed-Code benötigt.");
@@ -243,8 +242,8 @@ export async function createLearningContentItem(scenarioId: string, input: { for
       "Szenario: " + scenario.title,
       "Altersgruppe: " + scenario.age_band,
       "Lernschritt: " + (step?.title || "nicht angegeben"),
-      "Lernschritt-Beschreibung: " + (step?.description || ""),
-      "Pädagogischer Zweck: " + (step?.activity_config?.contentPlan ? JSON.stringify(step.activity_config.contentPlan) : "nicht angegeben"),
+      "Szenario-Kontext: " + (scenario.description || "nicht angegeben"),
+      "Lernziel und pädagogischer Zweck: Leite einen passenden, altersgerechten Lernimpuls aus dem Szenario ab. Keine Lernschritt-Vorgabe.",
       "Zusätzlicher Wunsch der Redaktion: " + (userPrompt || "keiner"),
       "Erzeuge keinen Meta-Text über Pädagogik. Alles bleibt Draft.",
     ].join("\n");
@@ -285,9 +284,7 @@ export async function createLearningContentItem(scenarioId: string, input: { for
   }).select("id").single();
   if (error || !contentItem) throw new Error(error?.message || "Content konnte nicht gespeichert werden.");
 
-  if (step) {
-    await supabase.from("learning_step_content").insert({ learning_step_id: step.id, content_item_id: contentItem.id, role: format, order_index: 0, required: false });
-  }
+  // No automatic learning_step_content mapping: the editorial piece is the primary unit.
   revalidatePath("/scenarios/" + scenarioId);
   return { ok: true, id: contentItem.id };
 }
