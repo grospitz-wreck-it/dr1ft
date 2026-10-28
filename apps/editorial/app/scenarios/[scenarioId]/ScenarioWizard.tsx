@@ -19,7 +19,6 @@ export function ScenarioWizard({
   const [current, setCurrent] = useState(0);
   const active = steps[current];
   const completed = steps.filter((step) => step.complete).length;
-  const progress = Math.round((completed / Math.max(steps.length, 1)) * 100);
 
   return (
     <div className="w-full space-y-5">
