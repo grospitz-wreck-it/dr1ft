@@ -38,7 +38,7 @@ export default async function ScenariosPage() {
     supabase.from("content_items").select("id, scenario_id"),
     supabase.from("class_scenario_assignments").select("scenario_id, class_id"),
     supabase.from("classes").select("id, school_id, is_active"),
-    supabase.from("user_mission_progress").select("mission_id, status, completed_at"),
+    supabase.from("user_mission_progress").select("mission_id, user_id, status, completed_at"),
   ]);
 
   const rows = scenarios ?? [];
@@ -67,7 +67,9 @@ export default async function ScenariosPage() {
       const klass: any = classById.get(item.class_id);
       return klass?.school_id;
     }).filter(Boolean));
-    const completedMissions = (progress ?? []).filter((item: any) => missionIds.has(item.mission_id) && item.status === "completed").length;
+    const completedProgress = (progress ?? []).filter((item: any) => missionIds.has(item.mission_id) && item.status === "completed");
+    const completedMissions = completedProgress.length;
+    const learnersReached = new Set(completedProgress.map((item: any) => item.user_id).filter(Boolean)).size;
 
     return {
       key,
@@ -80,6 +82,7 @@ export default async function ScenariosPage() {
       activeClasses: activeAssignedClasses.size,
       schoolsInUse: schoolIds.size,
       completedMissions,
+      learnersReached,
     };
   });
 
@@ -140,9 +143,10 @@ export default async function ScenariosPage() {
                       <span className="rounded-full bg-slate-100 px-2.5 py-1 text-[11px] font-medium text-slate-600">{family.activeVariants} aktive Varianten</span>
                     </div>
                     {family.description && <p className="mt-2 max-w-3xl text-sm leading-5 text-slate-500">{family.description}</p>}
-                    <div className="mt-4 grid grid-cols-2 gap-2 sm:grid-cols-4">
+                    <div className="mt-4 grid grid-cols-2 gap-2 sm:grid-cols-3 xl:grid-cols-5">
                       <MiniKpi label="Schulen" value={String(family.schoolsInUse)} />
                       <MiniKpi label="Aktive Klassen" value={String(family.activeClasses)} />
+                      <MiniKpi label="Lernende erreicht" value={String(family.learnersReached)} />
                       <MiniKpi label="Missionen" value={String(family.missionCount)} />
                       <MiniKpi label="Abschlüsse" value={String(family.completedMissions)} />
                     </div>
