@@ -24,7 +24,7 @@ export default function NewScenarioPage({ searchParams = {} }: { searchParams?: 
         <div className="border-b border-slate-100 px-6 py-5 sm:px-7">
           <div className="flex items-start gap-3">
             <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-violet-50 text-violet-600"><Sparkles className="h-4 w-4" /></div>
-            <div><h2 className="font-semibold text-slate-900">Szenario-Brief</h2><p className="mt-1 text-sm text-slate-500">Einmal die Grundlage festlegen. Lernplan und Missionen werden danach im Szenario ausgearbeitet.</p></div>
+            <div><h2 className="font-semibold text-slate-900">Szenario-Brief</h2><p className="mt-1 text-sm text-slate-500">Einmal die Grundlage festlegen. Lege Thema, Zielgruppe und die grobe Lern-Ausrichtung fest. DR1FT erstellt daraus einen ersten Entwurf mit konkreten Lernerlebnissen.</p></div>
           </div>
         </div>
       <form action={generateScenarioDraft} className="grid gap-7 p-6 lg:grid-cols-[1.15fr_.85fr] lg:p-7">
@@ -88,6 +88,42 @@ export default function NewScenarioPage({ searchParams = {} }: { searchParams?: 
                       </span>
                     </label>
                   ))}
+                </div>
+              </div>
+
+              <div className="rounded-xl border border-violet-100 bg-violet-50/50 p-4">
+                <div className="mb-3">
+                  <div className="text-sm font-semibold text-slate-900">Lern-Ausrichtung <span className="font-normal text-slate-400">· kurz wählen</span></div>
+                  <p className="mt-1 text-xs leading-5 text-slate-500">Diese Angaben steuern, wie die KI die Erlebnisse und Interaktionen aufbaut. Du kannst den Entwurf später bearbeiten.</p>
+                </div>
+                <div className="space-y-3">
+                  <div>
+                    <label className="mb-1.5 block text-xs font-semibold text-slate-600">Wie sollen Lernende vor allem lernen?</label>
+                    <select name="learningModel" defaultValue="experience_reflection" className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm">
+                      <option value="experience_reflection">Erleben → reflektieren → ausprobieren</option>
+                      <option value="goal_aligned">Lernziel → passende Aufgabe → Nachweis</option>
+                      <option value="discover_evidence">Hinweise entdecken → prüfen → Urteil bilden</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label className="mb-1.5 block text-xs font-semibold text-slate-600">Was sollen Lernende am Ende können?</label>
+                    <select name="cognitiveLevel" defaultValue="analyze" className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm">
+                      <option value="understand">Erklären und verstehen</option>
+                      <option value="apply">Wissen in einer Situation anwenden</option>
+                      <option value="analyze">Hinweise vergleichen und Zusammenhänge erkennen</option>
+                      <option value="evaluate">Eine Entscheidung begründen</option>
+                      <option value="create">Eine eigene Lösung entwickeln</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label className="mb-1.5 block text-xs font-semibold text-slate-600">Welche Art Lernerlebnis passt?</label>
+                    <select name="experiencePattern" defaultValue="social_feed" className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm">
+                      <option value="social_feed">Social Feed: Posts, Kommentare und Reaktionen</option>
+                      <option value="investigation">Ermittlung: Hinweise sammeln und abgleichen</option>
+                      <option value="decision">Entscheidung: wählen, Folgen erleben, reflektieren</option>
+                      <option value="conversation">Dialog: Perspektiven und Antworten abwägen</option>
+                    </select>
+                  </div>
                 </div>
               </div>
 
