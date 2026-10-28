@@ -122,9 +122,9 @@ export default async function FeedPage() {
         const requiredIds = active.progressIds;
         const viewedCount = requiredIds.filter((id) => viewedIds.has(id)).length;
       } else if (stepsWithLiveContent.length > 0) {
-        // All linked learning steps have been viewed. Do not silently replay
-        // them through the generic feed; keep the end state explicit.
-        learningSequenceItems = [];
+        // The learning sequence has no remaining unseen step. Do not render
+        // an empty feed: return to the existing feed selector as a safe fallback.
+        learningSequenceItems = null;
       }
     }
   }
