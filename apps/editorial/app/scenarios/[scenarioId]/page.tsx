@@ -37,6 +37,11 @@ const STATUS_LABELS: Record<string, string> = {
 
 const STATUS_ORDER = ["draft", "in_review", "approved", "live", "rejected", "archived"];
 
+function displayScenarioStatus(scenario: any) {
+  if (scenario.is_active) return "Aktiv";
+  return STATUS_LABELS[scenario.status ?? "draft"] ?? "Entwurf";
+}
+
 export default async function ScenarioDetailPage({ params, searchParams = {} }: Props) {
   const supabase = supabaseServerClient();
   const { scenarioId } = params;
@@ -161,7 +166,7 @@ export default async function ScenarioDetailPage({ params, searchParams = {} }: 
                           </div>
                         </div>
                         <div className="rounded-xl bg-slate-50 px-3 py-2.5 text-xs text-slate-500">
-                          Status: <span className="font-semibold text-slate-700">{scenario.is_active ? "Aktiv" : "Entwurf"}</span>
+                          Status: <span className="font-semibold text-slate-700">{displayScenarioStatus(scenario)}</span>
                           <span className="mt-1 block">Die Freigabe erfolgt im letzten Schritt.</span>
                         </div>
                       </div>
@@ -174,7 +179,7 @@ export default async function ScenarioDetailPage({ params, searchParams = {} }: 
                             className={`rounded-xl border px-3 py-2 ${variant.id === scenarioId ? "border-accent bg-accent/5" : "border-slate-200 hover:border-accent"}`}
                           >
                             <div className="text-xs font-semibold text-slate-800">{AGE_LABELS[variant.age_band] ?? variant.age_rating}</div>
-                            <div className="text-[11px] text-slate-400 mt-0.5">{STATUS_LABELS[variant.status ?? "draft"] ?? "Entwurf"}</div>
+                            <div className="text-[11px] text-slate-400 mt-0.5">{displayScenarioStatus(variant)}</div>
                           </a>
                         ))}
                       </div>
