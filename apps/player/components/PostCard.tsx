@@ -153,30 +153,31 @@ export function PostCard({ item, userId, classInstanceId, initiallyLiked, onView
 
     // Editorially prepared scenario comments are shared across class instances.
     // Only load these for a scenario post, and require the same scenario ID.
-    const scenarioCommentsRequest = item.scenarioId
-      ? supabase
-          .from("content_items")
-          .select(commentSelect)
-          .eq("parent_id", item.id)
-          .eq("scenario_id", item.scenarioId)
-          .is("class_instance_id", null)
-          .eq("type", "comment")
-          .eq("status", "live")
-          .order("created_at", { ascending: true })
-      : Promise.resolve({ data: [], error: null });
+    const classResult = await classCommentsRequest;
+    let scenarioRows: any[] = [];
+    let scenarioError: unknown = null;
 
-    const [classResult, scenarioResult] = await Promise.all([
-      classCommentsRequest,
-      scenarioCommentsRequest,
-    ]);
+    if (item.scenarioId) {
+      const scenarioResult = await supabase
+        .from("content_items")
+        .select(commentSelect)
+        .eq("parent_id", item.id)
+        .eq("scenario_id", item.scenarioId)
+        .is("class_instance_id", null)
+        .eq("type", "comment")
+        .eq("status", "live")
+        .order("created_at", { ascending: true });
+      scenarioRows = scenarioResult.data ?? [];
+      scenarioError = scenarioResult.error;
+    }
 
-    if (classResult.error || scenarioResult.error) {
+    if (classResult.error || scenarioError) {
       showFeedback("Kommentare konnten gerade nicht vollständig geladen werden.");
     }
 
     // Merge both sources, avoid duplicates, and preserve chronological order.
     const rowsById = new Map<string, any>();
-    for (const row of [...(scenarioResult.data ?? []), ...(classResult.data ?? [])]) {
+    for (const row of [...scenarioRows, ...(classResult.data ?? [])]) {
       rowsById.set(row.id, row);
     }
     const nextComments = Array.from(rowsById.values())
