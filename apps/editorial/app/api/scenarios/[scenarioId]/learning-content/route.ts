@@ -7,7 +7,7 @@ export async function POST(
 ) {
   try {
     const body = await request.json().catch(() => ({}));
-    const result = await generateLearningContent(params.scenarioId, body?.learningDesignId, body?.contentFirst === true);
+    const result = await generateLearningContent(params.scenarioId, body?.learningDesignId, body?.contentFirst === true, body?.creatorId);
     return NextResponse.json(result);
   } catch (error) {
     return NextResponse.json(
