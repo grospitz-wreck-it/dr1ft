@@ -289,7 +289,13 @@ export async function generateAmbientDrafts(formData: FormData) {
   const imageStyle = text(formData, "imageStyle", "authentic social photo");
   const aspectRatio = text(formData, "aspectRatio", "4:5");
   const creatorId = String(formData.get("creatorId") ?? "") || null;
-  const interests = String(formData.get("interests") ?? "").split(",").map((v) => v.trim()).filter(Boolean).slice(0, 3);
+  const requestedInterestKeys = [...new Set(String(formData.get("interests") ?? "").split(",").map((v) => v.trim()).filter(Boolean))].slice(0, 3);
+  const { data: interestRows, error: interestError } = requestedInterestKeys.length
+    ? await supabase.from("ambient_interests").select("key, label").in("key", requestedInterestKeys).eq("is_active", true).eq("is_selectable", true).eq("taxonomy_status", "active")
+    : { data: [], error: null };
+  if (interestError) throw new Error(`Interessen-Katalog konnte nicht geladen werden: ${interestError.message}`);
+  const interests = (interestRows ?? []).map((interest) => interest.label);
+  const interestKeys = (interestRows ?? []).map((interest) => interest.key);
 
   const creatorVoice = creatorId ? (await supabase.from("creators").select("display_name, persona").eq("id", creatorId).maybeSingle()).data : null;
   const profile = (await supabase.from("ambient_generation_profiles").select("*").eq("age_band", ageBand).eq("is_active", true).limit(1).maybeSingle()).data;
@@ -375,7 +381,7 @@ export async function generateAmbientDrafts(formData: FormData) {
       imageProvider = image.provider;
       imageModel = image.model;
     }
-    rows.push({ type: "post", scenario_id: null, creator_id: creatorId, body: item.body.trim().slice(0, 1000), media_url: mediaUrl, media_type: mediaUrl ? "image" : null, manipulation_techniques: [], target_competencies: [], difficulty: 1, age_rating: ageBand === "16_17" || ageBand === "18_plus" ? "16_plus" : ageBand === "all" ? "all_ages" : "12_plus", status: "draft", extra: { generatedBy: "ai", generatorVersion: "ambient-studio-v4", provider, theme, ageBand, interests, style, styleLabel: styleText, typoLevel, slangLevel, emojiLevel, imageRatio, imageMode, format: item.format, mood: item.mood, topic: item.topic, creatorVibe: item.creatorVibe, imageRequested: shouldImage, imageGenerated: Boolean(mediaUrl), imageProvider, imageModel, languageLibrary: "source-grounded-2026-08" } });
+    rows.push({ type: "post", scenario_id: null, creator_id: creatorId, body: item.body.trim().slice(0, 1000), media_url: mediaUrl, media_type: mediaUrl ? "image" : null, manipulation_techniques: [], target_competencies: [], difficulty: 1, age_rating: ageBand === "16_17" || ageBand === "18_plus" ? "16_plus" : ageBand === "all" ? "all_ages" : "12_plus", status: "draft", extra: { generatedBy: "ai", generatorVersion: "ambient-studio-v5", provider, theme, ageBand, interests, interestKeys, style, styleLabel: styleText, typoLevel, slangLevel, emojiLevel, imageRatio, imageMode, format: item.format, mood: item.mood, topic: item.topic, creatorVibe: item.creatorVibe, imageRequested: shouldImage, imageGenerated: Boolean(mediaUrl), imageProvider, imageModel, languageLibrary: "source-grounded-2026-08" } });
   }
   if (!rows.length) throw new Error("Die KI hat keine gültigen Items geliefert.");
   const { error } = await supabase.from("content_items").insert(rows);
