@@ -282,7 +282,7 @@ export default async function ScenarioDetailPage({ params, searchParams = {} }: 
                                         action={updateContentItemBody.bind(null, item.id, scenarioId)}
                                       />
                                       <p className="mt-2 whitespace-pre-wrap text-sm text-slate-900">{item.body}</p>
-                                      <p className="text-xs text-slate-400 mt-1">{item.type} · {item.age_rating} · Schwierigkeit {item.difficulty}</p>
+                                      <p className="text-xs text-slate-400 mt-1">{item.type} · {item.age_rating} · Schwierigkeit {item.difficulty}{item.creator_id && creators?.find((creator) => creator.id === item.creator_id) ? " · Figur: " + creators.find((creator) => creator.id === item.creator_id)?.display_name : ""}</p>
             
                                       {item.media_url && item.media_type === "image" && (
                                         <div className="mt-3 rounded-xl bg-slate-50 border border-slate-200 p-3">
