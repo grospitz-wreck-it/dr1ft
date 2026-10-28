@@ -73,7 +73,7 @@ export function ScenarioWizard({
 
       <div className="min-h-[320px] w-full">
         <div key={current} className="animate-in fade-in slide-in-from-right-2 duration-200">
-          {panels[current]}
+          {panels.length === steps.length ? panels[current] : children}
         </div>
       </div>
 
