@@ -285,7 +285,7 @@ export async function createLearningContentItem(scenarioId: string, input: { for
   return { ok: true, id: contentItem.id };
 }
 
-export async function generateLearningContent(scenarioId: string, learningDesignId?: string) {
+export async function generateLearningContent(scenarioId: string, learningDesignId?: string, contentFirst = false) {
   const supabase = supabaseServerClient();
 
   const { data: scenario } = await supabase
@@ -304,9 +304,11 @@ export async function generateLearningContent(scenarioId: string, learningDesign
     .limit(1)
     .maybeSingle();
 
-  const { data: design } = learningDesignId
-    ? await supabase.from("learning_designs").select("id,title,description").eq("id", learningDesignId).single()
-    : await designQuery;
+  const { data: design } = contentFirst
+    ? { data: null }
+    : learningDesignId
+      ? await supabase.from("learning_designs").select("id,title,description").eq("id", learningDesignId).single()
+      : await designQuery;
 
   // Content-first path: when no optional learning design exists, generate a small
   // coherent set of standalone feed pieces directly from the scenario brief.
