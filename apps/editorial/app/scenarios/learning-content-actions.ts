@@ -308,7 +308,55 @@ export async function generateLearningContent(scenarioId: string, learningDesign
     ? await supabase.from("learning_designs").select("id,title,description").eq("id", learningDesignId).single()
     : await designQuery;
 
-  if (!design) throw new Error("Noch kein Learning Design vorhanden.");
+  // Content-first path: when no optional learning design exists, generate a small
+  // coherent set of standalone feed pieces directly from the scenario brief.
+  if (!design) {
+    const pieces = [
+      { role: "opening", format: "post", purpose: "Einstieg: eine glaubwürdige Alltagssituation, die Neugier weckt, ohne die Lernbotschaft vorwegzunehmen." },
+      { role: "social_reaction", format: "comment", purpose: "Eine plausible Reaktion einer Person im Umfeld, die eine andere Perspektive oder Gruppendynamik sichtbar macht." },
+      { role: "turning_point", format: "post", purpose: "Ein weiterer Feed-Beitrag, der die Situation weiterentwickelt und relevante Hinweise für eine eigene Einschätzung liefert." },
+      { role: "reflection", format: "reflection_prompt", purpose: "Eine konkrete, offene Reflexionsfrage, die Lernende zum begründeten Nachdenken oder Handeln einlädt." },
+    ];
+    let created = 0;
+    for (const piece of pieces) {
+      const body = await geminiText([
+        "Erzeuge genau einen glaubwürdigen Social-Media-Inhalt für DR1FT auf Deutsch.",
+        "Szenario: " + scenario.title,
+        "Kontext: " + (scenario.description || "Aus dem Szenariotitel ableiten."),
+        "Altersgruppe: " + scenario.age_band,
+        "Rolle im Lernerlebnis: " + piece.role,
+        "Aufgabe dieses Content-Pieces: " + piece.purpose,
+        "Format: " + piece.format,
+        "Der Inhalt darf seine Lernfunktion nicht erklären und keine Meta-Kommentare enthalten.",
+        "Keine erfundenen externen Fakten. Keine realen Personen. Altersgerecht und glaubwürdig.",
+      ].join("\\n"));
+      const type = piece.format === "comment" ? "comment" : piece.format === "reflection_prompt" ? "reflection_prompt" : "post";
+      const { error } = await supabase.from("content_items").insert({
+        scenario_id: scenarioId,
+        type,
+        body,
+        media_url: null,
+        media_type: null,
+        difficulty: 1,
+        age_rating: scenario.age_band === "16_17" || scenario.age_band === "18_plus" ? "16_plus" : "12_plus",
+        manipulation_techniques: [],
+        target_competencies: [],
+        status: "draft",
+        extra: {
+          generatedBy: "scenario-content-first-v1",
+          contentRole: piece.role,
+          contentFormat: piece.format,
+          pedagogicalPurpose: piece.purpose,
+          learningDesignId: null,
+          learningStepId: null,
+        },
+      });
+      if (error) throw new Error(error.message || "Content konnte nicht gespeichert werden.");
+      created++;
+    }
+    revalidatePath("/scenarios/" + scenarioId);
+    return { created, learningDesignId: null, mode: "content-first" as const };
+  }
 
   const { data: steps } = await supabase
     .from("learning_steps")
