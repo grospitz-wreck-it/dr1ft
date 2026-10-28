@@ -20,13 +20,14 @@ type Props = {
   } | null;
 };
 
-const MODEL_OPTIONS: { value: LearningModel; title: string; short: string; effect: string; result: string }[] = [
+const MODEL_OPTIONS: { value: LearningModel; title: string; short: string; effect: string; result: string; visual: string[] }[] = [
   {
     value: "backward_design",
     title: "Vom Lernziel ausgehen",
     short: "Ziel → Nachweis → Lernweg",
     effect: "DR1FT plant rückwärts: erst das gewünschte Können, dann ein sichtbarer Nachweis und daraus passende Lernschritte.",
     result: "Die Schritte arbeiten auf ein klares Lernziel hin. Die Redaktion kann prüfen, woran sich der Lernerfolg erkennen lässt.",
+    visual: ["Lernziel", "Nachweis", "Feed & Aufgaben"],
   },
   {
     value: "constructive_alignment",
@@ -34,6 +35,7 @@ const MODEL_OPTIONS: { value: LearningModel; title: string; short: string; effec
     short: "Alles greift ineinander",
     effect: "Jedes Lernziel wird mit einer passenden Aktivität und einem beobachtbaren Nachweis verknüpft.",
     result: "Du erhältst Lernschritte, bei denen Aufgabe und erwarteter Lernerfolg zusammenpassen – statt nur thematisch passende Inhalte.",
+    visual: ["Lernziel", "Feed-Aktivität", "Nachweis"],
   },
   {
     value: "kolb",
@@ -41,6 +43,7 @@ const MODEL_OPTIONS: { value: LearningModel; title: string; short: string; effec
     short: "Erleben → Reflektieren → Ausprobieren",
     effect: "DR1FT baut den Lernweg um eine Erfahrung herum auf: erleben, darüber nachdenken, ein Prinzip erkennen und es erneut anwenden.",
     result: "Der Lernplan enthält einen nachvollziehbaren Erfahrungsbogen statt einer reinen Folge von Informationen.",
+    visual: ["Erleben", "Reflektieren", "Erkennen", "Ausprobieren"],
   },
 ];
 
@@ -51,6 +54,19 @@ const BLOOM_OPTIONS: { value: BloomLevel; title: string; prompt: string; effect:
   { value: "evaluate", title: "Bewerten", prompt: "Eine Entscheidung treffen und begründen", effect: "Die Lernenden wägen Optionen ab und begründen ihre Entscheidung." },
   { value: "create", title: "Eigenes entwickeln", prompt: "Eine eigene Lösung oder Handlung entwickeln", effect: "Die Lernenden entwerfen eine eigene Antwort, Lösung oder Handlungsstrategie." },
 ];
+
+function MiniFlow({ items }: { items: string[] }) {
+  return (
+    <div className="mt-3 flex items-center gap-1" aria-label={"Ablauf: " + items.join(" → ")}>
+      {items.map((item, index) => (
+        <span key={item} className="contents">
+          <span className="flex min-h-8 flex-1 items-center justify-center rounded-lg border border-violet-100 bg-white px-2 py-1 text-center text-[10px] font-semibold leading-3 text-slate-700">{item}</span>
+          {index < items.length - 1 && <ArrowRight className="h-3 w-3 shrink-0 text-violet-400" aria-hidden="true" />}
+        </span>
+      ))}
+    </div>
+  );
+}
 
 function InfoTip({ children }: { children: ReactNode }) {
   return (
@@ -184,10 +200,15 @@ export function LearningDesignStudio({ scenarioId, latestDesign }: Props) {
                     </span>
                   </span>
                   <span className="mt-2 block text-xs font-medium text-violet-700">{option.short}</span>
-                  <span className="mt-2 block text-xs leading-5 text-slate-600">{option.effect}</span>
+                  <MiniFlow items={option.visual} />
+                  <span className="mt-3 block text-xs leading-5 text-slate-600">{option.effect}</span>
                 </button>
               );
             })}
+          </div>
+          <div className="mt-3 rounded-2xl border border-violet-100 bg-violet-50/50 px-4 py-3">
+            <p className="text-[11px] font-semibold uppercase tracking-wide text-violet-700">So wirkt es auf die Feed-Konzeption</p>
+            <MiniFlow items={selectedModel.visual} />
           </div>
           <div className="mt-3 flex gap-3 rounded-2xl bg-slate-50 px-4 py-3">
             <ArrowRight className="mt-0.5 h-4 w-4 shrink-0 text-violet-600" />
@@ -199,6 +220,13 @@ export function LearningDesignStudio({ scenarioId, latestDesign }: Props) {
           <div className="mb-3">
             <h3 className="text-sm font-semibold text-slate-900">3. Denk-Anforderung auswählen</h3>
             <p className="mt-1 text-xs text-slate-500">Was sollen Lernende mit dem Thema tun können? Das legt den kognitiven Anspruch fest.</p>
+          </div>
+          <div className="mb-3 rounded-2xl border border-slate-200 bg-slate-50/70 p-3">
+            <p className="mb-2 text-[11px] font-semibold uppercase tracking-wide text-slate-500">Bloom: vom einfachen zum komplexen Denken</p>
+            <div className="flex items-end gap-1.5" aria-label="Bloom-Taxonomie: Verstehen, Anwenden, Analysieren, Bewerten, Eigenes entwickeln">
+              {[{ label: "Verstehen", height: "h-7" }, { label: "Anwenden", height: "h-9" }, { label: "Analysieren", height: "h-11" }, { label: "Bewerten", height: "h-13" }, { label: "Entwickeln", height: "h-15" }].map((level) => <div key={level.label} className={"flex flex-1 items-end justify-center rounded-t-lg border border-violet-200 bg-gradient-to-t from-violet-100 to-fuchsia-50 px-1 pb-1 text-center text-[9px] font-semibold leading-3 text-violet-800 " + level.height}>{level.label}</div>)}
+            </div>
+            <p className="mt-2 text-[11px] leading-4 text-slate-500">Je höher die Anforderung, desto mehr soll der Feed zu begründetem Urteilen oder eigenem Gestalten anregen – nicht nur Informationen zeigen.</p>
           </div>
           <div className="grid gap-2 sm:grid-cols-2 xl:grid-cols-5">
             {BLOOM_OPTIONS.map((option, index) => {
