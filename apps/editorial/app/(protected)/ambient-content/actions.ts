@@ -383,6 +383,17 @@ export async function generateAmbientDrafts(formData: FormData) {
     revalidatePath("/ambient-content");
     redirect("/ambient-content");
   } catch (error) {
+    // Next.js redirect() throws a control-flow exception; do not turn a
+    // successful post-generation redirect into a displayed generation error.
+    if (
+      error &&
+      typeof error === "object" &&
+      "digest" in error &&
+      typeof error.digest === "string" &&
+      error.digest.startsWith("NEXT_REDIRECT")
+    ) {
+      throw error;
+    }
     const message = error instanceof Error ? error.message : "Unbekannter Fehler bei der Ambient-Generierung.";
     console.error("[ambient-generator]", error);
     redirect(`/ambient-content?generationError=${encodeURIComponent(message.slice(0, 900))}`);
