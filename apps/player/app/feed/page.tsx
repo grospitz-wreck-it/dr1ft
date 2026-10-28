@@ -53,7 +53,7 @@ export default async function FeedPage() {
         current = interestParentByKey.get(current);
       }
     }
-    return [...expanded];
+    return Array.from(expanded);
   };
   const { data: recentInteractions } = await supabase.from("user_interactions").select("content_item_id, interaction_type").eq("user_id", user.id).eq("class_instance_id", classInstanceId).order("created_at", { ascending: false }).limit(200);
   const recentlySeenContentIds = (recentInteractions ?? []).filter((i) => i.interaction_type === "view").map((i) => i.content_item_id);
