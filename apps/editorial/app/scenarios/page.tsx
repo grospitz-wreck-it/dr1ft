@@ -57,11 +57,12 @@ export default async function ScenariosPage() {
     const familyMissions = (missions ?? []).filter((mission: any) => scenarioIds.has(mission.scenario_id));
     const missionIds = new Set(familyMissions.map((mission: any) => mission.id));
     const familyContent = (contentItems ?? []).filter((item: any) => scenarioIds.has(item.scenario_id));
-    const familyAssignments = (assignments ?? []).filter((item: any) => scenarioIds.has(item.scenario_id));
-    const activeAssignedClasses = new Set(familyAssignments.filter((item: any) => {
+    const activeScenarioIds = new Set(variants.filter((variant) => variant.is_active).map((variant) => variant.id));
+    const familyAssignments = (assignments ?? []).filter((item: any) => {
       const klass: any = classById.get(item.class_id);
-      return klass?.is_active !== false;
-    }).map((item: any) => item.class_id));
+      return scenarioIds.has(item.scenario_id) && activeScenarioIds.has(item.scenario_id) && klass?.is_active !== false;
+    });
+    const activeAssignedClasses = new Set(familyAssignments.map((item: any) => item.class_id));
     const schoolIds = new Set(familyAssignments.map((item: any) => {
       const klass: any = classById.get(item.class_id);
       return klass?.school_id;
@@ -83,11 +84,13 @@ export default async function ScenariosPage() {
   });
 
   const totalActive = rows.filter((scenario: any) => scenario.is_active).length;
-  const totalAssignedClasses = new Set((assignments ?? []).filter((item: any) => {
+  const activeScenarioIds = new Set(rows.filter((scenario: any) => scenario.is_active).map((scenario: any) => scenario.id));
+  const activeAssignments = (assignments ?? []).filter((item: any) => {
     const klass: any = classById.get(item.class_id);
-    return klass?.is_active !== false;
-  }).map((item: any) => item.class_id)).size;
-  const totalSchools = new Set((assignments ?? []).map((item: any) => {
+    return activeScenarioIds.has(item.scenario_id) && klass?.is_active !== false;
+  });
+  const totalAssignedClasses = new Set(activeAssignments.map((item: any) => item.class_id)).size;
+  const totalSchools = new Set(activeAssignments.map((item: any) => {
     const klass: any = classById.get(item.class_id);
     return klass?.school_id;
   }).filter(Boolean)).size;
