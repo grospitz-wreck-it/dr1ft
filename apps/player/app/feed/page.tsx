@@ -61,17 +61,6 @@ export default async function FeedPage() {
   // If a generated Learning Design has approved/live posts linked to its steps,
   // play those posts as a deliberate sequence instead of mixing them into the
   // generic recommendation feed. Legacy scenarios keep the existing feed path.
-  let learningStepProgress: {
-    title: string;
-    description: string | null;
-    index: number;
-    total: number;
-    contentCount: number;
-    viewedCount: number;
-    allViewed: boolean;
-    requiredContentIds: string[];
-    viewedContentIds: string[];
-  } | null = null;
   let learningSequenceItems: FeedItem[] | null = null;
 
   if (scenarioIntro) {
@@ -132,32 +121,10 @@ export default async function FeedPage() {
           .sort((a, b) => (order.get(a.id) ?? 0) - (order.get(b.id) ?? 0));
         const requiredIds = active.progressIds;
         const viewedCount = requiredIds.filter((id) => viewedIds.has(id)).length;
-        learningStepProgress = {
-          title: active.step.title,
-          description: active.step.description,
-          index: stepsWithLiveContent.indexOf(active) + 1,
-          total: stepsWithLiveContent.length,
-          contentCount: requiredIds.length,
-          viewedCount,
-          allViewed: requiredIds.length > 0 && viewedCount === requiredIds.length,
-          requiredContentIds: requiredIds,
-          viewedContentIds: requiredIds.filter((id) => viewedIds.has(id)),
-        };
       } else if (stepsWithLiveContent.length > 0) {
         // All linked learning steps have been viewed. Do not silently replay
         // them through the generic feed; keep the end state explicit.
         learningSequenceItems = [];
-        learningStepProgress = {
-          title: "Lernweg abgeschlossen",
-          description: "Alle erforderlichen Beiträge dieses Lernplans wurden angesehen.",
-          index: stepsWithLiveContent.length,
-          total: stepsWithLiveContent.length,
-          contentCount: 0,
-          viewedCount: 0,
-          allViewed: true,
-          requiredContentIds: [],
-          viewedContentIds: [],
-        };
       }
     }
   }
@@ -166,5 +133,5 @@ export default async function FeedPage() {
     ? learningSequenceItems
     : selectNextFeedItems(mappedPool, ctx, 20) as FeedItem[];
   const likedContentIds = new Set((recentInteractions ?? []).filter((i) => i.interaction_type === "like").map((i) => i.content_item_id));
-  return <FeedClient initialItems={items} userId={user.id} classInstanceId={classInstanceId} likedContentIds={likedContentIds} scenarioIntro={scenarioIntro} scenarioMissionCount={scenarioMissionIds.length} completedScenarioMissionCount={new Set((completedScenarioMissions ?? []).map((mission) => mission.mission_id)).size} learningStepProgress={learningStepProgress} profile={{ displayName: currentProfile?.display_name ?? "DR1FT User", username: currentProfile?.username ?? "user", avatarSeed: currentProfile?.avatar_seed ?? user.id }} />;
+
 }
