@@ -168,6 +168,8 @@ export default async function FeedPage() {
   const personalizedAmbientItems = selectedInterestHierarchyKeys.size
     ? mappedPool
         .filter((item) => {
+          const ageOrder = { all_ages: 0, "12_plus": 1, "16_plus": 2 } as const;
+          if (ageOrder[item.ageRating] > ageOrder[ageRating]) return false;
           if (item.manipulationTechniques.length > 0) return false;
           const itemKeys = Array.isArray(item.extra?.interestKeys)
             ? item.extra.interestKeys.filter((key: unknown): key is string => typeof key === "string")
