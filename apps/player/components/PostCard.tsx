@@ -7,6 +7,7 @@
 // immediate feedback so exploration itself feels like a normal product flow.
 
 import { useEffect, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import Link from "next/link";
 import { Check, ChevronDown, Eye, Flag, Heart, Image as ImageIcon, MessageCircle, MoreHorizontal, Search, Share2, UserRound, X } from "lucide-react";
 import type { FeedItem, CreatorSummary } from "../lib/types";
@@ -35,6 +36,9 @@ export function PostCard({ item, userId, classInstanceId, initiallyLiked, onView
   const [commentText, setCommentText] = useState("");
   const [commentSaving, setCommentSaving] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
+  const menuButtonRef = useRef<HTMLButtonElement>(null);
+  const menuRef = useRef<HTMLDivElement>(null);
+  const [menuPosition, setMenuPosition] = useState<React.CSSProperties>({ position: "fixed", top: 12, left: 12, visibility: "hidden" });
   const [shareOpen, setShareOpen] = useState(false);
   const [shareLoading, setShareLoading] = useState(false);
   const [shareSaving, setShareSaving] = useState(false);
@@ -65,7 +69,7 @@ export function PostCard({ item, userId, classInstanceId, initiallyLiked, onView
     if (!menuOpen) return;
     const closeOnOutside = (event: PointerEvent) => {
       const target = event.target;
-      if (target instanceof Element && !target.closest("[data-post-menu]")) setMenuOpen(false);
+      if (target instanceof Element && !target.closest("[data-post-menu-panel], [data-post-menu-trigger]")) setMenuOpen(false);
     };
     const closeOnEscape = (event: KeyboardEvent) => {
       if (event.key === "Escape") setMenuOpen(false);
@@ -77,6 +81,60 @@ export function PostCard({ item, userId, classInstanceId, initiallyLiked, onView
       document.removeEventListener("keydown", closeOnEscape);
     };
   }, [menuOpen]);
+
+  useEffect(() => {
+    if (!menuOpen) return;
+    let frame = 0;
+    let resizeObserver: ResizeObserver | undefined;
+
+    const updateMenuPosition = () => {
+      const button = menuButtonRef.current;
+      const menu = menuRef.current;
+      if (!button || !menu) return;
+      const rect = button.getBoundingClientRect();
+      const margin = 12;
+      const edge = 16;
+      const width = Math.max(0, Math.min(240, window.innerWidth - edge * 2));
+      const maxHeight = Math.max(120, window.innerHeight - margin * 2);
+      const measuredHeight = menu.getBoundingClientRect().height || menu.scrollHeight;
+      const height = Math.min(measuredHeight, maxHeight);
+      const left = Math.max(edge, Math.min(rect.right - width, window.innerWidth - width - edge));
+      const spaceAbove = Math.max(0, rect.top - margin);
+      const spaceBelow = Math.max(0, window.innerHeight - rect.bottom - margin);
+      const placeAbove = spaceAbove >= height || spaceAbove >= spaceBelow;
+      const availableHeight = Math.max(120, Math.min(maxHeight, placeAbove ? spaceAbove : spaceBelow));
+      const finalHeight = Math.min(height, availableHeight);
+      const top = placeAbove
+        ? Math.max(margin, rect.top - finalHeight - margin)
+        : Math.min(rect.bottom + margin, window.innerHeight - finalHeight - margin);
+      setMenuPosition({ position: "fixed", top, left, width, maxHeight: availableHeight, overflowY: "auto", visibility: "visible" });
+    };
+
+    frame = window.requestAnimationFrame(() => {
+      updateMenuPosition();
+      if (menuRef.current && typeof ResizeObserver !== "undefined") {
+        resizeObserver = new ResizeObserver(updateMenuPosition);
+        resizeObserver.observe(menuRef.current);
+      }
+    });
+    window.addEventListener("resize", updateMenuPosition);
+    window.addEventListener("scroll", updateMenuPosition, true);
+    return () => {
+      window.cancelAnimationFrame(frame);
+      resizeObserver?.disconnect();
+      window.removeEventListener("resize", updateMenuPosition);
+      window.removeEventListener("scroll", updateMenuPosition, true);
+    };
+  }, [menuOpen, item.id]);
+
+  useEffect(() => {
+    const onGlobalMenuOpen = (event: Event) => {
+      const detail = (event as CustomEvent<{ postId: string }>).detail;
+      setMenuOpen(detail?.postId === item.id);
+    };
+    window.addEventListener("dr1ft:post-menu-open", onGlobalMenuOpen);
+    return () => window.removeEventListener("dr1ft:post-menu-open", onGlobalMenuOpen);
+  }, [item.id]);
 
   useEffect(() => {
     const onCommentCreated = (event: Event) => {
@@ -397,7 +455,11 @@ export function PostCard({ item, userId, classInstanceId, initiallyLiked, onView
           <button onClick={toggleLike} className={`tap-pulse touch-target flex items-center gap-1.5 rounded-xl px-3 text-sm font-body transition-colors hover:bg-ink/5 ${liked ? "text-social-pink" : "text-ink/60"}`} aria-label="Gefällt mir"><Heart className="w-5 h-5" fill={liked ? "currentColor" : "none"} strokeWidth={2}/>{baseLikeCount + (liked ? 1 : 0)}</button>
           <button onClick={toggleComments} className="touch-target flex items-center gap-1.5 rounded-xl px-3 text-sm font-body text-ink/60 transition-colors hover:bg-ink/5" aria-label="Kommentare anzeigen"><MessageCircle className="w-[18px] h-[18px]" strokeWidth={2}/>{comments ? comments.length : liveCommentCount}</button>
           <div className="ml-auto flex items-center gap-1">
-            <button onClick={() => setMenuOpen((open) => !open)} className="touch-target group grid w-10 place-items-center rounded-xl transition-colors hover:bg-violet-500/10" aria-label="Weitere Optionen" aria-expanded={menuOpen}>
+            <button ref={menuButtonRef} data-post-menu-trigger onClick={() => {
+              const nextOpen = !menuOpen;
+              if (nextOpen) window.dispatchEvent(new CustomEvent("dr1ft:post-menu-open", { detail: { postId: item.id } }));
+              setMenuOpen(nextOpen);
+            }} className="touch-target group grid w-10 place-items-center rounded-xl transition-colors hover:bg-violet-500/10" aria-label="Weitere Optionen" aria-expanded={menuOpen}>
               <span className="flex items-center gap-[3px]" aria-hidden="true">
                 <span className="h-1.5 w-1.5 rounded-full bg-[#8B5CF6] transition-all duration-300 group-hover:-translate-y-0.5 group-hover:bg-[#22D3EE] group-hover:scale-125"/>
                 <span className="h-1.5 w-1.5 rounded-full bg-[#22D3EE] transition-all duration-300 group-hover:translate-y-0.5 group-hover:bg-[#EC4899] group-hover:scale-125"/>
@@ -405,7 +467,7 @@ export function PostCard({ item, userId, classInstanceId, initiallyLiked, onView
               </span>
             </button>
           </div>
-          {menuOpen && <div className="absolute z-30 right-0 bottom-12 w-[min(19rem,calc(100vw-2rem))] overflow-hidden rounded-[1.35rem] border border-violet-300/35 bg-white/85 p-2 text-slate-900 shadow-[0_24px_80px_rgba(77,39,145,0.28)] backdrop-blur-2xl supports-[backdrop-filter]:bg-white/70 dark:border-violet-300/20 dark:bg-[#211a32]/85 dark:text-slate-100 dark:shadow-[0_24px_80px_rgba(0,0,0,0.45)] dark-post-menu"><div className="flex items-center gap-2 px-3 pb-2 pt-2 text-[10px] font-bold uppercase tracking-[0.18em] text-violet-700 dark:text-violet-300"><span className="flex items-center gap-1"><span className="h-1.5 w-1.5 rounded-full bg-violet-500"/><span className="h-1.5 w-1.5 rounded-full bg-cyan-400"/><span className="h-1.5 w-1.5 rounded-full bg-pink-500"/></span>DR1FT · Prüfen</div><ActionButton icon={<Search/>} label="Quelle ansehen" onClick={inspectSource}/><ActionButton icon={<ImageIcon/>} label="Bild prüfen" onClick={inspectMedia}/><ActionButton icon={<Eye/>} label="Fakten & Kontext checken" onClick={inspectContext}/><ActionButton icon={<UserRound/>} label="Profil ansehen" onClick={inspectProfile}/><ActionButton icon={<Search/>} label="Informationen vergleichen" onClick={compareInformation}/><div className="mx-2 my-2 h-px bg-gradient-to-r from-violet-400/40 via-cyan-400/35 to-pink-400/40"/><div className="px-3 pb-1 pt-1 text-[10px] font-bold uppercase tracking-[0.18em] text-slate-500 dark:text-slate-400">Weiter</div><ActionButton icon={<Share2/>} label="Teilen" onClick={share}/><ActionButton icon={<Flag/>} label="Melden" onClick={report} /><ActionButton icon={<X/>} label="Ignorieren" onClick={ignore} /></div>}
+          {menuOpen && typeof document !== "undefined" && createPortal(<div ref={menuRef} data-post-menu-panel style={menuPosition} className="z-[80] overflow-hidden rounded-[1.35rem] border border-violet-300/35 bg-white/85 p-2 text-slate-900 shadow-[0_24px_80px_rgba(77,39,145,0.28)] backdrop-blur-2xl supports-[backdrop-filter]:bg-white/70 dark:border-violet-300/20 dark:bg-[#211a32]/85 dark:text-slate-100 dark:shadow-[0_24px_80px_rgba(0,0,0,0.45)] dark-post-menu"><div className="flex items-center gap-2 px-3 pb-2 pt-2 text-[10px] font-bold uppercase tracking-[0.18em] text-violet-700 dark:text-violet-300"><span className="flex items-center gap-1"><span className="h-1.5 w-1.5 rounded-full bg-violet-500"/><span className="h-1.5 w-1.5 rounded-full bg-cyan-400"/><span className="h-1.5 w-1.5 rounded-full bg-pink-500"/></span>DR1FT · Prüfen</div><ActionButton icon={<Search/>} label="Quelle ansehen" onClick={inspectSource}/><ActionButton icon={<ImageIcon/>} label="Bild prüfen" onClick={inspectMedia}/><ActionButton icon={<Eye/>} label="Fakten & Kontext checken" onClick={inspectContext}/><ActionButton icon={<UserRound/>} label="Profil ansehen" onClick={inspectProfile}/><ActionButton icon={<Search/>} label="Informationen vergleichen" onClick={compareInformation}/><div className="mx-2 my-2 h-px bg-gradient-to-r from-violet-400/40 via-cyan-400/35 to-pink-400/40"/><div className="px-3 pb-1 pt-1 text-[10px] font-bold uppercase tracking-[0.18em] text-slate-500 dark:text-slate-400">Weiter</div><ActionButton icon={<Share2/>} label="Teilen" onClick={share}/><ActionButton icon={<Flag/>} label="Melden" onClick={report} /><ActionButton icon={<X/>} label="Ignorieren" onClick={ignore} /></div>, document.body)}
         </div>
         {shareOpen && <div className="fixed inset-0 z-[100] flex items-center justify-center bg-slate-950/60 p-4 backdrop-blur-sm" onPointerDown={(event) => { if (event.target === event.currentTarget) setShareOpen(false); }}>
           <section role="dialog" aria-modal="true" aria-labelledby={`share-title-${item.id}`} className="w-full max-w-md rounded-3xl border border-slate-200 bg-white p-5 text-slate-900 shadow-2xl dark-share-dialog">
