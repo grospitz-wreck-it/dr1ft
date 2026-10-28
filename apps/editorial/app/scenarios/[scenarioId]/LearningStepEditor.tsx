@@ -219,17 +219,18 @@ export function LearningStepEditor({
                   </div>
                 </div>
 
-                <div>
-                  <div className="text-xs font-semibold text-slate-700">Was sollen die Lernenden dabei lernen?</div>
-                  <div className="mt-2 grid sm:grid-cols-2 gap-2">
-                    {availableObjectives.map((objective) => (
-                      <label key={objective.id} className="flex items-start gap-2 rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs">
-                        <input type="checkbox" name="objective_id" value={objective.id} formNoValidate disabled className="mt-0.5" checked={objectiveIds.has(objective.id)} readOnly />
-                        <span>{objective.title}</span>
-                      </label>
-                    ))}
-                  </div>
-                  <div className="mt-1 text-[10px] text-slate-400">Lernziele werden durch den Generator festgelegt. Änderungen erfolgen über die Zuordnungen weiter unten.</div>
+                <div className="rounded-xl border border-slate-200 bg-slate-50/70 p-3">
+                  <div className="text-xs font-semibold text-slate-700">Zugeordnete Lernziele</div>
+                  {objectiveIds.size > 0 ? (
+                    <div className="mt-2 flex flex-wrap gap-1.5">
+                      {availableObjectives.filter((objective) => objectiveIds.has(objective.id)).map((objective) => (
+                        <span key={objective.id} className="rounded-lg border border-violet-100 bg-white px-2.5 py-1.5 text-xs text-slate-700">{objective.title}</span>
+                      ))}
+                    </div>
+                  ) : (
+                    <p className="mt-1 text-xs text-slate-500">Noch kein Lernziel zugeordnet. Öffne „Zuordnungen & pädagogische Daten“, um eines auszuwählen.</p>
+                  )}
+                  <p className="mt-2 text-[11px] leading-4 text-slate-400">Diese Übersicht ist nur lesbar. Die Zuordnung bearbeitest du im Abschnitt am Ende der Station.</p>
                 </div>
 
                 <label className="text-xs font-medium text-slate-600">
@@ -238,15 +239,15 @@ export function LearningStepEditor({
                 </label>
 
                 <details className="rounded-xl border border-slate-200 bg-slate-50">
-                  <summary className="cursor-pointer list-none px-3 py-2.5 text-xs font-semibold text-slate-700">Weitere pädagogische Details</summary>
+                  <summary className="cursor-pointer list-none px-3 py-2.5 text-xs font-semibold text-slate-700">Erweiterte Einstellungen <span className="font-normal text-slate-400">· nur bei Bedarf</span></summary>
                   <div className="p-3 grid lg:grid-cols-2 gap-3">
                     <label className="text-xs text-slate-500">Pädagogische Funktion<input name="pedagogical_function" defaultValue={step.pedagogical_function || ""} className="mt-1 w-full rounded-xl border border-slate-200 px-3 py-2 text-sm text-slate-900" /></label>
                     <label className="text-xs text-slate-500">Kognitive Anforderung (Bloom)<select name="bloom_level" defaultValue={step.bloom_level} className="mt-1 w-full rounded-xl border border-slate-200 px-3 py-2 text-sm"><option value="remember">Erinnern</option><option value="understand">Verstehen</option><option value="apply">Anwenden</option><option value="analyze">Analysieren</option><option value="evaluate">Bewerten</option><option value="create">Erschaffen</option></select></label>
                     <label className="text-xs text-slate-500">Lernphase<select name="experiential_phase" defaultValue={step.experiential_phase} className="mt-1 w-full rounded-xl border border-slate-200 px-3 py-2 text-sm"><option value="concrete_experience">Erleben</option><option value="reflective_observation">Reflektieren</option><option value="abstract_conceptualization">Verstehen</option><option value="active_experimentation">Ausprobieren</option></select></label>
                     <label className="text-xs text-slate-500">Rolle in der Geschichte<input name="narrative_role" defaultValue={step.narrative_role || ""} className="mt-1 w-full rounded-xl border border-slate-200 px-3 py-2 text-sm" /></label>
                     <label className="text-xs text-slate-500">Sozialer Druck (0–5)<input name="social_pressure_level" type="number" min="0" max="5" defaultValue={step.social_pressure_level ?? 0} className="mt-1 w-full rounded-xl border border-slate-200 px-3 py-2 text-sm" /></label>
-                    <label className="text-xs text-slate-500">Eigene Aufgabe (JSON)<textarea name="creation_task" defaultValue={JSON.stringify(step.creation_task || {}, null, 2)} rows={4} className="mt-1 w-full rounded-xl border border-slate-200 px-3 py-2 font-mono text-[11px]" /></label>
-                    <label className="text-xs text-slate-500">Transfer-Aufgabe (JSON)<textarea name="transfer_task" defaultValue={JSON.stringify(step.transfer_task || {}, null, 2)} rows={4} className="mt-1 w-full rounded-xl border border-slate-200 px-3 py-2 font-mono text-[11px]" /></label>
+                    <label className="text-xs text-slate-500">Aufgaben-Konfiguration (JSON)<textarea name="creation_task" defaultValue={JSON.stringify(step.creation_task || {}, null, 2)} rows={4} className="mt-1 w-full rounded-xl border border-slate-200 px-3 py-2 font-mono text-[11px]" /></label>
+                    <label className="text-xs text-slate-500">Transfer-Konfiguration (JSON)<textarea name="transfer_task" defaultValue={JSON.stringify(step.transfer_task || {}, null, 2)} rows={4} className="mt-1 w-full rounded-xl border border-slate-200 px-3 py-2 font-mono text-[11px]" /></label>
                   </div>
                 </details>
 
