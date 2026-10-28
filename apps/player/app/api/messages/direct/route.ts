@@ -39,14 +39,41 @@ export async function GET(request: Request) {
       .is("read_at", null);
     if (unreadError) return NextResponse.json({ error: "Ungelesene Nachrichten konnten nicht geladen werden." }, { status: 500 });
 
+    const { data: recentMessages, error: recentMessagesError } = await supabase
+      .from("student_direct_messages")
+      .select("sender_id, recipient_id, body, created_at")
+      .eq("class_instance_id", classInstanceId)
+      .or(`sender_id.eq.${user.id},recipient_id.eq.${user.id}`)
+      .order("created_at", { ascending: false })
+      .limit(1000);
+    if (recentMessagesError) return NextResponse.json({ error: "Nachrichtenvorschau konnte nicht geladen werden." }, { status: 500 });
+
+    const contactIds = new Set(memberIds);
+    const latestByContact = new Map<string, { body: string; created_at: string; fromMe: boolean }>();
+    for (const message of recentMessages ?? []) {
+      const contactId = message.sender_id === user.id ? message.recipient_id : message.sender_id;
+      if (!contactIds.has(contactId) || latestByContact.has(contactId)) continue;
+      latestByContact.set(contactId, {
+        body: message.body,
+        created_at: message.created_at,
+        fromMe: message.sender_id === user.id,
+      });
+    }
+
     const unreadSenderIds = new Set((unreadMessages ?? []).map((message) => message.sender_id));
     return NextResponse.json({
-      contacts: (profiles ?? []).map((p) => ({
-        id: p.id,
-        display_name: p.display_name || p.username || "DR1FT Schüler",
-        handle: p.username ? `@${p.username}` : "@dr1ft",
-        isDue: unreadSenderIds.has(p.id),
-      })),
+      contacts: (profiles ?? []).map((p) => {
+        const latest = latestByContact.get(p.id);
+        return {
+          id: p.id,
+          display_name: p.display_name || p.username || "DR1FT Schüler",
+          handle: p.username ? `@${p.username}` : "@dr1ft",
+          isDue: unreadSenderIds.has(p.id),
+          lastMessage: latest?.body ?? null,
+          lastMessageAt: latest?.created_at ?? null,
+          lastMessageFromMe: latest?.fromMe ?? false,
+        };
+      }),
       hasUnread: unreadSenderIds.size > 0,
     });
   }
