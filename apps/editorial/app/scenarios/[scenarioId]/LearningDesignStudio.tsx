@@ -105,7 +105,8 @@ export function LearningDesignStudio({ scenarioId, latestDesign }: Props) {
       : [
           { title: "Ziel klären", detail: "Festlegen, was Lernende am Ende verstehen oder können sollen." },
           { title: "Hinweise entdecken", detail: selectedBloom.value === "analyze" ? "Informationen vergleichen und Zusammenhänge untersuchen." : "Einen Feed-Beitrag untersuchen und relevante Hinweise sammeln." },
-          { title: selectedBloom.value === "create" ? "Eigene Lösung entwickeln" : selectedBloom.value === "evaluate" ? "Urteil begründen" : selectedBloom.value === "apply" ? "Wissen anwenden" : "Erkenntnis festhalten", detail: selectedBloom.effect };
+          { title: selectedBloom.value === "create" ? "Eigene Lösung entwickeln" : selectedBloom.value === "evaluate" ? "Urteil begründen" : selectedBloom.value === "apply" ? "Wissen anwenden" : "Erkenntnis festhalten", detail: selectedBloom.effect },
+      ];
 
   function createDesign() {
     setMessage("");
