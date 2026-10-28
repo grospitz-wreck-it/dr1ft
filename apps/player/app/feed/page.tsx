@@ -58,7 +58,107 @@ export default async function FeedPage() {
   const progress = (competencyProgress ?? []).map((c) => ({ userId: c.user_id, competencyId: c.competency_id, evidence: c.evidence, level: c.level, updatedAt: c.updated_at }));
   const recentTechniques = mappedPool.filter((item) => recentlySeenContentIds.includes(item.id)).flatMap((item) => item.manipulationTechniques).slice(0, 12);
   const ctx: FeedContext = { userAgeRating: ageRating, competencyProgress: progress, recentlySeenContentIds, recentTechniques, assignedScenarioIds, signalRatio: computeAdaptiveSignalRatio(progress) };
-  const items = selectNextFeedItems(mappedPool, ctx, 20) as FeedItem[];
+  // If a generated Learning Design has approved/live posts linked to its steps,
+  // play those posts as a deliberate sequence instead of mixing them into the
+  // generic recommendation feed. Legacy scenarios keep the existing feed path.
+  let learningStepProgress: {
+    title: string;
+    description: string | null;
+    index: number;
+    total: number;
+    contentCount: number;
+    viewedCount: number;
+    allViewed: boolean;
+  } | null = null;
+  let learningSequenceItems: FeedItem[] | null = null;
+
+  if (scenarioIntro) {
+    const { data: latestDesign } = await supabase
+      .from("learning_designs")
+      .select("id")
+      .eq("scenario_id", scenarioIntro.id)
+      .order("version", { ascending: false })
+      .limit(1)
+      .maybeSingle();
+
+    if (latestDesign) {
+      const { data: steps } = await supabase
+        .from("learning_steps")
+        .select("id, step_index, title, description")
+        .eq("learning_design_id", latestDesign.id)
+        .order("step_index", { ascending: true });
+
+      const stepIds = (steps ?? []).map((step) => step.id);
+      const { data: links } = stepIds.length
+        ? await supabase
+            .from("learning_step_content")
+            .select("learning_step_id, content_item_id, order_index, required")
+            .in("learning_step_id", stepIds)
+        : { data: [] as { learning_step_id: string; content_item_id: string; order_index: number; required: boolean }[] };
+
+      const livePostIds = new Set(mappedPool.map((item) => item.id));
+      const usableLinks = (links ?? []).filter((link) => livePostIds.has(link.content_item_id));
+      const linkedContentIds = Array.from(new Set(usableLinks.map((link) => link.content_item_id)));
+      const { data: viewedRows } = linkedContentIds.length
+        ? await supabase
+            .from("user_interactions")
+            .select("content_item_id")
+            .eq("user_id", user.id)
+            .eq("class_instance_id", classInstanceId)
+            .eq("interaction_type", "view")
+            .in("content_item_id", linkedContentIds)
+        : { data: [] as { content_item_id: string }[] };
+      const viewedIds = new Set((viewedRows ?? []).map((row) => row.content_item_id));
+
+      const stepsWithLiveContent = (steps ?? [])
+        .map((step) => {
+          const stepLinks = usableLinks
+            .filter((link) => link.learning_step_id === step.id)
+            .sort((a, b) => a.order_index - b.order_index);
+          const requiredIds = stepLinks.filter((link) => link.required).map((link) => link.content_item_id);
+          const progressIds = requiredIds.length ? requiredIds : stepLinks.map((link) => link.content_item_id);
+          return { step, stepLinks, progressIds, done: progressIds.length > 0 && progressIds.every((id) => viewedIds.has(id)) };
+        })
+        .filter((entry) => entry.stepLinks.length > 0);
+
+      const active = stepsWithLiveContent.find((entry) => !entry.done);
+      if (active) {
+        const activeIds = new Set(active.stepLinks.map((link) => link.content_item_id));
+        const order = new Map(active.stepLinks.map((link) => [link.content_item_id, link.order_index]));
+        learningSequenceItems = mappedPool
+          .filter((item) => activeIds.has(item.id))
+          .sort((a, b) => (order.get(a.id) ?? 0) - (order.get(b.id) ?? 0));
+        const requiredIds = active.progressIds;
+        const viewedCount = requiredIds.filter((id) => viewedIds.has(id)).length;
+        learningStepProgress = {
+          title: active.step.title,
+          description: active.step.description,
+          index: stepsWithLiveContent.indexOf(active) + 1,
+          total: stepsWithLiveContent.length,
+          contentCount: requiredIds.length,
+          viewedCount,
+          allViewed: requiredIds.length > 0 && viewedCount === requiredIds.length,
+        };
+      } else if (stepsWithLiveContent.length > 0) {
+        // All linked learning steps have been viewed. Do not silently replay
+        // them through the generic feed; keep the end state explicit.
+        learningSequenceItems = [];
+        learningStepProgress = {
+          title: "Lernweg abgeschlossen",
+          description: "Alle erforderlichen Beiträge dieses Lernplans wurden angesehen.",
+          index: stepsWithLiveContent.length,
+          total: stepsWithLiveContent.length,
+          contentCount: 0,
+          viewedCount: 0,
+          allViewed: true,
+        };
+      }
+    }
+  }
+
+  const items = learningSequenceItems !== null
+    ? learningSequenceItems
+    : selectNextFeedItems(mappedPool, ctx, 20) as FeedItem[];
   const likedContentIds = new Set((recentInteractions ?? []).filter((i) => i.interaction_type === "like").map((i) => i.content_item_id));
-  return <FeedClient initialItems={items} userId={user.id} classInstanceId={classInstanceId} likedContentIds={likedContentIds} scenarioIntro={scenarioIntro} scenarioMissionCount={scenarioMissionIds.length} completedScenarioMissionCount={new Set((completedScenarioMissions ?? []).map((mission) => mission.mission_id)).size} profile={{ displayName: currentProfile?.display_name ?? "DR1FT User", username: currentProfile?.username ?? "user", avatarSeed: currentProfile?.avatar_seed ?? user.id }} />;
+  return <FeedClient initialItems={items} userId={user.id} classInstanceId={classInstanceId} likedContentIds={likedContentIds} scenarioIntro={scenarioIntro} scenarioMissionCount={scenarioMissionIds.length} completedScenarioMissionCount={new Set((completedScenarioMissions ?? []).map((mission) => mission.mission_id)).size} learningStepProgress={learningStepProgress} profile={{ displayName: currentProfile?.display_name ?? "DR1FT User", username: currentProfile?.username ?? "user", avatarSeed: currentProfile?.avatar_seed ?? user.id }} />;
 }
