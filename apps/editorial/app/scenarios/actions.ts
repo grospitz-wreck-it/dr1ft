@@ -316,6 +316,7 @@ function slugifyScenarioGroup(input: string): string {
  */
 export async function generateScenarioDraft(formData: FormData) {
   let createdGroup = "";
+  let firstCreatedScenarioId = "";
   try {
     const supabase = supabaseServerClient();
 
@@ -520,6 +521,8 @@ Gib ausschließlich valides JSON gemäß Schema zurück.`;
         );
       }
 
+      if (!firstCreatedScenarioId) firstCreatedScenarioId = scenario.id;
+
       const arcTitle = String(variant.arcTitle || "Ablauf").trim();
       const { data: arc, error: arcError } = await supabase
         .from("story_arcs")
@@ -587,10 +590,11 @@ Gib ausschließlich valides JSON gemäß Schema zurück.`;
         ? error.message
         : "Unbekannter Fehler bei der Szenario-Generierung.";
     console.error("[scenario-generator]", error);
-    redirect(`/scenarios?generationError=${encodeURIComponent(message.slice(0, 900))}`);
+    redirect(`/scenarios/new?generationError=${encodeURIComponent(message.slice(0, 900))}`);
   }
 
   revalidatePath("/scenarios");
+  if (firstCreatedScenarioId) redirect(`/scenarios/${firstCreatedScenarioId}`);
   redirect(`/scenarios?group=${encodeURIComponent(createdGroup)}`);
 }
 
