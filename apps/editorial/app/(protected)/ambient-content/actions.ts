@@ -289,7 +289,7 @@ export async function generateAmbientDrafts(formData: FormData) {
   const imageStyle = text(formData, "imageStyle", "authentic social photo");
   const aspectRatio = text(formData, "aspectRatio", "4:5");
   const creatorId = String(formData.get("creatorId") ?? "") || null;
-  const requestedInterestKeys = [...new Set(String(formData.get("interests") ?? "").split(",").map((v) => v.trim()).filter(Boolean))].slice(0, 3);
+  const requestedInterestKeys = Array.from(new Set(String(formData.get("interests") ?? "").split(",").map((v) => v.trim()).filter(Boolean))).slice(0, 3);
   const { data: interestRows, error: interestError } = requestedInterestKeys.length
     ? await supabase.from("ambient_interests").select("key, label").in("key", requestedInterestKeys).eq("is_active", true).eq("is_selectable", true).eq("taxonomy_status", "active")
     : { data: [], error: null };
