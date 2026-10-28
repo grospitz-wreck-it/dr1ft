@@ -10,7 +10,6 @@ import { AmbientGeneratorForm } from "./AmbientGeneratorForm";
 
 const STATUS_ORDER = ["draft", "in_review", "approved", "live", "rejected", "archived"];
 const STYLE_OPTIONS = [["mixed", "✨ Wild Mix — alles durcheinander"], ["casual", "😎 Locker & natürlich"], ["chatty", "💬 Chatty / Messenger"], ["meme", "💀 Meme-native / Internet"], ["deadpan", "😐 Trocken / deadpan"], ["wholesome", "🫶 Warm / wholesome"], ["chaotic", "🤪 Chaotisch / impulsiv"], ["observational", "👀 Beobachtend"], ["storyteller", "📖 Mini-Storys"], ["minimal", "🫥 Minimalistisch"]];
-const INTEREST_OPTIONS = ["🎵 Musik", "🎮 Gaming", "🍿 Serien & Filme", "⚽ Sport", "👟 Mode", "🍕 Essen", "🏃 Fitness", "✈️ Reisen", "🐶 Tiere", "📱 Tech", "📚 Schule", "🫶 Freunde", "😂 Memes", "🎨 Kreativität", "📖 Bücher", "🌿 Natur", "🔬 Wissenschaft", "📍 Lokales"];
 const statusLabel: Record<string, string> = { draft: "ENTWURF", in_review: "REVIEW", approved: "APPROVED", live: "LIVE", rejected: "ABGELEHNT", archived: "ARCHIV" };
 
 type Props = { searchParams?: { status?: string; q?: string; media?: string; provider?: string; creator?: string; age?: string; grade?: string; mission?: string; arc?: string; generationError?: string } };
@@ -47,6 +46,7 @@ export default async function AmbientContentPage({ searchParams = {} }: Props) {
     arcStepsResult,
     arcsResult,
     classesResult,
+    ambientInterestsResult,
   ] = await Promise.all([
     supabase.from("creators").select("id, display_name").eq("creator_role", "ambient").order("display_name"),
     itemsQuery,
@@ -55,6 +55,7 @@ export default async function AmbientContentPage({ searchParams = {} }: Props) {
     supabase.from("story_arc_steps").select("arc_id, mission_id"),
     supabase.from("story_arcs").select("id, title, scenario_id"),
     supabase.from("classes").select("id, name, grade_level"),
+    supabase.from("ambient_interests").select("key, label, emoji, category").eq("is_active", true).eq("is_selectable", true).eq("taxonomy_status", "active").order("sort_order").order("label"),
   ]);
 
   const ambientCreators = creatorsResult.data ?? [];
@@ -64,6 +65,7 @@ export default async function AmbientContentPage({ searchParams = {} }: Props) {
   const arcRows = arcsResult.data ?? [];
   const arcStepRows = arcStepsResult.data ?? [];
   const classRows = classesResult.data ?? [];
+  const ambientInterests = ambientInterestsResult.data ?? [];
 
   const metadataErrors = [
     creatorsResult.error,
@@ -73,6 +75,7 @@ export default async function AmbientContentPage({ searchParams = {} }: Props) {
     arcStepsResult.error,
     arcsResult.error,
     classesResult.error,
+    ambientInterestsResult.error,
   ].filter(Boolean);
 
   const missionByContent = new Map<string, { id: string; title: string; scenarioId: string | null }[]>();
@@ -166,7 +169,7 @@ export default async function AmbientContentPage({ searchParams = {} }: Props) {
       <section className="bg-white border border-slate-200 rounded-2xl p-6 shadow-sm space-y-6">
         <div className="flex items-center justify-between"><div><h2 className="font-semibold text-slate-900 flex items-center gap-2"><Wand2 className="w-4 h-4 text-accent"/> Feed-Rezept</h2><p className="text-xs text-slate-500 mt-1">Wie soll sich der Feed anfühlen?</p></div><span className="text-[11px] px-2 py-1 rounded-full bg-violet-50 text-violet-700 font-medium">AMBIENT v4</span></div>
         <div><label className="block text-xs font-semibold text-slate-600 mb-2">THEMA / KONTEXT</label><input name="theme" required defaultValue="" placeholder="z.B. Schulweg, Wochenende, neue Musik, Freibad, Gaming-Abend …" className="w-full rounded-xl border border-slate-200 px-4 py-3 text-sm outline-none focus:border-accent"/></div>
-        <div><label className="block text-xs font-semibold text-slate-600 mb-2">INTERESSEN · MAX. 3</label><AmbientInterestPicker options={INTEREST_OPTIONS} /></div>
+        <div><label className="block text-xs font-semibold text-slate-600 mb-2">INTERESSEN · MAX. 3</label><AmbientInterestPicker options={ambientInterests} /></div>
         <div className="grid md:grid-cols-2 gap-4"><Field label="ZIELGRUPPE"><select name="ageBand" defaultValue="14_15" className="control"><option value="12_13">12–13 · Early Teen</option><option value="14_15">14–15 · Teen</option><option value="16_17">16–17 · Older Teen</option><option value="18_plus">18+ · Young Adult</option><option value="all">Altersneutral</option></select></Field><Field label="CREATOR / STIMME"><select name="creatorId" className="control"><option value="">Automatisch wechseln</option>{ambientCreators?.map((creator)=><option key={creator.id} value={creator.id}>{creator.display_name}</option>)}</select></Field></div>
         <Field label="SCHREIBSTIL"><select name="style" defaultValue="mixed" className="control">{STYLE_OPTIONS.map(([value,label])=><option key={value} value={value}>{label}</option>)}</select></Field>
         <div className="grid md:grid-cols-3 gap-4"><SliderSelect name="typoLevel" label="TIPPFEHLER" options={["0 · clean","1 · gelegentlich","2 · glaubwürdig","3 · chaotisch"]}/><SliderSelect name="slangLevel" label="JUGENDSPRACHE" options={["0 · neutral","1 · leicht","2 · natürlich","3 · stark"]} defaultValue="2"/><SliderSelect name="emojiLevel" label="EMOJIS" options={["0 · keine","1 · sparsam","2 · natürlich","3 · viel"]} defaultValue="2"/></div>

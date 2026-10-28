@@ -32,6 +32,8 @@ export interface FeedContext {
    * computeAdaptiveSignalRatio().
    */
   signalRatio?: number;
+  /** Explicitly selected DR1FT interest keys; used only as a soft feed preference. */
+  interestKeys?: string[];
 }
 
 const AGE_ORDER: Record<AgeRating, number> = {
@@ -78,6 +80,16 @@ function scoreItem(item: ContentItem, ctx: FeedContext): number {
     return acc + (5 - level) * 0.3;
   }, 0);
   score += lowProgressBoost;
+
+  // Explicitly selected interests are a soft ranking signal, never a hard
+  // filter. Post interestKeys should already include their canonical ancestors.
+  const itemExtra = (item as ContentItem & { extra?: Record<string, unknown> }).extra;
+  const rawInterestKeys = itemExtra?.interestKeys;
+  const itemInterestKeys = Array.isArray(rawInterestKeys)
+    ? rawInterestKeys.filter((key): key is string => typeof key === "string")
+    : [];
+  const interestMatches = itemInterestKeys.filter((key) => ctx.interestKeys?.includes(key)).length;
+  score += Math.min(3, interestMatches * 1.5);
 
   return score;
 }

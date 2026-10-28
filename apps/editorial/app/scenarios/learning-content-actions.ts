@@ -133,13 +133,14 @@ function youtubeEmbedUrl(value: string) {
   }
 }
 
-export async function updateExistingContentMedia(scenarioId: string, contentItemId: string, input: { format?: string; prompt?: string; url?: string; ai?: boolean }) {
+export async function updateExistingContentMedia(scenarioId: string, contentItemId: string, input: { format?: string; prompt?: string; url?: string; ai?: boolean; creatorId?: string | null }) {
   const supabase = supabaseServerClient();
   const { data: item } = await supabase.from("content_items").select("id,body,media_url,media_type,extra").eq("id", contentItemId).eq("scenario_id", scenarioId).single();
   if (!item) throw new Error("Inhalt nicht gefunden.");
 
   const format = String(input.format || "photo");
   const url = String(input.url || "").trim();
+  const creatorId = String(input.creatorId || "").trim() || null;
   const prompt = String(input.prompt || "").trim();
   const extra = { ...((item.extra || {}) as Record<string, unknown>) };
 
@@ -190,7 +191,7 @@ export async function updateExistingContentMedia(scenarioId: string, contentItem
     "Szenario: " + scenario.title,
     "Altersgruppe: " + scenario.age_band,
     "Bestehender Beitrag: " + item.body,
-    "Lernschritt: " + (step?.title || "nicht angegeben"),
+    "Didaktischer Kontext: Content-Piece wird eigenständig im Szenario gestaltet.",
     "Lernkontext: " + (step?.description || ""),
     "Redaktionswunsch: " + (prompt || "passend zum bestehenden Beitrag"),
   ].join("\n");
@@ -210,25 +211,21 @@ export async function updateExistingContentMedia(scenarioId: string, contentItem
   return { ok: true };
 }
 
-export async function createLearningContentItem(scenarioId: string, input: { format?: string; prompt?: string; url?: string; ai?: boolean }) {
+export async function createLearningContentItem(scenarioId: string, input: { format?: string; prompt?: string; url?: string; ai?: boolean; creatorId?: string | null }) {
   const supabase = supabaseServerClient();
   const format = String(input.format || "post");
   const userPrompt = String(input.prompt || "").trim();
   const url = String(input.url || "").trim();
+  const creatorId = String(input.creatorId || "").trim() || null;
 
   const { data: scenario } = await supabase.from("scenarios").select("id,title,description,age_band,age_rating").eq("id", scenarioId).single();
   if (!scenario) throw new Error("Szenario nicht gefunden.");
-
-  const { data: design } = await supabase.from("learning_designs").select("id").eq("scenario_id", scenarioId).order("version", { ascending: false }).limit(1).maybeSingle();
-  const { data: step } = design
-    ? await supabase.from("learning_steps").select("id,title,description,activity_type,activity_config,reflection_prompt").eq("learning_design_id", design.id).order("step_index").limit(1).maybeSingle()
-    : { data: null };
 
   const labels: Record<string,string> = { post:"Textbeitrag", photo:"Foto", meme:"Meme", video:"Video", embed:"Embed", comment:"Kommentar", dm_message:"DM", reflection_prompt:"Reflexionsimpuls" };
   let body = userPrompt;
   let mediaUrl: string | null = null;
   let mediaType: string | null = null;
-  let extra: Record<string, unknown> = { generatedBy: "content-composer-v1", contentFormat: format, learningStepId: step?.id ?? null };
+  let extra: Record<string, unknown> = { generatedBy: "content-composer-v1", contentFormat: format, learningStepId: null };
 
   if (format === "embed") {
     if (!url) throw new Error("Für einen Embed wird eine URL oder ein Embed-Code benötigt.");
@@ -242,9 +239,9 @@ export async function createLearningContentItem(scenarioId: string, input: { for
       "Format: " + (labels[format] || format),
       "Szenario: " + scenario.title,
       "Altersgruppe: " + scenario.age_band,
-      "Lernschritt: " + (step?.title || "nicht angegeben"),
-      "Lernschritt-Beschreibung: " + (step?.description || ""),
-      "Pädagogischer Zweck: " + (step?.activity_config?.contentPlan ? JSON.stringify(step.activity_config.contentPlan) : "nicht angegeben"),
+      "Arbeitsweise: Content-Piece wird direkt aus dem Szenario-Kontext entwickelt.",
+      "Szenario-Kontext: " + (scenario.description || "nicht angegeben"),
+      "Lernziel und pädagogischer Zweck: Leite einen passenden, altersgerechten Lernimpuls aus dem Szenario ab. Keine Lernschritt-Vorgabe.",
       "Zusätzlicher Wunsch der Redaktion: " + (userPrompt || "keiner"),
       "Erzeuge keinen Meta-Text über Pädagogik. Alles bleibt Draft.",
     ].join("\n");
@@ -257,7 +254,7 @@ export async function createLearningContentItem(scenarioId: string, input: { for
       );
       mediaUrl = image.url;
       mediaType = "image";
-      body = format === "meme" ? (await geminiText(prompt + "\nGive a short meme caption for the generated image.")) : (userPrompt || "Bild für den Lernschritt");
+      body = format === "meme" ? (await geminiText(prompt + "\nGive a short meme caption for the generated image.")) : (userPrompt || "Bild für das Szenario");
       extra.imageGeneration = {
         status: "generated", provider: image.provider, model: image.model, fullPrompt: prompt,
         aspectRatio: "4:5", generationCount: 1, editorialReview: "pending", generatedAt: new Date().toISOString(),
@@ -279,20 +276,18 @@ export async function createLearningContentItem(scenarioId: string, input: { for
 
   const type = format === "comment" ? "comment" : format === "dm_message" ? "dm_message" : format === "reflection_prompt" ? "reflection_prompt" : "post";
   const { data: contentItem, error } = await supabase.from("content_items").insert({
-    scenario_id: scenarioId, type, body: body || labels[format] || "Entwurf", media_url: mediaUrl, media_type: mediaType,
+    scenario_id: scenarioId, creator_id: creatorId, type, body: body || labels[format] || "Entwurf", media_url: mediaUrl, media_type: mediaType,
     difficulty: 1, age_rating: scenario.age_band === "16_17" || scenario.age_band === "18_plus" ? "16_plus" : "12_plus",
     manipulation_techniques: [], target_competencies: [], status: "draft", extra,
   }).select("id").single();
   if (error || !contentItem) throw new Error(error?.message || "Content konnte nicht gespeichert werden.");
 
-  if (step) {
-    await supabase.from("learning_step_content").insert({ learning_step_id: step.id, content_item_id: contentItem.id, role: format, order_index: 0, required: false });
-  }
+  // No automatic learning_step_content mapping: the editorial piece is the primary unit.
   revalidatePath("/scenarios/" + scenarioId);
   return { ok: true, id: contentItem.id };
 }
 
-export async function generateLearningContent(scenarioId: string, learningDesignId?: string) {
+export async function generateLearningContent(scenarioId: string, learningDesignId?: string, contentFirst = false, creatorId?: string | null) {
   const supabase = supabaseServerClient();
 
   const { data: scenario } = await supabase
@@ -311,11 +306,62 @@ export async function generateLearningContent(scenarioId: string, learningDesign
     .limit(1)
     .maybeSingle();
 
-  const { data: design } = learningDesignId
-    ? await supabase.from("learning_designs").select("id,title,description").eq("id", learningDesignId).single()
-    : await designQuery;
+  const { data: design } = contentFirst
+    ? { data: null }
+    : learningDesignId
+      ? await supabase.from("learning_designs").select("id,title,description").eq("id", learningDesignId).single()
+      : await designQuery;
 
-  if (!design) throw new Error("Noch kein Learning Design vorhanden.");
+  // Content-first path: when no optional learning design exists, generate a small
+  // coherent set of standalone feed pieces directly from the scenario brief.
+  if (!design) {
+    const pieces = [
+      { role: "opening", format: "post", purpose: "Einstieg: eine glaubwürdige Alltagssituation, die Neugier weckt, ohne die Lernbotschaft vorwegzunehmen." },
+      { role: "social_reaction", format: "comment", purpose: "Eine plausible Reaktion einer Person im Umfeld, die eine andere Perspektive oder Gruppendynamik sichtbar macht." },
+      { role: "turning_point", format: "post", purpose: "Ein weiterer Feed-Beitrag, der die Situation weiterentwickelt und relevante Hinweise für eine eigene Einschätzung liefert." },
+      { role: "reflection", format: "reflection_prompt", purpose: "Eine konkrete, offene Reflexionsfrage, die Lernende zum begründeten Nachdenken oder Handeln einlädt." },
+    ];
+    let created = 0;
+    for (const piece of pieces) {
+      const body = await geminiText([
+        "Erzeuge genau einen glaubwürdigen Social-Media-Inhalt für DR1FT auf Deutsch.",
+        "Szenario: " + scenario.title,
+        "Kontext: " + (scenario.description || "Aus dem Szenariotitel ableiten."),
+        "Altersgruppe: " + scenario.age_band,
+        "Rolle im Lernerlebnis: " + piece.role,
+        "Aufgabe dieses Content-Pieces: " + piece.purpose,
+        "Format: " + piece.format,
+        "Der Inhalt darf seine Lernfunktion nicht erklären und keine Meta-Kommentare enthalten.",
+        "Keine erfundenen externen Fakten. Keine realen Personen. Altersgerecht und glaubwürdig.",
+      ].join("\\n"));
+      const type = piece.format === "comment" ? "comment" : piece.format === "reflection_prompt" ? "reflection_prompt" : "post";
+      const { error } = await supabase.from("content_items").insert({
+        scenario_id: scenarioId,
+        creator_id: creatorId || null,
+        type,
+        body,
+        media_url: null,
+        media_type: null,
+        difficulty: 1,
+        age_rating: scenario.age_band === "16_17" || scenario.age_band === "18_plus" ? "16_plus" : "12_plus",
+        manipulation_techniques: [],
+        target_competencies: [],
+        status: "draft",
+        extra: {
+          generatedBy: "scenario-content-first-v1",
+          contentRole: piece.role,
+          contentFormat: piece.format,
+          pedagogicalPurpose: piece.purpose,
+          learningDesignId: null,
+          learningStepId: null,
+        },
+      });
+      if (error) throw new Error(error.message || "Content konnte nicht gespeichert werden.");
+      created++;
+    }
+    revalidatePath("/scenarios/" + scenarioId);
+    return { created, learningDesignId: null, mode: "content-first" as const };
+  }
 
   const { data: steps } = await supabase
     .from("learning_steps")

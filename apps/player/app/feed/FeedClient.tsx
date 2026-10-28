@@ -115,7 +115,11 @@ export function FeedClient({ initialItems, userId, classInstanceId, likedContent
   }, [supabase, classInstanceId]);
 
   useEffect(() => eventBus.on("MissionCompleted", async (event) => { const { data: mission } = await supabase.from("missions").select("reflection_content_id").eq("id", event.missionId).single(); if (mission?.reflection_content_id) setReflection({ missionId: event.missionId, contentItemId: mission.reflection_content_id }); }), [supabase, classInstanceId]);
-  function handleView(item: FeedItem) { if (seenRef.current.has(item.id)) return; seenRef.current.add(item.id); void recordInteraction(supabase, { userId, contentItemId: item.id, interactionType: "view", classInstanceId }); }
+  function handleView(item: FeedItem) {
+    if (seenRef.current.has(item.id)) return;
+    seenRef.current.add(item.id);
+    void recordInteraction(supabase, { userId, contentItemId: item.id, interactionType: "view", classInstanceId });
+  }
   function handleScenarioStart() {
     if (scenarioStarted) return;
     setScenarioStarted(true);

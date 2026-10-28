@@ -27,7 +27,34 @@ export default async function FeedPage() {
   const { data: allCompetencies } = await supabase.from("competencies").select("id, title");
   const progressByCompetency = new Map((competencyProgress ?? []).map((c) => [c.competency_id, c.level]));
   const competencyDisplay = (allCompetencies ?? []).map((c) => ({ id: c.id, title: c.title, level: progressByCompetency.get(c.id) ?? 1 }));
-  const { data: currentProfile } = await supabase.from("user_profiles").select("display_name, username, avatar_seed, birth_year").eq("id", user.id).maybeSingle();
+  const [
+    { data: currentProfile },
+    { data: ambientCatalog },
+    { data: ambientPreferences },
+  ] = await Promise.all([
+    supabase.from("user_profiles").select("display_name, username, avatar_seed, birth_year").eq("id", user.id).maybeSingle(),
+    supabase.from("ambient_interests").select("key, parent_key").eq("is_active", true).eq("taxonomy_status", "active"),
+    supabase.from("user_ambient_preferences").select("interest_keys").eq("user_id", user.id).maybeSingle(),
+  ]);
+  const interestParentByKey = new Map((ambientCatalog ?? []).map((interest) => [interest.key, interest.parent_key]));
+  const selectedInterestKeys: string[] = Array.isArray(ambientPreferences?.interest_keys)
+    ? ambientPreferences.interest_keys.filter((key: unknown): key is string => typeof key === "string")
+    : [];
+  const addInterestAncestors = (keys: unknown): string[] => {
+    if (!Array.isArray(keys)) return [];
+    const expanded = new Set<string>();
+    for (const rawKey of keys) {
+      if (typeof rawKey !== "string") continue;
+      let current: string | null | undefined = rawKey;
+      const visited = new Set<string>();
+      while (current && !visited.has(current)) {
+        visited.add(current);
+        expanded.add(current);
+        current = interestParentByKey.get(current);
+      }
+    }
+    return [...expanded];
+  };
   const { data: recentInteractions } = await supabase.from("user_interactions").select("content_item_id, interaction_type").eq("user_id", user.id).eq("class_instance_id", classInstanceId).order("created_at", { ascending: false }).limit(200);
   const recentlySeenContentIds = (recentInteractions ?? []).filter((i) => i.interaction_type === "view").map((i) => i.content_item_id);
   const scenarioFilter = assignedScenarioIds.length > 0 ? `scenario_id.in.(${assignedScenarioIds.join(",")}),scenario_id.is.null` : "scenario_id.is.null";
@@ -53,12 +80,86 @@ export default async function FeedPage() {
   const { data: socialProfiles } = likeUserIds.length ? await supabase.from("user_profiles").select("id, display_name, username, avatar_seed").in("id", likeUserIds) : { data: [] as { id: string; display_name: string | null; username: string | null; avatar_seed: string | null }[] };
   const socialProfileById = new Map((socialProfiles ?? []).map((p) => [p.id, p])); const socialByContent = new Map<string, Array<{ id: string; displayName: string; username: string; avatarSeed: string }>>();
   for (const like of instanceLikes ?? []) { const profile = socialProfileById.get(like.user_id); if (!profile) continue; const list = socialByContent.get(like.content_item_id) ?? []; if (!list.some((p) => p.id === profile.id)) list.push({ id: profile.id, displayName: profile.display_name ?? "DR1FT User", username: profile.username ?? "user", avatarSeed: profile.avatar_seed ?? profile.id }); socialByContent.set(like.content_item_id, list); }
-  const mappedPool: FeedItem[] = (pool ?? []).map((row: any) => ({ id: row.id, type: row.type, scenarioId: row.scenario_id, creatorId: row.creator_id, parentId: row.parent_id, title: row.title, body: row.body, mediaUrl: row.media_url, mediaType: row.media_type, manipulationTechniques: row.manipulation_techniques ?? [], targetCompetencies: row.target_competencies ?? [], difficulty: row.difficulty, ageRating: row.age_rating, sourceRefs: row.source_refs ?? [], status: row.status, reviewedBy: row.reviewed_by, reviewedAt: row.reviewed_at, reviewNotes: row.review_notes, extra: { ...(row.extra ?? {}), classLikeCount: likeCounts.get(row.id) ?? 0, classLikeUsers: socialByContent.get(row.id) ?? [], classCommentCount: commentCounts.get(row.id) ?? 0 }, createdAt: row.created_at, updatedAt: row.updated_at, creator: mapCreatorRow(row.creators) }));
+  const mappedPool: FeedItem[] = (pool ?? []).map((row: any) => ({ id: row.id, type: row.type, scenarioId: row.scenario_id, creatorId: row.creator_id, parentId: row.parent_id, title: row.title, body: row.body, mediaUrl: row.media_url, mediaType: row.media_type, manipulationTechniques: row.manipulation_techniques ?? [], targetCompetencies: row.target_competencies ?? [], difficulty: row.difficulty, ageRating: row.age_rating, sourceRefs: row.source_refs ?? [], status: row.status, reviewedBy: row.reviewed_by, reviewedAt: row.reviewed_at, reviewNotes: row.review_notes, extra: { ...(row.extra ?? {}), interestKeys: addInterestAncestors(row.extra?.interestKeys), classLikeCount: likeCounts.get(row.id) ?? 0, classLikeUsers: socialByContent.get(row.id) ?? [], classCommentCount: commentCounts.get(row.id) ?? 0 }, createdAt: row.created_at, updatedAt: row.updated_at, creator: mapCreatorRow(row.creators) }));
   const ageRating: FeedContext["userAgeRating"] = currentProfile?.birth_year && new Date().getFullYear() - currentProfile.birth_year >= 16 ? "16_plus" : "12_plus";
   const progress = (competencyProgress ?? []).map((c) => ({ userId: c.user_id, competencyId: c.competency_id, evidence: c.evidence, level: c.level, updatedAt: c.updated_at }));
   const recentTechniques = mappedPool.filter((item) => recentlySeenContentIds.includes(item.id)).flatMap((item) => item.manipulationTechniques).slice(0, 12);
-  const ctx: FeedContext = { userAgeRating: ageRating, competencyProgress: progress, recentlySeenContentIds, recentTechniques, assignedScenarioIds, signalRatio: computeAdaptiveSignalRatio(progress) };
-  const items = selectNextFeedItems(mappedPool, ctx, 20) as FeedItem[];
+  const ctx: FeedContext = { userAgeRating: ageRating, competencyProgress: progress, recentlySeenContentIds, recentTechniques, assignedScenarioIds, signalRatio: computeAdaptiveSignalRatio(progress), interestKeys: selectedInterestKeys };
+  // If a generated Learning Design has approved/live posts linked to its steps,
+  // play those posts as a deliberate sequence instead of mixing them into the
+  // generic recommendation feed. Legacy scenarios keep the existing feed path.
+  let learningSequenceItems: FeedItem[] | null = null;
+
+  if (scenarioIntro) {
+    const { data: latestDesign } = await supabase
+      .from("learning_designs")
+      .select("id")
+      .eq("scenario_id", scenarioIntro.id)
+      .order("version", { ascending: false })
+      .limit(1)
+      .maybeSingle();
+
+    if (latestDesign) {
+      const { data: steps } = await supabase
+        .from("learning_steps")
+        .select("id, step_index, title, description")
+        .eq("learning_design_id", latestDesign.id)
+        .order("step_index", { ascending: true });
+
+      const stepIds = (steps ?? []).map((step) => step.id);
+      const { data: links } = stepIds.length
+        ? await supabase
+            .from("learning_step_content")
+            .select("learning_step_id, content_item_id, order_index, required")
+            .in("learning_step_id", stepIds)
+        : { data: [] as { learning_step_id: string; content_item_id: string; order_index: number; required: boolean }[] };
+
+      const livePostIds = new Set(mappedPool.map((item) => item.id));
+      const usableLinks = (links ?? []).filter((link) => livePostIds.has(link.content_item_id));
+      const linkedContentIds = Array.from(new Set(usableLinks.map((link) => link.content_item_id)));
+      const { data: viewedRows } = linkedContentIds.length
+        ? await supabase
+            .from("user_interactions")
+            .select("content_item_id")
+            .eq("user_id", user.id)
+            .eq("class_instance_id", classInstanceId)
+            .eq("interaction_type", "view")
+            .in("content_item_id", linkedContentIds)
+        : { data: [] as { content_item_id: string }[] };
+      const viewedIds = new Set((viewedRows ?? []).map((row) => row.content_item_id));
+
+      const stepsWithLiveContent = (steps ?? [])
+        .map((step) => {
+          const stepLinks = usableLinks
+            .filter((link) => link.learning_step_id === step.id)
+            .sort((a, b) => a.order_index - b.order_index);
+          const requiredIds = stepLinks.filter((link) => link.required).map((link) => link.content_item_id);
+          const progressIds = requiredIds.length ? requiredIds : stepLinks.map((link) => link.content_item_id);
+          return { step, stepLinks, progressIds, done: progressIds.length > 0 && progressIds.every((id) => viewedIds.has(id)) };
+        })
+        .filter((entry) => entry.stepLinks.length > 0);
+
+      const active = stepsWithLiveContent.find((entry) => !entry.done);
+      if (active) {
+        const activeIds = new Set(active.stepLinks.map((link) => link.content_item_id));
+        const order = new Map(active.stepLinks.map((link) => [link.content_item_id, link.order_index]));
+        learningSequenceItems = mappedPool
+          .filter((item) => activeIds.has(item.id))
+          .sort((a, b) => (order.get(a.id) ?? 0) - (order.get(b.id) ?? 0));
+        const requiredIds = active.progressIds;
+        const viewedCount = requiredIds.filter((id) => viewedIds.has(id)).length;
+      } else if (stepsWithLiveContent.length > 0) {
+        // The learning sequence has no remaining unseen step. Do not render
+        // an empty feed: return to the existing feed selector as a safe fallback.
+        learningSequenceItems = null;
+      }
+    }
+  }
+
+  const items = learningSequenceItems !== null
+    ? learningSequenceItems
+    : selectNextFeedItems(mappedPool, ctx, 20) as FeedItem[];
   const likedContentIds = new Set((recentInteractions ?? []).filter((i) => i.interaction_type === "like").map((i) => i.content_item_id));
+
   return <FeedClient initialItems={items} userId={user.id} classInstanceId={classInstanceId} likedContentIds={likedContentIds} scenarioIntro={scenarioIntro} scenarioMissionCount={scenarioMissionIds.length} completedScenarioMissionCount={new Set((completedScenarioMissions ?? []).map((mission) => mission.mission_id)).size} profile={{ displayName: currentProfile?.display_name ?? "DR1FT User", username: currentProfile?.username ?? "user", avatarSeed: currentProfile?.avatar_seed ?? user.id }} />;
 }

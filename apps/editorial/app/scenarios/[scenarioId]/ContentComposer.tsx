@@ -16,13 +16,15 @@ const formats: { id: Format; label: string; hint: string; icon: typeof PenLine }
   { id: "reflection_prompt", label: "Reflexion", hint: "Frage zum Nachdenken", icon: PenLine },
 ];
 
-export function ContentComposer({ scenarioId }: { scenarioId: string }) {
+export function ContentComposer({ scenarioId, creators = [] }: { scenarioId: string; creators?: { id: string; display_name: string; creator_role?: string | null }[] }) {
   const [format, setFormat] = useState<Format>("post");
   const [prompt, setPrompt] = useState("");
   const [url, setUrl] = useState("");
+  const [creatorId, setCreatorId] = useState("");
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState("");
   const [showMore, setShowMore] = useState(false);
+  const [generatingSet, setGeneratingSet] = useState(false);
 
   async function create(ai: boolean) {
     setBusy(true);
@@ -31,7 +33,7 @@ export function ContentComposer({ scenarioId }: { scenarioId: string }) {
       const response = await fetch("/api/scenarios/" + scenarioId + "/content-item", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ format, prompt, url, ai }),
+        body: JSON.stringify({ format, prompt, url, ai, creatorId: creatorId || null }),
       });
       const result = await response.json().catch(() => ({}));
       if (!response.ok) throw new Error(result.error || "Inhalt konnte nicht erstellt werden.");
@@ -44,26 +46,42 @@ export function ContentComposer({ scenarioId }: { scenarioId: string }) {
     }
   }
 
+  async function generateExperienceSet() {
+    setGeneratingSet(true);
+    setMessage("");
+    try {
+      const response = await fetch("/api/scenarios/" + scenarioId + "/learning-content", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ contentFirst: true, creatorId: creatorId || null }),
+      });
+      const result = await response.json().catch(() => ({}));
+      if (!response.ok) throw new Error(result.error || "Lernerlebnisse konnten nicht generiert werden.");
+      setMessage((result.created ?? 0) + " Content-Pieces als Entwurf erstellt. Die Seite wird aktualisiert …");
+      window.location.reload();
+    } catch (error) {
+      setMessage(error instanceof Error ? error.message : "KI-Generierung fehlgeschlagen.");
+    } finally {
+      setGeneratingSet(false);
+    }
+  }
+
   const visibleFormats = formats.filter(({ id }) => showMore || ["post", "photo", "meme", "video", "embed"].includes(id));
   const active = formats.find((item) => item.id === format)!;
   const ActiveIcon = active.icon;
 
   return (
     <section className="overflow-hidden rounded-3xl border border-violet-100 bg-white shadow-sm">
-      <div className="relative overflow-hidden bg-gradient-to-br from-violet-700 via-violet-600 to-fuchsia-500 px-5 py-6 text-white sm:px-7 sm:py-8">
-        <div className="pointer-events-none absolute -right-8 -top-12 h-44 w-44 rounded-full border-[28px] border-white/10" />
-        <div className="pointer-events-none absolute right-28 top-20 h-12 w-12 rounded-full bg-fuchsia-300/20 blur-xl" />
-        <div className="relative flex items-start gap-3">
-          <div className="grid h-11 w-11 shrink-0 place-items-center rounded-2xl bg-white/15 shadow-inner"><Sparkles className="h-5 w-5" /></div>
+      <div className="border-b border-slate-200 px-5 py-4 sm:px-6">
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <div>
-            <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-violet-100">Dein Content-Studio</p>
-            <h2 className="mt-1 text-xl font-bold tracking-tight sm:text-2xl">Was passiert als Nächstes im Feed?</h2>
-            <p className="mt-2 max-w-xl text-sm leading-6 text-white/80">Wähle ein Format und beschreibe kurz die Szene. DR1FT erstellt einen passenden Entwurf, den du danach weiter bearbeiten kannst.</p>
+            <h2 className="text-base font-semibold text-slate-900">Content erstellen</h2>
+            <p className="mt-1 text-sm text-slate-500">Wähle ein Format, beschreibe die Szene und ordne den Inhalt bei Bedarf direkt einer Figur zu.</p>
           </div>
-        </div>
-        <div className="relative mt-5 flex flex-wrap gap-2 text-[10px] font-medium">
-          <span className="rounded-full border border-white/20 bg-white/10 px-3 py-1.5">✦ KI-gestützter Entwurf</span>
-          <span className="rounded-full border border-white/20 bg-white/10 px-3 py-1.5">Du behältst die redaktionelle Kontrolle</span>
+          <button type="button" onClick={generateExperienceSet} disabled={generatingSet || busy} className="inline-flex shrink-0 items-center justify-center gap-2 rounded-lg border border-violet-200 bg-violet-50 px-3.5 py-2.5 text-sm font-semibold text-violet-700 transition hover:bg-violet-100 disabled:cursor-not-allowed disabled:opacity-60">
+            {generatingSet ? <LoaderCircle className="h-4 w-4 animate-spin" /> : <Sparkles className="h-4 w-4" />}
+            {generatingSet ? "Entwurf wird erstellt …" : "Lernerlebnis mit KI entwerfen"}
+          </button>
         </div>
       </div>
 
@@ -86,6 +104,11 @@ export function ContentComposer({ scenarioId }: { scenarioId: string }) {
 
         <div className="mt-6 rounded-2xl bg-slate-50 p-4 sm:p-5">
           <div className="flex items-center gap-2"><span className="grid h-8 w-8 place-items-center rounded-xl bg-white text-violet-700 shadow-sm"><ActiveIcon className="h-4 w-4" /></span><div><h3 className="text-sm font-bold text-slate-900">2. Szene beschreiben</h3><p className="text-[11px] text-slate-500">Format: {active.label} · Lernkontext wird automatisch berücksichtigt</p></div></div>
+          <label className="mt-4 block text-xs font-semibold text-slate-700">Figur / NPC <span className="font-normal text-slate-400">· optional</span></label>
+          <select value={creatorId} onChange={(e) => setCreatorId(e.target.value)} className="mt-1.5 w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm">
+            <option value="">Keine Figur zuordnen</option>
+            {creators.map((creator) => <option key={creator.id} value={creator.id}>{creator.display_name}{creator.creator_role ? " · " + creator.creator_role : ""}</option>)}
+          </select>
           <label className="mt-4 block text-xs font-semibold text-slate-700">Was soll im Inhalt passieren?</label>
           <textarea value={prompt} onChange={(e) => setPrompt(e.target.value)} rows={3} placeholder="Zum Beispiel: Eine Schülerin sieht einen dramatischen Post in ihrer Klassengruppe und ist unsicher, ob er stimmt …" className="mt-2 w-full resize-y rounded-xl border border-slate-200 bg-white px-3.5 py-3 text-sm leading-6 outline-none transition placeholder:text-slate-400 focus:border-violet-400 focus:ring-4 focus:ring-violet-100" />
           {(format === "embed" || format === "video") && <label className="mt-3 block text-xs font-semibold text-slate-700">{format === "embed" ? "Link zum Inhalt" : "Video-Link (optional)"}<input value={url} onChange={(e) => setUrl(e.target.value)} placeholder="https://" className="mt-1.5 w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm outline-none focus:border-violet-400 focus:ring-4 focus:ring-violet-100" /></label>}

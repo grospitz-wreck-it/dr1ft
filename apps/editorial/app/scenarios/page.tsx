@@ -1,7 +1,6 @@
-import { BookOpen, ChevronRight, FilePlus2, Sparkles, Users, Route, Clock3 } from "lucide-react";
+import type { ReactNode } from "react";
+import { BookOpen, ChevronRight, Users, Building2, CheckCircle2, Sparkles } from "lucide-react";
 import { supabaseServerClient } from "../../lib/supabaseServerClient";
-import { createScenario, generateScenarioDraft } from "./actions";
-import { AiGenerationButton } from "../components/AiGenerationButton";
 
 const AGE_BANDS = [
   ["9_11", "9–11", "Kinder / frühe Lernende"],
@@ -20,26 +19,36 @@ const STATUS: Record<string, string> = {
   archived: "Archiv",
 };
 
+function displayScenarioStatus(scenario: any) {
+  // is_active controls availability; status is the editorial workflow state.
+  if (scenario.is_active) return "Aktiv";
+  return STATUS[scenario.status ?? "draft"] ?? "Entwurf";
+}
+
 function groupKey(scenario: any) {
   return scenario.scenario_group || scenario.slug || scenario.id;
 }
 
-export default async function ScenariosPage({
-  searchParams = {},
-}: {
-  searchParams?: { group?: string; generationError?: string };
-}) {
+export default async function ScenariosPage() {
   const supabase = supabaseServerClient();
-
-  const [{ data: scenarios }, { data: missions }, { data: contentItems }] = await Promise.all([
+  const [
+    { data: scenarios },
+    { data: missions },
+    { data: contentItems },
+    { data: assignments },
+    { data: classes },
+    { data: progress },
+  ] = await Promise.all([
     supabase.from("scenarios").select("*").order("created_at", { ascending: false }),
     supabase.from("missions").select("id, scenario_id, status"),
     supabase.from("content_items").select("id, scenario_id"),
+    supabase.from("class_scenario_assignments").select("scenario_id, class_id"),
+    supabase.from("classes").select("id, school_id, is_active"),
+    supabase.from("user_mission_progress").select("mission_id, user_id, status, completed_at"),
   ]);
 
   const rows = scenarios ?? [];
   const grouped = new Map<string, any[]>();
-
   for (const scenario of rows) {
     const key = groupKey(scenario);
     const list = grouped.get(key) ?? [];
@@ -47,14 +56,27 @@ export default async function ScenariosPage({
     grouped.set(key, list);
   }
 
+  const classById = new Map((classes ?? []).map((item: any) => [item.id, item]));
   const families = Array.from(grouped.entries()).map(([key, variants]) => {
     const first = variants[0];
-    const familyMissions = (missions ?? []).filter((mission) =>
-      variants.some((variant) => variant.id === mission.scenario_id)
-    );
-    const familyContent = (contentItems ?? []).filter((item) =>
-      variants.some((variant) => variant.id === item.scenario_id)
-    );
+    const scenarioIds = new Set(variants.map((variant) => variant.id));
+    const familyMissions = (missions ?? []).filter((mission: any) => scenarioIds.has(mission.scenario_id));
+    const missionIds = new Set(familyMissions.map((mission: any) => mission.id));
+    const familyContent = (contentItems ?? []).filter((item: any) => scenarioIds.has(item.scenario_id));
+    const activeScenarioIds = new Set(variants.filter((variant) => variant.is_active).map((variant) => variant.id));
+    const familyAssignments = (assignments ?? []).filter((item: any) => {
+      const klass: any = classById.get(item.class_id);
+      return scenarioIds.has(item.scenario_id) && activeScenarioIds.has(item.scenario_id) && klass?.is_active !== false;
+    });
+    const activeAssignedClasses = new Set(familyAssignments.map((item: any) => item.class_id));
+    const schoolIds = new Set(familyAssignments.map((item: any) => {
+      const klass: any = classById.get(item.class_id);
+      return klass?.school_id;
+    }).filter(Boolean));
+    const completedProgress = (progress ?? []).filter((item: any) => missionIds.has(item.mission_id) && item.status === "completed");
+    const completedMissions = completedProgress.length;
+    const learnersReached = new Set(completedProgress.map((item: any) => item.user_id).filter(Boolean)).size;
+
     return {
       key,
       title: first.title?.replace(/\s*[–-]\s*(9–11|12–13|14–15|16–17|18\+).*$/i, "") || first.title,
@@ -62,252 +84,121 @@ export default async function ScenariosPage({
       variants,
       missionCount: familyMissions.length,
       contentCount: familyContent.length,
+      activeVariants: variants.filter((variant) => variant.is_active).length,
+      activeClasses: activeAssignedClasses.size,
+      schoolsInUse: schoolIds.size,
+      completedMissions,
+      learnersReached,
     };
   });
 
-  const selectedFamily = searchParams.group
-    ? families.find((family) => family.key === searchParams.group)
-    : null;
+  const totalActive = rows.filter((scenario: any) => scenario.is_active).length;
+  const activeScenarioIds = new Set(rows.filter((scenario: any) => scenario.is_active).map((scenario: any) => scenario.id));
+  const activeAssignments = (assignments ?? []).filter((item: any) => {
+    const klass: any = classById.get(item.class_id);
+    return activeScenarioIds.has(item.scenario_id) && klass?.is_active !== false;
+  });
+  const totalAssignedClasses = new Set(activeAssignments.map((item: any) => item.class_id)).size;
+  const totalSchools = new Set(activeAssignments.map((item: any) => {
+    const klass: any = classById.get(item.class_id);
+    return klass?.school_id;
+  }).filter(Boolean)).size;
+  const totalCompletions = (progress ?? []).filter((item: any) => item.status === "completed").length;
 
   return (
     <div className="space-y-8">
       <div className="max-w-[1440px] space-y-8">
-        <header className="flex flex-col lg:flex-row lg:items-end lg:justify-between gap-5">
+        <header className="flex flex-col gap-5 sm:flex-row sm:items-end sm:justify-between">
           <div>
             <div className="mb-3 inline-flex items-center gap-2 rounded-full border border-violet-200 bg-violet-50 px-3 py-1.5 text-[11px] font-bold uppercase tracking-[0.14em] text-violet-700">
-              <BookOpen className="w-4 h-4" /> Lernfälle
+              <BookOpen className="h-4 w-4" /> Lernfälle
             </div>
             <h1 className="text-3xl font-bold tracking-tight text-slate-950 sm:text-[34px]">Szenario-Studio</h1>
             <p className="mt-2 max-w-2xl text-sm leading-6 text-slate-500">
-              Ein Thema, mehrere Altersvarianten. Die redaktionelle Oberfläche führt dich vom
-              Lernziel über den Ablauf bis zu Missionen und Inhalten.
+              Bestehende Szenarien verwalten, Einsatz und Lernfortschritt überblicken oder einen neuen Lernfall entwickeln.
             </p>
           </div>
-          <a
-            href="#scenario-studio"
-            className="inline-flex items-center justify-center gap-2 rounded-xl bg-accent px-4 py-3 text-sm font-semibold text-white shadow-sm transition hover:bg-accent-hover hover:shadow-md"
-          >
-            <Sparkles className="w-4 h-4" /> Mit KI entwerfen
+          <a href="/scenarios/new" className="inline-flex shrink-0 items-center justify-center gap-2 rounded-xl bg-accent px-5 py-3 text-sm font-semibold text-white shadow-sm transition hover:bg-accent-hover hover:shadow-md">
+            <Sparkles className="h-4 w-4" /> Neues Szenario anlegen
           </a>
         </header>
 
-        <section aria-label="Szenario-Überblick" className="grid gap-3 sm:grid-cols-3">
-          <div className="rounded-2xl border border-slate-200/90 bg-white p-4 shadow-[0_3px_18px_rgba(15,23,42,0.025)] sm:p-5">
-            <div className="flex items-center justify-between gap-3"><span className="text-xs font-semibold text-slate-500">Szenario-Themen</span><span className="grid h-9 w-9 place-items-center rounded-xl bg-violet-50 text-violet-600"><BookOpen className="h-4 w-4" /></span></div>
-            <div className="mt-3 text-2xl font-bold tracking-tight text-slate-950">{families.length}</div>
-            <p className="mt-1 text-xs text-slate-500">Thematische Szenario-Familien</p>
-          </div>
-          <div className="rounded-2xl border border-slate-200/90 bg-white p-4 shadow-[0_3px_18px_rgba(15,23,42,0.025)] sm:p-5">
-            <div className="flex items-center justify-between gap-3"><span className="text-xs font-semibold text-slate-500">Altersvarianten</span><span className="grid h-9 w-9 place-items-center rounded-xl bg-sky-50 text-sky-600"><Users className="h-4 w-4" /></span></div>
-            <div className="mt-3 text-2xl font-bold tracking-tight text-slate-950">{rows.length}</div>
-            <p className="mt-1 text-xs text-slate-500">Versionen für unterschiedliche Zielgruppen</p>
-          </div>
-          <div className="rounded-2xl border border-slate-200/90 bg-white p-4 shadow-[0_3px_18px_rgba(15,23,42,0.025)] sm:p-5">
-            <div className="flex items-center justify-between gap-3"><span className="text-xs font-semibold text-slate-500">Lernmissionen</span><span className="grid h-9 w-9 place-items-center rounded-xl bg-emerald-50 text-emerald-600"><Route className="h-4 w-4" /></span></div>
-            <div className="mt-3 text-2xl font-bold tracking-tight text-slate-950">{(missions ?? []).length}</div>
-            <p className="mt-1 text-xs text-slate-500">Missionen über alle Szenarien</p>
-          </div>
+        <section aria-label="Szenario-Kennzahlen" className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+          <Kpi icon={<BookOpen className="h-4 w-4" />} label="Szenario-Themen" value={String(families.length)} detail="Thematische Familien" />
+          <Kpi icon={<Users className="h-4 w-4" />} label="Aktive Varianten" value={String(totalActive)} detail={`${rows.length} Varianten insgesamt`} />
+          <Kpi icon={<Building2 className="h-4 w-4" />} label="Schulen im Einsatz" value={String(totalSchools)} detail={`${totalAssignedClasses} aktive Klassen mit Zuweisung`} />
+          <Kpi icon={<CheckCircle2 className="h-4 w-4" />} label="Abgeschlossene Missionen" value={String(totalCompletions)} detail="Abschlüsse über alle Szenarien" />
         </section>
-
-        <section id="scenario-studio" className="overflow-hidden rounded-2xl border border-slate-200/90 bg-white shadow-[0_4px_24px_rgba(15,23,42,0.035)]">
-          <div className="border-b border-slate-100 px-6 py-5 sm:px-7">
-            <div className="flex items-start gap-3">
-              <div className="w-9 h-9 rounded-xl bg-violet-50 text-violet-600 flex items-center justify-center shrink-0">
-                <Sparkles className="w-4 h-4" />
-              </div>
-              <div>
-                <h2 className="font-semibold text-slate-900">Neues Szenario als KI-Entwurf</h2>
-                <p className="text-sm text-slate-500 mt-1">
-                  Fülle nur den groben Brief aus. DR1FT erstellt daraus Altersvarianten,
-                  einen Ablauf und erste Missionen. Alles bleibt zunächst Entwurf.
-                </p>
-              </div>
-            </div>
-          </div>
-
-          <form action={generateScenarioDraft} className="grid gap-7 p-6 lg:grid-cols-[1.15fr_.85fr] lg:p-7">
-            <div className="space-y-5">
-              <div>
-                <label className="block text-xs font-semibold text-slate-600 mb-2">THEMA</label>
-                <input
-                  name="topic"
-                  required
-                  placeholder="z. B. Fake News erkennen"
-                  className="w-full rounded-xl border border-slate-200 px-4 py-3 text-sm outline-none focus:border-accent"
-                />
-              </div>
-
-              <div>
-                <label className="block text-xs font-semibold text-slate-600 mb-2">DEIN KURZER BRIEF</label>
-                <textarea
-                  name="brief"
-                  rows={6}
-                  placeholder="Was soll passieren? Was sollen Jugendliche lernen? Gibt es einen bestimmten Alltagsschauplatz, eine Plattform oder Vorgabe?"
-                  className="w-full rounded-xl border border-slate-200 px-4 py-3 text-sm outline-none focus:border-accent resize-y"
-                />
-                <p className="text-xs text-slate-400 mt-2">
-                  Stichpunkte reichen. Die KI formuliert daraus den redaktionellen Entwurf.
-                </p>
-              </div>
-
-              <div>
-                <label className="block text-xs font-semibold text-slate-600 mb-2">BESONDERE VORGABEN</label>
-                <textarea
-                  name="constraints"
-                  rows={3}
-                  placeholder="Optional: keine realen Personen, Schulchat statt TikTok, eher sachlich …"
-                  className="w-full rounded-xl border border-slate-200 px-4 py-3 text-sm outline-none focus:border-accent resize-y"
-                />
-              </div>
-            </div>
-
-            <div className="space-y-5">
-              <div>
-                <div className="flex items-center justify-between mb-2">
-                  <label className="text-xs font-semibold text-slate-600">ALTERSVARIANTEN</label>
-                  <span className="text-[11px] text-slate-400">Mehrere möglich</span>
-                </div>
-                <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-2">
-                  {AGE_BANDS.map(([value, label, hint]) => (
-                    <label
-                      key={value}
-                      className="flex items-center gap-2 rounded-lg border border-slate-200 bg-white px-2.5 py-2 hover:border-slate-300 hover:bg-slate-50 cursor-pointer transition-colors"
-                    >
-                      <input
-                        type="checkbox"
-                        name="ageBands"
-                        value={value}
-                        defaultChecked={value !== "18_plus"}
-                        className="shrink-0"
-                      />
-                      <span className="min-w-0">
-                        <span className="block text-sm font-medium leading-tight text-slate-800">{label}</span>
-                        <span className="block text-[10px] text-slate-400 mt-0.5 truncate">{hint}</span>
-                      </span>
-                    </label>
-                  ))}
-                </div>
-              </div>
-
-              <div className="grid sm:grid-cols-2 gap-3">
-                <div>
-                  <label className="block text-xs font-semibold text-slate-600 mb-2">UMFANG</label>
-                  <select name="duration" defaultValue="standard" className="w-full rounded-xl border border-slate-200 px-3 py-2.5 text-sm">
-                    <option value="short">Kurz · 5–10 Min.</option>
-                    <option value="standard">Standard · 15–20 Min.</option>
-                    <option value="intensive">Intensiv · 25–35 Min.</option>
-                  </select>
-                </div>
-                <div>
-                  <label className="block text-xs font-semibold text-slate-600 mb-2">TON</label>
-                  <select name="tone" defaultValue="realistic" className="w-full rounded-xl border border-slate-200 px-3 py-2.5 text-sm">
-                    <option value="realistic">realistisch</option>
-                    <option value="neutral">sachlich</option>
-                    <option value="emotional">emotional</option>
-                    <option value="light">locker / leicht</option>
-                  </select>
-                </div>
-              </div>
-
-              <div className="rounded-xl bg-slate-50 border border-slate-200 p-4 text-xs text-slate-600 space-y-2">
-                <div className="font-semibold text-slate-800">Die KI erstellt</div>
-                <div className="flex items-center gap-2"><FilePlus2 className="w-3.5 h-3.5" /> eine Variante je Altersgruppe</div>
-                <div className="flex items-center gap-2"><Route className="w-3.5 h-3.5" /> einen ersten Ablauf</div>
-                <div className="flex items-center gap-2"><Users className="w-3.5 h-3.5" /> 2–4 konkrete Missionen</div>
-                <div className="flex items-center gap-2"><Clock3 className="w-3.5 h-3.5" /> alles als Entwurf</div>
-              </div>
-
-              <AiGenerationButton
-                idleLabel="Szenario-Draft erstellen"
-                pendingLabel="Szenario wird erstellt …"
-                className="w-full inline-flex items-center justify-center gap-2 rounded-xl bg-accent px-4 py-3 text-sm font-semibold text-white hover:bg-accent-hover"
-              />
-            </div>
-          </form>
-        </section>
-
-        {searchParams.generationError && (
-          <section className="rounded-2xl border border-red-200 bg-red-50 px-5 py-4">
-            <div className="text-xs font-semibold uppercase tracking-wider text-red-700">KI-Entwurf fehlgeschlagen</div>
-            <div className="mt-1 text-sm text-red-800 break-words">{searchParams.generationError}</div>
-          </section>
-        )}
-
-        {selectedFamily && (
-          <section className="rounded-2xl border border-accent/20 bg-accent/5 px-5 py-4">
-            <div className="text-xs font-semibold uppercase tracking-wider text-accent">Neu erstellt</div>
-            <div className="mt-1 text-sm text-slate-700">
-              <strong>{selectedFamily.title}</strong> wurde als Szenario-Familie angelegt.
-              Öffne eine Altersvariante, um Ablauf und Missionen zu bearbeiten.
-            </div>
-          </section>
-        )}
 
         <section>
-          <div className="flex items-center justify-between mb-3">
+          <div className="mb-4 flex flex-col gap-1 sm:flex-row sm:items-end sm:justify-between">
             <div>
-              <h2 className="text-lg font-bold tracking-tight text-slate-950">Szenario-Bibliothek</h2>
-              <p className="mt-1 text-sm text-slate-500">Alle Themen, Altersvarianten und zugehörigen Lerninhalte im Überblick.</p>
+              <h2 className="text-xl font-bold tracking-tight text-slate-950">Szenario-Bibliothek</h2>
+              <p className="mt-1 text-sm text-slate-500">Einsatz, Umfang und Status pro Szenario-Familie.</p>
             </div>
+            <p className="text-xs text-slate-400">Die Einsatz-KPIs basieren auf Klassenzuweisungen und gespeicherten Missionsabschlüssen.</p>
           </div>
 
           <div className="space-y-3">
             {families.map((family) => (
               <article key={family.key} className="rounded-2xl border border-slate-200/90 bg-white p-5 shadow-[0_3px_18px_rgba(15,23,42,0.03)] transition hover:border-slate-300 hover:shadow-sm sm:p-6">
-                <div className="flex flex-col xl:flex-row xl:items-start xl:justify-between gap-5">
-                  <div className="min-w-0">
-                    <h3 className="text-base font-semibold text-slate-900">{family.title}</h3>
-                    {family.description && <p className="text-sm text-slate-500 mt-1 max-w-2xl">{family.description}</p>}
-                    <div className="flex flex-wrap gap-2 mt-3 text-xs text-slate-500">
+                <div className="flex flex-col gap-5 xl:flex-row xl:items-start xl:justify-between">
+                  <div className="min-w-0 flex-1">
+                    <div className="flex flex-wrap items-center gap-2">
+                      <h3 className="text-base font-semibold text-slate-900">{family.title}</h3>
+                      <span className="rounded-full bg-slate-100 px-2.5 py-1 text-[11px] font-medium text-slate-600">{family.activeVariants} aktive Varianten</span>
+                    </div>
+                    {family.description && <p className="mt-2 max-w-3xl text-sm leading-5 text-slate-500">{family.description}</p>}
+                    <div className="mt-4 grid grid-cols-2 gap-2 sm:grid-cols-3 xl:grid-cols-5">
+                      <MiniKpi label="Schulen" value={String(family.schoolsInUse)} />
+                      <MiniKpi label="Aktive Klassen" value={String(family.activeClasses)} />
+                      <MiniKpi label="Lernende erreicht" value={String(family.learnersReached)} />
+                      <MiniKpi label="Missionen" value={String(family.missionCount)} />
+                      <MiniKpi label="Abschlüsse" value={String(family.completedMissions)} />
+                    </div>
+                    <div className="mt-3 flex flex-wrap gap-2 text-xs text-slate-500">
                       <span className="rounded-full bg-slate-100 px-2.5 py-1">{family.variants.length} Altersvarianten</span>
-                      <span className="rounded-full bg-slate-100 px-2.5 py-1">{family.missionCount} Missionen</span>
                       <span className="rounded-full bg-slate-100 px-2.5 py-1">{family.contentCount} Inhalte</span>
                     </div>
                   </div>
-
-                  <div className="flex flex-wrap gap-2">
+                  <div className="flex flex-wrap gap-2 xl:max-w-[440px]">
                     {family.variants.map((variant) => (
-                      <a
-                        key={variant.id}
-                        href={`/scenarios/${variant.id}`}
-                        className="group min-w-[115px] rounded-xl border border-slate-200 bg-white px-3 py-2.5 transition hover:border-violet-300 hover:bg-violet-50/70"
-                      >
+                      <a key={variant.id} href={`/scenarios/${variant.id}`} className="group min-w-[112px] rounded-xl border border-slate-200 bg-white px-3 py-2.5 transition hover:border-violet-300 hover:bg-violet-50/70">
                         <div className="text-xs font-semibold text-slate-800">{AGE_BANDS.find(([value]) => value === variant.age_band)?.[1] ?? variant.age_rating}</div>
-                        <div className="text-[11px] text-slate-400 mt-0.5">{STATUS[variant.status ?? "draft"] ?? "Entwurf"}</div>
-                        <div className="text-xs text-accent mt-1 flex items-center gap-1">Bearbeiten <ChevronRight className="w-3 h-3 transition-transform group-hover:translate-x-0.5" /></div>
+                        <div className="mt-1 text-[11px] text-slate-500">{displayScenarioStatus(variant)}</div>
+                        <div className="mt-1 flex items-center gap-1 text-xs text-accent">Bearbeiten <ChevronRight className="h-3 w-3 transition-transform group-hover:translate-x-0.5" /></div>
                       </a>
                     ))}
                   </div>
                 </div>
               </article>
             ))}
-
             {families.length === 0 && (
-              <div className="bg-white border border-dashed border-slate-300 rounded-2xl p-10 text-center">
-                <BookOpen className="w-7 h-7 mx-auto text-slate-300" />
-                <p className="text-sm font-medium text-slate-700 mt-3">Noch kein Szenario vorhanden</p>
-                <p className="text-xs text-slate-500 mt-1">Starte oben mit einem kurzen Brief.</p>
+              <div className="rounded-2xl border border-dashed border-slate-300 bg-white p-10 text-center">
+                <BookOpen className="mx-auto h-7 w-7 text-slate-300" />
+                <p className="mt-3 text-sm font-medium text-slate-700">Noch kein Szenario vorhanden</p>
+                <p className="mt-1 text-xs text-slate-500">Lege dein erstes Szenario über den Button oben an.</p>
               </div>
             )}
           </div>
         </section>
 
-        <details className="bg-white border border-slate-200 rounded-2xl">
-          <summary className="cursor-pointer px-5 py-4 text-sm font-medium text-slate-700">
-            Szenario ohne KI manuell anlegen
-          </summary>
-          <form action={createScenario} className="px-5 pb-5 pt-1 grid md:grid-cols-3 gap-3">
-            <input name="title" placeholder="Titel" required className="border border-slate-200 rounded-xl px-3 py-2 text-sm md:col-span-2" />
-            <select name="ageRating" defaultValue="12_plus" className="border border-slate-200 rounded-xl px-3 py-2 text-sm">
-              <option value="all_ages">Alle Altersgruppen</option>
-              <option value="12_plus">12+</option>
-              <option value="16_plus">16+</option>
-            </select>
-            <textarea name="description" placeholder="Kurzbeschreibung" className="border border-slate-200 rounded-xl px-3 py-2 text-sm md:col-span-3" />
-            <button type="submit" className="md:col-span-3 bg-slate-900 text-white rounded-xl px-4 py-2 text-sm font-medium">Anlegen</button>
-          </form>
-        </details>
+
       </div>
     </div>
   );
+}
+
+function Kpi({ icon, label, value, detail }: { icon: ReactNode; label: string; value: string; detail: string }) {
+  return <div className="rounded-2xl border border-slate-200/90 bg-white p-5 shadow-[0_3px_18px_rgba(15,23,42,0.025)]">
+    <div className="flex items-center justify-between gap-3"><span className="text-xs font-semibold text-slate-500">{label}</span><span className="grid h-9 w-9 place-items-center rounded-xl bg-violet-50 text-violet-600">{icon}</span></div>
+    <div className="mt-3 text-2xl font-bold tracking-tight text-slate-950">{value}</div>
+    <p className="mt-1 text-xs text-slate-500">{detail}</p>
+  </div>;
+}
+
+function MiniKpi({ label, value }: { label: string; value: string }) {
+  return <div className="rounded-xl border border-slate-100 bg-slate-50 px-3 py-2">
+    <div className="text-[11px] text-slate-500">{label}</div><div className="mt-1 text-lg font-semibold text-slate-900">{value}</div>
+  </div>;
 }

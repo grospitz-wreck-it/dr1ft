@@ -316,6 +316,7 @@ function slugifyScenarioGroup(input: string): string {
  */
 export async function generateScenarioDraft(formData: FormData) {
   let createdGroup = "";
+  let firstCreatedScenarioId = "";
   try {
     const supabase = supabaseServerClient();
 
@@ -328,6 +329,28 @@ export async function generateScenarioDraft(formData: FormData) {
     const duration = String(formData.get("duration") ?? "standard");
     const tone = String(formData.get("tone") ?? "realistic");
     const constraints = String(formData.get("constraints") ?? "").trim();
+    const learningModel = String(formData.get("learningModel") ?? "experience_reflection");
+    const cognitiveLevel = String(formData.get("cognitiveLevel") ?? "analyze");
+    const experiencePattern = String(formData.get("experiencePattern") ?? "social_feed");
+    const learningModelLabels: Record<string, string> = {
+      experience_reflection: "Erleben → reflektieren → ausprobieren",
+      goal_aligned: "Lernziel → passende Aufgabe → Nachweis",
+      discover_evidence: "Hinweise entdecken → prüfen → Urteil bilden",
+    };
+    const cognitiveLevelLabels: Record<string, string> = {
+      understand: "Erklären und verstehen", apply: "Wissen anwenden",
+      analyze: "Hinweise vergleichen und Zusammenhänge erkennen",
+      evaluate: "Eine Entscheidung begründen", create: "Eine eigene Lösung entwickeln",
+    };
+    const experiencePatternLabels: Record<string, string> = {
+      social_feed: "Social Feed: Posts, Kommentare und Reaktionen",
+      investigation: "Ermittlung: Hinweise sammeln und abgleichen",
+      decision: "Entscheidung: wählen, Folgen erleben, reflektieren",
+      conversation: "Dialog: Perspektiven und Antworten abwägen",
+    };
+    const selectedLearningModel = learningModelLabels[learningModel] ? learningModel : "experience_reflection";
+    const selectedCognitiveLevel = cognitiveLevelLabels[cognitiveLevel] ? cognitiveLevel : "analyze";
+    const selectedExperiencePattern = experiencePatternLabels[experiencePattern] ? experiencePattern : "social_feed";
 
     if (!topic) throw new Error("Bitte ein Thema angeben.");
     if (!selectedAgeBands.length) throw new Error("Bitte mindestens eine Altersvariante auswählen.");
@@ -389,6 +412,12 @@ ALTERSGRUPPEN: ${selectedAgeBands.map((band) => AGE_LABELS[band]).join(", ")}
 UMFANG: ${duration}
 TON: ${tone}
 BESONDERE VORGABEN: ${constraints || "Keine besonderen Vorgaben."}
+LERN-AUSRICHTUNG:
+- Didaktischer Ansatz: ${learningModelLabels[selectedLearningModel]}
+- Kognitiver Anspruch: ${cognitiveLevelLabels[selectedCognitiveLevel]}
+- Bevorzugtes Lernerlebnis: ${experiencePatternLabels[selectedExperiencePattern]}
+
+Setze diese Ausrichtung konkret in Content-Ideen, Missionshandlungen und Reflexionsimpulse um. Plane konkrete Erlebnisse, Entscheidungen und Reaktionen statt abstrakter Lernplan-Stationen.
 
 WICHTIG:
 - Erstelle für jede ausgewählte Altersgruppe genau eine eigene Variante desselben Grundthemas.
@@ -520,6 +549,8 @@ Gib ausschließlich valides JSON gemäß Schema zurück.`;
         );
       }
 
+      if (!firstCreatedScenarioId) firstCreatedScenarioId = scenario.id;
+
       const arcTitle = String(variant.arcTitle || "Ablauf").trim();
       const { data: arc, error: arcError } = await supabase
         .from("story_arcs")
@@ -587,10 +618,11 @@ Gib ausschließlich valides JSON gemäß Schema zurück.`;
         ? error.message
         : "Unbekannter Fehler bei der Szenario-Generierung.";
     console.error("[scenario-generator]", error);
-    redirect(`/scenarios?generationError=${encodeURIComponent(message.slice(0, 900))}`);
+    redirect(`/scenarios/new?generationError=${encodeURIComponent(message.slice(0, 900))}`);
   }
 
   revalidatePath("/scenarios");
+  if (firstCreatedScenarioId) redirect(`/scenarios/${firstCreatedScenarioId}`);
   redirect(`/scenarios?group=${encodeURIComponent(createdGroup)}`);
 }
 
