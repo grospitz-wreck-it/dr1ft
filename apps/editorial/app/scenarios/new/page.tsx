@@ -163,7 +163,6 @@ export default function NewScenarioPage({ searchParams = {} }: { searchParams?: 
             </div>
       </form>
       </section>
-aside>
     </div>
   );
 }
