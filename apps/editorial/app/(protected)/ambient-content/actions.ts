@@ -462,7 +462,7 @@ export async function assignAmbientPostCreator(formData: FormData) {
       .eq("id", creatorId)
       .maybeSingle();
     if (creatorError) throw new Error(creatorError.message);
-    if (!creator || creator.kind !== "npc" || creator.is_active === false || creator.scenario_id !== null || creator.creator_role === "ambient") {
+    if (!creator || creator.kind !== "npc" || creator.is_active === false || creator.scenario_id !== null) {
       throw new Error("Bitte eine vorhandene globale NPC-Figur auswählen.");
     }
   }
