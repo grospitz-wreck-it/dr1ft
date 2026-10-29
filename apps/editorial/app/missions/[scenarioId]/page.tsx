@@ -1,6 +1,7 @@
 // apps/admin/app/missions/[scenarioId]/page.tsx
 
 import { supabaseServerClient } from "../../../lib/supabaseServerClient";
+import { MissionThumbnailEditor } from "./MissionThumbnailEditor";
 import {
   createMission,
   toggleMissionLive,
@@ -56,38 +57,37 @@ export default async function MissionsAndArcsPage({ params }: Props) {
     : { data: [] };
 
   return (
-    <div className="px-6 py-5 max-w-3xl space-y-8">
+    <div className="mx-auto max-w-5xl space-y-8 px-4 py-6 md:px-8">
       <h1 className="text-lg font-semibold text-slate-900">{scenario?.title} — Missionen &amp; Arcs</h1>
 
       {/* ---------- MISSIONEN ---------- */}
       <section>
         <h2 className="text-sm font-medium text-slate-500 uppercase text-xs2 mb-3">Missionen</h2>
-        <ul className="space-y-2 mb-6">
+        <ul className="mb-6 grid gap-4">
           {missions?.map((m) => (
-            <li key={m.id} className="bg-panel border border-border rounded-lg p-3">
-              <div className="flex justify-between items-start">
-                <div>
-                  <p className="font-medium text-sm text-slate-900">{m.title}</p>
-                  <p className="text-xs2 text-slate-400">
-                    Trigger: {EVENT_LABELS[m.trigger_condition?.event] ?? m.trigger_condition?.event}{" "}
-                    × {m.trigger_condition?.count ?? 1}
-                    {m.trigger_condition?.technique_filter?.length
-                      ? ` (nur: ${m.trigger_condition.technique_filter.join(", ")})`
-                      : ""}
-                  </p>
+            <li key={m.id} className="overflow-hidden rounded-2xl border border-slate-200 bg-white p-4 shadow-sm transition hover:shadow-md md:p-5">
+              <div className="flex flex-col justify-between gap-3 sm:flex-row sm:items-start">
+                <div className="min-w-0">
+                  <div className="flex flex-wrap items-center gap-2">
+                    <p className="font-semibold text-sm text-slate-950">{m.title}</p>
+                    <span className={`rounded-full px-2.5 py-1 text-[10px] font-bold ${m.status === "live" ? "bg-emerald-50 text-emerald-700" : "bg-slate-100 text-slate-500"}`}>{m.status === "live" ? "LIVE" : "ENTWURF"}</span>
+                  </div>
+                  <p className="mt-1 text-xs leading-5 text-slate-500">{m.description || "Noch keine Beschreibung hinterlegt."}</p>
+                  <p className="mt-2 text-xs text-slate-400">Trigger: {EVENT_LABELS[m.trigger_condition?.event] ?? m.trigger_condition?.event} × {m.trigger_condition?.count ?? 1}{m.trigger_condition?.technique_filter?.length ? ` · ${m.trigger_condition.technique_filter.join(", ")}` : ""}</p>
                 </div>
-                <form>
+                <form className="shrink-0">
                   <button
                     formAction={async () => {
                       "use server";
                       await toggleMissionLive(m.id, scenarioId, m.status !== "live");
                     }}
-                    className="text-xs border border-border rounded-md px-2 py-1 hover:bg-canvas"
+                    className={`rounded-xl px-3 py-2 text-xs font-semibold ${m.status === "live" ? "border border-slate-200 bg-white text-slate-600" : "bg-slate-950 text-white"}`}
                   >
-                    {m.status === "live" ? "live → deaktivieren" : "Entwurf → live schalten"}
+                    {m.status === "live" ? "Live deaktivieren" : "Live schalten"}
                   </button>
                 </form>
               </div>
+              <MissionThumbnailEditor missionId={m.id} scenarioId={scenarioId} title={m.title} thumbnailUrl={m.thumbnail_url ?? null} />
             </li>
           ))}
         </ul>
@@ -99,6 +99,7 @@ export default async function MissionsAndArcsPage({ params }: Props) {
           <h3 className="font-medium text-sm text-slate-900">Neue Mission</h3>
           <input name="title" placeholder="Titel" required className="border border-border rounded-md px-3 py-2 w-full text-sm" />
           <textarea name="description" placeholder="Beschreibung" className="border border-border rounded-md px-3 py-2 w-full text-sm" />
+          <input name="thumbnailUrl" type="url" placeholder="Thumbnail-URL (optional)" className="border border-border rounded-xl px-3 py-2 w-full text-sm" />
 
           <div className="flex gap-3">
             <select name="triggerEvent" className="border border-border rounded-md px-3 py-2 text-sm">
