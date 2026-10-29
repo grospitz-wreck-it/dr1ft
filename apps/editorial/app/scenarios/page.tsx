@@ -1,6 +1,7 @@
 import type { ReactNode } from "react";
 import { BookOpen, ChevronRight, Users, Building2, CheckCircle2, Sparkles } from "lucide-react";
 import { supabaseServerClient } from "../../lib/supabaseServerClient";
+import { ScenarioCoverEditor } from "./ScenarioCoverEditor";
 
 const AGE_BANDS = [
   ["9_11", "9–11", "Kinder / frühe Lernende"],
@@ -82,6 +83,7 @@ export default async function ScenariosPage() {
       title: first.title?.replace(/\s*[–-]\s*(9–11|12–13|14–15|16–17|18\+).*$/i, "") || first.title,
       description: first.description?.split("\n\nLernziele")[0] || "",
       variants,
+      coverImageUrl: first.cover_image_url ?? null,
       missionCount: familyMissions.length,
       contentCount: familyContent.length,
       activeVariants: variants.filter((variant) => variant.is_active).length,
@@ -149,6 +151,7 @@ export default async function ScenariosPage() {
                       <span className="rounded-full bg-slate-100 px-2.5 py-1 text-[11px] font-medium text-slate-600">{family.activeVariants} aktive Varianten</span>
                     </div>
                     {family.description && <p className="mt-2 max-w-3xl text-sm leading-5 text-slate-500">{family.description}</p>}
+                    <ScenarioCoverEditor scenarioId={family.variants[0].id} title={family.title} coverImageUrl={family.coverImageUrl} />
                     <div className="mt-4 grid grid-cols-2 gap-2 sm:grid-cols-3 xl:grid-cols-5">
                       <MiniKpi label="Schulen" value={String(family.schoolsInUse)} />
                       <MiniKpi label="Aktive Klassen" value={String(family.activeClasses)} />
