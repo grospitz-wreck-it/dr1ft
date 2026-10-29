@@ -1,5 +1,5 @@
 import type { ReactNode } from "react";
-import { BookOpen, ChevronRight, Users, Building2, CheckCircle2, Sparkles } from "lucide-react";
+import { BookOpen, ChevronRight, Users, Building2, CheckCircle2, Sparkles, GraduationCap, School, Flag, Layers3, ArrowUpRight } from "lucide-react";
 import { supabaseServerClient } from "../../lib/supabaseServerClient";
 import { ScenarioCoverEditor } from "./ScenarioCoverEditor";
 
@@ -153,25 +153,34 @@ export default async function ScenariosPage() {
                     {family.description && <p className="mt-1 max-w-4xl text-sm leading-5 text-slate-500">{family.description}</p>}
                     <ScenarioCoverEditor scenarioId={family.variants[0].id} title={family.title} coverImageUrl={family.coverImageUrl} />
                     <div className="mt-3 grid grid-cols-2 gap-2 sm:grid-cols-3 xl:grid-cols-5">
-                      <MiniKpi label="Schulen" value={String(family.schoolsInUse)} />
-                      <MiniKpi label="Aktive Klassen" value={String(family.activeClasses)} />
-                      <MiniKpi label="Lernende erreicht" value={String(family.learnersReached)} />
-                      <MiniKpi label="Missionen" value={String(family.missionCount)} />
-                      <MiniKpi label="Abschlüsse" value={String(family.completedMissions)} />
+                      <MiniKpi icon={<School className="h-4 w-4" />} tint="violet" label="Schulen" value={String(family.schoolsInUse)} />
+                      <MiniKpi icon={<Users className="h-4 w-4" />} tint="blue" label="Aktive Klassen" value={String(family.activeClasses)} />
+                      <MiniKpi icon={<GraduationCap className="h-4 w-4" />} tint="cyan" label="Lernende erreicht" value={String(family.learnersReached)} />
+                      <MiniKpi icon={<Flag className="h-4 w-4" />} tint="amber" label="Missionen" value={String(family.missionCount)} />
+                      <MiniKpi icon={<CheckCircle2 className="h-4 w-4" />} tint="emerald" label="Abschlüsse" value={String(family.completedMissions)} />
                     </div>
-                    <div className="mt-3 flex flex-wrap gap-2 text-xs text-slate-500">
-                      <span className="rounded-full bg-slate-100 px-2.5 py-1">{family.variants.length} Altersvarianten</span>
-                      <span className="rounded-full bg-slate-100 px-2.5 py-1">{family.contentCount} Inhalte</span>
+                    <div className="mt-3 flex flex-wrap gap-2">
+                      <span className="inline-flex items-center gap-1.5 rounded-full border border-slate-200 bg-white px-2.5 py-1 text-[11px] font-medium text-slate-500"><Layers3 className="h-3.5 w-3.5 text-violet-500" />{family.variants.length} Altersvarianten</span>
+                      <span className="inline-flex items-center gap-1.5 rounded-full border border-slate-200 bg-white px-2.5 py-1 text-[11px] font-medium text-slate-500"><BookOpen className="h-3.5 w-3.5 text-cyan-600" />{family.contentCount} Inhalte</span>
                     </div>
                   </div>
-                  <div className="flex flex-wrap gap-2 xl:max-w-[390px] xl:justify-end">
-                    {family.variants.map((variant) => (
-                      <a key={variant.id} href={`/scenarios/${variant.id}`} className="group min-w-[100px] rounded-xl border border-slate-200 bg-white px-3 py-2 transition hover:border-violet-300 hover:bg-violet-50/70">
-                        <div className="text-xs font-semibold text-slate-800">{AGE_BANDS.find(([value]) => value === variant.age_band)?.[1] ?? variant.age_rating}</div>
-                        <div className="mt-1 text-[11px] text-slate-500">{displayScenarioStatus(variant)}</div>
-                        <div className="mt-1 flex items-center gap-1 text-xs text-accent">Bearbeiten <ChevronRight className="h-3 w-3 transition-transform group-hover:translate-x-0.5" /></div>
-                      </a>
-                    ))}
+                  <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 xl:w-[330px] xl:shrink-0 xl:grid-cols-2">
+                    {family.variants.map((variant) => {
+                      const ageLabel = AGE_BANDS.find(([value]) => value === variant.age_band)?.[1] ?? variant.age_rating;
+                      const active = Boolean(variant.is_active);
+                      return (
+                        <a key={variant.id} href={`/scenarios/${variant.id}`} className="group relative overflow-hidden rounded-xl border border-slate-200 bg-gradient-to-br from-white to-slate-50 p-3 transition duration-200 hover:-translate-y-0.5 hover:border-violet-200 hover:shadow-md hover:shadow-violet-100/70">
+                          <div className="flex items-start justify-between gap-2">
+                            <span className="grid h-9 w-9 place-items-center rounded-xl bg-gradient-to-br from-violet-100 to-indigo-100 text-violet-700 ring-1 ring-violet-200/70"><Users className="h-4 w-4" /></span>
+                            <span className={`rounded-full px-2 py-1 text-[10px] font-semibold ${active ? "bg-emerald-50 text-emerald-700" : "bg-slate-100 text-slate-500"}`}><span className={`mr-1 inline-block h-1.5 w-1.5 rounded-full ${active ? "bg-emerald-500" : "bg-slate-400"}`} />{displayScenarioStatus(variant)}</span>
+                          </div>
+                          <div className="mt-2 text-base font-bold tracking-tight text-slate-900">{ageLabel}</div>
+                          <div className="mt-1 flex items-center justify-between text-xs font-semibold text-violet-700">
+                            <span>Bearbeiten</span><ArrowUpRight className="h-3.5 w-3.5 transition-transform group-hover:-translate-y-0.5 group-hover:translate-x-0.5" />
+                          </div>
+                        </a>
+                      );
+                    })}
                   </div>
                 </div>
               </article>
@@ -200,8 +209,19 @@ function Kpi({ icon, label, value, detail }: { icon: ReactNode; label: string; v
   </div>;
 }
 
-function MiniKpi({ label, value }: { label: string; value: string }) {
-  return <div className="rounded-xl border border-slate-100 bg-slate-50 px-3 py-2">
-    <div className="text-[11px] text-slate-500">{label}</div><div className="mt-1 text-lg font-semibold text-slate-900">{value}</div>
+function MiniKpi({ icon, tint, label, value }: { icon: ReactNode; tint: "violet" | "blue" | "cyan" | "amber" | "emerald"; label: string; value: string }) {
+  const tones = {
+    violet: "bg-violet-100 text-violet-700",
+    blue: "bg-blue-100 text-blue-700",
+    cyan: "bg-cyan-100 text-cyan-700",
+    amber: "bg-amber-100 text-amber-700",
+    emerald: "bg-emerald-100 text-emerald-700",
+  };
+  return <div className="rounded-xl border border-slate-200/80 bg-white px-3 py-2.5 shadow-[0_2px_8px_rgba(15,23,42,0.025)] transition hover:border-slate-300">
+    <div className="flex items-center justify-between gap-2">
+      <span className="text-[11px] font-medium leading-4 text-slate-500">{label}</span>
+      <span className={`grid h-7 w-7 shrink-0 place-items-center rounded-lg ${tones[tint]}`}>{icon}</span>
+    </div>
+    <div className="mt-1 text-xl font-bold tracking-tight text-slate-950">{value}</div>
   </div>;
 }
