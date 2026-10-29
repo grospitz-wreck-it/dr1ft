@@ -23,6 +23,9 @@ export function FeedClient({ initialItems, userId, classInstanceId, likedContent
   const [hasMore, setHasMore] = useState(true);
   const sentinelRef = useRef<HTMLDivElement | null>(null);
   const requestedBatchRef = useRef(false);
+  const [scenarioStarted, setScenarioStarted] = useState(false);
+  const [scenarioFinished, setScenarioFinished] = useState(false);
+  const [scenarioStateLoaded, setScenarioStateLoaded] = useState(false);
   useEffect(() => {
     if (!requestedBatchRef.current) return;
     const knownIds = new Set(feedItems.map((item) => item.id));
@@ -49,9 +52,6 @@ export function FeedClient({ initialItems, userId, classInstanceId, likedContent
     observer.observe(sentinel);
     return () => observer.disconnect();
   }, [feedItems, hasMore, loadingMore, router, scenarioFinished, scenarioStarted]);
-  const [scenarioStarted, setScenarioStarted] = useState(false);
-  const [scenarioFinished, setScenarioFinished] = useState(false);
-  const [scenarioStateLoaded, setScenarioStateLoaded] = useState(false);
   const scenarioStateKey = `dr1ft:scenario-state:${userId}:${classInstanceId}:${scenarioIntro?.id ?? "none"}`;
 
   useEffect(() => {
