@@ -178,7 +178,6 @@ export default async function ScenariosPage() {
                       <h3 className="text-lg font-bold tracking-tight text-slate-950">{family.title}</h3>
                       <span className="rounded-full bg-slate-100 px-2.5 py-1 text-[11px] font-medium text-slate-600">{family.activeVariants} aktive Varianten</span>
                     </div>
-                    {family.description && <p className="mt-1.5 max-w-5xl text-sm leading-5 text-slate-500">{family.description}</p>}
                   </div>
                 </div>
 
@@ -198,6 +197,12 @@ export default async function ScenariosPage() {
                       <MiniKpi icon={<CheckCircle2 className="h-4 w-4" />} tint="emerald" label="Abschlüsse" value={String(family.completedMissions)} />
                       <MiniKpi icon={<Layers3 className="h-4 w-4" />} tint="violet" label="Varianten / Inhalte" value={`${family.variants.length} / ${family.contentCount}`} />
                     </div>
+                    {family.description && (
+                      <section className="rounded-2xl border border-slate-200/80 bg-slate-50/80 p-4">
+                        <p className="text-[11px] font-bold uppercase tracking-[0.14em] text-slate-400">Szenario-Beschreibung</p>
+                        <p className="mt-2 whitespace-pre-line text-sm leading-6 text-slate-600">{family.description}</p>
+                      </section>
+                    )}
                   </div>
                 </div>
               </article>
