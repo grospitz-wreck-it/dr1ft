@@ -439,11 +439,11 @@ export default async function ClassDetailPage({
             <Panel title="Challenge- und Lernnachweise">
               <div className="grid grid-cols-2 gap-px bg-border sm:grid-cols-4">
                 <div className="bg-white p-4"><p className="text-xs text-slate-400">Antworten abgegeben</p><p className="mt-2 text-xl font-semibold">{learningEvidenceTotals.responses}</p></div>
-                <div className="bg-white p-4"><p className="text-xs text-slate-400">Geprüfte Anforderungen</p><p className="mt-2 text-xl font-semibold">{learningEvidenceTotals.assessed}</p></div>
-                <div className="bg-white p-4"><p className="text-xs text-slate-400">Erfolgreich erfüllt</p><p className="mt-2 text-xl font-semibold">{learningEvidenceTotals.successful}</p></div>
-                <div className="bg-white p-4"><p className="text-xs text-slate-400">Noch nicht erfüllt</p><p className="mt-2 text-xl font-semibold">{learningEvidenceTotals.notYet}</p></div>
+                <div className="bg-white p-4"><p className="text-xs text-slate-400">Geprüfte Anforderungen</p><p className="mt-2 text-xl font-semibold">{learningEvidenceTotals.assessed > 0 ? learningEvidenceTotals.assessed : "—"}</p></div>
+                <div className="bg-white p-4"><p className="text-xs text-slate-400">Erfolgreich erfüllt</p><p className="mt-2 text-xl font-semibold">{learningEvidenceTotals.assessed > 0 ? learningEvidenceTotals.successful : "—"}</p></div>
+                <div className="bg-white p-4"><p className="text-xs text-slate-400">Noch nicht erfüllt</p><p className="mt-2 text-xl font-semibold">{learningEvidenceTotals.assessed > 0 ? learningEvidenceTotals.notYet : "—"}</p></div>
               </div>
-              <p className="bg-white px-5 py-3 text-xs leading-relaxed text-slate-500">Abgegebene Antworten zählen als Bearbeitung, nicht automatisch als fachlicher Erfolg. Geprüfte Anforderungen beruhen auf validierten Bewertungen.</p>
+              <p className="bg-white px-5 py-3 text-xs leading-relaxed text-slate-500">Abgegebene Antworten zählen als Bearbeitung, nicht automatisch als fachlicher Erfolg. Geprüfte Anforderungen beruhen auf validierten Bewertungen. {learningEvidenceTotals.assessed === 0 ? "Für diese Klasse liegen aktuell keine validierten Bewertungsereignisse vor; deshalb werden Erfolgs- und Misserfolgswerte als nicht verfügbar angezeigt." : ""}</p>
             </Panel>
             <Panel title="Kompetenzentwicklung · Klassendurchschnitt">
               {competencyOverview.length ? (

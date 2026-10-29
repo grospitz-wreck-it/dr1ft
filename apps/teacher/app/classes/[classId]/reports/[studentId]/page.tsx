@@ -64,11 +64,12 @@ export default async function StudentReportPage({ params }: { params: { classId:
   const missionTotal = missions.length;
   const missionCompleted = missions.filter((m: AnyRow) => m.progressStatus === "completed").length;
   const average = competencies.length ? competencies.reduce((sum: number, row: AnyRow) => sum + Number(row.level ?? 0), 0) / competencies.length : null;
+  const assessedRequirements = Number(learningEvidence?.assessed_requirements ?? 0);
   const reportStats = [
     { label: "Challenges beantwortet", value: learningEvidence?.challenge_responses_submitted ?? 0, icon: "▤", tone: "violet" },
-    { label: "Geprüfte Anforderungen", value: learningEvidence?.assessed_requirements ?? 0, icon: "✓", tone: "green" },
-    { label: "Erfolgreich erfüllt", value: learningEvidence?.successful_requirements ?? 0, icon: "♜", tone: "orange" },
-    { label: "Noch nicht erfüllt", value: learningEvidence?.not_yet_requirements ?? 0, icon: "!", tone: "pink" },
+    { label: "Geprüfte Anforderungen", value: assessedRequirements > 0 ? assessedRequirements : "—", icon: "✓", tone: "green" },
+    { label: "Erfolgreich erfüllt", value: assessedRequirements > 0 ? Number(learningEvidence?.successful_requirements ?? 0) : "—", icon: "♜", tone: "orange" },
+    { label: "Noch nicht erfüllt", value: assessedRequirements > 0 ? Number(learningEvidence?.not_yet_requirements ?? 0) : "—", icon: "!", tone: "pink" },
   ];
   const initials = (profile?.display_name || "D").trim().slice(0, 1).toUpperCase();
 
@@ -108,7 +109,7 @@ export default async function StudentReportPage({ params }: { params: { classId:
               {missions.length === 0 && <div className="mt-5 rounded-2xl border border-dashed border-slate-200 bg-slate-50/70 px-5 py-8 text-center text-sm text-slate-500">Für diese Klasseninstanz sind noch keine Missionen zugeordnet.</div>}
             </section>
 
-            <section id="evidence" className="drift-panel p-5 md:p-6"><h2 className="text-xl font-bold tracking-tight text-slate-950">Challenge- und Lernnachweise</h2><p className="mt-1 text-sm text-slate-500">Antworten und geprüfte Lernanforderungen – transparent und getrennt ausgewiesen.</p><div className="mt-5 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">{reportStats.map((stat) => <div key={stat.label} className="drift-evidence-card"><span className={`drift-stat-icon drift-${stat.tone}`}>{stat.icon}</span><p className="mt-3 text-xs leading-5 text-slate-500">{stat.label}</p><p className="mt-1 text-3xl font-bold tracking-tight text-slate-950">{stat.value}</p><p className="mt-1 text-[11px] text-slate-400">ausgewertete Nachweise</p></div>)}</div></section>
+            <section id="evidence" className="drift-panel p-5 md:p-6"><h2 className="text-xl font-bold tracking-tight text-slate-950">Challenge- und Lernnachweise</h2><p className="mt-1 text-sm text-slate-500">Antworten und geprüfte Lernanforderungen – transparent und getrennt ausgewiesen.</p><div className="mt-5 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">{reportStats.map((stat) => <div key={stat.label} className="drift-evidence-card"><span className={`drift-stat-icon drift-${stat.tone}`}>{stat.icon}</span><p className="mt-3 text-xs leading-5 text-slate-500">{stat.label}</p><p className="mt-1 text-3xl font-bold tracking-tight text-slate-950">{stat.value}</p><p className="mt-1 text-[11px] text-slate-400">ausgewertete Nachweise</p></div>)}</div>{assessedRequirements === 0 && <p className="mt-4 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm leading-5 text-amber-900">Für diese:n Schüler:in liegen aktuell keine validierten Bewertungsereignisse vor. Erfolgs- und Misserfolgswerte sind deshalb nicht verfügbar; gespeicherte Missions- und Kompetenzfortschritte werden davon getrennt angezeigt.</p>}</section>
 
             <section id="activity" className="drift-panel p-5 md:p-6"><h2 className="text-xl font-bold tracking-tight text-slate-950">Letzte Aktivitäten</h2><p className="mt-1 text-sm text-slate-500">Dokumentierte Missionsabschlüsse in dieser Klasse</p><div className="mt-4 space-y-4">{missions.filter((m: AnyRow) => m.progressStatus === "completed").length ? missions.filter((m: AnyRow) => m.progressStatus === "completed").map((mission: AnyRow) => <div key={mission.id} className="flex items-start gap-3"><span className="grid h-9 w-9 shrink-0 place-items-center rounded-full bg-emerald-50 text-emerald-600">✓</span><div className="min-w-0 flex-1"><p className="text-sm font-semibold text-slate-800">{mission.title} abgeschlossen</p><p className="mt-1 text-xs text-slate-500">Missionsfortschritt gespeichert</p></div><time className="shrink-0 text-xs text-slate-400">{mission.completedAt ? new Date(mission.completedAt).toLocaleString("de-DE", { dateStyle: "short", timeStyle: "short" }) : ""}</time></div>) : <p className="rounded-xl bg-slate-50 px-4 py-5 text-sm text-slate-400">Noch keine abgeschlossenen Missionen dokumentiert.</p>}</div></section>
           </div>
