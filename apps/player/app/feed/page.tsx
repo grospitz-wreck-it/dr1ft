@@ -181,7 +181,7 @@ export default async function FeedPage() {
   // regardless of recommendation ranking or ambient-density limits.
   const missionContentOrder = new Map((missionContentLinks ?? []).map((link) => [link.content_item_id, link.order_index]));
   const requiredMissionItems = mappedPool
-    .filter((item) => missionContentOrder.has(item.id))
+    .filter((item) => missionContentOrder.has(item.id) && !recentlySeenContentIds.includes(item.id))
     .sort((a, b) => (missionContentOrder.get(a.id) ?? 0) - (missionContentOrder.get(b.id) ?? 0));
   const baseItems = [...requiredMissionItems, ...selectedFeedItems.filter((item) => !requiredMissionItems.some((required) => required.id === item.id))];
 
