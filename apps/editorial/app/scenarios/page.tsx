@@ -168,9 +168,8 @@ export default async function ScenariosPage() {
                       <MiniKpi icon={<GraduationCap className="h-4 w-4" />} tint="cyan" label="Lernende erreicht" value={String(family.learnersReached)} />
                       <MiniKpi icon={<Flag className="h-4 w-4" />} tint="amber" label="Missionen" value={String(family.missionCount)} />
                       <MiniKpi icon={<CheckCircle2 className="h-4 w-4" />} tint="emerald" label="Abschlüsse" value={String(family.completedMissions)} />
-                      <MiniKpi icon={<Layers3 className="h-4 w-4" />} tint="violet" label="Altersvarianten" value={String(family.variants.length)} />
+                      <MiniKpi icon={<Layers3 className="h-4 w-4" />} tint="violet" label="Varianten / Inhalte" value={`${family.variants.length} / ${family.contentCount}`} />
                     </div>
-                    <p className="px-1 text-xs text-slate-400">{family.contentCount} Inhalte im Szenario</p>
                   </div>
                 </div>
               </article>
