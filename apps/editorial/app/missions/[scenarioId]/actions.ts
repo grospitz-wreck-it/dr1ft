@@ -17,6 +17,7 @@ export async function createMission(scenarioId: string, formData: FormData) {
 
   const title = String(formData.get("title") ?? "").trim();
   const description = String(formData.get("description") ?? "").trim();
+  const thumbnailUrl = String(formData.get("thumbnailUrl") ?? "").trim();
   const event = String(formData.get("triggerEvent") ?? "PostViewed");
   const count = Number(formData.get("triggerCount") ?? 1);
   const techniqueFilterRaw = String(formData.get("techniqueFilter") ?? "");
@@ -36,6 +37,7 @@ export async function createMission(scenarioId: string, formData: FormData) {
     slug: slugify(title) + "-" + Date.now().toString(36),
     title,
     description,
+    thumbnail_url: thumbnailUrl || null,
     trigger_condition: triggerCondition,
     target_competencies: targetCompetencies,
     reflection_content_id: reflectionContentId,
