@@ -10,8 +10,17 @@ export default async function FeedPage() {
   if (!user) return <main className="min-h-screen flex items-center justify-center text-ash font-body">Bitte einloggen.</main>;
   const { data: classInstanceId, error: classInstanceError } = await supabase.rpc("get_current_class_instance_id");
   if (classInstanceError || !classInstanceId) return <main className="min-h-screen flex items-center justify-center text-ash font-body px-6 text-center">Du bist aktuell keiner DR1FT-Klasse zugeordnet.</main>;
-  const { data: assignments } = await supabase.from("class_instance_scenario_assignments").select("scenario_id").eq("class_instance_id", classInstanceId);
-  const assignedScenarioIds: string[] = Array.from(new Set<string>((assignments ?? []).map((a) => a.scenario_id)));
+  const { data: assignments } = await supabase
+    .from("class_instance_scenario_assignments")
+    .select("scenario_id,scheduled_start_at,scheduled_end_at")
+    .eq("class_instance_id", classInstanceId);
+  const now = Date.now();
+  const availableAssignments = (assignments ?? []).filter((assignment: any) => {
+    const startsAt = assignment.scheduled_start_at ? new Date(assignment.scheduled_start_at).getTime() : null;
+    const endsAt = assignment.scheduled_end_at ? new Date(assignment.scheduled_end_at).getTime() : null;
+    return (startsAt === null || startsAt <= now) && (endsAt === null || endsAt > now);
+  });
+  const assignedScenarioIds: string[] = Array.from(new Set<string>(availableAssignments.map((a: any) => a.scenario_id)));
   const { data: assignedScenarios } = assignedScenarioIds.length
     ? await supabase.from("scenarios").select("id, title, description, ambient_density").in("id", assignedScenarioIds).order("created_at", { ascending: true })
     : { data: [] as { id: string; title: string; description: string | null; ambient_density: string | null }[] };
