@@ -5,7 +5,8 @@ import { Sparkles, Image as ImageIcon, Wand2, Zap, Search, SlidersHorizontal } f
 import { supabaseServerClient } from "../../../lib/supabaseServerClient";
 import { AmbientInterestPicker } from "./AmbientInterestPicker";
 import { GenerateAmbientButton } from "./GenerateAmbientButton";
-import { generateAmbientDrafts } from "./actions";
+import { assignAmbientPostCreator, generateAmbientDrafts } from "./actions";
+import { AmbientNpcAssignment } from "./AmbientNpcAssignment";
 import { AmbientGeneratorForm } from "./AmbientGeneratorForm";
 import { AmbientContentModeFields } from "./AmbientContentModeFields";
 
@@ -48,6 +49,7 @@ export default async function AmbientContentPage({ searchParams = {} }: Props) {
     arcsResult,
     classesResult,
     ambientInterestsResult,
+    npcCreatorsResult,
   ] = await Promise.all([
     supabase.from("creators").select("id, display_name").eq("creator_role", "ambient").order("display_name"),
     itemsQuery,
@@ -57,6 +59,7 @@ export default async function AmbientContentPage({ searchParams = {} }: Props) {
     supabase.from("story_arcs").select("id, title, scenario_id"),
     supabase.from("classes").select("id, name, grade_level"),
     supabase.from("ambient_interests").select("key, label, emoji, category").eq("is_active", true).eq("is_selectable", true).eq("taxonomy_status", "active").order("sort_order").order("label"),
+    supabase.from("creators").select("id, display_name, creator_role, persona, scenario_id").is("scenario_id", null).order("display_name"),
   ]);
 
   const ambientCreators = creatorsResult.data ?? [];
@@ -67,6 +70,7 @@ export default async function AmbientContentPage({ searchParams = {} }: Props) {
   const arcStepRows = arcStepsResult.data ?? [];
   const classRows = classesResult.data ?? [];
   const ambientInterests = ambientInterestsResult.data ?? [];
+  const npcCreators = (npcCreatorsResult.data ?? []).filter((creator) => creator.creator_role !== "ambient");
 
   const inventoryRows: Array<{ id: string; status: string; extra: Record<string, any> | null }> = [];
   let inventoryError: string | null = null;
@@ -114,6 +118,7 @@ export default async function AmbientContentPage({ searchParams = {} }: Props) {
     arcsResult.error,
     classesResult.error,
     ambientInterestsResult.error,
+    npcCreatorsResult.error,
   ].filter(Boolean);
 
   const missionByContent = new Map<string, { id: string; title: string; scenarioId: string | null }[]>();
@@ -272,7 +277,8 @@ export default async function AmbientContentPage({ searchParams = {} }: Props) {
       <div className="flex flex-wrap gap-2 text-xs"><a href={filterHref("status", "all")} className={`rounded-full px-3 py-1.5 border ${statusFilter === "all" ? "bg-slate-900 text-white border-slate-900" : "border-slate-200 text-slate-600"}`}>Alle</a>{STATUS_ORDER.map((status)=><a key={status} href={filterHref("status", status)} className={`rounded-full px-3 py-1.5 border ${statusFilter === status ? "bg-slate-900 text-white border-slate-900" : "border-slate-200 text-slate-600"}`}>{statusLabel[status]}</a>)}</div>
     </section>
 
-    <section className="grid xl:grid-cols-2 gap-5">{grouped.length === 0 ? <div className="xl:col-span-2 bg-white border border-dashed border-slate-300 rounded-2xl p-10 text-center"><div className="text-sm font-medium text-slate-700">Keine passenden Ambient-Posts</div><div className="text-xs text-slate-400 mt-1">Filter anpassen oder neue Ambient-Items erzeugen.</div></div> : grouped.map((group)=><div key={group.status} className="space-y-2"><div className="flex items-center justify-between px-1"><h2 className="text-xs font-semibold tracking-widest text-slate-500">{statusLabel[group.status]} · {group.items.length}</h2></div><ul className="space-y-2">{group.items.map((item)=><li key={item.id} className="bg-white border border-slate-200 rounded-xl overflow-hidden">{item.media_url&&<img src={item.media_url} alt="" className="w-full max-h-80 object-cover"/>}<div className="p-4 space-y-3"><p className="text-sm leading-6 text-slate-900">{item.body}</p>{item.extra?.generatedBy === "ai"&&<div className="flex flex-wrap gap-1.5 text-[10px] text-slate-500"><Tag>{item.extra?.ageBand}</Tag><Tag>{item.extra?.styleLabel}</Tag>{item.extra?.format&&<Tag>{item.extra.format}</Tag>}{item.extra?.topic&&<Tag>{item.extra.topic}</Tag>}{Array.isArray(item.extra?.interests)&&item.extra.interests.map((interest: string)=><Tag key={interest}>♡ {interest}</Tag>)}{item.extra?.imageGenerated&&<Tag>🖼 {item.extra?.imageProvider === "cloudflare" ? "FLUX" : "Gemini"}</Tag>}{(missionByContent.get(item.id) ?? []).map((mission)=><Tag key={mission.id}>🎯 {mission.title}</Tag>)}{Array.from(new Set((missionByContent.get(item.id) ?? []).flatMap((mission)=>arcByMission.get(mission.id) ?? []).map((arc)=>arc.title))).map((title)=><Tag key={title}>📖 {title}</Tag>)}{Array.from(new Set((missionByContent.get(item.id) ?? []).flatMap((mission)=>mission.scenarioId ? (classesByScenario.get(mission.scenarioId) ?? []).map((entry)=>entry.name) : []))).map((name)=><Tag key={name}>🏫 {name}</Tag>)}</div>}<div className="flex items-center justify-between gap-2"><span className="text-xs font-medium text-slate-500">{statusLabel[item.status] ?? item.status}</span></div></div></li>)}</ul></div>)}</section>
+    <section className="grid xl:grid-cols-2 gap-5">{grouped.length === 0 ? <div className="xl:col-span-2 bg-white border border-dashed border-slate-300 rounded-2xl p-10 text-center"><div className="text-sm font-medium text-slate-700">Keine passenden Ambient-Posts</div><div className="text-xs text-slate-400 mt-1">Filter anpassen oder neue Ambient-Items erzeugen.</div></div> : grouped.map((group)=><div key={group.status} className="space-y-2"><div className="flex items-center justify-between px-1"><h2 className="text-xs font-semibold tracking-widest text-slate-500">{statusLabel[group.status]} · {group.items.length}</h2></div><ul className="space-y-2">{group.items.map((item)=><li key={item.id} className="bg-white border border-slate-200 rounded-xl overflow-hidden">{item.media_url&&<img src={item.media_url} alt="" className="w-full max-h-80 object-cover"/>}<div className="p-4 space-y-3"><p className="text-sm leading-6 text-slate-900">{item.body}</p>{item.extra?.generatedBy === "ai"&&<div className="flex flex-wrap gap-1.5 text-[10px] text-slate-500"><Tag>{item.extra?.ageBand}</Tag><Tag>{item.extra?.styleLabel}</Tag>{item.extra?.format&&<Tag>{item.extra.format}</Tag>}{item.extra?.topic&&<Tag>{item.extra.topic}</Tag>}{Array.isArray(item.extra?.interests)&&item.extra.interests.map((interest: string)=><Tag key={interest}>♡ {interest}</Tag>)}{item.extra?.imageGenerated&&<Tag>🖼 {item.extra?.imageProvider === "cloudflare" ? "FLUX" : "Gemini"}</Tag>}{(missionByContent.get(item.id) ?? []).map((mission)=><Tag key={mission.id}>🎯 {mission.title}</Tag>)}{Array.from(new Set((missionByContent.get(item.id) ?? []).flatMap((mission)=>arcByMission.get(mission.id) ?? []).map((arc)=>arc.title))).map((title)=><Tag key={title}>📖 {title}</Tag>)}{Array.from(new Set((missionByContent.get(item.id) ?? []).flatMap((mission)=>mission.scenarioId ? (classesByScenario.get(mission.scenarioId) ?? []).map((entry)=>entry.name) : []))).map((name)=><Tag key={name}>🏫 {name}</Tag>)}</div>}<AmbientNpcAssignment action={assignAmbientPostCreator} contentItemId={item.id} currentCreatorId={item.creator_id ?? null} creators={npcCreators} interestKeys={Array.isArray(item.extra?.interestKeys) ? item.extra.interestKeys : []} interestLabels={Array.isArray(item.extra?.interests) ? item.extra.interests : []} />
+        <div className="flex items-center justify-between gap-2"><span className="text-xs font-medium text-slate-500">{statusLabel[item.status] ?? item.status}</span></div></div></li>)}</ul></div>)}</section>
   </div><style>{`@keyframes ambient-progress{0%{transform:translateX(-120%)}50%{transform:translateX(120%)}100%{transform:translateX(320%)}}.control{width:100%;border:1px solid #e2e8f0;border-radius:12px;padding:10px 12px;font-size:13px;background:white;color:#0f172a}.darkControl{width:100%;border:1px solid rgba(255,255,255,.12);border-radius:12px;padding:10px 12px;font-size:13px;background:rgba(255,255,255,.06);color:white}`}</style></div>;
 }
 function Field({label,children}:{label:string;children:ReactNode}){return <label className="block"><span className="block text-[10px] font-semibold tracking-wider text-slate-500 mb-1.5">{label}</span>{children}</label>}
