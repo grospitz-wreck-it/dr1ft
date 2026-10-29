@@ -193,9 +193,9 @@ export default async function ScenariosPage() {
 }
 
 function Kpi({ icon, label, value, detail }: { icon: ReactNode; label: string; value: string; detail: string }) {
-  return <div className="rounded-2xl border border-slate-200/90 bg-white p-5 shadow-[0_3px_18px_rgba(15,23,42,0.025)]">
+  return <div className="rounded-2xl border border-slate-200/90 bg-white p-4 shadow-[0_3px_18px_rgba(15,23,42,0.025)]">
     <div className="flex items-center justify-between gap-3"><span className="text-xs font-semibold text-slate-500">{label}</span><span className="grid h-9 w-9 place-items-center rounded-xl bg-violet-50 text-violet-600">{icon}</span></div>
-    <div className="mt-3 text-2xl font-bold tracking-tight text-slate-950">{value}</div>
+    <div className="mt-2 text-2xl font-bold tracking-tight text-slate-950">{value}</div>
     <p className="mt-1 text-xs text-slate-500">{detail}</p>
   </div>;
 }
