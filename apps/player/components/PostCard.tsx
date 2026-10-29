@@ -420,20 +420,20 @@ export function PostCard({ item, userId, classInstanceId, initiallyLiked, onView
 
   return <>
     <article id={`post-${item.id}`} ref={ref} className="post-card group relative rounded-[26px] border border-white/80 bg-paper text-ink shadow-sm">
-      <div className="flex items-center justify-between gap-3 px-4 pb-3 pt-4 sm:px-5"><AuthorRow creator={item.creator}/><div className="flex shrink-0 items-center gap-2"><span className="hidden rounded-full bg-violet-100/80 px-2.5 py-1 font-mono text-[10px] font-medium uppercase tracking-[0.14em] text-violet-700 sm:inline-flex">{item.type}</span><span className="grid h-8 w-8 place-items-center rounded-full bg-ink/5 text-ink/45"><Sparkles className="h-4 w-4"/></span></div></div>
+      <div className="flex items-center px-4 pb-3 pt-4 sm:px-5"><AuthorRow creator={item.creator}/></div>
       {item.mediaUrl && item.mediaType === "image" && <div className="post-media-stage relative isolate mx-2 overflow-hidden rounded-[22px] sm:mx-3"><div aria-hidden="true" className="post-media-pattern pointer-events-none absolute inset-0"/><div aria-hidden="true" className="post-media-orb post-media-orb-one pointer-events-none absolute -left-8 top-8 h-24 w-24 rounded-full"/><div aria-hidden="true" className="post-media-orb post-media-orb-two pointer-events-none absolute -bottom-8 right-8 h-28 w-28 rounded-full"/><img src={item.mediaUrl} alt="" className="post-media-image relative z-[1] mx-auto block h-auto max-h-[75vh] w-auto max-w-full object-contain" loading="lazy" onError={(event) => { event.currentTarget.style.display = "none"; }}/></div>}
       {item.mediaUrl && item.mediaType === "video" && <div className="post-media-stage mx-2 overflow-hidden rounded-[22px] sm:mx-3"><video src={item.mediaUrl} controls className="relative z-[1] mx-auto block h-auto max-h-[75vh] w-auto max-w-full bg-black object-contain"/></div>}
       <div className="px-4 pb-4 pt-4 sm:px-5">
         <p className="font-body text-[15px] leading-relaxed sm:text-base">{item.body}</p>
-        {learningFeedback && <section className="mt-3 overflow-hidden rounded-2xl border border-violet-200 bg-gradient-to-br from-violet-50 via-white to-sky-50 shadow-sm" aria-live="polite">
-          <div className="flex items-start gap-3 p-4">
-            <span className="grid h-9 w-9 shrink-0 place-items-center rounded-xl bg-gradient-to-br from-violet-600 to-sky-500 text-white"><Sparkles className="h-4 w-4" /></span>
+        {learningFeedback && <section className="post-learning-hint mt-3 overflow-hidden rounded-2xl border shadow-sm" aria-live="polite">
+          <div className="flex items-start gap-3 p-4 sm:p-5">
+            <span className="post-learning-hint-icon grid h-9 w-9 shrink-0 place-items-center rounded-xl"><Sparkles className="h-4 w-4" /></span>
             <div className="min-w-0 flex-1">
-              <p className="text-[10px] font-bold uppercase tracking-[0.14em] text-violet-700">DR1FT · Erkenntnis</p>
-              <h3 className="mt-1 text-sm font-bold text-slate-900">{learningFeedback.title}</h3>
-              <p className="mt-1 text-sm leading-relaxed text-slate-700">{learningFeedback.message}</p>
+              <p className="post-learning-hint-label text-[10px] font-bold uppercase tracking-[0.14em]">DR1FT-Hinweis</p>
+              <h3 className="post-learning-hint-title mt-1 text-sm font-bold">{learningFeedback.title}</h3>
+              <p className="post-learning-hint-copy mt-1 text-sm leading-relaxed">{learningFeedback.message}</p>
             </div>
-            <button type="button" onClick={() => setLearningFeedback(null)} aria-label="Rückmeldung schließen" className="rounded-lg p-1 text-violet-700 hover:bg-violet-100"><X className="h-4 w-4" /></button>
+            <button type="button" onClick={() => setLearningFeedback(null)} aria-label="Hinweis schließen" className="post-learning-hint-close rounded-lg p-1"><X className="h-4 w-4" /></button>
           </div>
         </section>}
         {learningTask.learnerAction?.trim() && <section className="mt-4 rounded-2xl border border-violet-200 bg-gradient-to-br from-violet-50 to-fuchsia-50/60 p-4">
