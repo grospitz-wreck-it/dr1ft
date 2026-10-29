@@ -74,7 +74,7 @@ export function AmbientNpcAssignment({
     <details className="mt-3 rounded-xl border border-slate-200 bg-slate-50">
       <summary className="flex cursor-pointer list-none items-center justify-between gap-3 px-3 py-2.5 text-xs font-medium text-slate-700">
         <span className="inline-flex items-center gap-2"><UserRound className="h-3.5 w-3.5 text-violet-600" /> NPC-Zuordnung</span>
-        <span className="max-w-[55%] truncate text-right text-slate-500">{current?.display_name ?? currentCreatorName ?? "Noch keiner vorgeschlagen"}</span>
+        <span className="max-w-[55%] truncate text-right text-slate-500">{current?.display_name ?? currentCreatorName ?? defaultSuggestion?.creator.display_name ?? "Noch keiner vorgeschlagen"}</span>
       </summary>
       <form action={action} className="space-y-3 border-t border-slate-200 p-3">
         <input type="hidden" name="contentItemId" value={contentItemId} />
