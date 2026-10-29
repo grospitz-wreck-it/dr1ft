@@ -183,7 +183,8 @@ export async function generateMissionThumbnail(missionId: string, scenarioId: st
     "Age group: " + String(scenario.age_band ?? scenario.age_rating ?? "12+"),
     "Translate the pedagogical situation into one clear visual metaphor and a strong focal subject. Make it engaging for teenagers, contemporary, nuanced, emotionally intelligent, safe for school, and visually polished.",
     "Use a rich but balanced palette with violet, indigo, electric blue and small cyan accents; soft cinematic lighting, layered depth, subtle texture, refined composition.",
-    "Wide landscape cover, exact 16:9 composition. No readable text, no letters, no logos, no watermark, no real-person likeness, no brand marks.",
+    "ABSOLUTE RULE: the image must contain zero text of any kind. No words, no letters, no numbers, no typography, no captions, no labels, no signs, no speech bubbles, no UI, no interface, no posters, no writing on objects, and no pseudo-text or gibberish glyphs. Do not render the scenario or mission title. If a phone or screen appears, show only abstract shapes and image thumbnails with no legible or simulated writing.",
+    "Wide landscape cover, exact 16:9 composition, purely visual illustration. No logos, no watermark, no real-person likeness, no brand marks."
   ].join("\n\n");
 
   const generated = await generateEditorialTeaserImage(prompt);
