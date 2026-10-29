@@ -169,3 +169,53 @@ body:has(.dr1ft-login-screen) .editorial-content > * {
   max-width: none !important;
   margin: 0 !important;
 }
+
+
+/* DR1FT learning report — airy gradient surfaces and vivid learning signals */
+.drift-report { background: radial-gradient(ellipse at 8% 0%, rgba(224,231,255,.72), transparent 38%), radial-gradient(ellipse at 95% 8%, rgba(243,232,255,.78), transparent 34%), #f6f8ff; color: #101638; }
+.drift-panel { border: 1px solid rgba(226,231,244,.92); border-radius: 24px; background: rgba(255,255,255,.9); box-shadow: 0 8px 28px rgba(42,53,105,.045); }
+.drift-profile-banner { background: linear-gradient(115deg, rgba(246,231,255,.98) 0%, rgba(230,244,255,.96) 52%, rgba(237,235,255,.98) 100%); isolation: isolate; }
+.drift-profile-banner:before { content:""; position:absolute; inset:0; opacity:.7; background-image: radial-gradient(circle at 30% 30%, rgba(255,255,255,.8) 0 2px, transparent 3px), radial-gradient(circle at 70% 75%, rgba(124,58,237,.12) 0 20px, transparent 21px), linear-gradient(135deg, transparent 42%, rgba(255,255,255,.45) 42.2% 43%, transparent 43.2%); background-size: 42px 42px, 100% 100%, 100% 100%; pointer-events:none; }
+.drift-orb { position:absolute; border-radius:999px; filter:blur(1px); pointer-events:none; }
+.drift-orb-one { width:220px;height:220px;left:31%;top:-135px;background:linear-gradient(135deg,rgba(139,92,246,.16),rgba(34,211,238,.10)); }
+.drift-orb-two { width:130px;height:130px;left:56%;bottom:-84px;background:rgba(124,58,237,.12); }
+.drift-orb-three { width:80px;height:80px;right:8%;top:16px;background:rgba(34,211,238,.12); }
+.drift-stat-card { position:relative; min-width:0; border:1px solid rgba(255,255,255,.95); border-radius:21px; background:rgba(255,255,255,.79); padding:17px; box-shadow:0 7px 22px rgba(67,56,202,.06); backdrop-filter:blur(10px); }
+.drift-stat-icon { display:grid; width:40px;height:40px;place-items:center;flex:0 0 auto;border-radius:15px;font-size:21px;font-weight:800; }
+.drift-violet { background:#f1eaff;color:#7c3aed; }
+.drift-cyan { background:#e1faff;color:#0891b2; }
+.drift-pink { background:#ffe8f7;color:#db2777; }
+.drift-orange { background:#fff0e4;color:#ea580c; }
+.drift-green { background:#e2fbef;color:#059669; }
+.drift-progress-track { height:7px; overflow:hidden; border-radius:999px; background:#e9edf7; }
+.drift-progress-fill { height:100%; border-radius:999px; transition:width .35s ease; }
+.drift-fill-violet { background:linear-gradient(90deg,#9333ea,#5b4bff); }
+.drift-fill-cyan { background:linear-gradient(90deg,#38bdf8,#22d3ee); }
+.drift-fill-pink { background:linear-gradient(90deg,#e879f9,#ec4899); }
+.drift-fill-green { background:linear-gradient(90deg,#34d399,#10b981); }
+.drift-fill-orange { background:linear-gradient(90deg,#fb923c,#f97316); }
+.drift-dot { display:inline-block;width:9px;height:9px;border-radius:999px;margin-right:6px; }
+.drift-mission-card { overflow:hidden;border:1px solid #e8ebf5;border-radius:17px;background:#fff;box-shadow:0 3px 12px rgba(42,53,105,.045);transition:transform .18s ease,box-shadow .18s ease; }
+.drift-mission-card:hover { transform:translateY(-3px);box-shadow:0 12px 24px rgba(42,53,105,.10); }
+.drift-mission-thumb { position:relative;height:91px;overflow:hidden;background:#ddd6fe; }
+.drift-thumb-0 { background:linear-gradient(135deg,#312e81,#a78bfa 55%,#67e8f9); }
+.drift-thumb-1 { background:linear-gradient(135deg,#111827,#6d28d9 60%,#f472b6); }
+.drift-thumb-2 { background:linear-gradient(135deg,#0f766e,#5eead4 52%,#a5b4fc); }
+.drift-thumb-3 { background:linear-gradient(135deg,#172554,#7c3aed 58%,#f0abfc); }
+.drift-thumb-4 { background:linear-gradient(135deg,#7c2d12,#fb923c 55%,#fef3c7); }
+.drift-thumb-placeholder { display:flex;height:100%;align-items:center;justify-content:center;flex-direction:column;color:#fff;text-shadow:0 2px 12px rgba(15,23,42,.2); }
+.drift-thumb-placeholder span { font-size:37px;line-height:1; }
+.drift-thumb-placeholder small { margin-top:7px;font-size:8px;font-weight:800;letter-spacing:.24em;opacity:.82; }
+.drift-mission-state { position:absolute;left:9px;top:9px;display:grid;width:23px;height:23px;place-items:center;border:2px solid rgba(255,255,255,.9);border-radius:50%;background:#fff;color:#94a3b8;font-size:12px;font-weight:900;box-shadow:0 2px 8px rgba(15,23,42,.14); }
+.drift-mission-state.state-done { background:#10b981;color:#fff; }
+.drift-mission-state.state-active { background:#6255f6;color:#fff; }
+.drift-competency-icon { display:grid;width:40px;height:40px;flex:0 0 auto;place-items:center;border-radius:15px;font-size:20px;font-weight:800; }
+.drift-track-violet { background:#eee7ff; }.drift-fill-violet { background:linear-gradient(90deg,#a855f7,#6d5dfc); }
+.drift-track-cyan { background:#dff8ff; }.drift-fill-cyan { background:linear-gradient(90deg,#38bdf8,#22d3ee); }
+.drift-track-pink { background:#ffe4f5; }.drift-fill-pink { background:linear-gradient(90deg,#e879f9,#ec4899); }
+.drift-track-orange { background:#ffeddc; }.drift-fill-orange { background:linear-gradient(90deg,#fb923c,#f97316); }
+.drift-track-green { background:#d8fae9; }.drift-fill-green { background:linear-gradient(90deg,#34d399,#10b981); }
+.drift-evidence-card { min-width:0;border:1px solid #e9edf6;border-radius:18px;background:linear-gradient(145deg,#fff,#fafbff);padding:15px; }
+.drift-tag { border-radius:999px;background:#f0ebff;color:#6d28d9;padding:7px 11px;font-size:11px;font-weight:700; }
+@media(max-width:640px){.drift-profile-banner{border-radius:22px}.drift-stat-card{padding:13px}.drift-mission-thumb{height:112px}}
+@media print { .drift-report{background:#fff!important}.drift-panel,.drift-stat-card{box-shadow:none!important}.drift-mission-card{break-inside:avoid} }
