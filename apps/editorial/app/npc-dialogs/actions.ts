@@ -314,6 +314,11 @@ export async function createNpcProfile(formData: FormData) {
   const supabase = supabaseServerClient();
   const displayName = String(formData.get("displayName") ?? "").trim();
   const handleInput = String(formData.get("handle") ?? "").trim();
+  const requestedInterestKeys = Array.from(new Set(formData.getAll("interestKeys").map(String).filter(Boolean))).slice(0, 12);
+  const { data: interestCatalogRows, error: interestCatalogError } = await supabase.from("ambient_interests").select("key, label").eq("is_active", true).eq("is_selectable", true).eq("taxonomy_status", "active");
+  if (interestCatalogError) throw new Error(`Interessen-Katalog konnte nicht geladen werden: ${interestCatalogError.message}`);
+  const interestByKey = new Map((interestCatalogRows ?? []).map((interest: any) => [interest.key, interest]));
+  const interestKeys = requestedInterestKeys.filter((key) => interestByKey.has(key));
   if (!displayName) throw new Error("Name darf nicht leer sein.");
 
   const handle = handleInput
@@ -329,12 +334,10 @@ export async function createNpcProfile(formData: FormData) {
       bio: String(formData.get("bio") ?? "").trim(),
       npc_category: String(formData.get("category") ?? "citizen"),
       npc_role: String(formData.get("role") ?? "ambient"),
-      interest_tags: String(formData.get("interests") ?? "")
-        .split(",")
-        .map((v) => v.trim())
-        .filter(Boolean),
+      interest_tags: interestKeys.map((key) => interestByKey.get(key)?.label ?? key),
       age_bands: formData.getAll("ageBands").map(String),
       persona: {
+        interestKeys,
         styleNotes: String(formData.get("styleNotes") ?? "").trim(),
         rhetoricPatterns: String(formData.get("rhetoricPatterns") ?? "")
           .split(",").map((v) => v.trim()).filter(Boolean),
@@ -367,6 +370,7 @@ export async function updateNpcProfile(formData: FormData) {
   const handleInput = String(formData.get("handle") ?? "").trim();
   const category = String(formData.get("category") ?? "citizen");
   const role = String(formData.get("role") ?? "ambient");
+  const requestedInterestKeys = Array.from(new Set(formData.getAll("interestKeys").map(String).filter(Boolean))).slice(0, 12);
 
   if (!creatorId || !displayName || !handleInput) {
     throw new Error("NPC, Name und Handle sind erforderlich.");
@@ -379,6 +383,10 @@ export async function updateNpcProfile(formData: FormData) {
   }
 
   const handle = handleInput.startsWith("@") ? handleInput : `@${handleInput}`;
+  const { data: interestCatalogRows, error: interestCatalogError } = await supabase.from("ambient_interests").select("key, label").eq("is_active", true).eq("is_selectable", true).eq("taxonomy_status", "active");
+  if (interestCatalogError) throw new Error(`Interessen-Katalog konnte nicht geladen werden: ${interestCatalogError.message}`);
+  const interestByKey = new Map((interestCatalogRows ?? []).map((interest: any) => [interest.key, interest]));
+  const interestKeys = requestedInterestKeys.filter((key) => interestByKey.has(key));
   const { data: current } = await supabase
     .from("creators")
     .select("persona, ai_identity")
@@ -400,6 +408,7 @@ export async function updateNpcProfile(formData: FormData) {
     recurringDetails: csv("recurringDetails"),
     worldview: String(formData.get("worldview") ?? "").trim(),
     boundaries: csv("boundaries"),
+    interestKeys,
   };
 
   const { error } = await supabase.from("creators").update({
@@ -409,7 +418,7 @@ export async function updateNpcProfile(formData: FormData) {
     npc_category: category,
     npc_role: role,
     story_role: String(formData.get("storyRole") ?? "").trim(),
-    interest_tags: csv("interests"),
+    interest_tags: interestKeys.map((key) => interestByKey.get(key)?.label ?? key),
     age_bands: ageBands,
     persona,
     ai_identity: {
