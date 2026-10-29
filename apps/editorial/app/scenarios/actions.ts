@@ -944,6 +944,25 @@ export async function updateScenarioBasics(scenarioId: string, formData: FormDat
   revalidatePath("/scenarios");
 }
 
+export async function updateScenarioAmbientDensity(scenarioId: string, formData: FormData) {
+  const supabase = supabaseServerClient();
+  const ambientDensity = String(formData.get("ambientDensity") ?? "medium");
+  const allowedDensities = ["off", "low", "medium", "high"];
+  if (!allowedDensities.includes(ambientDensity)) {
+    throw new Error("Ungültige Ambient-Content-Dichte.");
+  }
+
+  const { error } = await supabase
+    .from("scenarios")
+    .update({ ambient_density: ambientDensity })
+    .eq("id", scenarioId);
+
+  if (error) throw new Error(error.message);
+  revalidatePath(`/scenarios/${scenarioId}`);
+  revalidatePath("/scenarios");
+  revalidatePath("/feed");
+}
+
 export async function updateMissionDraft(missionId: string, scenarioId: string, formData: FormData) {
   const supabase = supabaseServerClient();
   const title = String(formData.get("title") ?? "").trim();
