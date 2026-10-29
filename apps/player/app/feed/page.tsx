@@ -158,9 +158,16 @@ export default async function FeedPage() {
     }
   }
 
+  // Density controls both the mix and the amount of content a learner is expected to read.
+  // A higher density produces a longer session, not just a different ratio.
+  const densityAwarePool = ambientDensity === "off"
+    ? mappedPool.filter((item) => item.scenarioId !== null)
+    : mappedPool;
+  const feedItemTargets: Record<string, number> = { off: 12, low: 16, medium: 20, high: 28 };
+  const personalizedAmbientLimits: Record<string, number> = { off: 0, low: 1, medium: 3, high: 6 };
   const baseItems = learningSequenceItems !== null
     ? learningSequenceItems
-    : selectNextFeedItems(mappedPool, ctx, 20) as FeedItem[];
+    : selectNextFeedItems(densityAwarePool, ctx, feedItemTargets[ambientDensity] ?? 20) as FeedItem[];
 
   // Keep the learning sequence intact, but always supplement it with a small
   // set of live ambient posts that match this learner's chosen interests.
