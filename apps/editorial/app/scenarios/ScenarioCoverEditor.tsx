@@ -2,7 +2,7 @@
 
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { ImagePlus, LoaderCircle, Sparkles, Link2 } from "lucide-react";
+import { ImagePlus, LoaderCircle, Sparkles, Link2, X } from "lucide-react";
 import { generateScenarioCover, saveScenarioCoverUrl } from "./actions";
 
 export function ScenarioCoverEditor({
@@ -19,6 +19,7 @@ export function ScenarioCoverEditor({
   const [error, setError] = useState("");
   const [url, setUrl] = useState(coverImageUrl ?? "");
   const [savedMessage, setSavedMessage] = useState("");
+  const [lightboxOpen, setLightboxOpen] = useState(false);
 
   function generate() {
     setError("");
@@ -51,49 +52,59 @@ export function ScenarioCoverEditor({
   }
 
   return (
-    <section className="h-full overflow-hidden rounded-2xl border border-violet-100 bg-gradient-to-br from-violet-50/80 via-white to-cyan-50/80 p-3">
-      <div className="grid h-full items-center gap-3 md:grid-cols-[minmax(0,0.9fr)_minmax(0,1.1fr)] md:gap-4">
-        <div className="relative aspect-video w-full overflow-hidden rounded-xl border border-white bg-gradient-to-br from-violet-700 via-indigo-600 to-cyan-400 shadow-sm">
-          {coverImageUrl ? (
-            <img src={coverImageUrl} alt={`Teaserbild: ${title}`} className="absolute inset-0 h-full w-full object-cover" />
-          ) : (
-            <div className="absolute inset-0 flex flex-col items-center justify-center text-white">
-              <ImagePlus className="h-8 w-8 opacity-90" />
-              <span className="mt-2 text-[9px] font-bold tracking-[.2em]">16:9 TEASERBILD</span>
-            </div>
-          )}
-          {pending && <div className="absolute inset-0 grid place-items-center bg-slate-950/45 text-white"><LoaderCircle className="h-8 w-8 animate-spin" /></div>}
-          {coverImageUrl && <span className="absolute bottom-2 left-2 rounded-md bg-slate-950/75 px-2 py-1 text-[10px] font-semibold text-white">Szenario-Cover · 16:9</span>}
-        </div>
+    <>
+      <section className="overflow-hidden rounded-2xl border border-violet-100 bg-gradient-to-br from-violet-50/80 via-white to-cyan-50/80 p-3 sm:p-4">
+        <div className="space-y-3">
+          <button
+            type="button"
+            onClick={() => coverImageUrl && setLightboxOpen(true)}
+            disabled={!coverImageUrl}
+            aria-label={coverImageUrl ? `Teaserbild ${title} vergrößern` : "Noch kein Teaserbild vorhanden"}
+            className={`group relative block aspect-video w-full overflow-hidden rounded-xl border border-white bg-gradient-to-br from-violet-700 via-indigo-600 to-cyan-400 text-left shadow-sm ${coverImageUrl ? "cursor-zoom-in" : "cursor-default"}`}
+          >
+            {coverImageUrl ? (
+              <img src={coverImageUrl} alt={`Teaserbild: ${title}`} className="absolute inset-0 h-full w-full object-cover transition duration-300 group-hover:scale-[1.02]" />
+            ) : (
+              <div className="absolute inset-0 flex flex-col items-center justify-center text-white">
+                <ImagePlus className="h-10 w-10 opacity-90" />
+                <span className="mt-2 text-[10px] font-bold tracking-[.2em]">16:9 TEASERBILD</span>
+              </div>
+            )}
+            {coverImageUrl && <span className="absolute bottom-3 left-3 rounded-lg bg-slate-950/75 px-2.5 py-1.5 text-xs font-semibold text-white">Zum Vergrößern anklicken</span>}
+            {pending && <span className="absolute inset-0 grid place-items-center bg-slate-950/45 text-white"><LoaderCircle className="h-9 w-9 animate-spin" /></span>}
+          </button>
 
-        <div className="min-w-0">
-          <div className="flex flex-wrap items-center justify-between gap-2">
-            <div>
-              <p className="text-xs font-bold uppercase tracking-[.16em] text-violet-700">Szenario-Teaserbild</p>
-              <p className="mt-1 text-sm leading-5 text-slate-600">Ein gemeinsames Motiv für alle Altersvarianten – erstellt aus dem Szenario-Briefing.</p>
-            </div>
-            {coverImageUrl && <span className="rounded-full bg-emerald-50 px-2.5 py-1 text-[10px] font-semibold text-emerald-700">Bild hinterlegt</span>}
-          </div>
-
-          <div className="mt-2.5 flex flex-wrap gap-2">
-            <button type="button" onClick={generate} disabled={pending} className="inline-flex items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-violet-600 to-indigo-600 px-4 py-2.5 text-xs font-semibold text-white shadow-sm shadow-violet-500/20 transition hover:from-violet-700 hover:to-indigo-700 disabled:cursor-wait disabled:opacity-60">
+          <div className="flex flex-wrap items-center gap-2">
+            <button type="button" onClick={generate} disabled={pending} className="inline-flex min-h-11 items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-violet-600 via-indigo-600 to-blue-600 px-4 py-2.5 text-sm font-bold text-white shadow-md shadow-violet-500/20 transition hover:-translate-y-0.5 hover:shadow-lg disabled:cursor-wait disabled:opacity-60">
               {pending ? <LoaderCircle className="h-4 w-4 animate-spin" /> : <Sparkles className="h-4 w-4" />}
               {pending ? "Teaserbild wird erstellt …" : coverImageUrl ? "Teaserbild neu erstellen" : "Teaserbild erstellen"}
             </button>
-            {coverImageUrl && <a href={coverImageUrl} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1.5 rounded-xl border border-slate-200 bg-white/90 px-3 py-2.5 text-xs font-semibold text-slate-700 hover:border-violet-200 hover:text-violet-700">Bild ansehen ↗</a>}
+            {coverImageUrl && <span className="inline-flex items-center gap-1.5 rounded-full bg-emerald-50 px-3 py-1.5 text-xs font-semibold text-emerald-700">Bild hinterlegt</span>}
           </div>
 
-          <form onSubmit={saveUrl} className="mt-2.5 flex min-w-0 gap-2">
+          <form onSubmit={saveUrl} className="flex min-w-0 flex-col gap-2 sm:flex-row">
             <label className="relative min-w-0 flex-1">
-              <Link2 className="pointer-events-none absolute left-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-slate-400" />
-              <input type="url" name="coverImageUrl" value={url} onChange={(event) => setUrl(event.target.value)} placeholder="Eigene Bild-URL (optional)" aria-label={`Teaserbild-URL für ${title}`} className="w-full min-w-0 rounded-xl border border-slate-200 bg-white px-3 py-2 pl-9 text-xs outline-none transition focus:border-violet-300 focus:ring-2 focus:ring-violet-100" />
+              <Link2 className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+              <input type="url" name="coverImageUrl" value={url} onChange={(event) => setUrl(event.target.value)} placeholder="Eigene Bild-URL (optional)" aria-label={`Teaserbild-URL für ${title}`} className="min-h-11 w-full min-w-0 rounded-xl border border-slate-200 bg-white px-3 py-2 pl-10 text-sm outline-none transition focus:border-violet-300 focus:ring-2 focus:ring-violet-100" />
             </label>
-            <button type="submit" disabled={pending} className="shrink-0 rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs font-semibold text-slate-700 transition hover:border-violet-200 hover:text-violet-700 disabled:opacity-50">URL speichern</button>
+            <button type="submit" disabled={pending} className="min-h-11 shrink-0 rounded-xl border border-violet-200 bg-white px-4 py-2 text-sm font-bold text-violet-700 transition hover:border-violet-300 hover:bg-violet-50 disabled:opacity-50">URL speichern</button>
           </form>
-          {savedMessage && <p role="status" className="mt-2 text-xs font-medium text-emerald-700">{savedMessage}</p>}
-          {error && <p role="alert" className="mt-2 rounded-lg border border-rose-200 bg-rose-50 px-3 py-2 text-xs leading-5 text-rose-700">{error}</p>}
+          {savedMessage && <p role="status" className="text-sm font-medium text-emerald-700">{savedMessage}</p>}
+          {error && <p role="alert" className="rounded-lg border border-rose-200 bg-rose-50 px-3 py-2 text-sm leading-5 text-rose-700">{error}</p>}
         </div>
-      </div>
-    </section>
+      </section>
+
+      {lightboxOpen && coverImageUrl && (
+        <div role="dialog" aria-modal="true" aria-label={`Teaserbild: ${title}`} onClick={() => setLightboxOpen(false)} onKeyDown={(event) => { if (event.key === "Escape") setLightboxOpen(false); }} className="fixed inset-0 z-[100] flex items-center justify-center bg-slate-950/85 p-4 backdrop-blur-sm sm:p-8">
+          <button type="button" onClick={() => setLightboxOpen(false)} aria-label="Lightbox schließen" className="absolute right-4 top-4 z-10 grid h-11 w-11 place-items-center rounded-full border border-white/20 bg-white/10 text-white transition hover:bg-white/20">
+            <X className="h-5 w-5" />
+          </button>
+          <div onClick={(event) => event.stopPropagation()} className="relative w-full max-w-6xl">
+            <img src={coverImageUrl} alt={`Teaserbild: ${title}`} className="max-h-[85vh] w-full rounded-2xl object-contain shadow-2xl" />
+            <p className="mt-3 text-center text-sm font-medium text-white/80">{title}</p>
+          </div>
+        </div>
+      )}
+    </>
   );
 }
