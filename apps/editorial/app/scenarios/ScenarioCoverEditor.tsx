@@ -50,7 +50,7 @@ export function ScenarioCoverEditor({
         <p className="mt-1 text-sm leading-5 text-slate-600">FLUX erstellt ein gemeinsames Cover für alle Altersvarianten – direkt aus dem hinterlegten Szenario-Briefing.</p>
         <button type="button" onClick={generate} disabled={pending} className="mt-3 inline-flex items-center gap-2 rounded-xl bg-gradient-to-r from-violet-600 to-indigo-600 px-3.5 py-2.5 text-xs font-semibold text-white shadow-md shadow-violet-500/15 hover:from-violet-700 hover:to-indigo-700 disabled:cursor-wait disabled:opacity-60">
           {pending ? <LoaderCircle className="h-4 w-4 animate-spin" /> : <Sparkles className="h-4 w-4" />}
-          {pending ? "FLUX erstellt die Illustration …" : coverImageUrl ? "Mit FLUX neu generieren" : "Illustration mit FLUX erstellen"}
+          {pending ? "Teaserbild wird erstellt …" : coverImageUrl ? "Teaserbild neu erstellen" : "Teaserbild erstellen"}
         </button>
         <form
           onSubmit={(event) => {
