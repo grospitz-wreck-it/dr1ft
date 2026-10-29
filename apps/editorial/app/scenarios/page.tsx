@@ -103,8 +103,8 @@ export default async function ScenariosPage() {
 
     return {
       key,
-      title: first.title?.replace(/\\s*[–-]\\s*(9–11|12–13|14–15|16–17|18\\+).*$/i, "") || first.title,
-      description: first.description?.split("\\n\\nLernziele")[0] || "",
+      title: first.title?.replace(/\s*[–-]\s*(9–11|12–13|14–15|16–17|18\+).*$/i, "") || first.title,
+      description: first.description?.split("\n\nLernziele")[0] || "",
       variants,
       coverImageUrl: first.cover_image_url ?? null,
       missionCount: familyMissions.length,
