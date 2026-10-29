@@ -67,6 +67,43 @@ export default async function AmbientContentPage({ searchParams = {} }: Props) {
   const classRows = classesResult.data ?? [];
   const ambientInterests = ambientInterestsResult.data ?? [];
 
+  const inventoryRows: Array<{ id: string; status: string; extra: Record<string, any> | null }> = [];
+  let inventoryError: string | null = null;
+  for (let offset = 0; ; offset += 1000) {
+    const { data, error } = await supabase
+      .from("content_items")
+      .select("id, status, extra")
+      .eq("type", "post")
+      .is("scenario_id", null)
+      .order("created_at", { ascending: false })
+      .range(offset, offset + 999);
+    if (error) {
+      inventoryError = error.message;
+      break;
+    }
+    const batch = (data ?? []) as Array<{ id: string; status: string; extra: Record<string, any> | null }>;
+    inventoryRows.push(...batch);
+    if (batch.length < 1000) break;
+  }
+
+  const interestCoverage = ambientInterests.map((interest) => {
+    const matching = inventoryRows.filter((item) =>
+      Array.isArray(item.extra?.interestKeys) && item.extra.interestKeys.includes(interest.key)
+    );
+    return {
+      ...interest,
+      total: matching.length,
+      live: matching.filter((item) => item.status === "live").length,
+      draft: matching.filter((item) => item.status === "draft").length,
+    };
+  }).sort((a, b) => a.total - b.total || a.label.localeCompare(b.label, "de"));
+  const coveredInterestCount = interestCoverage.filter((interest) => interest.total > 0).length;
+  const untaggedPostCount = inventoryRows.filter((item) =>
+    !Array.isArray(item.extra?.interestKeys) || item.extra.interestKeys.length === 0
+  ).length;
+  const legacyTaggedCount = inventoryRows.filter((item) =>
+    item.extra?.generatedBy === "ai" && item.extra?.generatorVersion !== "ambient-studio-v6"
+  ).length;
   const metadataErrors = [
     creatorsResult.error,
     itemsResult.error,
@@ -187,6 +224,36 @@ export default async function AmbientContentPage({ searchParams = {} }: Props) {
       </section>
     </AmbientGeneratorForm>
 
+    <section className="bg-white border border-slate-200 rounded-2xl p-5 shadow-sm space-y-4">
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <div><h2 className="font-semibold text-slate-900">Interessen-Abdeckung</h2><p className="text-xs text-slate-500 mt-1">Inventar aller szenario-unabhängigen Posts; Tags werden anhand der gespeicherten interestKeys gezählt.</p></div>
+        <span className="text-[10px] rounded-full bg-violet-50 text-violet-700 px-2.5 py-1.5 font-medium">Katalog + Content-Inventar</span>
+      </div>
+      {inventoryError ? <p className="text-sm text-red-700">Inventar konnte nicht vollständig geladen werden: {inventoryError}</p> : <>
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+          <Stat label="INTERESSEN" value={ambientInterests.length}/>
+          <Stat label="MIT POSTS" value={coveredInterestCount}/>
+          <Stat label="OHNE POSTS" value={interestCoverage.length - coveredInterestCount}/>
+          <Stat label="OHNE TAGS" value={untaggedPostCount}/>
+        </div>
+        <div className="flex flex-wrap gap-2 text-[11px] text-slate-500">
+          <span className="rounded-full bg-slate-100 px-2.5 py-1">{inventoryRows.length} Ambient-Posts inventarisiert</span>
+          <span className="rounded-full bg-amber-50 text-amber-800 px-2.5 py-1">{legacyTaggedCount} ältere KI-Posts mit Legacy-Tagging</span>
+        </div>
+        <details className="rounded-xl border border-slate-200">
+          <summary className="cursor-pointer list-none px-4 py-3 flex items-center justify-between gap-3 text-sm font-medium text-slate-800"><span>Alle Interessen und Post-Zahlen ansehen</span><span className="text-xs text-slate-400">{coveredInterestCount}/{interestCoverage.length} abgedeckt</span></summary>
+          <div className="border-t border-slate-100 p-3 space-y-3">
+            <div><h3 className="text-xs font-semibold uppercase tracking-wide text-slate-500 mb-2">Noch ohne zugeordnete Posts</h3>
+              {interestCoverage.filter((interest) => interest.total === 0).length === 0 ? <p className="text-xs text-emerald-700">Alle Interessen haben mindestens einen zugeordneten Post.</p> : <div className="flex flex-wrap gap-1.5">{interestCoverage.filter((interest) => interest.total === 0).map((interest) => <span key={interest.key} className="rounded-full border border-amber-200 bg-amber-50 px-2.5 py-1 text-xs text-amber-900">{interest.emoji} {interest.label}</span>)}</div>}
+            </div>
+            <div><h3 className="text-xs font-semibold uppercase tracking-wide text-slate-500 mb-2">Vollständige Abdeckung</h3>
+              <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-1.5">{[...interestCoverage].sort((a, b) => a.label.localeCompare(b.label, "de")).map((interest) => <div key={interest.key} className="flex items-center justify-between gap-2 rounded-lg bg-slate-50 px-2.5 py-2 text-xs"><span className="min-w-0 truncate">{interest.emoji} {interest.label}</span><span className={interest.total ? "shrink-0 font-semibold text-slate-700" : "shrink-0 text-amber-700"}>{interest.total} <span className="font-normal text-slate-400">({interest.live} live · {interest.draft} Draft)</span></span></div>)}</div>
+            </div>
+          </div>
+        </details>
+      </>}
+    </section>
+
     <section className="bg-white border border-slate-200 rounded-2xl p-4 shadow-sm space-y-4"><div className="flex items-center justify-between gap-3"><div className="flex items-center gap-2"><SlidersHorizontal className="w-4 h-4 text-slate-500"/><h2 className="font-semibold text-sm text-slate-900">Content-Übersicht</h2>{activeFilterCount > 0 && <span className="text-[10px] rounded-full bg-accent/10 text-accent px-2 py-1 font-semibold">{activeFilterCount} Filter</span>}</div><span className="text-xs text-slate-400">{filteredItems.length} von {allAmbient.length} Ambient-Posts</span></div>
       <form method="get" className="grid lg:grid-cols-4 gap-2">
         <div className="relative lg:col-span-2"><Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400"/><input name="q" defaultValue={q} placeholder="Text durchsuchen …" className="w-full rounded-xl border border-slate-200 pl-9 pr-3 py-2.5 text-sm"/></div>
@@ -202,7 +269,7 @@ export default async function AmbientContentPage({ searchParams = {} }: Props) {
       <div className="flex flex-wrap gap-2 text-xs"><a href={filterHref("status", "all")} className={`rounded-full px-3 py-1.5 border ${statusFilter === "all" ? "bg-slate-900 text-white border-slate-900" : "border-slate-200 text-slate-600"}`}>Alle</a>{STATUS_ORDER.map((status)=><a key={status} href={filterHref("status", status)} className={`rounded-full px-3 py-1.5 border ${statusFilter === status ? "bg-slate-900 text-white border-slate-900" : "border-slate-200 text-slate-600"}`}>{statusLabel[status]}</a>)}</div>
     </section>
 
-    <section className="grid xl:grid-cols-2 gap-5">{grouped.length === 0 ? <div className="xl:col-span-2 bg-white border border-dashed border-slate-300 rounded-2xl p-10 text-center"><div className="text-sm font-medium text-slate-700">Keine passenden Ambient-Posts</div><div className="text-xs text-slate-400 mt-1">Filter anpassen oder neue Ambient-Items erzeugen.</div></div> : grouped.map((group)=><div key={group.status} className="space-y-2"><div className="flex items-center justify-between px-1"><h2 className="text-xs font-semibold tracking-widest text-slate-500">{statusLabel[group.status]} · {group.items.length}</h2></div><ul className="space-y-2">{group.items.map((item)=><li key={item.id} className="bg-white border border-slate-200 rounded-xl overflow-hidden">{item.media_url&&<img src={item.media_url} alt="" className="w-full max-h-80 object-cover"/>}<div className="p-4 space-y-3"><p className="text-sm leading-6 text-slate-900">{item.body}</p>{item.extra?.generatedBy === "ai"&&<div className="flex flex-wrap gap-1.5 text-[10px] text-slate-500"><Tag>{item.extra?.ageBand}</Tag><Tag>{item.extra?.styleLabel}</Tag>{item.extra?.format&&<Tag>{item.extra.format}</Tag>}{item.extra?.topic&&<Tag>{item.extra.topic}</Tag>}{item.extra?.imageGenerated&&<Tag>🖼 {item.extra?.imageProvider === "cloudflare" ? "FLUX" : "Gemini"}</Tag>}{(missionByContent.get(item.id) ?? []).map((mission)=><Tag key={mission.id}>🎯 {mission.title}</Tag>)}{Array.from(new Set((missionByContent.get(item.id) ?? []).flatMap((mission)=>arcByMission.get(mission.id) ?? []).map((arc)=>arc.title))).map((title)=><Tag key={title}>📖 {title}</Tag>)}{Array.from(new Set((missionByContent.get(item.id) ?? []).flatMap((mission)=>mission.scenarioId ? (classesByScenario.get(mission.scenarioId) ?? []).map((entry)=>entry.name) : []))).map((name)=><Tag key={name}>🏫 {name}</Tag>)}</div>}<div className="flex items-center justify-between gap-2"><span className="text-xs font-medium text-slate-500">{statusLabel[item.status] ?? item.status}</span></div></div></li>)}</ul></div>)}</section>
+    <section className="grid xl:grid-cols-2 gap-5">{grouped.length === 0 ? <div className="xl:col-span-2 bg-white border border-dashed border-slate-300 rounded-2xl p-10 text-center"><div className="text-sm font-medium text-slate-700">Keine passenden Ambient-Posts</div><div className="text-xs text-slate-400 mt-1">Filter anpassen oder neue Ambient-Items erzeugen.</div></div> : grouped.map((group)=><div key={group.status} className="space-y-2"><div className="flex items-center justify-between px-1"><h2 className="text-xs font-semibold tracking-widest text-slate-500">{statusLabel[group.status]} · {group.items.length}</h2></div><ul className="space-y-2">{group.items.map((item)=><li key={item.id} className="bg-white border border-slate-200 rounded-xl overflow-hidden">{item.media_url&&<img src={item.media_url} alt="" className="w-full max-h-80 object-cover"/>}<div className="p-4 space-y-3"><p className="text-sm leading-6 text-slate-900">{item.body}</p>{item.extra?.generatedBy === "ai"&&<div className="flex flex-wrap gap-1.5 text-[10px] text-slate-500"><Tag>{item.extra?.ageBand}</Tag><Tag>{item.extra?.styleLabel}</Tag>{item.extra?.format&&<Tag>{item.extra.format}</Tag>}{item.extra?.topic&&<Tag>{item.extra.topic}</Tag>}{Array.isArray(item.extra?.interests)&&item.extra.interests.map((interest: string)=><Tag key={interest}>♡ {interest}</Tag>)}{item.extra?.imageGenerated&&<Tag>🖼 {item.extra?.imageProvider === "cloudflare" ? "FLUX" : "Gemini"}</Tag>}{(missionByContent.get(item.id) ?? []).map((mission)=><Tag key={mission.id}>🎯 {mission.title}</Tag>)}{Array.from(new Set((missionByContent.get(item.id) ?? []).flatMap((mission)=>arcByMission.get(mission.id) ?? []).map((arc)=>arc.title))).map((title)=><Tag key={title}>📖 {title}</Tag>)}{Array.from(new Set((missionByContent.get(item.id) ?? []).flatMap((mission)=>mission.scenarioId ? (classesByScenario.get(mission.scenarioId) ?? []).map((entry)=>entry.name) : []))).map((name)=><Tag key={name}>🏫 {name}</Tag>)}</div>}<div className="flex items-center justify-between gap-2"><span className="text-xs font-medium text-slate-500">{statusLabel[item.status] ?? item.status}</span></div></div></li>)}</ul></div>)}</section>
   </div><style>{`@keyframes ambient-progress{0%{transform:translateX(-120%)}50%{transform:translateX(120%)}100%{transform:translateX(320%)}}.control{width:100%;border:1px solid #e2e8f0;border-radius:12px;padding:10px 12px;font-size:13px;background:white;color:#0f172a}.darkControl{width:100%;border:1px solid rgba(255,255,255,.12);border-radius:12px;padding:10px 12px;font-size:13px;background:rgba(255,255,255,.06);color:white}`}</style></div>;
 }
 function Field({label,children}:{label:string;children:ReactNode}){return <label className="block"><span className="block text-[10px] font-semibold tracking-wider text-slate-500 mb-1.5">{label}</span>{children}</label>}
