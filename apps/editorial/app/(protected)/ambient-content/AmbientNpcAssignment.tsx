@@ -88,7 +88,7 @@ export function AmbientNpcAssignment({
         const isRestricted = entityLike || isPoliticalOrCampaign;
         const identityTokens = tokens([creator.display_name, creator.npc_category, creator.npc_role, persona.organization, persona.brand, persona.party]);
         const identityMatch = identityTokens.some((word) => postNorm.includes(word));
-        const topicMatch = signals.some((signal) => signal.length > 3 && (postNorm.includes(signal) || profileNorm.includes(signal) && postTokens.has(signal)));
+        const topicMatch = tags.some((tag) => tag.length > 3 && postNorm.includes(tag)) || [...postTokens].some((token) => tags.some((tag) => tokens(tag).includes(token))) || signals.some((signal) => signal.length > 3 && postNorm.includes(signal));
         // Branded/institutional/political accounts only qualify when the post is specifically about their identity or a relevant topic.
         const allowed = !isRestricted || identityMatch || topicMatch;
 
