@@ -38,7 +38,7 @@ export function AmbientGeneratorForm({ action, children }: { action: Action; chi
   const [summary, setSummary] = useState<Summary>(defaults);
   function updateSummary(event: ChangeEvent<HTMLFormElement>) {
     const data = new FormData(event.currentTarget);
-    const rawInterests = String(data.get("interests") ?? "");
+    const rawInterests = String(data.get("interestLabels") ?? "");
     setSummary({
       contentMode: String(data.get("contentMode") ?? defaults.contentMode),
       theme: String(data.get("theme") ?? ""),
