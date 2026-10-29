@@ -51,6 +51,7 @@ export function AmbientInterestPicker({
   return (
     <div>
       <input type="hidden" name="interests" value={selected.join(",")} />
+      <input type="hidden" name="interestLabels" value={selected.map((key) => optionByKey.get(key)?.label ?? key).join(",")} />
       <div className="flex flex-wrap gap-1.5 mb-2">
         {selected.map((key) => {
           const interest = optionByKey.get(key);
