@@ -3,6 +3,7 @@ import { ArrowLeft, BookOpen, CheckCircle2, ChevronDown, Clock3, FileText, Flag,
 import { supabaseServerClient } from "../../../lib/supabaseServerClient";
 import { createContentItem, generateScenarioContent, optimizeScenarioBasics, toggleScenarioActive, updateContentItemBody, updateScenarioBasics, updateScenarioAmbientDensity } from "../actions";
 import { ContentStatusControl } from "./ContentStatusControl";
+import { ScenarioCoverEditor } from "../ScenarioCoverEditor";
 import { AiGenerationButton } from "../../components/AiGenerationButton";
 import { LearningDesignStudio } from "./LearningDesignStudio";
 import { ScenarioWizard } from "./ScenarioWizard";
