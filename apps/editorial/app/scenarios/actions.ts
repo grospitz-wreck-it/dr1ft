@@ -1014,7 +1014,8 @@ export async function generateScenarioCover(scenarioId: string) {
     "Age group: " + String(scenario.age_band ?? scenario.age_rating ?? "12+"),
     "Interpret the briefing as a clear visual story or metaphor. Make the illustration engaging for teenagers, emotionally intelligent, nuanced, safe for school, and immediately legible at small thumbnail size.",
     "Modern editorial illustration, layered shapes and depth, polished lighting, tactile subtle grain, strong focal point, sophisticated violet/indigo/electric-blue palette with restrained cyan highlights.",
-    "Wide landscape cover, exact 16:9 composition, balanced negative space, no text, no letters, no logos, no watermark, no real-person likeness, no generic corporate stock imagery.",
+    "ABSOLUTE RULE: the image must contain zero text of any kind. No words, no letters, no numbers, no typography, no captions, no labels, no signs, no speech bubbles, no UI, no interface, no posters, no writing on objects, and no pseudo-text or gibberish glyphs. Do not attempt to render the scenario title. If a phone or screen appears, show only abstract shapes and image thumbnails with no legible or simulated writing.",
+    "Wide landscape cover, exact 16:9 composition, balanced negative space, purely visual illustration, no logos, no watermark, no real-person likeness, no generic corporate stock imagery."
   ].join("\n\n");
 
   // Use the existing Editorial generator, which already implements FLUX and its
