@@ -49,7 +49,7 @@ export function MissionThumbnailEditor({
         <div className="flex flex-wrap items-center gap-2">
           <button type="button" onClick={generate} disabled={pending} className="inline-flex items-center gap-2 rounded-xl bg-gradient-to-r from-violet-600 to-indigo-600 px-3 py-2 text-xs font-semibold text-white shadow-sm hover:from-violet-700 hover:to-indigo-700 disabled:cursor-wait disabled:opacity-60">
             {pending ? <LoaderCircle className="h-4 w-4 animate-spin" /> : <Sparkles className="h-4 w-4" />}
-            {pending ? "Flux illustriert die Mission …" : thumbnailUrl ? "Mit Flux neu illustrieren" : "Mit Flux illustrieren"}
+            {pending ? "Teaserbild wird erstellt …" : thumbnailUrl ? "Teaserbild neu erstellen" : "Teaserbild erstellen"}
           </button>
           <span className="text-[11px] text-slate-400">KI-Cover aus Szenario-Briefing und Missionsbeschreibung</span>
         </div>
