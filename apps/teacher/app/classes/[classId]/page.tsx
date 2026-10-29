@@ -120,6 +120,7 @@ export default async function ClassDetailPage({
     }));
 
   const activeAssignment = (assignments ?? [])[0] as any;
+  const reportingUnlocked = !activeAssignment?.show_reports_at_end || Boolean(activeAssignment?.scheduled_end_at && new Date(activeAssignment.scheduled_end_at).getTime() <= Date.now());
 
   const { data: session } = await supabase.auth.getSession();
 
@@ -376,6 +377,7 @@ export default async function ClassDetailPage({
           <StudentRoster
             classId={classId}
             initialStudents={students}
+            reportingUnlocked={reportingUnlocked}
           />
         </div>
 
