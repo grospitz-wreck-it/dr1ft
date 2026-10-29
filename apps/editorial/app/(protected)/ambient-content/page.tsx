@@ -59,7 +59,7 @@ export default async function AmbientContentPage({ searchParams = {} }: Props) {
     supabase.from("story_arcs").select("id, title, scenario_id"),
     supabase.from("classes").select("id, name, grade_level"),
     supabase.from("ambient_interests").select("key, label, emoji, category").eq("is_active", true).eq("is_selectable", true).eq("taxonomy_status", "active").order("sort_order").order("label"),
-    supabase.from("creators").select("id, display_name, creator_role, persona, interest_tags, bio, story_role, npc_category, npc_role, age_bands, is_active, scenario_id").is("scenario_id", null).order("display_name"),
+    supabase.from("creators").select("id, kind, display_name, creator_role, persona, interest_tags, bio, story_role, npc_category, npc_role, age_bands, is_active, scenario_id").eq("kind", "npc").is("scenario_id", null).order("display_name"),
   ]);
 
   const ambientCreators = creatorsResult.data ?? [];
@@ -70,7 +70,7 @@ export default async function AmbientContentPage({ searchParams = {} }: Props) {
   const arcStepRows = arcStepsResult.data ?? [];
   const classRows = classesResult.data ?? [];
   const ambientInterests = ambientInterestsResult.data ?? [];
-  const npcCreators = (npcCreatorsResult.data ?? []).filter((creator) => creator.creator_role !== "ambient");
+  const npcCreators = (npcCreatorsResult.data ?? []).filter((creator) => creator.kind === "npc" && creator.creator_role !== "ambient");
 
   const inventoryRows: Array<{ id: string; status: string; extra: Record<string, any> | null }> = [];
   let inventoryError: string | null = null;
