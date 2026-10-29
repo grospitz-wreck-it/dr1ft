@@ -1,5 +1,5 @@
 import type { ReactNode } from "react";
-import { BookOpen, ChevronRight, Users, Building2, CheckCircle2, Sparkles, GraduationCap, School, Flag, Layers3, ArrowUpRight } from "lucide-react";
+import { BookOpen, Users, Building2, CheckCircle2, Sparkles, GraduationCap, School, Flag, Layers3, ArrowUpRight } from "lucide-react";
 import { supabaseServerClient } from "../../lib/supabaseServerClient";
 import { ScenarioCoverEditor } from "./ScenarioCoverEditor";
 
@@ -144,7 +144,7 @@ export default async function ScenariosPage() {
           <div className="space-y-3">
             {families.map((family) => (
               <article key={family.key} className="overflow-hidden rounded-2xl border border-slate-200/90 bg-white p-4 shadow-[0_3px_18px_rgba(15,23,42,0.03)] transition hover:border-slate-300 hover:shadow-sm sm:p-5">
-                <div className="flex flex-wrap items-start justify-between gap-x-4 gap-y-2">
+                <div className="flex flex-wrap items-start justify-between gap-3">
                   <div className="min-w-0 flex-1">
                     <div className="flex flex-wrap items-center gap-2">
                       <h3 className="text-lg font-bold tracking-tight text-slate-950">{family.title}</h3>
@@ -152,49 +152,25 @@ export default async function ScenariosPage() {
                     </div>
                     {family.description && <p className="mt-1.5 max-w-5xl text-sm leading-5 text-slate-500">{family.description}</p>}
                   </div>
-                  <div className="flex shrink-0 flex-wrap gap-2">
-                    <span className="inline-flex items-center gap-1.5 rounded-full border border-slate-200 bg-white px-2.5 py-1 text-[11px] font-medium text-slate-500"><Layers3 className="h-3.5 w-3.5 text-violet-500" />{family.variants.length} Altersvarianten</span>
-                    <span className="inline-flex items-center gap-1.5 rounded-full border border-slate-200 bg-white px-2.5 py-1 text-[11px] font-medium text-slate-500"><BookOpen className="h-3.5 w-3.5 text-cyan-600" />{family.contentCount} Inhalte</span>
-                  </div>
                 </div>
 
-                <div className="mt-4 grid gap-4 lg:grid-cols-[minmax(0,1.05fr)_minmax(0,0.95fr)]">
+                <div className="mt-4 grid gap-4 lg:grid-cols-[minmax(0,0.95fr)_minmax(0,1.05fr)]">
                   <div className="min-w-0">
                     <ScenarioCoverEditor scenarioId={family.variants[0].id} title={family.title} coverImageUrl={family.coverImageUrl} />
                   </div>
                   <div className="flex min-w-0 flex-col gap-3">
-                    <section className="rounded-2xl border border-slate-200/80 bg-slate-50/70 p-3">
-                      <div className="mb-2.5 flex items-center justify-between gap-3">
-                        <div>
-                          <h4 className="text-sm font-bold text-slate-900">Altersvarianten</h4>
-                          <p className="mt-0.5 text-xs text-slate-500">Direkt öffnen und bearbeiten</p>
-                        </div>
-                        <span className="rounded-full bg-white px-2 py-1 text-[10px] font-semibold text-slate-500 ring-1 ring-slate-200">{family.activeVariants} aktiv</span>
-                      </div>
-                      <div className={`grid gap-2 ${family.variants.length === 1 ? "grid-cols-1" : "grid-cols-2"}`}>
-                        {family.variants.map((variant) => {
-                          const ageLabel = AGE_BANDS.find(([value]) => value === variant.age_band)?.[1] ?? variant.age_rating;
-                          const active = Boolean(variant.is_active);
-                          return (
-                            <a key={variant.id} href={`/scenarios/${variant.id}`} className="group flex min-w-0 items-center gap-3 rounded-xl border border-slate-200 bg-white p-3 transition duration-200 hover:-translate-y-0.5 hover:border-violet-200 hover:shadow-md hover:shadow-violet-100/70">
-                              <span className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-gradient-to-br from-violet-100 to-indigo-100 text-violet-700 ring-1 ring-violet-200/70"><Users className="h-4 w-4" /></span>
-                              <span className="min-w-0 flex-1">
-                                <span className="block text-sm font-bold tracking-tight text-slate-900">{ageLabel}</span>
-                                <span className={`mt-1 inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-semibold ${active ? "bg-emerald-50 text-emerald-700" : "bg-slate-100 text-slate-500"}`}><span className={`inline-block h-1.5 w-1.5 rounded-full ${active ? "bg-emerald-500" : "bg-slate-400"}`} />{displayScenarioStatus(variant)}</span>
-                              </span>
-                              <span className="inline-flex shrink-0 items-center gap-1 text-[11px] font-semibold text-violet-700">Bearbeiten <ArrowUpRight className="h-3.5 w-3.5 transition-transform group-hover:-translate-y-0.5 group-hover:translate-x-0.5" /></span>
-                            </a>
-                          );
-                        })}
-                      </div>
-                    </section>
+                    <a href={`/scenarios/${family.variants[0].id}`} className="group inline-flex min-h-12 w-full items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-violet-600 via-indigo-600 to-blue-600 px-5 py-3 text-sm font-bold text-white shadow-md shadow-violet-500/20 transition hover:-translate-y-0.5 hover:shadow-lg hover:shadow-violet-500/25 focus:outline-none focus:ring-2 focus:ring-violet-400 focus:ring-offset-2">
+                      <Sparkles className="h-4 w-4" /> Bearbeiten <ArrowUpRight className="h-4 w-4 transition-transform group-hover:-translate-y-0.5 group-hover:translate-x-0.5" />
+                    </a>
                     <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
                       <MiniKpi icon={<School className="h-4 w-4" />} tint="violet" label="Schulen" value={String(family.schoolsInUse)} />
                       <MiniKpi icon={<Users className="h-4 w-4" />} tint="blue" label="Aktive Klassen" value={String(family.activeClasses)} />
                       <MiniKpi icon={<GraduationCap className="h-4 w-4" />} tint="cyan" label="Lernende erreicht" value={String(family.learnersReached)} />
                       <MiniKpi icon={<Flag className="h-4 w-4" />} tint="amber" label="Missionen" value={String(family.missionCount)} />
                       <MiniKpi icon={<CheckCircle2 className="h-4 w-4" />} tint="emerald" label="Abschlüsse" value={String(family.completedMissions)} />
+                      <MiniKpi icon={<Layers3 className="h-4 w-4" />} tint="violet" label="Altersvarianten" value={String(family.variants.length)} />
                     </div>
+                    <p className="px-1 text-xs text-slate-400">{family.contentCount} Inhalte im Szenario</p>
                   </div>
                 </div>
               </article>
