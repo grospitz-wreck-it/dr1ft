@@ -1,7 +1,7 @@
 import type { ReactNode } from "react";
 import { ArrowLeft, FileText, Flag, Route, Sparkles, Users } from "lucide-react";
 import { supabaseServerClient } from "../../../lib/supabaseServerClient";
-import { createContentItem, generateScenarioContent, optimizeScenarioBasics, toggleScenarioActive, updateContentItemBody, updateScenarioBasics } from "../actions";
+import { createContentItem, generateScenarioContent, optimizeScenarioBasics, toggleScenarioActive, updateContentItemBody, updateScenarioBasics, updateScenarioAmbientDensity } from "../actions";
 import { ContentStatusControl } from "./ContentStatusControl";
 import { AiGenerationButton } from "../../components/AiGenerationButton";
 import { LearningDesignStudio } from "./LearningDesignStudio";
@@ -171,6 +171,25 @@ export default async function ScenarioDetailPage({ params, searchParams = {} }: 
                         </div>
                       </div>
             
+                      <div className="mt-5 rounded-2xl border border-violet-100 bg-violet-50/50 p-4 sm:p-5">
+                        <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+                          <div>
+                            <h3 className="text-sm font-semibold text-slate-900">Feed & Ambient-Content</h3>
+                            <p className="mt-1 max-w-2xl text-xs leading-5 text-slate-600">Steuere, wie viele neutrale Alltagsbeiträge zwischen den szenariorelevanten Posts auftauchen. Diese Einstellung lässt sich jederzeit ändern – auch bei bereits angelegten Szenen.</p>
+                          </div>
+                          <form action={updateScenarioAmbientDensity.bind(null, scenarioId)} className="flex w-full flex-col gap-2 sm:w-72">
+                            <label htmlFor="ambientDensity" className="text-xs font-semibold text-slate-700">Ambient-Dichte</label>
+                            <select id="ambientDensity" name="ambientDensity" defaultValue={scenario.ambient_density ?? "medium"} className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm">
+                              <option value="off">Aus – keine globalen Ambient-Posts</option>
+                              <option value="low">Niedrig – seltene Alltagsbeiträge</option>
+                              <option value="medium">Mittel – ausgewogener Feed</option>
+                              <option value="high">Hoch – viele Alltagsbeiträge</option>
+                            </select>
+                            <button className="self-start rounded-xl bg-violet-700 px-3 py-2 text-xs font-semibold text-white hover:bg-violet-800">Feed-Einstellung speichern</button>
+                          </form>
+                        </div>
+                      </div>
+
                       <div className="mt-5 pt-4 border-t border-slate-100 flex flex-wrap gap-2">
                         {(variants ?? []).map((variant) => (
                           <a
