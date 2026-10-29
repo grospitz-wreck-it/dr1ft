@@ -154,3 +154,24 @@ export async function swapArcSteps(
   if (e1 || e2) throw new Error(e1?.message ?? e2?.message);
   revalidatePath(`/missions/${scenarioId}`);
 }
+
+export async function saveMissionThumbnail(missionId: string, scenarioId: string, formData: FormData) {
+  const supabase = supabaseServerClient();
+  const thumbnailUrl = String(formData.get("thumbnailUrl") ?? "").trim();
+  if (thumbnailUrl) {
+    let parsed: URL;
+    try { parsed = new URL(thumbnailUrl); } catch { throw new Error("Bitte eine gültige Bild-URL eingeben."); }
+    if (parsed.protocol !== "https:" && parsed.protocol !== "http:") {
+      throw new Error("Die Bild-URL muss mit https:// oder http:// beginnen.");
+    }
+  }
+
+  const { error } = await supabase
+    .from("missions")
+    .update({ thumbnail_url: thumbnailUrl || null })
+    .eq("id", missionId)
+    .eq("scenario_id", scenarioId);
+
+  if (error) throw new Error(error.message);
+  revalidatePath(`/missions/${scenarioId}`);
+}
