@@ -171,7 +171,7 @@ export default async function ScenariosPage() {
                         </div>
                         <span className="rounded-full bg-white px-2 py-1 text-[10px] font-semibold text-slate-500 ring-1 ring-slate-200">{family.activeVariants} aktiv</span>
                       </div>
-                      <div className="grid grid-cols-2 gap-2">
+                      <div className={`grid gap-2 ${family.variants.length === 1 ? "grid-cols-1" : "grid-cols-2"}`}>
                         {family.variants.map((variant) => {
                           const ageLabel = AGE_BANDS.find(([value]) => value === variant.age_band)?.[1] ?? variant.age_rating;
                           const active = Boolean(variant.is_active);
