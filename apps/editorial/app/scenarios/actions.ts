@@ -4,6 +4,7 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { supabaseServerClient } from "../../lib/supabaseServerClient";
+import { generateEditorialTeaserImage } from "../(protected)/ambient-content/actions";
 
 function slugify(input: string): string {
   return input
@@ -999,12 +1000,6 @@ export async function updateArcDraft(arcId: string, scenarioId: string, formData
 /** Generiert ein Szenario-Cover mit FLUX auf Basis des vorhandenen Briefings. */
 export async function generateScenarioCover(scenarioId: string) {
   const supabase = supabaseServerClient();
-  const workerUrl = process.env.CLOUDFLARE_AMBIENT_IMAGE_URL?.trim()
-    || "https://dr1ft.grospitz.workers.dev";
-  const apiKey = process.env.AMBIENT_IMAGE_API_KEY?.trim()
-    || process.env.CLOUDFLARE_AMBIENT_IMAGE_API_KEY?.trim();
-  if (!apiKey) throw new Error("FLUX ist nicht konfiguriert: AMBIENT_IMAGE_API_KEY fehlt in den Vercel-Umgebungsvariablen.");
-
   const { data: scenario, error } = await supabase
     .from("scenarios")
     .select("id,title,description,age_band,age_rating,scenario_group,slug")
@@ -1018,29 +1013,15 @@ export async function generateScenarioCover(scenarioId: string) {
     "Scenario briefing: " + String(scenario.description ?? "").slice(0, 2200),
     "Age group: " + String(scenario.age_band ?? scenario.age_rating ?? "12+"),
     "Interpret the briefing as a clear visual story or metaphor. Make the illustration engaging for teenagers, emotionally intelligent, nuanced, safe for school, and immediately legible at small thumbnail size.",
-    "Art direction: modern editorial illustration, layered shapes and depth, polished lighting, tactile subtle grain, strong focal point, sophisticated violet/indigo/electric-blue palette with restrained cyan highlights.",
-    "Wide cinematic landscape cover, 16:9 composition, balanced negative space, no text, no letters, no logos, no watermark, no real-person likeness, no generic corporate stock imagery.",
+    "Modern editorial illustration, layered shapes and depth, polished lighting, tactile subtle grain, strong focal point, sophisticated violet/indigo/electric-blue palette with restrained cyan highlights.",
+    "Wide landscape cover, exact 16:9 composition, balanced negative space, no text, no letters, no logos, no watermark, no real-person likeness, no generic corporate stock imagery.",
   ].join("\\n\\n");
 
-  const response = await fetch(workerUrl, {
-    method: "POST",
-    headers: { "Content-Type": "application/json", Authorization: "Bearer " + apiKey },
-    body: JSON.stringify({ prompt, aspectRatio: "16:9", steps: 4 }),
-    cache: "no-store",
-    signal: AbortSignal.timeout(90000),
-  });
-  if (!response.ok) throw new Error("FLUX-Generierung fehlgeschlagen (" + response.status + "): " + (await response.text()).slice(0, 500));
-  const result = await response.json();
-  if (typeof result?.image !== "string") throw new Error("FLUX hat kein Bild zurückgegeben.");
+  // Use the existing Editorial generator, which already implements FLUX and its
+  // configured fallback, plus the production storage bucket and error handling.
+  const generated = await generateEditorialTeaserImage(prompt);
+  const imageUrl = generated.url;
 
-  const storagePath = "generated/scenario-covers/" + scenarioId + "-" + crypto.randomUUID() + ".jpg";
-  const { error: uploadError } = await supabase.storage.from("ambient-assets").upload(
-    storagePath, Buffer.from(result.image, "base64"), { contentType: "image/jpeg", upsert: false },
-  );
-  if (uploadError) throw new Error("Szenario-Cover konnte nicht gespeichert werden: " + uploadError.message);
-  const imageUrl = supabase.storage.from("ambient-assets").getPublicUrl(storagePath).data.publicUrl;
-
-  // Altersvarianten derselben Szenario-Familie teilen sich das visuelle Cover.
   const group = scenario.scenario_group || scenario.slug || scenario.id;
   const { data: variants, error: variantsError } = await supabase
     .from("scenarios").select("id").eq("scenario_group", group);
@@ -1048,11 +1029,11 @@ export async function generateScenarioCover(scenarioId: string) {
   const ids = (variants ?? []).map((variant) => variant.id);
   const { error: updateError } = await supabase.from("scenarios")
     .update({ cover_image_url: imageUrl }).in("id", ids.length ? ids : [scenarioId]);
-  if (updateError) throw new Error("Bild gespeichert, Cover konnte aber nicht zugeordnet werden: " + updateError.message);
+  if (updateError) throw new Error("Teaserbild wurde generiert, konnte aber nicht dem Szenario zugeordnet werden: " + updateError.message);
 
   revalidatePath("/scenarios");
   revalidatePath("/scenarios/" + scenarioId);
-  return { coverImageUrl: imageUrl };
+  return { coverImageUrl: imageUrl, provider: generated.provider, model: generated.model };
 }
 
 export async function saveScenarioCoverUrl(scenarioId: string, formData: FormData) {
