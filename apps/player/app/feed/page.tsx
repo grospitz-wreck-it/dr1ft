@@ -4,7 +4,9 @@ import { mapCreatorRow, type FeedItem } from "../../lib/types";
 import { supabaseServerClient } from "../../lib/supabaseServerClient";
 import { FeedClient } from "./FeedClient";
 
-export default async function FeedPage() {
+export default async function FeedPage({ searchParams }: { searchParams: Promise<{ exclude?: string }> }) {
+  const params = await searchParams;
+  const excludedIds = new Set((params.exclude ?? "").split(",").filter(Boolean));
   const supabase = supabaseServerClient();
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return <main className="min-h-screen flex items-center justify-center text-ash font-body">Bitte einloggen.</main>;
@@ -60,7 +62,10 @@ export default async function FeedPage() {
     return Array.from(expanded);
   };
   const { data: recentInteractions } = await supabase.from("user_interactions").select("content_item_id, interaction_type").eq("user_id", user.id).eq("class_instance_id", classInstanceId).order("created_at", { ascending: false }).limit(200);
-  const recentlySeenContentIds = (recentInteractions ?? []).filter((i) => i.interaction_type === "view").map((i) => i.content_item_id);
+  const recentlySeenContentIds = Array.from(new Set([
+    ...(recentInteractions ?? []).filter((i) => i.interaction_type === "view").map((i) => i.content_item_id),
+    ...excludedIds,
+  ]));
   const scenarioFilter = assignedScenarioIds.length > 0 ? `scenario_id.in.(${assignedScenarioIds.join(",")}),scenario_id.is.null` : "scenario_id.is.null";
   const { data: scenarioPool } = await supabase.from("content_items").select("*, creators(id, display_name, handle, avatar_url)").eq("status", "live").eq("type", "post").or(scenarioFilter).or(`class_instance_id.eq.${classInstanceId},class_instance_id.is.null`);
   const linkedIdsOutsidePool = missionContentIds.filter((id) => !(scenarioPool ?? []).some((row: any) => row.id === id));
