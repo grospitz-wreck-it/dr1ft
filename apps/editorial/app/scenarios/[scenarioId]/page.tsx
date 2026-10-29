@@ -152,7 +152,7 @@ export default async function ScenarioDetailPage({ params, searchParams = {} }: 
   <ScenarioCoverEditor scenarioId={scenarioId} title={scenario.title} coverImageUrl={scenario.cover_image_url ?? null} />
   <section aria-label="Szenario-Kennzahlen" className="grid grid-cols-2 gap-2.5 md:grid-cols-4">
     <DetailKpi icon={<BookOpen className="h-5 w-5" />} tint="violet" label="Inhalte (Missionen)" value={String((missions?.length ?? 0) + (contentItems?.length ?? 0))} />
-    <DetailKpi icon={<School className="h-5 w-5" />} tint="blue" label="Schulen im Einsatz" value="—" hint="Keine verlässliche Kennzahl geladen" />
+    <DetailKpi icon={<School className="h-5 w-5" />} tint="blue" label="Schulen im Einsatz" value={String(schoolsInUse)} />
     <DetailKpi icon={<GraduationCap className="h-5 w-5" />} tint="emerald" label="Aktive Klassen" value={String(classesInUse)} />
     <DetailKpi icon={<Users className="h-5 w-5" />} tint="rose" label="Lernende erreicht" value={String(learnersReached)} />
   </section>
