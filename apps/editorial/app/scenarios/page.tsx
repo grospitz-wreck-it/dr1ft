@@ -37,15 +37,17 @@ export default async function ScenariosPage() {
     { data: missions },
     { data: contentItems },
     { data: assignments },
-    { data: classes },
+    { data: classInstances },
+    { data: classMemberships },
     { data: progress },
   ] = await Promise.all([
     supabase.from("scenarios").select("*").order("created_at", { ascending: false }),
     supabase.from("missions").select("id, scenario_id, status"),
     supabase.from("content_items").select("id, scenario_id"),
-    supabase.from("class_scenario_assignments").select("scenario_id, class_id"),
-    supabase.from("classes").select("id, school_id, is_active"),
-    supabase.from("user_mission_progress").select("mission_id, user_id, status, completed_at"),
+    supabase.from("class_instance_scenario_assignments").select("scenario_id, class_instance_id"),
+    supabase.from("class_instances").select("id, school_id, is_active, status"),
+    supabase.from("class_instance_memberships").select("class_instance_id, user_id, role, left_at"),
+    supabase.from("user_mission_progress").select("mission_id, user_id, class_instance_id, status, completed_at"),
   ]);
 
   const rows = scenarios ?? [];
@@ -57,7 +59,7 @@ export default async function ScenariosPage() {
     grouped.set(key, list);
   }
 
-  const classById = new Map((classes ?? []).map((item: any) => [item.id, item]));
+  const instanceById = new Map((classInstances ?? []).map((item: any) => [item.id, item]));
   const families = Array.from(grouped.entries()).map(([key, variants]) => {
     const first = variants[0];
     const scenarioIds = new Set(variants.map((variant) => variant.id));
@@ -65,47 +67,73 @@ export default async function ScenariosPage() {
     const missionIds = new Set(familyMissions.map((mission: any) => mission.id));
     const familyContent = (contentItems ?? []).filter((item: any) => scenarioIds.has(item.scenario_id));
     const activeScenarioIds = new Set(variants.filter((variant) => variant.is_active).map((variant) => variant.id));
+
+    // The teacher UI assigns scenarios to class *instances*, not the legacy
+    // classes/class_scenario_assignments tables. Keep the KPIs aligned with
+    // the assignments that actually control learner access.
     const familyAssignments = (assignments ?? []).filter((item: any) => {
-      const klass: any = classById.get(item.class_id);
-      return scenarioIds.has(item.scenario_id) && activeScenarioIds.has(item.scenario_id) && klass?.is_active !== false;
+      const instance: any = instanceById.get(item.class_instance_id);
+      return scenarioIds.has(item.scenario_id)
+        && activeScenarioIds.has(item.scenario_id)
+        && instance?.is_active !== false
+        && instance?.status !== "ended";
     });
-    const activeAssignedClasses = new Set(familyAssignments.map((item: any) => item.class_id));
+    const assignedInstanceIds = new Set(familyAssignments.map((item: any) => item.class_instance_id));
     const schoolIds = new Set(familyAssignments.map((item: any) => {
-      const klass: any = classById.get(item.class_id);
-      return klass?.school_id;
+      const instance: any = instanceById.get(item.class_instance_id);
+      return instance?.school_id;
     }).filter(Boolean));
-    const completedProgress = (progress ?? []).filter((item: any) => missionIds.has(item.mission_id) && item.status === "completed");
+
+    const assignedLearnerIds = new Set(
+      (classMemberships ?? [])
+        .filter((membership: any) =>
+          assignedInstanceIds.has(membership.class_instance_id)
+          && membership.role === "student"
+          && membership.left_at == null
+        )
+        .map((membership: any) => membership.user_id)
+        .filter(Boolean)
+    );
+    const completedProgress = (progress ?? []).filter((item: any) =>
+      missionIds.has(item.mission_id)
+      && assignedInstanceIds.has(item.class_instance_id)
+      && item.status === "completed"
+    );
     const completedMissions = completedProgress.length;
-    const learnersReached = new Set(completedProgress.map((item: any) => item.user_id).filter(Boolean)).size;
 
     return {
       key,
-      title: first.title?.replace(/\s*[–-]\s*(9–11|12–13|14–15|16–17|18\+).*$/i, "") || first.title,
-      description: first.description?.split("\n\nLernziele")[0] || "",
+      title: first.title?.replace(/\\s*[–-]\\s*(9–11|12–13|14–15|16–17|18\\+).*$/i, "") || first.title,
+      description: first.description?.split("\\n\\nLernziele")[0] || "",
       variants,
       coverImageUrl: first.cover_image_url ?? null,
       missionCount: familyMissions.length,
       contentCount: familyContent.length,
       activeVariants: variants.filter((variant) => variant.is_active).length,
-      activeClasses: activeAssignedClasses.size,
+      activeClasses: assignedInstanceIds.size,
       schoolsInUse: schoolIds.size,
       completedMissions,
-      learnersReached,
+      learnersReached: assignedLearnerIds.size,
     };
   });
 
   const totalActive = rows.filter((scenario: any) => scenario.is_active).length;
   const activeScenarioIds = new Set(rows.filter((scenario: any) => scenario.is_active).map((scenario: any) => scenario.id));
   const activeAssignments = (assignments ?? []).filter((item: any) => {
-    const klass: any = classById.get(item.class_id);
-    return activeScenarioIds.has(item.scenario_id) && klass?.is_active !== false;
+    const instance: any = instanceById.get(item.class_instance_id);
+    return activeScenarioIds.has(item.scenario_id)
+      && instance?.is_active !== false
+      && instance?.status !== "ended";
   });
-  const totalAssignedClasses = new Set(activeAssignments.map((item: any) => item.class_id)).size;
+  const totalAssignedClasses = new Set(activeAssignments.map((item: any) => item.class_instance_id)).size;
   const totalSchools = new Set(activeAssignments.map((item: any) => {
-    const klass: any = classById.get(item.class_id);
-    return klass?.school_id;
+    const instance: any = instanceById.get(item.class_instance_id);
+    return instance?.school_id;
   }).filter(Boolean)).size;
-  const totalCompletions = (progress ?? []).filter((item: any) => item.status === "completed").length;
+  const activeInstanceIds = new Set(activeAssignments.map((item: any) => item.class_instance_id));
+  const totalCompletions = (progress ?? []).filter((item: any) =>
+    item.status === "completed" && activeInstanceIds.has(item.class_instance_id)
+  ).length;
 
   return (
     <div className="space-y-5">
