@@ -218,7 +218,7 @@ export default async function FeedPage({ searchParams }: { searchParams: Promise
           return countMatches(b) - countMatches(a) ||
             new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
         })
-        .filter((item) => !ambientBaseItems.some((baseItem) => baseItem.id === item.id) && !missionContentIdsSet.has(item.id))
+        .filter((item) => !excludedIds.has(item.id) && !ambientBaseItems.some((baseItem) => baseItem.id === item.id) && !missionContentIdsSet.has(item.id))
         .slice(0, personalizedAmbientLimits[ambientDensity] ?? 3)
     : [];
 
