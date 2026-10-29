@@ -110,8 +110,7 @@ export async function generateNpcProfiles(formData: FormData) {
     const category = String(formData.get("category") ?? "citizen");
   const amount = Math.min(12, Math.max(1, Number(formData.get("amount") ?? 6)));
   const brief = String(formData.get("brief") ?? "").trim();
-  const hasSubmittedInterestKeys = formData.has("interestKeys");
-  const submittedInterestKeys = Array.from(new Set(String(formData.get("interestKeys") ?? "").split(",").map((key) => key.trim()).filter(Boolean))).slice(0, 12);
+  const requestedInterestKeys = Array.from(new Set(String(formData.get("interestKeys") ?? "").split(",").map((key) => key.trim()).filter(Boolean))).slice(0, 12);
   const supabase = supabaseServerClient();
   const { data: catalogRows, error: catalogError } = await supabase.from("ambient_interests").select("key, label, emoji, category, parent_key").eq("is_active", true).eq("is_selectable", true).eq("taxonomy_status", "active").order("sort_order").order("label");
   if (catalogError) throw new Error(`Interessen-Katalog konnte nicht geladen werden: ${catalogError.message}`);
@@ -315,7 +314,6 @@ export async function createNpcProfile(formData: FormData) {
   const supabase = supabaseServerClient();
   const displayName = String(formData.get("displayName") ?? "").trim();
   const handleInput = String(formData.get("handle") ?? "").trim();
-  const hasSubmittedInterestKeys = formData.has("interestKeys");
   const submittedInterestKeys = Array.from(new Set(String(formData.get("interestKeys") ?? "").split(",").map((key) => key.trim()).filter(Boolean))).slice(0, 12);
   const { data: interestCatalogRows, error: interestCatalogError } = await supabase.from("ambient_interests").select("key, label").eq("is_active", true).eq("is_selectable", true).eq("taxonomy_status", "active");
   if (interestCatalogError) throw new Error(`Interessen-Katalog konnte nicht geladen werden: ${interestCatalogError.message}`);
