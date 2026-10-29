@@ -320,7 +320,7 @@ export async function createNpcProfile(formData: FormData) {
   const { data: interestCatalogRows, error: interestCatalogError } = await supabase.from("ambient_interests").select("key, label").eq("is_active", true).eq("is_selectable", true).eq("taxonomy_status", "active");
   if (interestCatalogError) throw new Error(`Interessen-Katalog konnte nicht geladen werden: ${interestCatalogError.message}`);
   const interestByKey = new Map((interestCatalogRows ?? []).map((interest: any) => [interest.key, interest]));
-  const interestKeys = requestedInterestKeys.filter((key) => interestByKey.has(key));
+  const interestKeys = submittedInterestKeys.filter((key) => interestByKey.has(key));
   if (!displayName) throw new Error("Name darf nicht leer sein.");
 
   const handle = handleInput
@@ -372,7 +372,8 @@ export async function updateNpcProfile(formData: FormData) {
   const handleInput = String(formData.get("handle") ?? "").trim();
   const category = String(formData.get("category") ?? "citizen");
   const role = String(formData.get("role") ?? "ambient");
-  const requestedInterestKeys = Array.from(new Set(String(formData.get("interestKeys") ?? "").split(",").map((key) => key.trim()).filter(Boolean))).slice(0, 12);
+  const hasSubmittedInterestKeys = formData.has("interestKeys");
+  const submittedInterestKeys = Array.from(new Set(String(formData.get("interestKeys") ?? "").split(",").map((key) => key.trim()).filter(Boolean))).slice(0, 12);
 
   if (!creatorId || !displayName || !handleInput) {
     throw new Error("NPC, Name und Handle sind erforderlich.");
