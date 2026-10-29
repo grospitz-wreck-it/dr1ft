@@ -222,7 +222,7 @@ export default async function FeedPage() {
   // feed posts and have to recognize it in context.
   const items: FeedItem[] = [];
   let missionIndex = 0;
-  const ambientPerMission = ambientDensity === "high" ? 3 : ambientDensity === "medium" ? 2 : ambientDensity === "low" ? 1 : 0;
+  const ambientPerMission = ambientDensity === "high" ? 3 : ambientDensity === "medium" ? 2 : 1;
   for (let i = 0; i < ambientItems.length; i += 1) {
     items.push(ambientItems[i]);
     if (ambientPerMission > 0 && (i + 1) % ambientPerMission === 0 && missionIndex < requiredMissionItems.length) {
