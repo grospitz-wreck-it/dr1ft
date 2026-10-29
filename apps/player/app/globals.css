@@ -277,3 +277,85 @@ body.dark-mode {
 .dark-mode main article [data-post-menu] > button[aria-label="Kommentare anzeigen"] svg {
   flex-shrink: 0;
 }
+
+
+/* Expressive DR1FT post cards. Keep the post menu controls/behavior untouched. */
+.post-card {
+  overflow: visible;
+  border-color: rgba(255,255,255,.86);
+  background: linear-gradient(155deg, rgba(255,255,255,.98), rgba(255,255,255,.94) 55%, rgba(248,245,255,.98));
+  box-shadow: 0 18px 44px rgba(76,54,120,.09), 0 2px 7px rgba(76,54,120,.04);
+  transition: border-color .2s ease, box-shadow .2s ease, transform .2s ease;
+}
+.post-card:hover {
+  border-color: rgba(196,181,253,.9);
+  box-shadow: 0 22px 54px rgba(76,54,120,.14), 0 3px 10px rgba(76,54,120,.05);
+}
+.post-author-avatar {
+  background: #fff;
+  color: #6d28d9;
+}
+.post-media-stage {
+  isolation: isolate;
+  display: grid;
+  place-items: center;
+  min-height: 9rem;
+  background:
+    radial-gradient(ellipse at 12% 12%, rgba(168,85,247,.17), transparent 42%),
+    radial-gradient(ellipse at 88% 82%, rgba(34,211,238,.17), transparent 40%),
+    linear-gradient(135deg, #f1eef9, #e8e8f1 48%, #f7f3fb);
+}
+.post-media-pattern {
+  z-index: 0;
+  background-image:
+    repeating-linear-gradient(135deg, transparent 0 27px, rgba(139,92,246,.19) 28px, transparent 30px 56px),
+    radial-gradient(circle, rgba(34,211,238,.55) 1px, transparent 1.8px);
+  background-size: auto, 18px 18px;
+  opacity: .9;
+}
+.post-media-orb {
+  z-index: 0;
+  filter: blur(1px);
+  opacity: .8;
+}
+.post-media-orb-one {
+  background: linear-gradient(135deg, rgba(168,85,247,.24), rgba(236,72,153,.06));
+}
+.post-media-orb-two {
+  background: linear-gradient(135deg, rgba(34,211,238,.23), rgba(124,58,237,.08));
+}
+.post-media-image {
+  max-width: 100%;
+  box-shadow: 0 8px 26px rgba(28,20,48,.14);
+}
+.dark-mode .post-card {
+  border-color: rgba(139,92,246,.28);
+  background: linear-gradient(155deg, rgba(31,25,48,.99), rgba(24,20,39,.99) 60%, rgba(32,22,45,.99));
+  box-shadow: 0 20px 54px rgba(0,0,0,.24), 0 0 0 1px rgba(139,92,246,.04);
+}
+.dark-mode .post-card:hover {
+  border-color: rgba(139,92,246,.6);
+  box-shadow: 0 24px 60px rgba(0,0,0,.32), 0 0 24px rgba(139,92,246,.10);
+}
+.dark-mode .post-author-avatar {
+  background: #211a32;
+  color: #ddd6fe;
+}
+.dark-mode .post-media-stage {
+  background:
+    radial-gradient(ellipse at 12% 12%, rgba(168,85,247,.22), transparent 42%),
+    radial-gradient(ellipse at 88% 82%, rgba(34,211,238,.16), transparent 40%),
+    linear-gradient(135deg, #211a32, #171525 52%, #241a31);
+}
+.dark-mode .post-media-pattern {
+  background-image:
+    repeating-linear-gradient(135deg, transparent 0 27px, rgba(139,92,246,.31) 28px, transparent 30px 56px),
+    radial-gradient(circle, rgba(34,211,238,.7) 1px, transparent 1.8px);
+  opacity: .82;
+}
+.dark-mode .post-media-image {
+  box-shadow: 0 8px 30px rgba(0,0,0,.42), 0 0 0 1px rgba(196,181,253,.12);
+}
+@media (prefers-reduced-motion: reduce) {
+  .post-card { transition: none; }
+}
