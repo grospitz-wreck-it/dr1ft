@@ -43,7 +43,7 @@ export function AmbientInterestPicker({
     return options
       .filter((option) => !selected.includes(option.key))
       .filter((option) => !normalized || `${option.label} ${option.category} ${option.key}`.toLocaleLowerCase("de").includes(normalized))
-      .slice(0, 12);
+      .slice(0, 24);
   }, [options, query, selected]);
 
   function add(key: string) {
@@ -77,7 +77,7 @@ export function AmbientInterestPicker({
             </span>
           );
         })}
-        <span className="text-[11px] text-slate-400 self-center">{selected.length}/{maxSelections} ausgewählt</span>
+        <span className="text-[11px] text-slate-400 self-center">{selected.length}/{maxSelections} ausgewählt · {options.length} Themen im Katalog</span>
       </div>
       {selected.length < maxSelections && (
         <>
