@@ -40,17 +40,22 @@ export function AmbientInterestPicker({
 
   function add(key: string) {
     if (!optionByKey.has(key) || selected.length >= 3 || selected.includes(key)) return;
-    setSelected((current) => [...current, key]);
+    const next = [...selected, key];
+    setSelected(next);
+    window.dispatchEvent(new CustomEvent("ambient-interests-change", { detail: next.map((selectedKey) => optionByKey.get(selectedKey)?.label ?? selectedKey) }));
     setQuery("");
   }
 
   function remove(key: string) {
-    setSelected((current) => current.filter((item) => item !== key));
+    const next = selected.filter((item) => item !== key);
+    setSelected(next);
+    window.dispatchEvent(new CustomEvent("ambient-interests-change", { detail: next.map((selectedKey) => optionByKey.get(selectedKey)?.label ?? selectedKey) }));
   }
 
   return (
     <div>
       <input type="hidden" name="interests" value={selected.join(",")} />
+      <input type="hidden" name="interestLabels" value={selected.map((key) => optionByKey.get(key)?.label ?? key).join(",")} />
       <div className="flex flex-wrap gap-1.5 mb-2">
         {selected.map((key) => {
           const interest = optionByKey.get(key);
