@@ -110,6 +110,15 @@ export async function generateNpcProfiles(formData: FormData) {
     const category = String(formData.get("category") ?? "citizen");
   const amount = Math.min(12, Math.max(1, Number(formData.get("amount") ?? 6)));
   const brief = String(formData.get("brief") ?? "").trim();
+  const requestedInterestKeys = Array.from(new Set(String(formData.get("interestKeys") ?? "").split(",").map((key) => key.trim()).filter(Boolean))).slice(0, 12);
+  const supabase = supabaseServerClient();
+  const { data: catalogRows, error: catalogError } = await supabase.from("ambient_interests").select("key, label, emoji, category, parent_key").eq("is_active", true).eq("is_selectable", true).eq("taxonomy_status", "active").order("sort_order").order("label");
+  if (catalogError) throw new Error(`Interessen-Katalog konnte nicht geladen werden: ${catalogError.message}`);
+  const interestCatalog = catalogRows ?? [];
+  const interestByKey = new Map(interestCatalog.map((interest: any) => [interest.key, interest]));
+  const selectedInterestKeys = requestedInterestKeys.filter((key) => interestByKey.has(key));
+  const interestCatalogText = interestCatalog.map((interest: any) => `- ${interest.key}: ${interest.label}`).join("\n");
+  const selectedInterestText = selectedInterestKeys.map((key) => interestByKey.get(key)?.label ?? key).join(", ");
   const requestedAgeBands = formData
     .getAll("ageBands")
     .map(String)
@@ -133,7 +142,7 @@ export async function generateNpcProfiles(formData: FormData) {
             handle: { type: "string" },
             bio: { type: "string" },
             storyRole: { type: "string" },
-            interestTags: { type: "array", items: { type: "string" } },
+            interestKeys: { type: "array", items: { type: "string" } },
             ageBands: {
               type: "array",
               items: { type: "string", enum: [...AGE_BANDS] },
@@ -163,7 +172,7 @@ export async function generateNpcProfiles(formData: FormData) {
             "handle",
             "bio",
             "storyRole",
-            "interestTags",
+            "interestKeys",
             "ageBands",
             "persona",
           ],
@@ -176,13 +185,13 @@ export async function generateNpcProfiles(formData: FormData) {
   const prompt = `Du bist die NPC-Redaktion von DR1FT.
 Erzeuge ${amount} unterschiedliche, wiederverwendbare NPC-Profile für die Kategorie: ${category}.
 ALTERSBÄNDER: ${ageBands.join(", ")}
-ZUSATZBRIEF: ${brief || "Kein Zusatzbrief."}
+ZUSATZBRIEF: ${brief || "Kein Zusatzbrief."}\nINTERESSEN-PRIORITÄTEN: ${selectedInterestText || "Keine priorisiert; frei aus dem Katalog wählen."}\n\nKANONISCHER INTERESSEN-KATALOG (nur diese Keys verwenden):\n${interestCatalogText}
 
 Die NPCs sind dauerhaft gespeicherte Figuren einer simulierten Medienwelt.
 Jede Figur braucht eine klar wiedererkennbare, aber kurze Identität:
 - Name und stabiler Handle
 - kurze Bio
-- konkrete Interessen
+- konkrete Interessen aus dem kanonischen DR1FT-Katalog
 - eigene sprachliche Eigenheiten
 - typische Argumentations- und Reaktionsmuster
 - wiederkehrende Details, die in späteren KI-Prompts dieselbe Figur erkennbar halten
@@ -193,7 +202,7 @@ WICHTIG:
 - Für Parteien, Marken und Institutionen dürfen auch fiktive Accounts entstehen.
 - Keine Bewertung oder Einordnung als "gut/schlecht"; unterschiedliche gesellschaftliche Perspektiven sind ausdrücklich erwünscht.
 - Story-NPCs dürfen kontroverse oder manipulative Positionen vertreten, aber beschreibe diese als Figurenmerkmale und nicht als Tatsachen.
-- Das Profil ist Autorenmaterial. Es wird später als stabile Persona in Prompts verwendet.
+- Das Profil ist Autorenmaterial. Es wird später als stabile Persona in Prompts verwendet.\n- Gib pro NPC 3–8 passende interestKeys aus dem Katalog zurück. Die Auswahl oben priorisiert Themen, ist aber keine pauschale Tag-Zuweisung.\n- Erfinde keine Interesse-Keys und gib keine freien Labels statt Keys zurück.
 - Keine Kompetenz-IDs und keine Datenbank-IDs.
 - Gib ausschließlich valides JSON gemäß Schema zurück.`;
 
@@ -201,8 +210,6 @@ WICHTIG:
   if (!Array.isArray(draft?.npcs) || !draft.npcs.length) {
     throw new Error("Die KI hat keine NPCs zurückgegeben.");
   }
-
-  const supabase = supabaseServerClient();
 
   const npcsToCreate = draft.npcs.slice(0, amount);
 
@@ -247,8 +254,10 @@ WICHTIG:
         story_role: String(npc.storyRole || "").trim(),
         npc_category: category,
         npc_role: "hybrid",
-        interest_tags: Array.isArray(npc.interestTags)
-          ? npc.interestTags.map(String).filter(Boolean).slice(0, 12)
+        interest_tags: Array.isArray(npc.interestKeys)
+          ? Array.from(new Set(npc.interestKeys.map(String).filter((key: string) => interestByKey.has(key))))
+              .slice(0, 12)
+              .map((key: string) => interestByKey.get(key)?.label ?? key)
           : [],
         age_bands: Array.isArray(npc.ageBands)
           ? npc.ageBands
@@ -256,6 +265,9 @@ WICHTIG:
               .filter((v: string) => AGE_BANDS.includes(v as (typeof AGE_BANDS)[number]))
           : ageBands,
         persona: {
+          interestKeys: Array.isArray(npc.interestKeys)
+            ? Array.from(new Set(npc.interestKeys.map(String).filter((key: string) => interestByKey.has(key)))).slice(0, 12)
+            : [],
           styleNotes: String(persona.styleNotes || ""),
           rhetoricPatterns: Array.isArray(persona.rhetoricPatterns)
             ? persona.rhetoricPatterns.map(String)
@@ -302,6 +314,11 @@ export async function createNpcProfile(formData: FormData) {
   const supabase = supabaseServerClient();
   const displayName = String(formData.get("displayName") ?? "").trim();
   const handleInput = String(formData.get("handle") ?? "").trim();
+  const submittedInterestKeys = Array.from(new Set(String(formData.get("interestKeys") ?? "").split(",").map((key) => key.trim()).filter(Boolean))).slice(0, 12);
+  const { data: interestCatalogRows, error: interestCatalogError } = await supabase.from("ambient_interests").select("key, label").eq("is_active", true).eq("is_selectable", true).eq("taxonomy_status", "active");
+  if (interestCatalogError) throw new Error(`Interessen-Katalog konnte nicht geladen werden: ${interestCatalogError.message}`);
+  const interestByKey = new Map((interestCatalogRows ?? []).map((interest: any) => [interest.key, interest]));
+  const interestKeys = submittedInterestKeys.filter((key) => interestByKey.has(key));
   if (!displayName) throw new Error("Name darf nicht leer sein.");
 
   const handle = handleInput
@@ -317,12 +334,10 @@ export async function createNpcProfile(formData: FormData) {
       bio: String(formData.get("bio") ?? "").trim(),
       npc_category: String(formData.get("category") ?? "citizen"),
       npc_role: String(formData.get("role") ?? "ambient"),
-      interest_tags: String(formData.get("interests") ?? "")
-        .split(",")
-        .map((v) => v.trim())
-        .filter(Boolean),
+      interest_tags: interestKeys.map((key) => interestByKey.get(key)?.label ?? key),
       age_bands: formData.getAll("ageBands").map(String),
       persona: {
+        interestKeys,
         styleNotes: String(formData.get("styleNotes") ?? "").trim(),
         rhetoricPatterns: String(formData.get("rhetoricPatterns") ?? "")
           .split(",").map((v) => v.trim()).filter(Boolean),
@@ -355,6 +370,8 @@ export async function updateNpcProfile(formData: FormData) {
   const handleInput = String(formData.get("handle") ?? "").trim();
   const category = String(formData.get("category") ?? "citizen");
   const role = String(formData.get("role") ?? "ambient");
+  const hasSubmittedInterestKeys = formData.has("interestKeys");
+  const submittedInterestKeys = Array.from(new Set(String(formData.get("interestKeys") ?? "").split(",").map((key) => key.trim()).filter(Boolean))).slice(0, 12);
 
   if (!creatorId || !displayName || !handleInput) {
     throw new Error("NPC, Name und Handle sind erforderlich.");
@@ -367,12 +384,22 @@ export async function updateNpcProfile(formData: FormData) {
   }
 
   const handle = handleInput.startsWith("@") ? handleInput : `@${handleInput}`;
+  const { data: interestCatalogRows, error: interestCatalogError } = await supabase.from("ambient_interests").select("key, label").eq("is_active", true).eq("is_selectable", true).eq("taxonomy_status", "active");
+  if (interestCatalogError) throw new Error(`Interessen-Katalog konnte nicht geladen werden: ${interestCatalogError.message}`);
+  const interestByKey = new Map((interestCatalogRows ?? []).map((interest: any) => [interest.key, interest]));
   const { data: current } = await supabase
     .from("creators")
-    .select("persona, ai_identity")
+    .select("persona, ai_identity, interest_tags")
     .eq("id", creatorId)
     .eq("kind", "npc")
     .single();
+  const existingInterestKeys = Array.isArray(current?.persona?.interestKeys)
+    ? current.persona.interestKeys.map(String)
+    : (current?.interest_tags ?? []).map((tag: string) =>
+        (interestCatalogRows ?? []).find((interest: any) => interest.label.toLocaleLowerCase("de") === tag.toLocaleLowerCase("de"))?.key
+      ).filter(Boolean);
+  const requestedInterestKeys = hasSubmittedInterestKeys ? submittedInterestKeys : existingInterestKeys;
+  const interestKeys = requestedInterestKeys.filter((key) => interestByKey.has(key));
 
   const csv = (name: string) =>
     String(formData.get(name) ?? "").split(",").map((v) => v.trim()).filter(Boolean);
@@ -388,6 +415,7 @@ export async function updateNpcProfile(formData: FormData) {
     recurringDetails: csv("recurringDetails"),
     worldview: String(formData.get("worldview") ?? "").trim(),
     boundaries: csv("boundaries"),
+    interestKeys,
   };
 
   const { error } = await supabase.from("creators").update({
@@ -397,7 +425,7 @@ export async function updateNpcProfile(formData: FormData) {
     npc_category: category,
     npc_role: role,
     story_role: String(formData.get("storyRole") ?? "").trim(),
-    interest_tags: csv("interests"),
+    interest_tags: interestKeys.map((key) => interestByKey.get(key)?.label ?? key),
     age_bands: ageBands,
     persona,
     ai_identity: {

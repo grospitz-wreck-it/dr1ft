@@ -14,6 +14,7 @@ import {
 import { supabaseServerClient } from "../../lib/supabaseServerClient";
 import { createNpcProfile, generateNpcProfiles } from "./actions";
 import { AiGenerationButton } from "../components/AiGenerationButton";
+import { AmbientInterestPicker } from "../(protected)/ambient-content/AmbientInterestPicker";
 
 const CATEGORIES = [
   ["student", "Schüler:innen"],
@@ -112,6 +113,7 @@ export default async function NpcDialogsOverviewPage({
     { data: storyLinksForFilter },
     { data: dialogsForFilter },
     { data: interestRows },
+    { data: interestCatalog },
     { count: storyCount },
     { count: totalDialogCount },
   ] = await Promise.all([
@@ -122,6 +124,7 @@ export default async function NpcDialogsOverviewPage({
       ? supabase.from("npc_dialogs").select("creator_id")
       : Promise.resolve({ data: null }),
     supabase.from("creators").select("interest_tags").eq("kind", "npc").limit(1000),
+    supabase.from("ambient_interests").select("key, label, emoji, category").eq("is_active", true).eq("is_selectable", true).eq("taxonomy_status", "active").order("sort_order").order("label"),
     supabase.from("npc_story_links").select("id", { count: "exact", head: true }),
     supabase.from("npc_dialogs").select("id", { count: "exact", head: true }),
   ]);
@@ -306,6 +309,12 @@ export default async function NpcDialogsOverviewPage({
                   className="w-full rounded-xl border border-slate-200 px-4 py-3 text-sm resize-y outline-none focus:border-accent"
                 />
               </div>
+
+              <div>
+                <label className="block text-xs font-semibold text-slate-600 mb-2">INTERESSEN FÜR DIE NPC-GENERIERUNG · OPTIONAL</label>
+                <p className="mb-2 text-xs text-slate-500">Die Auswahl priorisiert Themen; jede Figur bekommt nur die Interessen, die zu ihrem Profil passen.</p>
+                <AmbientInterestPicker options={interestCatalog ?? []} maxSelections={12} fieldName="interestKeys" labelsFieldName="interestLabels" eventName="npc-interests-change" placeholder="Gemeinsamen Interessen-Katalog durchsuchen …" />
+              </div>
             </div>
 
             <div className="space-y-4">
@@ -471,7 +480,7 @@ export default async function NpcDialogsOverviewPage({
                     {CATEGORIES.map(([value, label]) => <option key={value} value={value}>{label}</option>)}
                   </select>
                   <textarea name="bio" placeholder="Kurze Bio" className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm" />
-                  <input name="interests" placeholder="Interessen, kommasepariert" className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm" />
+                  <div><label className="block text-xs font-medium text-slate-600 mb-2">Interessen aus dem gemeinsamen Katalog</label><AmbientInterestPicker options={interestCatalog ?? []} maxSelections={12} fieldName="interestKeys" labelsFieldName="interestLabels" eventName="npc-interests-change" placeholder="Interessen suchen …" /></div>
                   <input name="styleNotes" placeholder="Sprachstil / Eigenheiten" className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm" />
                   <button className="w-full bg-slate-900 text-white rounded-lg px-3 py-2 text-sm">NPC anlegen</button>
                 </form>

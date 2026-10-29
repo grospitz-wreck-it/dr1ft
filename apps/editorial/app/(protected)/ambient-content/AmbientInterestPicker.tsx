@@ -14,15 +14,23 @@ type Props = {
   options: InterestOption[];
   initialValue?: string;
   placeholder?: string;
+  maxSelections?: number;
+  fieldName?: string;
+  labelsFieldName?: string;
+  eventName?: string;
 };
 
 export function AmbientInterestPicker({
   options,
   initialValue = "",
   placeholder = "Interesse suchen …",
+  maxSelections = 3,
+  fieldName = "interests",
+  labelsFieldName = "interestLabels",
+  eventName = "ambient-interests-change",
 }: Props) {
   const [selected, setSelected] = useState<string[]>(
-    () => initialValue.split(",").map((value) => value.trim()).filter(Boolean).slice(0, 3),
+    () => initialValue.split(",").map((value) => value.trim()).filter(Boolean).slice(0, maxSelections),
   );
   const [query, setQuery] = useState("");
 
@@ -35,27 +43,27 @@ export function AmbientInterestPicker({
     return options
       .filter((option) => !selected.includes(option.key))
       .filter((option) => !normalized || `${option.label} ${option.category} ${option.key}`.toLocaleLowerCase("de").includes(normalized))
-      .slice(0, 12);
+      .slice(0, 24);
   }, [options, query, selected]);
 
   function add(key: string) {
-    if (!optionByKey.has(key) || selected.length >= 3 || selected.includes(key)) return;
+    if (!optionByKey.has(key) || selected.length >= maxSelections || selected.includes(key)) return;
     const next = [...selected, key];
     setSelected(next);
-    window.dispatchEvent(new CustomEvent("ambient-interests-change", { detail: next.map((selectedKey) => optionByKey.get(selectedKey)?.label ?? selectedKey) }));
+    window.dispatchEvent(new CustomEvent(eventName, { detail: next.map((selectedKey) => optionByKey.get(selectedKey)?.label ?? selectedKey) }));
     setQuery("");
   }
 
   function remove(key: string) {
     const next = selected.filter((item) => item !== key);
     setSelected(next);
-    window.dispatchEvent(new CustomEvent("ambient-interests-change", { detail: next.map((selectedKey) => optionByKey.get(selectedKey)?.label ?? selectedKey) }));
+    window.dispatchEvent(new CustomEvent(eventName, { detail: next.map((selectedKey) => optionByKey.get(selectedKey)?.label ?? selectedKey) }));
   }
 
   return (
     <div>
-      <input type="hidden" name="interests" value={selected.join(",")} />
-      <input type="hidden" name="interestLabels" value={selected.map((key) => optionByKey.get(key)?.label ?? key).join(",")} />
+      <input type="hidden" name={fieldName} value={selected.join(",")} />
+      <input type="hidden" name={labelsFieldName} value={selected.map((key) => optionByKey.get(key)?.label ?? key).join(",")} />
       <div className="flex flex-wrap gap-1.5 mb-2">
         {selected.map((key) => {
           const interest = optionByKey.get(key);
@@ -69,9 +77,9 @@ export function AmbientInterestPicker({
             </span>
           );
         })}
-        <span className="text-[11px] text-slate-400 self-center">{selected.length}/3 ausgewählt</span>
+        <span className="text-[11px] text-slate-400 self-center">{selected.length}/{maxSelections} ausgewählt · {options.length} Themen im Katalog</span>
       </div>
-      {selected.length < 3 && (
+      {selected.length < maxSelections && (
         <>
           <input
             value={query}
