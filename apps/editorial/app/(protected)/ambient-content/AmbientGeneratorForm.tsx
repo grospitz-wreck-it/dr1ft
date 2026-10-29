@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import type { ReactNode, ChangeEvent } from "react";
 import type { generateAmbientDrafts } from "./actions";
 import { GenerateAmbientButton } from "./GenerateAmbientButton";
@@ -36,6 +36,14 @@ const labels: Record<string, Record<string, string>> = {
 };
 export function AmbientGeneratorForm({ action, children }: { action: Action; children: ReactNode }) {
   const [summary, setSummary] = useState<Summary>(defaults);
+  useEffect(() => {
+    const handleInterestChange = (event: Event) => {
+      const detail = (event as CustomEvent<string[]>).detail;
+      setSummary((current) => ({ ...current, interests: Array.isArray(detail) ? detail : [] }));
+    };
+    window.addEventListener("ambient-interests-change", handleInterestChange);
+    return () => window.removeEventListener("ambient-interests-change", handleInterestChange);
+  }, []);
   function updateSummary(event: ChangeEvent<HTMLFormElement>) {
     const data = new FormData(event.currentTarget);
     const rawInterests = String(data.get("interestLabels") ?? "");
@@ -44,7 +52,7 @@ export function AmbientGeneratorForm({ action, children }: { action: Action; chi
       theme: String(data.get("theme") ?? ""),
       ageBand: String(data.get("ageBand") ?? defaults.ageBand),
       style: String(data.get("style") ?? defaults.style),
-      creator: String(data.get("creatorId") ?? ""),
+      creator: (() => { const select = event.currentTarget.elements.namedItem("creatorId") as HTMLSelectElement | null; return select?.selectedOptions[0]?.textContent?.trim() || "Automatisch wechseln"; })(),
       count: String(data.get("count") ?? defaults.count),
       model: String(data.get("model") ?? defaults.model),
       interests: rawInterests.split(",").map((value) => value.trim()).filter(Boolean),
