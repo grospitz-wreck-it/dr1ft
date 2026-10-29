@@ -14,7 +14,7 @@ export default async function FeedPage() {
   const assignedScenarioIds: string[] = Array.from(new Set<string>((assignments ?? []).map((a) => a.scenario_id)));
   const { data: assignedScenarios } = assignedScenarioIds.length
     ? await supabase.from("scenarios").select("id, title, description, ambient_density").in("id", assignedScenarioIds).order("created_at", { ascending: true })
-    : { data: [] as { id: string; title: string; description: string | null }[] };
+    : { data: [] as { id: string; title: string; description: string | null; ambient_density: string | null }[] };
   const scenarioIntro = assignedScenarios?.[0] ?? null;
   const { data: scenarioMissions } = scenarioIntro
     ? await supabase.from("missions").select("id").eq("scenario_id", scenarioIntro.id).eq("status", "live")
