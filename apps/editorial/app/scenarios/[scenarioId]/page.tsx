@@ -98,6 +98,7 @@ export default async function ScenarioDetailPage({ params, searchParams = {} }: 
       .map((item: any) => item.user_id)
       .filter(Boolean)
   ).size;
+  const latestUpdatedAt = [scenario.updated_at, scenario.created_at, ...(missions ?? []).map((item: any) => item.updated_at ?? item.created_at), ...(contentItems ?? []).map((item: any) => item.updated_at ?? item.created_at)].filter(Boolean).sort((a: string, b: string) => new Date(b).getTime() - new Date(a).getTime())[0] ?? null;
 
   const learningDesignId = latestLearningDesign?.id ?? null;
   const [{ data: learningSteps }, { data: frameworkMappings }, { data: learningObjectives }] = learningDesignId
