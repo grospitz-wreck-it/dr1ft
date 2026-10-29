@@ -184,7 +184,7 @@ export async function generateMissionThumbnail(missionId: string, scenarioId: st
     "Translate the pedagogical situation into one clear visual metaphor and a strong focal subject. Make it engaging for teenagers, contemporary, nuanced, emotionally intelligent, safe for school, and visually polished.",
     "Use a rich but balanced palette with violet, indigo, electric blue and small cyan accents; soft cinematic lighting, layered depth, subtle texture, refined composition.",
     "Wide landscape cover, exact 16:9 composition. No readable text, no letters, no logos, no watermark, no real-person likeness, no brand marks.",
-  ].join("\\n\\n");
+  ].join("\n\n");
 
   const generated = await generateEditorialTeaserImage(prompt);
   // The shared generator already stores the image in the production asset bucket.
