@@ -51,9 +51,9 @@ export function ScenarioCoverEditor({
   }
 
   return (
-    <section className="mt-3 overflow-hidden rounded-2xl border border-violet-100 bg-gradient-to-r from-violet-50/80 via-white to-cyan-50/80 p-3">
-      <div className="grid items-center gap-3 md:grid-cols-[minmax(240px,320px)_minmax(0,1fr)] md:gap-5">
-        <div className="relative aspect-video w-full max-w-[320px] overflow-hidden rounded-xl border border-white bg-gradient-to-br from-violet-700 via-indigo-600 to-cyan-400 shadow-sm">
+    <section className="h-full overflow-hidden rounded-2xl border border-violet-100 bg-gradient-to-br from-violet-50/80 via-white to-cyan-50/80 p-3">
+      <div className="grid h-full items-center gap-3 md:grid-cols-[minmax(0,0.9fr)_minmax(0,1.1fr)] md:gap-4">
+        <div className="relative aspect-video w-full overflow-hidden rounded-xl border border-white bg-gradient-to-br from-violet-700 via-indigo-600 to-cyan-400 shadow-sm">
           {coverImageUrl ? (
             <img src={coverImageUrl} alt={`Teaserbild: ${title}`} className="absolute inset-0 h-full w-full object-cover" />
           ) : (
