@@ -446,3 +446,36 @@ export async function archiveAmbientContent(contentItemId: string) {
   if (error) throw new Error(error.message);
   revalidatePath("/ambient-content");
 }
+
+
+/** Assign an existing global NPC/creator as the author of an ambient post. */
+export async function assignAmbientPostCreator(formData: FormData) {
+  const supabase = supabaseServerClient();
+  const contentItemId = String(formData.get("contentItemId") ?? "").trim();
+  const creatorId = String(formData.get("creatorId") ?? "").trim() || null;
+  if (!contentItemId) throw new Error("Content-ID fehlt.");
+
+  if (creatorId) {
+    const { data: creator, error: creatorError } = await supabase
+      .from("creators")
+      .select("id, creator_role, scenario_id")
+      .eq("id", creatorId)
+      .maybeSingle();
+    if (creatorError) throw new Error(creatorError.message);
+    if (!creator || creator.scenario_id !== null || creator.creator_role === "ambient") {
+      throw new Error("Bitte eine vorhandene globale NPC-Figur auswählen.");
+    }
+  }
+
+  const { data: updated, error } = await supabase
+    .from("content_items")
+    .update({ creator_id: creatorId, updated_at: new Date().toISOString() })
+    .eq("id", contentItemId)
+    .eq("type", "post")
+    .is("scenario_id", null)
+    .select("id")
+    .maybeSingle();
+  if (error) throw new Error(error.message);
+  if (!updated) throw new Error("Ambient-Post nicht gefunden oder nicht änderbar.");
+  revalidatePath("/ambient-content");
+}
