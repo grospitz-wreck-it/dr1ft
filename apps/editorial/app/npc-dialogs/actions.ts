@@ -117,7 +117,7 @@ export async function generateNpcProfiles(formData: FormData) {
   const interestCatalog = catalogRows ?? [];
   const interestByKey = new Map(interestCatalog.map((interest: any) => [interest.key, interest]));
   const selectedInterestKeys = requestedInterestKeys.filter((key) => interestByKey.has(key));
-  const interestCatalogText = interestCatalog.map((interest: any) => `- ${interest.key}: ${interest.label}`).join("\\n");
+  const interestCatalogText = interestCatalog.map((interest: any) => `- ${interest.key}: ${interest.label}`).join("\n");
   const selectedInterestText = selectedInterestKeys.map((key) => interestByKey.get(key)?.label ?? key).join(", ");
   const requestedAgeBands = formData
     .getAll("ageBands")
@@ -314,7 +314,7 @@ export async function createNpcProfile(formData: FormData) {
   const supabase = supabaseServerClient();
   const displayName = String(formData.get("displayName") ?? "").trim();
   const handleInput = String(formData.get("handle") ?? "").trim();
-  const requestedInterestKeys = Array.from(new Set(formData.getAll("interestKeys").map(String).filter(Boolean))).slice(0, 12);
+  const requestedInterestKeys = Array.from(new Set(String(formData.get("interestKeys") ?? "").split(",").map((key) => key.trim()).filter(Boolean))).slice(0, 12);
   const { data: interestCatalogRows, error: interestCatalogError } = await supabase.from("ambient_interests").select("key, label").eq("is_active", true).eq("is_selectable", true).eq("taxonomy_status", "active");
   if (interestCatalogError) throw new Error(`Interessen-Katalog konnte nicht geladen werden: ${interestCatalogError.message}`);
   const interestByKey = new Map((interestCatalogRows ?? []).map((interest: any) => [interest.key, interest]));
@@ -370,7 +370,7 @@ export async function updateNpcProfile(formData: FormData) {
   const handleInput = String(formData.get("handle") ?? "").trim();
   const category = String(formData.get("category") ?? "citizen");
   const role = String(formData.get("role") ?? "ambient");
-  const requestedInterestKeys = Array.from(new Set(formData.getAll("interestKeys").map(String).filter(Boolean))).slice(0, 12);
+  const requestedInterestKeys = Array.from(new Set(String(formData.get("interestKeys") ?? "").split(",").map((key) => key.trim()).filter(Boolean))).slice(0, 12);
 
   if (!creatorId || !displayName || !handleInput) {
     throw new Error("NPC, Name und Handle sind erforderlich.");
