@@ -4,6 +4,7 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { supabaseServerClient } from "../../lib/supabaseServerClient";
+import { generateEditorialTeaserImage } from "../(protected)/ambient-content/actions";
 
 function slugify(input: string): string {
   return input
@@ -993,4 +994,63 @@ export async function updateArcDraft(arcId: string, scenarioId: string, formData
 
   if (error) throw new Error(error.message);
   revalidatePath(`/scenarios/${scenarioId}`);
+}
+
+
+/** Generiert ein Szenario-Cover mit FLUX auf Basis des vorhandenen Briefings. */
+export async function generateScenarioCover(scenarioId: string) {
+  const supabase = supabaseServerClient();
+  const { data: scenario, error } = await supabase
+    .from("scenarios")
+    .select("id,title,description,age_band,age_rating,scenario_group,slug")
+    .eq("id", scenarioId)
+    .single();
+  if (error || !scenario) throw new Error(error?.message ?? "Szenario nicht gefunden.");
+
+  const prompt = [
+    "Create premium cover artwork for a contemporary German school media-literacy scenario.",
+    "Scenario title: " + scenario.title,
+    "Scenario briefing: " + String(scenario.description ?? "").slice(0, 2200),
+    "Age group: " + String(scenario.age_band ?? scenario.age_rating ?? "12+"),
+    "Interpret the briefing as a clear visual story or metaphor. Make the illustration engaging for teenagers, emotionally intelligent, nuanced, safe for school, and immediately legible at small thumbnail size.",
+    "Modern editorial illustration, layered shapes and depth, polished lighting, tactile subtle grain, strong focal point, sophisticated violet/indigo/electric-blue palette with restrained cyan highlights.",
+    "Wide landscape cover, exact 16:9 composition, balanced negative space, no text, no letters, no logos, no watermark, no real-person likeness, no generic corporate stock imagery.",
+  ].join("\n\n");
+
+  // Use the existing Editorial generator, which already implements FLUX and its
+  // configured fallback, plus the production storage bucket and error handling.
+  const generated = await generateEditorialTeaserImage(prompt);
+  const imageUrl = generated.url;
+
+  const group = scenario.scenario_group || scenario.slug || scenario.id;
+  const { data: variants, error: variantsError } = await supabase
+    .from("scenarios").select("id").eq("scenario_group", group);
+  if (variantsError) throw new Error(variantsError.message);
+  const ids = (variants ?? []).map((variant) => variant.id);
+  const { error: updateError } = await supabase.from("scenarios")
+    .update({ cover_image_url: imageUrl }).in("id", ids.length ? ids : [scenarioId]);
+  if (updateError) throw new Error("Teaserbild wurde generiert, konnte aber nicht dem Szenario zugeordnet werden: " + updateError.message);
+
+  revalidatePath("/scenarios");
+  revalidatePath("/scenarios/" + scenarioId);
+  return { coverImageUrl: imageUrl, provider: generated.provider, model: generated.model };
+}
+
+export async function saveScenarioCoverUrl(scenarioId: string, formData: FormData) {
+  const supabase = supabaseServerClient();
+  const coverUrl = String(formData.get("coverImageUrl") ?? "").trim();
+  if (coverUrl) {
+    let parsed: URL;
+    try { parsed = new URL(coverUrl); } catch { throw new Error("Bitte eine gültige Bild-URL eingeben."); }
+    if (parsed.protocol !== "https:" && parsed.protocol !== "http:") throw new Error("Die Bild-URL muss http:// oder https:// verwenden.");
+  }
+  const { data: scenario } = await supabase.from("scenarios").select("scenario_group,slug").eq("id", scenarioId).single();
+  if (!scenario) throw new Error("Szenario nicht gefunden.");
+  const group = scenario.scenario_group || scenario.slug || scenarioId;
+  const { data: variants } = await supabase.from("scenarios").select("id").eq("scenario_group", group);
+  const ids = (variants ?? []).map((variant) => variant.id);
+  const { error } = await supabase.from("scenarios").update({ cover_image_url: coverUrl || null }).in("id", ids.length ? ids : [scenarioId]);
+  if (error) throw new Error(error.message);
+  revalidatePath("/scenarios");
+  revalidatePath("/scenarios/" + scenarioId);
 }

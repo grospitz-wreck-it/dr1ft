@@ -479,3 +479,14 @@ export async function assignAmbientPostCreator(formData: FormData) {
   if (!updated) throw new Error("Ambient-Post nicht gefunden oder nicht änderbar.");
   revalidatePath("/ambient-content");
 }
+
+
+/**
+ * Reuse the production-tested editorial image pipeline for scenario/mission
+ * teaser artwork. This preserves the existing FLUX -> Gemini fallback and
+ * storage handling instead of maintaining a separate image endpoint.
+ */
+export async function generateEditorialTeaserImage(prompt: string) {
+  if (!prompt.trim()) throw new Error("Für das Teaserbild fehlt die Bildbeschreibung.");
+  return generateImage(prompt, "16:9", Date.now());
+}
