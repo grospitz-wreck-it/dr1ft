@@ -177,13 +177,14 @@ export default async function FeedPage() {
   const selectedFeedItems = learningSequenceItems !== null
     ? learningSequenceItems
     : selectNextFeedItems(densityAwarePool, ctx, feedItemTargets[ambientDensity] ?? 20) as FeedItem[];
-  // Explicit mission mappings are mandatory curriculum content: include them
-  // regardless of recommendation ranking or ambient-density limits.
+  // Explicit mission mappings are mandatory curriculum content, but must be
+  // woven into the feed rather than shown as a block before ambient posts.
   const missionContentOrder = new Map((missionContentLinks ?? []).map((link) => [link.content_item_id, link.order_index]));
   const requiredMissionItems = mappedPool
     .filter((item) => missionContentOrder.has(item.id) && !recentlySeenContentIds.includes(item.id))
     .sort((a, b) => (missionContentOrder.get(a.id) ?? 0) - (missionContentOrder.get(b.id) ?? 0));
-  const baseItems = [...requiredMissionItems, ...selectedFeedItems.filter((item) => !requiredMissionItems.some((required) => required.id === item.id))];
+  const missionContentIdsSet = new Set(requiredMissionItems.map((item) => item.id));
+  const ambientBaseItems = selectedFeedItems.filter((item) => !missionContentIdsSet.has(item.id));
 
   // Keep the learning sequence intact, but always supplement it with a small
   // set of live ambient posts that match this learner's chosen interests.
@@ -211,11 +212,25 @@ export default async function FeedPage() {
           return countMatches(b) - countMatches(a) ||
             new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
         })
-        .filter((item) => !baseItems.some((baseItem) => baseItem.id === item.id))
+        .filter((item) => !ambientBaseItems.some((baseItem) => baseItem.id === item.id) && !missionContentIdsSet.has(item.id))
         .slice(0, personalizedAmbientLimits[ambientDensity] ?? 3)
     : [];
 
-  const items = [...baseItems, ...personalizedAmbientItems];
+  const ambientItems = [...ambientBaseItems, ...personalizedAmbientItems];
+  // Interleave mission posts after short ambient runs. The mission sequence
+  // stays ordered, while learners encounter mission content among ordinary
+  // feed posts and have to recognize it in context.
+  const items: FeedItem[] = [];
+  let missionIndex = 0;
+  const ambientPerMission = ambientDensity === "high" ? 3 : ambientDensity === "medium" ? 2 : ambientDensity === "low" ? 1 : 0;
+  for (let i = 0; i < ambientItems.length; i += 1) {
+    items.push(ambientItems[i]);
+    if (ambientPerMission > 0 && (i + 1) % ambientPerMission === 0 && missionIndex < requiredMissionItems.length) {
+      items.push(requiredMissionItems[missionIndex++]);
+    }
+  }
+  // If ambient content is sparse, never drop required mission posts.
+  while (missionIndex < requiredMissionItems.length) items.push(requiredMissionItems[missionIndex++]);
   const likedContentIds = new Set((recentInteractions ?? []).filter((i) => i.interaction_type === "like").map((i) => i.content_item_id));
 
   return <FeedClient initialItems={items} userId={user.id} classInstanceId={classInstanceId} likedContentIds={likedContentIds} scenarioIntro={scenarioIntro} scenarioMissionCount={scenarioMissionIds.length} completedScenarioMissionCount={new Set((completedScenarioMissions ?? []).map((mission) => mission.mission_id)).size} profile={{ displayName: currentProfile?.display_name ?? "DR1FT User", username: currentProfile?.username ?? "user", avatarSeed: currentProfile?.avatar_seed ?? user.id }} />;
