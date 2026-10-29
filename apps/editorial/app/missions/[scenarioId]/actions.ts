@@ -193,7 +193,7 @@ export async function generateMissionThumbnail(missionId: string, scenarioId: st
     "Use a rich but balanced palette with violet, indigo, electric blue and small cyan accents; soft cinematic lighting, layered depth, subtle texture, refined composition.",
     "Wide landscape cover art, 16:9 composition, subject readable at thumbnail size. Keep important visual elements near the center and leave comfortable negative space around edges.",
     "No readable text, no letters, no logos, no watermark, no real-person likeness, no brand marks. Avoid generic corporate stock imagery.",
-  ].join("\\n\\n");
+  ].join("\n\n");
 
   const response = await fetch(workerUrl, {
     method: "POST",
