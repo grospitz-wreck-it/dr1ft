@@ -110,7 +110,7 @@ export async function generateNpcProfiles(formData: FormData) {
     const category = String(formData.get("category") ?? "citizen");
   const amount = Math.min(12, Math.max(1, Number(formData.get("amount") ?? 6)));
   const brief = String(formData.get("brief") ?? "").trim();
-  const requestedInterestKeys = Array.from(new Set(formData.getAll("interestKeys").map(String).filter(Boolean))).slice(0, 12);
+  const requestedInterestKeys = Array.from(new Set(String(formData.get("interestKeys") ?? "").split(",").map((key) => key.trim()).filter(Boolean))).slice(0, 12);
   const supabase = supabaseServerClient();
   const { data: catalogRows, error: catalogError } = await supabase.from("ambient_interests").select("key, label, emoji, category, parent_key").eq("is_active", true).eq("is_selectable", true).eq("taxonomy_status", "active").order("sort_order").order("label");
   if (catalogError) throw new Error(`Interessen-Katalog konnte nicht geladen werden: ${catalogError.message}`);
