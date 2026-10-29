@@ -108,24 +108,24 @@ export default async function ScenariosPage() {
   const totalCompletions = (progress ?? []).filter((item: any) => item.status === "completed").length;
 
   return (
-    <div className="space-y-8">
-      <div className="max-w-[1440px] space-y-8">
-        <header className="flex flex-col gap-5 sm:flex-row sm:items-end sm:justify-between">
+    <div className="space-y-5">
+      <div className="mx-auto max-w-[1500px] space-y-5">
+        <header className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <div>
-            <div className="mb-3 inline-flex items-center gap-2 rounded-full border border-violet-200 bg-violet-50 px-3 py-1.5 text-[11px] font-bold uppercase tracking-[0.14em] text-violet-700">
+            <div className="mb-2 inline-flex items-center gap-2 rounded-full border border-violet-200 bg-violet-50 px-2.5 py-1 text-[10px] font-bold uppercase tracking-[0.14em] text-violet-700">
               <BookOpen className="h-4 w-4" /> Lernfälle
             </div>
-            <h1 className="text-3xl font-bold tracking-tight text-slate-950 sm:text-[34px]">Szenario-Studio</h1>
-            <p className="mt-2 max-w-2xl text-sm leading-6 text-slate-500">
+            <h1 className="text-2xl font-bold tracking-tight text-slate-950 sm:text-[30px]">Szenario-Studio</h1>
+            <p className="mt-1 max-w-2xl text-sm leading-5 text-slate-500">
               Bestehende Szenarien verwalten, Einsatz und Lernfortschritt überblicken oder einen neuen Lernfall entwickeln.
             </p>
           </div>
-          <a href="/scenarios/new" className="inline-flex shrink-0 items-center justify-center gap-2 rounded-xl bg-accent px-5 py-3 text-sm font-semibold text-white shadow-sm transition hover:bg-accent-hover hover:shadow-md">
+          <a href="/scenarios/new" className="inline-flex shrink-0 items-center justify-center gap-2 rounded-xl bg-accent px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-accent-hover hover:shadow-md">
             <Sparkles className="h-4 w-4" /> Neues Szenario anlegen
           </a>
         </header>
 
-        <section aria-label="Szenario-Kennzahlen" className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+        <section aria-label="Szenario-Kennzahlen" className="grid grid-cols-2 gap-2.5 md:grid-cols-4 xl:gap-3">
           <Kpi icon={<BookOpen className="h-4 w-4" />} label="Szenario-Themen" value={String(families.length)} detail="Thematische Familien" />
           <Kpi icon={<Users className="h-4 w-4" />} label="Aktive Varianten" value={String(totalActive)} detail={`${rows.length} Varianten insgesamt`} />
           <Kpi icon={<Building2 className="h-4 w-4" />} label="Schulen im Einsatz" value={String(totalSchools)} detail={`${totalAssignedClasses} aktive Klassen mit Zuweisung`} />
@@ -133,9 +133,9 @@ export default async function ScenariosPage() {
         </section>
 
         <section>
-          <div className="mb-4 flex flex-col gap-1 sm:flex-row sm:items-end sm:justify-between">
+          <div className="mb-3 flex flex-col gap-1 sm:flex-row sm:items-end sm:justify-between">
             <div>
-              <h2 className="text-xl font-bold tracking-tight text-slate-950">Szenario-Bibliothek</h2>
+              <h2 className="text-lg font-bold tracking-tight text-slate-950">Szenario-Bibliothek</h2>
               <p className="mt-1 text-sm text-slate-500">Einsatz, Umfang und Status pro Szenario-Familie.</p>
             </div>
             <p className="text-xs text-slate-400">Die Einsatz-KPIs basieren auf Klassenzuweisungen und gespeicherten Missionsabschlüssen.</p>
@@ -143,16 +143,16 @@ export default async function ScenariosPage() {
 
           <div className="space-y-3">
             {families.map((family) => (
-              <article key={family.key} className="rounded-2xl border border-slate-200/90 bg-white p-5 shadow-[0_3px_18px_rgba(15,23,42,0.03)] transition hover:border-slate-300 hover:shadow-sm sm:p-6">
-                <div className="flex flex-col gap-5 xl:flex-row xl:items-start xl:justify-between">
+              <article key={family.key} className="rounded-2xl border border-slate-200/90 bg-white p-4 shadow-[0_3px_18px_rgba(15,23,42,0.03)] transition hover:border-slate-300 hover:shadow-sm sm:p-5">
+                <div className="flex flex-col gap-3 xl:flex-row xl:items-start xl:justify-between">
                   <div className="min-w-0 flex-1">
                     <div className="flex flex-wrap items-center gap-2">
-                      <h3 className="text-base font-semibold text-slate-900">{family.title}</h3>
+                      <h3 className="text-lg font-bold tracking-tight text-slate-950">{family.title}</h3>
                       <span className="rounded-full bg-slate-100 px-2.5 py-1 text-[11px] font-medium text-slate-600">{family.activeVariants} aktive Varianten</span>
                     </div>
-                    {family.description && <p className="mt-2 max-w-3xl text-sm leading-5 text-slate-500">{family.description}</p>}
+                    {family.description && <p className="mt-1 max-w-4xl text-sm leading-5 text-slate-500">{family.description}</p>}
                     <ScenarioCoverEditor scenarioId={family.variants[0].id} title={family.title} coverImageUrl={family.coverImageUrl} />
-                    <div className="mt-4 grid grid-cols-2 gap-2 sm:grid-cols-3 xl:grid-cols-5">
+                    <div className="mt-3 grid grid-cols-2 gap-2 sm:grid-cols-3 xl:grid-cols-5">
                       <MiniKpi label="Schulen" value={String(family.schoolsInUse)} />
                       <MiniKpi label="Aktive Klassen" value={String(family.activeClasses)} />
                       <MiniKpi label="Lernende erreicht" value={String(family.learnersReached)} />
@@ -164,9 +164,9 @@ export default async function ScenariosPage() {
                       <span className="rounded-full bg-slate-100 px-2.5 py-1">{family.contentCount} Inhalte</span>
                     </div>
                   </div>
-                  <div className="flex flex-wrap gap-2 xl:max-w-[440px]">
+                  <div className="flex flex-wrap gap-2 xl:max-w-[390px] xl:justify-end">
                     {family.variants.map((variant) => (
-                      <a key={variant.id} href={`/scenarios/${variant.id}`} className="group min-w-[112px] rounded-xl border border-slate-200 bg-white px-3 py-2.5 transition hover:border-violet-300 hover:bg-violet-50/70">
+                      <a key={variant.id} href={`/scenarios/${variant.id}`} className="group min-w-[100px] rounded-xl border border-slate-200 bg-white px-3 py-2 transition hover:border-violet-300 hover:bg-violet-50/70">
                         <div className="text-xs font-semibold text-slate-800">{AGE_BANDS.find(([value]) => value === variant.age_band)?.[1] ?? variant.age_rating}</div>
                         <div className="mt-1 text-[11px] text-slate-500">{displayScenarioStatus(variant)}</div>
                         <div className="mt-1 flex items-center gap-1 text-xs text-accent">Bearbeiten <ChevronRight className="h-3 w-3 transition-transform group-hover:translate-x-0.5" /></div>
