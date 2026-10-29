@@ -185,6 +185,9 @@ export default async function ScenarioDetailPage({ params, searchParams = {} }: 
                               <option value="medium">Mittel – ausgewogener Feed</option>
                               <option value="high">Hoch – viele Alltagsbeiträge</option>
                             </select>
+                            <p className="text-[11px] leading-4 text-slate-500">
+                              Erwartete Lesedauer: {({ off: "ca. 7–9 Minuten", low: "ca. 9–12 Minuten", medium: "ca. 12–16 Minuten", high: "ca. 17–22 Minuten" } as Record<string, string>)[scenario.ambient_density ?? "medium"] ?? "ca. 12–16 Minuten"}. Grundlage: geschätzte Lesezeit pro Beitrag; tatsächliche Dauer hängt von Lesetempo und Interaktionen ab.
+                            </p>
                             <button className="self-start rounded-xl bg-violet-700 px-3 py-2 text-xs font-semibold text-white hover:bg-violet-800">Feed-Einstellung speichern</button>
                           </form>
                         </div>
