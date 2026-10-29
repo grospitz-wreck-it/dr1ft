@@ -1,5 +1,5 @@
 import type { ReactNode } from "react";
-import { ArrowLeft, FileText, Flag, Route, Sparkles, Users } from "lucide-react";
+import { ArrowLeft, BookOpen, CheckCircle2, ChevronDown, Clock3, FileText, Flag, GraduationCap, Info, Layers3, Pencil, Play, Route, School, Sparkles, Users } from "lucide-react";
 import { supabaseServerClient } from "../../../lib/supabaseServerClient";
 import { createContentItem, generateScenarioContent, optimizeScenarioBasics, toggleScenarioActive, updateContentItemBody, updateScenarioBasics, updateScenarioAmbientDensity } from "../actions";
 import { ContentStatusControl } from "./ContentStatusControl";
