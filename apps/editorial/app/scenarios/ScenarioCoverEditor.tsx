@@ -18,6 +18,7 @@ export function ScenarioCoverEditor({
   const [pending, startTransition] = useTransition();
   const [error, setError] = useState("");
   const [url, setUrl] = useState(coverImageUrl ?? "");
+  const [savedMessage, setSavedMessage] = useState("");
 
   function generate() {
     setError("");
@@ -51,10 +52,29 @@ export function ScenarioCoverEditor({
           {pending ? <LoaderCircle className="h-4 w-4 animate-spin" /> : <Sparkles className="h-4 w-4" />}
           {pending ? "FLUX erstellt die Illustration …" : coverImageUrl ? "Mit FLUX neu generieren" : "Illustration mit FLUX erstellen"}
         </button>
-        <form action={saveScenarioCoverUrl.bind(null, scenarioId)} className="mt-3 flex flex-col gap-2 sm:flex-row">
-          <input type="url" name="coverImageUrl" value={url} onChange={(event) => setUrl(event.target.value)} placeholder="Oder eigene Bild-URL …" aria-label={`Cover-URL für ${title}`} className="min-w-0 flex-1 rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs" />
-          <button type="submit" className="rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs font-semibold text-slate-700 hover:border-violet-200 hover:text-violet-700">URL speichern</button>
+        <form
+          onSubmit={(event) => {
+            event.preventDefault();
+            setError("");
+            setSavedMessage("");
+            const formData = new FormData();
+            formData.set("coverImageUrl", url);
+            startTransition(async () => {
+              try {
+                await saveScenarioCoverUrl(scenarioId, formData);
+                setSavedMessage("Cover-URL gespeichert.");
+                router.refresh();
+              } catch (err) {
+                setError(err instanceof Error ? err.message : "Die Cover-URL konnte nicht gespeichert werden.");
+              }
+            });
+          }}
+          className="mt-3 flex flex-col gap-2 sm:flex-row"
+        >
+          <input type="url" name="coverImageUrl" value={url} onChange={(event) => setUrl(event.target.value)} placeholder="Eigene Bild-URL (optional)" aria-label={`Cover-URL für ${title}`} className="min-w-0 flex-1 rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs" />
+          <button type="submit" disabled={pending} className="rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs font-semibold text-slate-700 hover:border-violet-200 hover:text-violet-700 disabled:opacity-50">URL speichern</button>
         </form>
+        {savedMessage && <p role="status" className="mt-2 text-xs font-medium text-emerald-700">{savedMessage}</p>}
         {error && <p role="alert" className="mt-2 rounded-lg border border-rose-200 bg-rose-50 px-3 py-2 text-xs text-rose-700">{error}</p>}
       </div>
     </div>
