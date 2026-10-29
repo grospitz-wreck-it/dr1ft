@@ -20,6 +20,10 @@ export default async function FeedPage() {
     ? await supabase.from("missions").select("id").eq("scenario_id", scenarioIntro.id).eq("status", "live")
     : { data: [] as { id: string }[] };
   const scenarioMissionIds = (scenarioMissions ?? []).map((mission) => mission.id);
+  const { data: missionContentLinks } = scenarioMissionIds.length
+    ? await supabase.from("mission_content_items").select("mission_id, content_item_id, required, order_index").in("mission_id", scenarioMissionIds).order("order_index", { ascending: true })
+    : { data: [] as { mission_id: string; content_item_id: string; required: boolean; order_index: number }[] };
+  const missionContentIds = Array.from(new Set((missionContentLinks ?? []).map((link) => link.content_item_id)));
   const { data: completedScenarioMissions } = scenarioMissionIds.length
     ? await supabase.from("user_mission_progress").select("mission_id").eq("user_id", user.id).eq("class_instance_id", classInstanceId).eq("status", "completed").in("mission_id", scenarioMissionIds)
     : { data: [] as { mission_id: string }[] };
@@ -58,7 +62,12 @@ export default async function FeedPage() {
   const { data: recentInteractions } = await supabase.from("user_interactions").select("content_item_id, interaction_type").eq("user_id", user.id).eq("class_instance_id", classInstanceId).order("created_at", { ascending: false }).limit(200);
   const recentlySeenContentIds = (recentInteractions ?? []).filter((i) => i.interaction_type === "view").map((i) => i.content_item_id);
   const scenarioFilter = assignedScenarioIds.length > 0 ? `scenario_id.in.(${assignedScenarioIds.join(",")}),scenario_id.is.null` : "scenario_id.is.null";
-  const { data: pool } = await supabase.from("content_items").select("*, creators(id, display_name, handle, avatar_url)").eq("status", "live").eq("type", "post").or(scenarioFilter).or(`class_instance_id.eq.${classInstanceId},class_instance_id.is.null`);
+  const { data: scenarioPool } = await supabase.from("content_items").select("*, creators(id, display_name, handle, avatar_url)").eq("status", "live").eq("type", "post").or(scenarioFilter).or(`class_instance_id.eq.${classInstanceId},class_instance_id.is.null`);
+  const linkedIdsOutsidePool = missionContentIds.filter((id) => !(scenarioPool ?? []).some((row: any) => row.id === id));
+  const { data: linkedMissionPool } = linkedIdsOutsidePool.length
+    ? await supabase.from("content_items").select("*, creators(id, display_name, handle, avatar_url)").in("id", linkedIdsOutsidePool).eq("status", "live").eq("type", "post")
+    : { data: [] as any[] };
+  const pool = [...(scenarioPool ?? []), ...(linkedMissionPool ?? [])];
   const contentIds = (pool ?? []).map((row: any) => row.id);
   const { data: instanceLikes } = contentIds.length ? await supabase.from("user_interactions").select("content_item_id, user_id").eq("class_instance_id", classInstanceId).eq("interaction_type", "like").in("content_item_id", contentIds) : { data: [] as { content_item_id: string; user_id: string }[] };
   const { data: npcLikes } = contentIds.length ? await supabase.from("npc_social_interactions").select("content_item_id").eq("class_instance_id", classInstanceId).eq("interaction_type", "like").in("content_item_id", contentIds) : { data: [] as { content_item_id: string }[] };
@@ -165,9 +174,16 @@ export default async function FeedPage() {
     : mappedPool;
   const feedItemTargets: Record<string, number> = { off: 12, low: 16, medium: 20, high: 28 };
   const personalizedAmbientLimits: Record<string, number> = { off: 0, low: 1, medium: 3, high: 6 };
-  const baseItems = learningSequenceItems !== null
+  const selectedFeedItems = learningSequenceItems !== null
     ? learningSequenceItems
     : selectNextFeedItems(densityAwarePool, ctx, feedItemTargets[ambientDensity] ?? 20) as FeedItem[];
+  // Explicit mission mappings are mandatory curriculum content: include them
+  // regardless of recommendation ranking or ambient-density limits.
+  const missionContentOrder = new Map((missionContentLinks ?? []).map((link) => [link.content_item_id, link.order_index]));
+  const requiredMissionItems = mappedPool
+    .filter((item) => missionContentOrder.has(item.id))
+    .sort((a, b) => (missionContentOrder.get(a.id) ?? 0) - (missionContentOrder.get(b.id) ?? 0));
+  const baseItems = [...requiredMissionItems, ...selectedFeedItems.filter((item) => !requiredMissionItems.some((required) => required.id === item.id))];
 
   // Keep the learning sequence intact, but always supplement it with a small
   // set of live ambient posts that match this learner's chosen interests.
