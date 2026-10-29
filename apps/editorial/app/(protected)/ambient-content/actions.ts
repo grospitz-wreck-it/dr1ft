@@ -58,8 +58,9 @@ const AMBIENT_ITEM_SCHEMA = {
           creatorVibe: { type: "string" },
           needsImage: { type: "boolean" },
           imagePrompt: { type: "string" },
+          interestKeys: { type: "array", items: { type: "string" } },
         },
-        required: ["body", "format", "mood", "topic", "creatorVibe", "needsImage", "imagePrompt"],
+        required: ["body", "format", "mood", "topic", "creatorVibe", "needsImage", "imagePrompt", "interestKeys"],
       },
     },
   },
@@ -296,6 +297,20 @@ export async function generateAmbientDrafts(formData: FormData) {
   if (interestError) throw new Error(`Interessen-Katalog konnte nicht geladen werden: ${interestError.message}`);
   const interests = (interestRows ?? []).map((interest) => interest.label);
   const interestKeys = (interestRows ?? []).map((interest) => interest.key);
+  const { data: catalogRows, error: catalogError } = await supabase
+    .from("ambient_interests")
+    .select("key, label, parent_key")
+    .eq("is_active", true)
+    .eq("taxonomy_status", "active")
+    .order("sort_order")
+    .order("label");
+  if (catalogError) throw new Error(`Interessen-Katalog konnte nicht geladen werden: ${catalogError.message}`);
+  const interestCatalog = catalogRows ?? [];
+  const interestByKey = new Map(interestCatalog.map((interest) => [interest.key, interest]));
+  const interestCatalogText = interestCatalog
+    .filter((interest) => interest.key && interest.label)
+    .map((interest) => `- ${interest.key}: ${interest.label}`)
+    .join("\n");
 
   const creatorVoice = creatorId ? (await supabase.from("creators").select("display_name, persona").eq("id", creatorId).maybeSingle()).data : null;
   const profile = (await supabase.from("ambient_generation_profiles").select("*").eq("age_band", ageBand).eq("is_active", true).limit(1).maybeSingle()).data;
@@ -325,7 +340,7 @@ export async function generateAmbientDrafts(formData: FormData) {
   const ageText = AGE_BANDS[ageBand] ?? ageBand;
   const styleText = STYLE_LABELS[style] ?? style;
   const dateText = new Intl.DateTimeFormat("de-DE", { dateStyle: "full", timeZone: "Europe/Berlin" }).format(new Date());
-  const prompt = `${CORE_PROMPT}\n\n${languageLibrary}\n\nGENERATION PROFILE\n- Zielgruppe: ${ageText}\n- Thema: ${theme}\n- Interessen: ${interests.length ? interests.join(", ") : "frei wählen"}\n- Schreibstil: ${styleText}\n- Tippfehler-Level: ${typoLevel}/3\n- Jugendsprache-Level: ${slangLevel}/3\n- Emoji-Level: ${emojiLevel}/3\n- Gewünschter Bildanteil: ${imageRatio}%\n- Bildstrategie: ${imageMode}\n- Heute: ${dateText}\n- Creator: ${creatorVoice?.display_name ?? "wechselnde Ambient-Accounts"}\n- Persona: ${JSON.stringify(creatorVoice?.persona ?? {})}\n- Profilhinweise: ${JSON.stringify(profile?.prompt_rules ?? {})}\n\nAUTHENTICITY CHECK\n- Mindestens einige Posts komplett normal und unspektakulär.\n- Slang nur kontextgerecht.\n- Tippfehler selten und plausibel.\n- Aktuelle Trendwörter nicht gleichmäßig verteilen.\n- Keine Wiederholungen oder Emoji-Schablonen.\n- Kein Erwachsener, der Teenager imitiert.\n- Unterschiede zwischen Stimmen und Altersgruppen müssen erkennbar sein.\n\nErzeuge ${count} Items und gib ausschließlich dieses JSON-Objekt zurück:\n{ "items": [{ "body": string, "format": "status" | "question" | "story" | "observation" | "reply" | "caption" | "poll_idea" | "moment", "mood": string, "topic": string, "creatorVibe": string, "needsImage": boolean, "imagePrompt": string }] }`;
+  const prompt = `${CORE_PROMPT}\n\n${languageLibrary}\n\nGENERATION PROFILE\n- Zielgruppe: ${ageText}\n- Thema: ${theme}\n- Interessen als kreative Ausgangspunkte: ${interests.length ? interests.join(", ") : "frei wählen"}\n- Schreibstil: ${styleText}\n- Tippfehler-Level: ${typoLevel}/3\n- Jugendsprache-Level: ${slangLevel}/3\n- Emoji-Level: ${emojiLevel}/3\n- Gewünschter Bildanteil: ${imageRatio}%\n- Bildstrategie: ${imageMode}\n- Heute: ${dateText}\n- Creator: ${creatorVoice?.display_name ?? "wechselnde Ambient-Accounts"}\n- Persona: ${JSON.stringify(creatorVoice?.persona ?? {})}\n- Profilhinweise: ${JSON.stringify(profile?.prompt_rules ?? {})}\n\nAUTHENTICITY CHECK\n- Mindestens einige Posts komplett normal und unspektakulär.\n- Slang nur kontextgerecht.\n- Tippfehler selten und plausibel.\n- Aktuelle Trendwörter nicht gleichmäßig verteilen.\n- Keine Wiederholungen oder Emoji-Schablonen.\n- Kein Erwachsener, der Teenager imitiert.\n- Unterschiede zwischen Stimmen und Altersgruppen müssen erkennbar sein.\n\nINTERESSEN-TAGS PRO POST\n- Verteile die Interessen NICHT pauschal auf alle Posts. Jeder Post bekommt eine eigene Zuordnung passend zu seinem konkreten Inhalt.\n- Die gewählten Interessen sind kreative Ausgangspunkte, keine automatischen Tags für jeden Post.\n- Nutze ausschließlich Keys aus dem folgenden kanonischen Katalog; keine Labels, erfundenen Keys oder Synonyme als Keys.\n- Vergib typischerweise 1–3 passende Keys pro Post. Lieber wenige präzise Tags als viele unpassende.\n- Ein Post darf mehrere Themen abdecken, aber tagge nur Themen, die im Text wirklich vorkommen oder klar im Mittelpunkt stehen.\n- Wenn ein Post keines der Interessen sinnvoll abdeckt, gib ein leeres Array zurück.\n- KANONISCHER INTERESSEN-KATALOG:\n${interestCatalogText}\n\nErzeuge ${count} Items und gib ausschließlich dieses JSON-Objekt zurück:\n{ "items": [{ "body": string, "format": "status" | "question" | "story" | "observation" | "reply" | "caption" | "poll_idea" | "moment", "mood": string, "topic": string, "creatorVibe": string, "needsImage": boolean, "imagePrompt": string, "interestKeys": string[] }] }`;
 
   let items: any[] = [];
 
@@ -381,7 +396,24 @@ export async function generateAmbientDrafts(formData: FormData) {
       imageProvider = image.provider;
       imageModel = image.model;
     }
-    rows.push({ type: "post", scenario_id: null, creator_id: creatorId, body: item.body.trim().slice(0, 1000), media_url: mediaUrl, media_type: mediaUrl ? "image" : null, manipulation_techniques: [], target_competencies: [], difficulty: 1, age_rating: ageBand === "16_17" || ageBand === "18_plus" ? "16_plus" : ageBand === "all" ? "all_ages" : "12_plus", status: "draft", extra: { generatedBy: "ai", generatorVersion: "ambient-studio-v5", provider, theme, ageBand, interests, interestKeys, style, styleLabel: styleText, typoLevel, slangLevel, emojiLevel, imageRatio, imageMode, format: item.format, mood: item.mood, topic: item.topic, creatorVibe: item.creatorVibe, imageRequested: shouldImage, imageGenerated: Boolean(mediaUrl), imageProvider, imageModel, languageLibrary: "source-grounded-2026-08" } });
+    const assignedInterestKeys = new Set<string>();
+    if (Array.isArray(item.interestKeys)) {
+      for (const rawKey of item.interestKeys) {
+        if (typeof rawKey !== "string" || !interestByKey.has(rawKey)) continue;
+        let current: string | null = rawKey;
+        const visited = new Set<string>();
+        while (current && !visited.has(current)) {
+          visited.add(current);
+          assignedInterestKeys.add(current);
+          current = interestByKey.get(current)?.parent_key ?? null;
+        }
+      }
+    }
+    const postInterestKeys = Array.from(assignedInterestKeys);
+    const postInterests = postInterestKeys
+      .map((key) => interestByKey.get(key)?.label)
+      .filter((label): label is string => Boolean(label));
+    rows.push({ type: "post", scenario_id: null, creator_id: creatorId, body: item.body.trim().slice(0, 1000), media_url: mediaUrl, media_type: mediaUrl ? "image" : null, manipulation_techniques: [], target_competencies: [], difficulty: 1, age_rating: ageBand === "16_17" || ageBand === "18_plus" ? "16_plus" : ageBand === "all" ? "all_ages" : "12_plus", status: "draft", extra: { generatedBy: "ai", generatorVersion: "ambient-studio-v6", provider, theme, ageBand, interests: postInterests, interestKeys: postInterestKeys, generationInterests: interests, generationInterestKeys: interestKeys, style, styleLabel: styleText, typoLevel, slangLevel, emojiLevel, imageRatio, imageMode, format: item.format, mood: item.mood, topic: item.topic, creatorVibe: item.creatorVibe, imageRequested: shouldImage, imageGenerated: Boolean(mediaUrl), imageProvider, imageModel, languageLibrary: "source-grounded-2026-08" } });
   }
   if (!rows.length) throw new Error("Die KI hat keine gültigen Items geliefert.");
   const { error } = await supabase.from("content_items").insert(rows);
