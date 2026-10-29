@@ -41,7 +41,7 @@ type Action = (formData: FormData) => Promise<void>;
 }) {
   const recommendations = useMemo(() => {
     const normalize = (value: unknown) =>
-      String(value ?? "").toLocaleLowerCase("de").replace(/[_-]+/g, " ").replace(/[^\\p{L}\\p{N} ]/gu, " ").replace(/\\s+/g, " ").trim();
+      String(value ?? "").toLocaleLowerCase("de").replace(/[_-]+/g, " ").replace(/[^\\wäöüß ]/gi, " ").replace(/\\s+/g, " ").trim();
     const tokens = (value: unknown) => normalize(value).split(" ").filter((token) => token.length >= 4);
     const postNorm = normalize([postText, postTopic, ...interestLabels].join(" "));
     const postTokens = new Set(tokens([postText, postTopic, ...interestLabels].join(" ")));
