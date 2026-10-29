@@ -37,6 +37,7 @@ export function AmbientNpcAssignment({
 }) {
   const recommendations = useMemo(() => {
     const normalize = (value: unknown) =>
+      String(value ?? "").toLocaleLowerCase("de").replace(/[_-]+/g, " ").replace(/[^\p{L}\p{N} ]/gu, " ").replace(/\s+/g, " ").trim();
       String(value ?? "").toLocaleLowerCase("de").replace(/[_-]+/g, " ").replace(/[^\\p{L}\\p{N} ]/gu, " ").replace(/\\s+/g, " ").trim();
     const signals = [...interestKeys, ...interestLabels].map(normalize).filter((value) => value.length > 2);
     return creators
@@ -82,7 +83,7 @@ export function AmbientNpcAssignment({
           <select name="creatorId" defaultValue={selectedCreatorId} className="control mt-1.5">
             <option value="">Keine Figur zuordnen</option>
             {suggested.length > 0 && <optgroup label="Passende Vorschläge">{suggested.map(({ creator, score }) => <option key={creator.id} value={creator.id}>{creator.display_name} · {score} Treffer</option>)}</optgroup>}{fallbackSuggestion && !suggestedIds.has(fallbackSuggestion.creator.id) && <optgroup label="Weitere Empfehlung"><option value={fallbackSuggestion.creator.id}>{fallbackSuggestion.creator.display_name} · allgemeiner Vorschlag</option></optgroup>}
-            <optgroup label="Alle globalen NPCs">{creators.filter((creator) => !suggestedIds.has(creator.id)).map((creator) => <option key={creator.id} value={creator.id}>{creator.display_name}{creator.creator_role ? " · " + creator.creator_role : ""}</option>)}</optgroup>
+            <optgroup label="Alle globalen NPCs">{creators.filter((creator) => !suggestedIds.has(creator.id) && creator.id !== fallbackSuggestion?.creator.id).map((creator) => <option key={creator.id} value={creator.id}>{creator.display_name}{creator.creator_role ? " · " + creator.creator_role : ""}</option>)}</optgroup>
           </select>
         </label>
         {suggested.length > 0 ? (
