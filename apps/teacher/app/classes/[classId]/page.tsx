@@ -177,8 +177,12 @@ export default async function ClassDetailPage({
     student.completed += Number(row.missions_completed ?? 0);
     student.total += Number(row.missions_total ?? 0);
   }
-  const allCompetencyTitles = Array.from(
-    new Set(competencyRows.map((row: any) => row.competency_title).filter(Boolean)),
+  const allCompetencyTitles: string[] = Array.from(
+    new Set<string>(
+      competencyRows
+        .map((row: any) => row.competency_title)
+        .filter((title: unknown): title is string => typeof title === "string" && title.trim().length > 0),
+    ),
   );
   const missionBottlenecks = (dashboard.missionBottlenecks ?? []).slice(0, 5);
   const competencyOverview = (dashboard.competencyOverview ?? []).filter(
