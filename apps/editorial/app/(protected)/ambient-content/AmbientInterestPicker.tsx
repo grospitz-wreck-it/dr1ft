@@ -30,7 +30,7 @@ export function AmbientInterestPicker({
   eventName = "ambient-interests-change",
 }: Props) {
   const [selected, setSelected] = useState<string[]>(
-    () => initialValue.split(",").map((value) => value.trim()).filter(Boolean).slice(0, 3),
+    () => initialValue.split(",").map((value) => value.trim()).filter(Boolean).slice(0, maxSelections),
   );
   const [query, setQuery] = useState("");
 
