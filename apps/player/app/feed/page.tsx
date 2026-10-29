@@ -64,7 +64,7 @@ export default async function FeedPage({ searchParams }: { searchParams: Promise
   const { data: recentInteractions } = await supabase.from("user_interactions").select("content_item_id, interaction_type").eq("user_id", user.id).eq("class_instance_id", classInstanceId).order("created_at", { ascending: false }).limit(200);
   const recentlySeenContentIds = Array.from(new Set([
     ...(recentInteractions ?? []).filter((i) => i.interaction_type === "view").map((i) => i.content_item_id),
-    ...excludedIds,
+    ...Array.from(excludedIds),
   ]));
   const scenarioFilter = assignedScenarioIds.length > 0 ? `scenario_id.in.(${assignedScenarioIds.join(",")}),scenario_id.is.null` : "scenario_id.is.null";
   const { data: scenarioPool } = await supabase.from("content_items").select("*, creators(id, display_name, handle, avatar_url)").eq("status", "live").eq("type", "post").or(scenarioFilter).or(`class_instance_id.eq.${classInstanceId},class_instance_id.is.null`);
