@@ -70,7 +70,7 @@ export default async function AmbientContentPage({ searchParams = {} }: Props) {
   const arcStepRows = arcStepsResult.data ?? [];
   const classRows = classesResult.data ?? [];
   const ambientInterests = ambientInterestsResult.data ?? [];
-  const npcCreators = (npcCreatorsResult.data ?? []).filter((creator) => creator.kind === "npc" && creator.creator_role !== "ambient");
+  const npcCreators = (npcCreatorsResult.data ?? []).filter((creator) => creator.kind === "npc" && creator.is_active !== false);
 
   const inventoryRows: Array<{ id: string; status: string; extra: Record<string, any> | null }> = [];
   let inventoryError: string | null = null;
