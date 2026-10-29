@@ -4,7 +4,9 @@ import { mapCreatorRow, type FeedItem } from "../../lib/types";
 import { supabaseServerClient } from "../../lib/supabaseServerClient";
 import { FeedClient } from "./FeedClient";
 
-export default async function FeedPage() {
+export default async function FeedPage({ searchParams }: { searchParams: Promise<{ exclude?: string }> }) {
+  const params = await searchParams;
+  const excludedIds = new Set((params.exclude ?? "").split(",").filter(Boolean));
   const supabase = supabaseServerClient();
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return <main className="min-h-screen flex items-center justify-center text-ash font-body">Bitte einloggen.</main>;
@@ -20,6 +22,17 @@ export default async function FeedPage() {
     ? await supabase.from("missions").select("id").eq("scenario_id", scenarioIntro.id).eq("status", "live")
     : { data: [] as { id: string }[] };
   const scenarioMissionIds = (scenarioMissions ?? []).map((mission) => mission.id);
+  const { data: missionContentLinks } = scenarioMissionIds.length
+    ? await supabase.from("mission_content_items").select("mission_id, content_item_id, required, order_index").in("mission_id", scenarioMissionIds).order("order_index", { ascending: true })
+    : { data: [] as { mission_id: string; content_item_id: string; required: boolean; order_index: number }[] };
+  const missionContentIds = Array.from(new Set((missionContentLinks ?? []).map((link) => link.content_item_id)));
+  const { data: scenarioNpcLinks } = scenarioIntro
+    ? await supabase.from("npc_story_links").select("creator_id, creators(id, display_name, handle, avatar_url)").eq("scenario_id", scenarioIntro.id).eq("is_active", true)
+    : { data: [] as any[] };
+  const scenarioNpcs = (scenarioNpcLinks ?? []).map((link: any) => mapCreatorRow(link.creators)).filter(Boolean) as NonNullable<FeedItem["creator"]>[];
+  const { data: ambientNpcRows } = await supabase.from("creators").select("id, display_name, handle, avatar_url").eq("is_active", true).eq("npc_role", "ambient");
+  const ambientNpcs = (ambientNpcRows ?? []).map((row: any) => mapCreatorRow(row)).filter(Boolean) as NonNullable<FeedItem["creator"]>[];
+  const fallbackNpcs = scenarioNpcs.length ? scenarioNpcs : ambientNpcs;
   const { data: completedScenarioMissions } = scenarioMissionIds.length
     ? await supabase.from("user_mission_progress").select("mission_id").eq("user_id", user.id).eq("class_instance_id", classInstanceId).eq("status", "completed").in("mission_id", scenarioMissionIds)
     : { data: [] as { mission_id: string }[] };
@@ -56,9 +69,17 @@ export default async function FeedPage() {
     return Array.from(expanded);
   };
   const { data: recentInteractions } = await supabase.from("user_interactions").select("content_item_id, interaction_type").eq("user_id", user.id).eq("class_instance_id", classInstanceId).order("created_at", { ascending: false }).limit(200);
-  const recentlySeenContentIds = (recentInteractions ?? []).filter((i) => i.interaction_type === "view").map((i) => i.content_item_id);
+  const recentlySeenContentIds = Array.from(new Set([
+    ...(recentInteractions ?? []).filter((i) => i.interaction_type === "view").map((i) => i.content_item_id),
+    ...Array.from(excludedIds),
+  ]));
   const scenarioFilter = assignedScenarioIds.length > 0 ? `scenario_id.in.(${assignedScenarioIds.join(",")}),scenario_id.is.null` : "scenario_id.is.null";
-  const { data: pool } = await supabase.from("content_items").select("*, creators(id, display_name, handle, avatar_url)").eq("status", "live").eq("type", "post").or(scenarioFilter).or(`class_instance_id.eq.${classInstanceId},class_instance_id.is.null`);
+  const { data: scenarioPool } = await supabase.from("content_items").select("*, creators(id, display_name, handle, avatar_url)").eq("status", "live").eq("type", "post").or(scenarioFilter).or(`class_instance_id.eq.${classInstanceId},class_instance_id.is.null`);
+  const linkedIdsOutsidePool = missionContentIds.filter((id) => !(scenarioPool ?? []).some((row: any) => row.id === id));
+  const { data: linkedMissionPool } = linkedIdsOutsidePool.length
+    ? await supabase.from("content_items").select("*, creators(id, display_name, handle, avatar_url)").in("id", linkedIdsOutsidePool).eq("status", "live").eq("type", "post")
+    : { data: [] as any[] };
+  const pool = [...(scenarioPool ?? []), ...(linkedMissionPool ?? [])];
   const contentIds = (pool ?? []).map((row: any) => row.id);
   const { data: instanceLikes } = contentIds.length ? await supabase.from("user_interactions").select("content_item_id, user_id").eq("class_instance_id", classInstanceId).eq("interaction_type", "like").in("content_item_id", contentIds) : { data: [] as { content_item_id: string; user_id: string }[] };
   const { data: npcLikes } = contentIds.length ? await supabase.from("npc_social_interactions").select("content_item_id").eq("class_instance_id", classInstanceId).eq("interaction_type", "like").in("content_item_id", contentIds) : { data: [] as { content_item_id: string }[] };
@@ -80,7 +101,14 @@ export default async function FeedPage() {
   const { data: socialProfiles } = likeUserIds.length ? await supabase.from("user_profiles").select("id, display_name, username, avatar_seed").in("id", likeUserIds) : { data: [] as { id: string; display_name: string | null; username: string | null; avatar_seed: string | null }[] };
   const socialProfileById = new Map((socialProfiles ?? []).map((p) => [p.id, p])); const socialByContent = new Map<string, Array<{ id: string; displayName: string; username: string; avatarSeed: string }>>();
   for (const like of instanceLikes ?? []) { const profile = socialProfileById.get(like.user_id); if (!profile) continue; const list = socialByContent.get(like.content_item_id) ?? []; if (!list.some((p) => p.id === profile.id)) list.push({ id: profile.id, displayName: profile.display_name ?? "DR1FT User", username: profile.username ?? "user", avatarSeed: profile.avatar_seed ?? profile.id }); socialByContent.set(like.content_item_id, list); }
-  const mappedPool: FeedItem[] = (pool ?? []).map((row: any) => ({ id: row.id, type: row.type, scenarioId: row.scenario_id, creatorId: row.creator_id, parentId: row.parent_id, title: row.title, body: row.body, mediaUrl: row.media_url, mediaType: row.media_type, manipulationTechniques: row.manipulation_techniques ?? [], targetCompetencies: row.target_competencies ?? [], difficulty: row.difficulty, ageRating: row.age_rating, sourceRefs: row.source_refs ?? [], status: row.status, reviewedBy: row.reviewed_by, reviewedAt: row.reviewed_at, reviewNotes: row.review_notes, extra: { ...(row.extra ?? {}), interestKeys: addInterestAncestors(row.extra?.interestKeys), classLikeCount: likeCounts.get(row.id) ?? 0, classLikeUsers: socialByContent.get(row.id) ?? [], classCommentCount: commentCounts.get(row.id) ?? 0 }, createdAt: row.created_at, updatedAt: row.updated_at, creator: mapCreatorRow(row.creators) }));
+  const stableNpcIndex = (id: string, length: number): number => {
+    let sum = 0;
+    for (let index = 0; index < id.length; index += 1) {
+      sum = (sum + id.charCodeAt(index)) % length;
+    }
+    return sum;
+  };
+  const mappedPool: FeedItem[] = (pool ?? []).map((row: any) => ({ id: row.id, type: row.type, scenarioId: row.scenario_id, creatorId: row.creator_id, parentId: row.parent_id, title: row.title, body: row.body, mediaUrl: row.media_url, mediaType: row.media_type, manipulationTechniques: row.manipulation_techniques ?? [], targetCompetencies: row.target_competencies ?? [], difficulty: row.difficulty, ageRating: row.age_rating, sourceRefs: row.source_refs ?? [], status: row.status, reviewedBy: row.reviewed_by, reviewedAt: row.reviewed_at, reviewNotes: row.review_notes, extra: { ...(row.extra ?? {}), interestKeys: addInterestAncestors(row.extra?.interestKeys), classLikeCount: likeCounts.get(row.id) ?? 0, classLikeUsers: socialByContent.get(row.id) ?? [], classCommentCount: commentCounts.get(row.id) ?? 0 }, createdAt: row.created_at, updatedAt: row.updated_at, creator: mapCreatorRow(row.creators) ?? (fallbackNpcs.length > 0 ? fallbackNpcs[stableNpcIndex(String(row.id), fallbackNpcs.length)] : undefined) }));
   const ageRating: FeedContext["userAgeRating"] = currentProfile?.birth_year && new Date().getFullYear() - currentProfile.birth_year >= 16 ? "16_plus" : "12_plus";
   const progress = (competencyProgress ?? []).map((c) => ({ userId: c.user_id, competencyId: c.competency_id, evidence: c.evidence, level: c.level, updatedAt: c.updated_at }));
   const recentTechniques = mappedPool.filter((item) => recentlySeenContentIds.includes(item.id)).flatMap((item) => item.manipulationTechniques).slice(0, 12);
@@ -165,9 +193,18 @@ export default async function FeedPage() {
     : mappedPool;
   const feedItemTargets: Record<string, number> = { off: 12, low: 16, medium: 20, high: 28 };
   const personalizedAmbientLimits: Record<string, number> = { off: 0, low: 1, medium: 3, high: 6 };
-  const baseItems = learningSequenceItems !== null
+  const selectedFeedItems = (learningSequenceItems !== null
     ? learningSequenceItems
-    : selectNextFeedItems(densityAwarePool, ctx, feedItemTargets[ambientDensity] ?? 20) as FeedItem[];
+    : selectNextFeedItems(densityAwarePool, ctx, feedItemTargets[ambientDensity] ?? 20) as FeedItem[])
+    .filter((item) => !excludedIds.has(item.id));
+  // Explicit mission mappings are mandatory curriculum content, but must be
+  // woven into the feed rather than shown as a block before ambient posts.
+  const missionContentOrder = new Map((missionContentLinks ?? []).map((link) => [link.content_item_id, link.order_index]));
+  const requiredMissionItems = mappedPool
+    .filter((item) => missionContentOrder.has(item.id) && !recentlySeenContentIds.includes(item.id))
+    .sort((a, b) => (missionContentOrder.get(a.id) ?? 0) - (missionContentOrder.get(b.id) ?? 0));
+  const missionContentIdsSet = new Set(requiredMissionItems.map((item) => item.id));
+  const ambientBaseItems = selectedFeedItems.filter((item) => !missionContentIdsSet.has(item.id));
 
   // Keep the learning sequence intact, but always supplement it with a small
   // set of live ambient posts that match this learner's chosen interests.
@@ -195,11 +232,25 @@ export default async function FeedPage() {
           return countMatches(b) - countMatches(a) ||
             new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
         })
-        .filter((item) => !baseItems.some((baseItem) => baseItem.id === item.id))
+        .filter((item) => !excludedIds.has(item.id) && !ambientBaseItems.some((baseItem) => baseItem.id === item.id) && !missionContentIdsSet.has(item.id))
         .slice(0, personalizedAmbientLimits[ambientDensity] ?? 3)
     : [];
 
-  const items = [...baseItems, ...personalizedAmbientItems];
+  const ambientItems = [...ambientBaseItems, ...personalizedAmbientItems];
+  // Interleave mission posts after short ambient runs. The mission sequence
+  // stays ordered, while learners encounter mission content among ordinary
+  // feed posts and have to recognize it in context.
+  const items: FeedItem[] = [];
+  let missionIndex = 0;
+  const ambientPerMission = ambientDensity === "high" ? 3 : ambientDensity === "medium" ? 2 : 1;
+  for (let i = 0; i < ambientItems.length; i += 1) {
+    items.push(ambientItems[i]);
+    if (ambientPerMission > 0 && (i + 1) % ambientPerMission === 0 && missionIndex < requiredMissionItems.length) {
+      items.push(requiredMissionItems[missionIndex++]);
+    }
+  }
+  // If ambient content is sparse, never drop required mission posts.
+  while (missionIndex < requiredMissionItems.length) items.push(requiredMissionItems[missionIndex++]);
   const likedContentIds = new Set((recentInteractions ?? []).filter((i) => i.interaction_type === "like").map((i) => i.content_item_id));
 
   return <FeedClient initialItems={items} userId={user.id} classInstanceId={classInstanceId} likedContentIds={likedContentIds} scenarioIntro={scenarioIntro} scenarioMissionCount={scenarioMissionIds.length} completedScenarioMissionCount={new Set((completedScenarioMissions ?? []).map((mission) => mission.mission_id)).size} profile={{ displayName: currentProfile?.display_name ?? "DR1FT User", username: currentProfile?.username ?? "user", avatarSeed: currentProfile?.avatar_seed ?? user.id }} />;

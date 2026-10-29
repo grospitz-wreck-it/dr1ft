@@ -277,3 +277,136 @@ body.dark-mode {
 .dark-mode main article [data-post-menu] > button[aria-label="Kommentare anzeigen"] svg {
   flex-shrink: 0;
 }
+
+
+/* Expressive DR1FT post cards. Keep the post menu controls/behavior untouched. */
+.post-card {
+  overflow: visible;
+  border-color: rgba(255,255,255,.86);
+  background: linear-gradient(155deg, rgba(255,255,255,.98), rgba(255,255,255,.94) 55%, rgba(248,245,255,.98));
+  box-shadow: 0 18px 44px rgba(76,54,120,.09), 0 2px 7px rgba(76,54,120,.04);
+  transition: border-color .2s ease, box-shadow .2s ease, transform .2s ease;
+}
+.post-card:hover {
+  border-color: rgba(196,181,253,.9);
+  box-shadow: 0 22px 54px rgba(76,54,120,.14), 0 3px 10px rgba(76,54,120,.05);
+}
+.post-author-avatar {
+  background: #fff;
+  color: #6d28d9;
+}
+.post-media-stage {
+  isolation: isolate;
+  display: grid;
+  place-items: center;
+  min-height: 9rem;
+  background:
+    radial-gradient(ellipse at 12% 12%, rgba(168,85,247,.17), transparent 42%),
+    radial-gradient(ellipse at 88% 82%, rgba(34,211,238,.17), transparent 40%),
+    linear-gradient(135deg, #f1eef9, #e8e8f1 48%, #f7f3fb);
+}
+.post-media-pattern {
+  z-index: 0;
+  background-image:
+    repeating-linear-gradient(135deg, transparent 0 27px, rgba(139,92,246,.19) 28px, transparent 30px 56px),
+    radial-gradient(circle, rgba(34,211,238,.55) 1px, transparent 1.8px);
+  background-size: auto, 18px 18px;
+  opacity: .9;
+}
+.post-media-orb {
+  z-index: 0;
+  filter: blur(1px);
+  opacity: .8;
+}
+.post-media-orb-one {
+  background: linear-gradient(135deg, rgba(168,85,247,.24), rgba(236,72,153,.06));
+}
+.post-media-orb-two {
+  background: linear-gradient(135deg, rgba(34,211,238,.23), rgba(124,58,237,.08));
+}
+.post-media-image {
+  max-width: 100%;
+  box-shadow: 0 8px 26px rgba(28,20,48,.14);
+}
+.dark-mode .post-card {
+  border-color: rgba(139,92,246,.28);
+  background: linear-gradient(155deg, rgba(31,25,48,.99), rgba(24,20,39,.99) 60%, rgba(32,22,45,.99));
+  box-shadow: 0 20px 54px rgba(0,0,0,.24), 0 0 0 1px rgba(139,92,246,.04);
+}
+.dark-mode .post-card:hover {
+  border-color: rgba(139,92,246,.6);
+  box-shadow: 0 24px 60px rgba(0,0,0,.32), 0 0 24px rgba(139,92,246,.10);
+}
+.dark-mode .post-author-avatar {
+  background: #211a32;
+  color: #ddd6fe;
+}
+.dark-mode .post-media-stage {
+  background:
+    radial-gradient(ellipse at 12% 12%, rgba(168,85,247,.22), transparent 42%),
+    radial-gradient(ellipse at 88% 82%, rgba(34,211,238,.16), transparent 40%),
+    linear-gradient(135deg, #211a32, #171525 52%, #241a31);
+}
+.dark-mode .post-media-pattern {
+  background-image:
+    repeating-linear-gradient(135deg, transparent 0 27px, rgba(139,92,246,.31) 28px, transparent 30px 56px),
+    radial-gradient(circle, rgba(34,211,238,.7) 1px, transparent 1.8px);
+  opacity: .82;
+}
+.dark-mode .post-media-image {
+  box-shadow: 0 8px 30px rgba(0,0,0,.42), 0 0 0 1px rgba(196,181,253,.12);
+}
+@media (prefers-reduced-motion: reduce) {
+  .post-card { transition: none; }
+}
+
+
+/* Quiet, readable feedback card: DR1FT identity without neon glare. */
+.post-learning-hint {
+  border-color: #d9d3e8;
+  background: linear-gradient(135deg, #f5f2fa 0%, #f8f8fc 62%, #eff7fa 100%);
+  color: #334155;
+}
+.post-learning-hint-icon { background: #e6e0f2; color: #7051a5; }
+.post-learning-hint-label { color: #7051a5; }
+.post-learning-hint-title { color: #27213d; }
+.post-learning-hint-copy { color: #43516a; }
+.post-learning-hint-close { color: #76658f; }
+.post-learning-hint-close:hover { background: rgba(112,81,165,.10); }
+.dark-mode .post-learning-hint {
+  border-color: #40364f;
+  background: linear-gradient(135deg, #252033 0%, #211e2e 62%, #202831 100%);
+  box-shadow: 0 8px 22px rgba(0,0,0,.12);
+  color: #d8d3e4;
+}
+.dark-mode .post-learning-hint-icon { background: #383047; color: #b9a8d9; }
+.dark-mode .post-learning-hint-label { color: #b9a8d9; }
+.dark-mode .post-learning-hint-title { color: #eeeaf6; }
+.dark-mode .post-learning-hint-copy { color: #c8c3d5; }
+.dark-mode .post-learning-hint-close { color: #b9a8d9; }
+.dark-mode .post-learning-hint-close:hover { background: rgba(185,168,217,.12); }
+
+.finish-scenario-dialog {
+  border-color: #ddd6ed;
+  background: linear-gradient(145deg, #fff 0%, #f8f6fc 70%, #f0f8fa 100%);
+  color: #27213d;
+}
+.finish-scenario-icon { background: #eee8f8; color: #7953b8; }
+.finish-scenario-eyebrow { color: #7953b8; }
+.finish-scenario-progress { background: linear-gradient(90deg, #8b72b5, #6f9ea9); }
+.finish-scenario-secondary { border: 1px solid #ddd6ed; color: #514563; background: rgba(255,255,255,.7); }
+.finish-scenario-secondary:hover { background: #f0ebf8; }
+.finish-scenario-primary { color: #fff; background: #625080; }
+.finish-scenario-primary:hover { background: #51416e; }
+.dark-mode .finish-scenario-dialog {
+  border-color: #40364f;
+  background: linear-gradient(145deg, #211d2d 0%, #201d2a 72%, #1d272e 100%);
+  color: #eeeaf6;
+}
+.dark-mode .finish-scenario-icon { background: #342c43; color: #c1b2dc; }
+.dark-mode .finish-scenario-eyebrow { color: #c1b2dc; }
+.dark-mode .finish-scenario-progress { background: linear-gradient(90deg, #9380b5, #719aa3); }
+.dark-mode .finish-scenario-secondary { border-color: #494056; color: #d9d3e6; background: #2b2638; }
+.dark-mode .finish-scenario-secondary:hover { background: #373047; }
+.dark-mode .finish-scenario-primary { color: #f7f4fc; background: #625577; }
+.dark-mode .finish-scenario-primary:hover { background: #74668a; }

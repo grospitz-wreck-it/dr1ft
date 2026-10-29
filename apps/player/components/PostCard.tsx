@@ -23,7 +23,7 @@ function getStringArray(value: unknown): string[] { return Array.isArray(value) 
 
 function AuthorRow({ creator }: { creator?: CreatorSummary }) {
   if (!creator) return null;
-  return <Link href={`/creator/${creator.id}`} className="flex items-center gap-2 mb-2 group" onClick={(e) => e.stopPropagation()}><span className="w-6 h-6 rounded-full bg-ink text-paper text-[10px] font-mono flex items-center justify-center shrink-0">{initials(creator.displayName)}</span><span className="text-xs font-medium text-ink group-hover:underline">{creator.displayName}</span><span className="text-xs text-ink/40">{creator.handle}</span></Link>;
+  return <Link href={`/creator/${creator.id}`} className="group flex min-w-0 items-center gap-2.5" onClick={(e) => e.stopPropagation()}><span className="grid h-9 w-9 shrink-0 place-items-center rounded-2xl bg-gradient-to-br from-violet-500 via-fuchsia-500 to-cyan-400 p-[1.5px] shadow-[0_4px_14px_rgba(139,92,246,.22)]"><span className="post-author-avatar grid h-full w-full place-items-center rounded-[13px] text-xs font-bold">{initials(creator.displayName)}</span></span><span className="min-w-0"><span className="block truncate text-sm font-semibold leading-tight text-ink group-hover:underline">{creator.displayName}</span><span className="mt-0.5 block truncate text-xs text-ink/45">{creator.handle}</span></span></Link>;
 }
 
 export function PostCard({ item, userId, classInstanceId, initiallyLiked, onView }: { item: FeedItem; userId: string; classInstanceId: string; initiallyLiked: boolean; onView: () => void }) {
@@ -419,21 +419,21 @@ export function PostCard({ item, userId, classInstanceId, initiallyLiked, onView
   async function ignore() { await track("ignore"); showFeedback("Beitrag wird für dich ausgeblendet."); setMenuOpen(false); }
 
   return <>
-    <article id={`post-${item.id}`} ref={ref} className="relative bg-paper text-ink rounded-card overflow-visible shadow-sm">
-      <div className="p-4 pb-0"><AuthorRow creator={item.creator}/><p className="font-mono text-[11px] text-ink/50 mb-2 uppercase tracking-wide">{item.type}</p></div>
-      {item.mediaUrl && item.mediaType === "image" && <img src={item.mediaUrl} alt="" className="w-full max-h-96 object-cover" loading="lazy"/>}
-      {item.mediaUrl && item.mediaType === "video" && <video src={item.mediaUrl} controls className="w-full max-h-96 object-cover bg-black"/>}
-      <div className="p-4 pt-3">
-        <p className="font-body text-[15px] leading-relaxed">{item.body}</p>
-        {learningFeedback && <section className="mt-3 overflow-hidden rounded-2xl border border-violet-200 bg-gradient-to-br from-violet-50 via-white to-sky-50 shadow-sm" aria-live="polite">
-          <div className="flex items-start gap-3 p-4">
-            <span className="grid h-9 w-9 shrink-0 place-items-center rounded-xl bg-gradient-to-br from-violet-600 to-sky-500 text-white"><Sparkles className="h-4 w-4" /></span>
+    <article id={`post-${item.id}`} ref={ref} className="post-card group relative rounded-[26px] border border-white/80 bg-paper text-ink shadow-sm">
+      <div className="flex items-center px-4 pb-3 pt-4 sm:px-5"><AuthorRow creator={item.creator}/></div>
+      {item.mediaUrl && item.mediaType === "image" && <div className="post-media-stage relative isolate mx-2 overflow-hidden rounded-[22px] sm:mx-3"><div aria-hidden="true" className="post-media-pattern pointer-events-none absolute inset-0"/><div aria-hidden="true" className="post-media-orb post-media-orb-one pointer-events-none absolute -left-8 top-8 h-24 w-24 rounded-full"/><div aria-hidden="true" className="post-media-orb post-media-orb-two pointer-events-none absolute -bottom-8 right-8 h-28 w-28 rounded-full"/><img src={item.mediaUrl} alt="" className="post-media-image relative z-[1] mx-auto block h-auto max-h-[75vh] w-auto max-w-full object-contain" loading="lazy" onError={(event) => { event.currentTarget.style.display = "none"; }}/></div>}
+      {item.mediaUrl && item.mediaType === "video" && <div className="post-media-stage mx-2 overflow-hidden rounded-[22px] sm:mx-3"><video src={item.mediaUrl} controls className="relative z-[1] mx-auto block h-auto max-h-[75vh] w-auto max-w-full bg-black object-contain"/></div>}
+      <div className="px-4 pb-4 pt-4 sm:px-5">
+        <p className="font-body text-[15px] leading-relaxed sm:text-base">{item.body}</p>
+        {learningFeedback && <section className="post-learning-hint mt-3 overflow-hidden rounded-2xl border shadow-sm" aria-live="polite">
+          <div className="flex items-start gap-3 p-4 sm:p-5">
+            <span className="post-learning-hint-icon grid h-9 w-9 shrink-0 place-items-center rounded-xl"><Sparkles className="h-4 w-4" /></span>
             <div className="min-w-0 flex-1">
-              <p className="text-[10px] font-bold uppercase tracking-[0.14em] text-violet-700">DR1FT · Erkenntnis</p>
-              <h3 className="mt-1 text-sm font-bold text-slate-900">{learningFeedback.title}</h3>
-              <p className="mt-1 text-sm leading-relaxed text-slate-700">{learningFeedback.message}</p>
+              <p className="post-learning-hint-label text-[10px] font-bold uppercase tracking-[0.14em]">DR1FT-Hinweis</p>
+              <h3 className="post-learning-hint-title mt-1 text-sm font-bold">{learningFeedback.title}</h3>
+              <p className="post-learning-hint-copy mt-1 text-sm leading-relaxed">{learningFeedback.message}</p>
             </div>
-            <button type="button" onClick={() => setLearningFeedback(null)} aria-label="Rückmeldung schließen" className="rounded-lg p-1 text-violet-700 hover:bg-violet-100"><X className="h-4 w-4" /></button>
+            <button type="button" onClick={() => setLearningFeedback(null)} aria-label="Hinweis schließen" className="post-learning-hint-close rounded-lg p-1"><X className="h-4 w-4" /></button>
           </div>
         </section>}
         {learningTask.learnerAction?.trim() && <section className="mt-4 rounded-2xl border border-violet-200 bg-gradient-to-br from-violet-50 to-fuchsia-50/60 p-4">
@@ -451,7 +451,7 @@ export function PostCard({ item, userId, classInstanceId, initiallyLiked, onView
             </div>
           </div>
         </section>}
-        <div data-post-menu className="relative flex items-center gap-2 mt-3 pt-3 border-t border-ink/10">
+        <div data-post-menu className="relative mt-4 flex items-center gap-2 border-t border-ink/10 pt-3">
           <button onClick={toggleLike} className={`tap-pulse touch-target flex items-center gap-1.5 rounded-xl px-3 text-sm font-body transition-colors hover:bg-ink/5 ${liked ? "text-social-pink" : "text-ink/60"}`} aria-label="Gefällt mir"><Heart className="w-5 h-5" fill={liked ? "currentColor" : "none"} strokeWidth={2}/>{baseLikeCount + (liked ? 1 : 0)}</button>
           <button onClick={toggleComments} className="touch-target flex items-center gap-1.5 rounded-xl px-3 text-sm font-body text-ink/60 transition-colors hover:bg-ink/5" aria-label="Kommentare anzeigen"><MessageCircle className="w-[18px] h-[18px]" strokeWidth={2}/>{comments ? comments.length : liveCommentCount}</button>
           <div className="ml-auto flex items-center gap-1">
