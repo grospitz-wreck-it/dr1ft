@@ -13,7 +13,7 @@ export default async function FeedPage() {
   const { data: assignments } = await supabase.from("class_instance_scenario_assignments").select("scenario_id").eq("class_instance_id", classInstanceId);
   const assignedScenarioIds: string[] = Array.from(new Set<string>((assignments ?? []).map((a) => a.scenario_id)));
   const { data: assignedScenarios } = assignedScenarioIds.length
-    ? await supabase.from("scenarios").select("id, title, description").in("id", assignedScenarioIds).order("created_at", { ascending: true })
+    ? await supabase.from("scenarios").select("id, title, description, ambient_density").in("id", assignedScenarioIds).order("created_at", { ascending: true })
     : { data: [] as { id: string; title: string; description: string | null }[] };
   const scenarioIntro = assignedScenarios?.[0] ?? null;
   const { data: scenarioMissions } = scenarioIntro
@@ -84,7 +84,9 @@ export default async function FeedPage() {
   const ageRating: FeedContext["userAgeRating"] = currentProfile?.birth_year && new Date().getFullYear() - currentProfile.birth_year >= 16 ? "16_plus" : "12_plus";
   const progress = (competencyProgress ?? []).map((c) => ({ userId: c.user_id, competencyId: c.competency_id, evidence: c.evidence, level: c.level, updatedAt: c.updated_at }));
   const recentTechniques = mappedPool.filter((item) => recentlySeenContentIds.includes(item.id)).flatMap((item) => item.manipulationTechniques).slice(0, 12);
-  const ctx: FeedContext = { userAgeRating: ageRating, competencyProgress: progress, recentlySeenContentIds, recentTechniques, assignedScenarioIds, signalRatio: computeAdaptiveSignalRatio(progress), interestKeys: selectedInterestKeys };
+  const ambientDensity = scenarioIntro?.ambient_density ?? "medium";
+  const ambientSignalRatios: Record<string, number> = { off: 1, low: 0.9, medium: 0.7, high: 0.5 };
+  const ctx: FeedContext = { userAgeRating: ageRating, competencyProgress: progress, recentlySeenContentIds, recentTechniques, assignedScenarioIds, signalRatio: ambientSignalRatios[ambientDensity] ?? computeAdaptiveSignalRatio(progress), interestKeys: selectedInterestKeys };
   // If a generated Learning Design has approved/live posts linked to its steps,
   // play those posts as a deliberate sequence instead of mixing them into the
   // generic recommendation feed. Legacy scenarios keep the existing feed path.
