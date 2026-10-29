@@ -131,8 +131,14 @@ export default async function ScenariosPage() {
     return instance?.school_id;
   }).filter(Boolean)).size;
   const activeInstanceIds = new Set(activeAssignments.map((item: any) => item.class_instance_id));
+  const activeAssignedScenarioIds = new Set(activeAssignments.map((item: any) => item.scenario_id));
+  const activeAssignedMissionIds = new Set(
+    (missions ?? []).filter((mission: any) => activeAssignedScenarioIds.has(mission.scenario_id)).map((mission: any) => mission.id)
+  );
   const totalCompletions = (progress ?? []).filter((item: any) =>
-    item.status === "completed" && activeInstanceIds.has(item.class_instance_id)
+    item.status === "completed"
+    && activeInstanceIds.has(item.class_instance_id)
+    && activeAssignedMissionIds.has(item.mission_id)
   ).length;
 
   return (
