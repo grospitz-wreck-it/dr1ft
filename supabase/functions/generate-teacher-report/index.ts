@@ -260,6 +260,8 @@ Deno.serve(async (req) => {
       }
     );
 
+  const learningEvidenceResult = await userClient.rpc("get_class_student_learning_evidence", { p_class_id: classId });
+
   if (bottleneckResult.error) {
     return json(
       {
@@ -269,6 +271,10 @@ Deno.serve(async (req) => {
       },
       500
     );
+  }
+
+  if (learningEvidenceResult.error) {
+    return json({ error: "Lernnachweise konnten nicht geladen werden", details: learningEvidenceResult.error.message }, 500);
   }
 
   // ----------------------------------------------------------
@@ -290,6 +296,8 @@ Deno.serve(async (req) => {
       user_id?: string;
     }) => row.user_id === studentId
   ) ?? null;
+
+  const learningEvidence = (learningEvidenceResult.data ?? []).find((row: { user_id?: string }) => row.user_id === studentId) ?? null;
 
   // ----------------------------------------------------------
   // Build pedagogical report snapshot
@@ -366,6 +374,14 @@ Deno.serve(async (req) => {
         ),
       })
     ),
+
+    learningEvidence: {
+      challengeResponsesSubmitted: Number(learningEvidence?.challenge_responses_submitted ?? 0),
+      assessedRequirements: Number(learningEvidence?.assessed_requirements ?? 0),
+      successfulRequirements: Number(learningEvidence?.successful_requirements ?? 0),
+      notYetRequirements: Number(learningEvidence?.not_yet_requirements ?? 0),
+      lastLearningActivityAt: learningEvidence?.last_learning_activity_at ?? null,
+    },
 
     pedagogicalSummary: {
       competenciesTracked: competencies.length,

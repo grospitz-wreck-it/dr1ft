@@ -59,7 +59,7 @@ Deno.serve(async (req) => {
   }
 
   // ---------- Klassen-Modus ----------
-  const [competency, mission, activity, studentCompetency, studentEvidence, studentMissions, bottlenecks] = await Promise.all([
+  const [competency, mission, activity, studentCompetency, studentEvidence, studentMissions, bottlenecks, studentLearningEvidence] = await Promise.all([
     supabase.rpc("get_class_competency_overview", { p_class_id: classId }),
     supabase.rpc("get_class_mission_overview", { p_class_id: classId }),
     supabase.rpc("get_class_activity_overview", { p_class_id: classId }),
@@ -67,10 +67,12 @@ Deno.serve(async (req) => {
     supabase.rpc("get_class_student_competency_evidence", { p_class_id: classId }),
     supabase.rpc("get_class_student_mission_progress", { p_class_id: classId }),
     supabase.rpc("get_class_mission_bottlenecks", { p_class_id: classId }),
+    supabase.rpc("get_class_student_learning_evidence", { p_class_id: classId }),
   ]);
 
   if (competency.error) return fail(competency.error.message);
   if (studentEvidence.error) return fail(studentEvidence.error.message);
+  if (studentLearningEvidence.error) return fail("Lernnachweise konnten nicht geladen werden: " + studentLearningEvidence.error.message);
 
   return new Response(
     JSON.stringify({
@@ -85,6 +87,7 @@ Deno.serve(async (req) => {
       })),
       studentMissionProgress: studentMissions.data ?? [],
       missionBottlenecks: bottlenecks.data ?? [],
+      studentLearningEvidence: studentLearningEvidence.data ?? [],
     }),
     { headers: { "Content-Type": "application/json" } }
   );

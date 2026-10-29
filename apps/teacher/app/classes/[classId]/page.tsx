@@ -144,6 +144,8 @@ export default async function ClassDetailPage({
 
   const competencyRows = dashboard.studentCompetencyProgress ?? [];
   const missionRows = dashboard.studentMissionProgress ?? [];
+  const learningEvidenceRows = dashboard.studentLearningEvidence ?? [];
+  const learningEvidenceTotals = learningEvidenceRows.reduce((totals: { responses: number; assessed: number; successful: number; notYet: number }, row: any) => ({ responses: totals.responses + Number(row.challenge_responses_submitted ?? 0), assessed: totals.assessed + Number(row.assessed_requirements ?? 0), successful: totals.successful + Number(row.successful_requirements ?? 0), notYet: totals.notYet + Number(row.not_yet_requirements ?? 0) }), { responses: 0, assessed: 0, successful: 0, notYet: 0 });
 
   const levels = competencyRows
     .map((row: any) => Number(row.level ?? 0))
@@ -390,6 +392,15 @@ export default async function ClassDetailPage({
           </div>
 
           <div className="grid gap-px bg-border lg:grid-cols-2">
+            <Panel title="Challenge- und Lernnachweise">
+              <div className="grid grid-cols-2 gap-px bg-border sm:grid-cols-4">
+                <div className="bg-white p-4"><p className="text-xs text-slate-400">Antworten abgegeben</p><p className="mt-2 text-xl font-semibold">{learningEvidenceTotals.responses}</p></div>
+                <div className="bg-white p-4"><p className="text-xs text-slate-400">Geprüfte Anforderungen</p><p className="mt-2 text-xl font-semibold">{learningEvidenceTotals.assessed}</p></div>
+                <div className="bg-white p-4"><p className="text-xs text-slate-400">Erfolgreich erfüllt</p><p className="mt-2 text-xl font-semibold">{learningEvidenceTotals.successful}</p></div>
+                <div className="bg-white p-4"><p className="text-xs text-slate-400">Noch nicht erfüllt</p><p className="mt-2 text-xl font-semibold">{learningEvidenceTotals.notYet}</p></div>
+              </div>
+              <p className="bg-white px-5 py-3 text-xs leading-relaxed text-slate-500">Abgegebene Antworten zählen als Bearbeitung, nicht automatisch als fachlicher Erfolg. Geprüfte Anforderungen beruhen auf validierten Bewertungen.</p>
+            </Panel>
             <Panel title="Kompetenzentwicklung">
               {dashboard.competencyOverview?.length ? (
                 dashboard.competencyOverview.map((row: any) => (
