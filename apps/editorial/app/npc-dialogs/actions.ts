@@ -110,7 +110,8 @@ export async function generateNpcProfiles(formData: FormData) {
     const category = String(formData.get("category") ?? "citizen");
   const amount = Math.min(12, Math.max(1, Number(formData.get("amount") ?? 6)));
   const brief = String(formData.get("brief") ?? "").trim();
-  const requestedInterestKeys = Array.from(new Set(String(formData.get("interestKeys") ?? "").split(",").map((key) => key.trim()).filter(Boolean))).slice(0, 12);
+  const hasSubmittedInterestKeys = formData.has("interestKeys");
+  const submittedInterestKeys = Array.from(new Set(String(formData.get("interestKeys") ?? "").split(",").map((key) => key.trim()).filter(Boolean))).slice(0, 12);
   const supabase = supabaseServerClient();
   const { data: catalogRows, error: catalogError } = await supabase.from("ambient_interests").select("key, label, emoji, category, parent_key").eq("is_active", true).eq("is_selectable", true).eq("taxonomy_status", "active").order("sort_order").order("label");
   if (catalogError) throw new Error(`Interessen-Katalog konnte nicht geladen werden: ${catalogError.message}`);
@@ -386,13 +387,19 @@ export async function updateNpcProfile(formData: FormData) {
   const { data: interestCatalogRows, error: interestCatalogError } = await supabase.from("ambient_interests").select("key, label").eq("is_active", true).eq("is_selectable", true).eq("taxonomy_status", "active");
   if (interestCatalogError) throw new Error(`Interessen-Katalog konnte nicht geladen werden: ${interestCatalogError.message}`);
   const interestByKey = new Map((interestCatalogRows ?? []).map((interest: any) => [interest.key, interest]));
-  const interestKeys = requestedInterestKeys.filter((key) => interestByKey.has(key));
   const { data: current } = await supabase
     .from("creators")
-    .select("persona, ai_identity")
+    .select("persona, ai_identity, interest_tags")
     .eq("id", creatorId)
     .eq("kind", "npc")
     .single();
+  const existingInterestKeys = Array.isArray(current?.persona?.interestKeys)
+    ? current.persona.interestKeys.map(String)
+    : (current?.interest_tags ?? []).map((tag: string) =>
+        (interestCatalogRows ?? []).find((interest: any) => interest.label.toLocaleLowerCase("de") === tag.toLocaleLowerCase("de"))?.key
+      ).filter(Boolean);
+  const requestedInterestKeys = hasSubmittedInterestKeys ? submittedInterestKeys : existingInterestKeys;
+  const interestKeys = requestedInterestKeys.filter((key) => interestByKey.has(key));
 
   const csv = (name: string) =>
     String(formData.get(name) ?? "").split(",").map((v) => v.trim()).filter(Boolean);
