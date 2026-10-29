@@ -37,7 +37,7 @@ export function AmbientNpcAssignment({
 }) {
   const recommendations = useMemo(() => {
     const normalize = (value: unknown) =>
-      String(value ?? "").toLocaleLowerCase("de").replace(/[_-]+/g, " ").replace(/[^\p{L}\p{N} ]/gu, " ").replace(/\s+/g, " ").trim();
+      String(value ?? "").toLocaleLowerCase("de").replace(/[_-]+/g, " ").replace(/\s+/g, " ").trim();
 
     const signals = [...interestKeys, ...interestLabels].map(normalize).filter((value) => value.length > 2);
     return creators
