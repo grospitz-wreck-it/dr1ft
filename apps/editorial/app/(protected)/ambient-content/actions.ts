@@ -458,11 +458,11 @@ export async function assignAmbientPostCreator(formData: FormData) {
   if (creatorId) {
     const { data: creator, error: creatorError } = await supabase
       .from("creators")
-      .select("id, creator_role, scenario_id")
+      .select("id, kind, creator_role, scenario_id, is_active")
       .eq("id", creatorId)
       .maybeSingle();
     if (creatorError) throw new Error(creatorError.message);
-    if (!creator || creator.scenario_id !== null || creator.creator_role === "ambient") {
+    if (!creator || creator.kind !== "npc" || creator.is_active === false || creator.scenario_id !== null || creator.creator_role === "ambient") {
       throw new Error("Bitte eine vorhandene globale NPC-Figur auswählen.");
     }
   }
