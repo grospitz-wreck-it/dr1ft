@@ -17,6 +17,7 @@ export async function createMission(scenarioId: string, formData: FormData) {
 
   const title = String(formData.get("title") ?? "").trim();
   const description = String(formData.get("description") ?? "").trim();
+  const thumbnailUrl = String(formData.get("thumbnailUrl") ?? "").trim();
   const event = String(formData.get("triggerEvent") ?? "PostViewed");
   const count = Number(formData.get("triggerCount") ?? 1);
   const techniqueFilterRaw = String(formData.get("techniqueFilter") ?? "");
@@ -36,6 +37,7 @@ export async function createMission(scenarioId: string, formData: FormData) {
     slug: slugify(title) + "-" + Date.now().toString(36),
     title,
     description,
+    thumbnail_url: thumbnailUrl || null,
     trigger_condition: triggerCondition,
     target_competencies: targetCompetencies,
     reflection_content_id: reflectionContentId,
@@ -153,4 +155,97 @@ export async function swapArcSteps(
 
   if (e1 || e2) throw new Error(e1?.message ?? e2?.message);
   revalidatePath(`/missions/${scenarioId}`);
+}
+
+
+/**
+ * Generiert ein Missions-Cover mit dem bestehenden DR1FT-Flux-Worker.
+ * Als Briefing dienen Titel/Beschreibung der Mission und Titel/Beschreibung
+ * des zugehörigen Szenarios. Das Ergebnis wird im Supabase Storage abgelegt.
+ */
+export async function generateMissionThumbnail(missionId: string, scenarioId: string) {
+  const supabase = supabaseServerClient();
+  const workerUrl = process.env.CLOUDFLARE_AMBIENT_IMAGE_URL?.trim()
+    || "https://dr1ft.grospitz.workers.dev";
+  const apiKey = process.env.AMBIENT_IMAGE_API_KEY?.trim()
+    || process.env.CLOUDFLARE_AMBIENT_IMAGE_API_KEY?.trim();
+
+  if (!apiKey) {
+    throw new Error("FLUX ist nicht konfiguriert: AMBIENT_IMAGE_API_KEY fehlt in den Vercel-Umgebungsvariablen.");
+  }
+
+  const [{ data: mission, error: missionError }, { data: scenario, error: scenarioError }] = await Promise.all([
+    supabase.from("missions").select("id,title,description,thumbnail_url").eq("id", missionId).eq("scenario_id", scenarioId).single(),
+    supabase.from("scenarios").select("id,title,description,age_band,age_rating").eq("id", scenarioId).single(),
+  ]);
+  if (missionError || !mission) throw new Error(missionError?.message ?? "Mission nicht gefunden.");
+  if (scenarioError || !scenario) throw new Error(scenarioError?.message ?? "Szenario nicht gefunden.");
+
+  const prompt = [
+    "Create a premium, visually striking editorial illustration used as the cover art for a German school media-literacy learning mission.",
+    "This is an illustration, not a screenshot, poster, app interface, social media post, or photograph.",
+    "Scenario title: " + scenario.title,
+    "Scenario briefing: " + String(scenario.description ?? "").slice(0, 1800),
+    "Mission title: " + mission.title,
+    "Mission briefing: " + String(mission.description ?? "").slice(0, 1200),
+    "Age group: " + String(scenario.age_band ?? scenario.age_rating ?? "12+"),
+    "Translate the pedagogical situation into one clear visual metaphor and a strong focal subject. Make it engaging for teenagers, contemporary, nuanced, emotionally intelligent, safe for school, and visually polished.",
+    "Use a rich but balanced palette with violet, indigo, electric blue and small cyan accents; soft cinematic lighting, layered depth, subtle texture, refined composition.",
+    "Wide landscape cover art, 16:9 composition, subject readable at thumbnail size. Keep important visual elements near the center and leave comfortable negative space around edges.",
+    "No readable text, no letters, no logos, no watermark, no real-person likeness, no brand marks. Avoid generic corporate stock imagery.",
+  ].join("\\n\\n");
+
+  const response = await fetch(workerUrl, {
+    method: "POST",
+    headers: { "Content-Type": "application/json", Authorization: "Bearer " + apiKey },
+    body: JSON.stringify({ prompt, aspectRatio: "16:9", steps: 4 }),
+    cache: "no-store",
+    signal: AbortSignal.timeout(90000),
+  });
+  if (!response.ok) {
+    throw new Error("FLUX-Generierung fehlgeschlagen (" + response.status + "): " + (await response.text()).slice(0, 500));
+  }
+
+  const result = await response.json();
+  if (typeof result?.image !== "string") throw new Error("FLUX hat kein Bild zurückgegeben.");
+
+  const storagePath = "generated/mission-thumbnails/" + scenarioId + "/" + missionId + "-" + crypto.randomUUID() + ".jpg";
+  const { error: uploadError } = await supabase.storage.from("ambient-assets").upload(
+    storagePath,
+    Buffer.from(result.image, "base64"),
+    { contentType: "image/jpeg", upsert: false },
+  );
+  if (uploadError) throw new Error("Mission-Thumbnail konnte nicht gespeichert werden: " + uploadError.message);
+
+  const { data: publicUrl } = supabase.storage.from("ambient-assets").getPublicUrl(storagePath);
+  const { error: updateError } = await supabase.from("missions")
+    .update({ thumbnail_url: publicUrl.publicUrl })
+    .eq("id", missionId)
+    .eq("scenario_id", scenarioId);
+  if (updateError) throw new Error("Bild gespeichert, aber Mission konnte nicht aktualisiert werden: " + updateError.message);
+
+  revalidatePath("/missions/" + scenarioId);
+  revalidatePath("/scenarios");
+  revalidatePath("/scenarios/" + scenarioId);
+  return { thumbnailUrl: publicUrl.publicUrl };
+}
+
+export async function saveMissionThumbnail(missionId: string, scenarioId: string, formData: FormData) {
+  const supabase = supabaseServerClient();
+  const thumbnailUrl = String(formData.get("thumbnailUrl") ?? "").trim();
+  if (thumbnailUrl) {
+    let parsed: URL;
+    try { parsed = new URL(thumbnailUrl); } catch { throw new Error("Bitte eine gültige Bild-URL eingeben."); }
+    if (parsed.protocol !== "https:" && parsed.protocol !== "http:") {
+      throw new Error("Die Bild-URL muss mit https:// oder http:// beginnen.");
+    }
+  }
+  const { error } = await supabase.from("missions")
+    .update({ thumbnail_url: thumbnailUrl || null })
+    .eq("id", missionId)
+    .eq("scenario_id", scenarioId);
+  if (error) throw new Error(error.message);
+  revalidatePath("/missions/" + scenarioId);
+  revalidatePath("/scenarios");
+  revalidatePath("/scenarios/" + scenarioId);
 }
