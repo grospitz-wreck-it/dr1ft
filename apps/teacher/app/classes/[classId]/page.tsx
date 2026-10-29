@@ -145,6 +145,43 @@ export default async function ClassDetailPage({
   const competencyRows = dashboard.studentCompetencyProgress ?? [];
   const missionRows = dashboard.studentMissionProgress ?? [];
 
+  const studentRows = new Map<string, { name: string; competencies: Record<string, number>; completed: number; total: number }>();
+  for (const row of competencyRows) {
+    if (!row.user_id) continue;
+    if (!studentRows.has(row.user_id)) {
+      studentRows.set(row.user_id, {
+        name: row.display_name ?? row.username ?? "Schüler:in",
+        competencies: {},
+        completed: 0,
+        total: 0,
+      });
+    }
+    if (row.competency_title && row.level != null) {
+      studentRows.get(row.user_id)!.competencies[row.competency_title] = Number(row.level);
+    }
+  }
+  for (const row of missionRows) {
+    if (!row.user_id) continue;
+    if (!studentRows.has(row.user_id)) {
+      studentRows.set(row.user_id, {
+        name: row.display_name ?? row.username ?? "Schüler:in",
+        competencies: {},
+        completed: 0,
+        total: 0,
+      });
+    }
+    const student = studentRows.get(row.user_id)!;
+    student.completed += Number(row.missions_completed ?? 0);
+    student.total += Number(row.missions_total ?? 0);
+  }
+  const allCompetencyTitles = Array.from(
+    new Set(competencyRows.map((row: any) => row.competency_title).filter(Boolean)),
+  );
+  const missionBottlenecks = (dashboard.missionBottlenecks ?? []).slice(0, 5);
+  const competencyOverview = (dashboard.competencyOverview ?? []).filter(
+    (row: any) => row.competency_id != null && Number(row.student_count ?? 0) > 0,
+  );
+
   const levels = competencyRows
     .map((row: any) => Number(row.level ?? 0))
     .filter((level: number) => level > 0);
@@ -379,61 +416,99 @@ export default async function ClassDetailPage({
             <p className="text-xs font-semibold uppercase tracking-[0.14em] text-accent">
               DR1FT Insights
             </p>
-
             <h2 className="mt-1.5 text-lg font-semibold text-slate-950">
-              Klassenanalyse
+              Lernreporting der Klasse
             </h2>
-
             <p className="mt-1 text-sm text-slate-500">
-              Kompetenzen und Missionen – nur für die Lehrkraft dieser Klasse.
+              Kompetenzentwicklung, Missionsfortschritt und mögliche Lernhürden dieser Klasseninstanz. Nur für berechtigte Lehrkräfte sichtbar.
             </p>
           </div>
 
           <div className="grid gap-px bg-border lg:grid-cols-2">
-            <Panel title="Kompetenzentwicklung">
-              {dashboard.competencyOverview?.length ? (
-                dashboard.competencyOverview.map((row: any) => (
-                  <div
-                    key={row.competency_id}
-                    className="flex justify-between bg-white px-5 py-3 text-sm"
-                  >
-                    <span>{row.competency_title}</span>
-                    <span className="text-slate-500">
-                      Ø {row.avg_level} / 5
-                    </span>
+            <Panel title="Kompetenzentwicklung · Klassendurchschnitt">
+              {competencyOverview.length ? (
+                competencyOverview.map((row: any) => (
+                  <div key={row.competency_id} className="bg-white px-5 py-4">
+                    <div className="flex items-center justify-between gap-3 text-sm">
+                      <span className="font-medium text-slate-800">{row.competency_title}</span>
+                      <span className="shrink-0 text-slate-500">Ø {Number(row.avg_level ?? 0).toFixed(1)} / 5</span>
+                    </div>
+                    <div className="mt-2 h-2 overflow-hidden rounded-full bg-slate-100">
+                      <div className="h-full rounded-full bg-violet-500" style={{ width: `${Math.max(0, Math.min(100, Number(row.avg_level ?? 0) / 5 * 100))}%` }} />
+                    </div>
+                    <p className="mt-1 text-xs text-slate-400">{row.student_count ?? 0} Schüler:innen mit Daten</p>
                   </div>
                 ))
               ) : (
-                <div className="bg-white p-5 text-sm text-slate-400">
-                  Noch keine Daten.
-                </div>
+                <div className="bg-white p-5 text-sm text-slate-400">Noch keine Kompetenzdaten vorhanden.</div>
               )}
             </Panel>
 
-            <Panel title="Wo gibt es Schwierigkeiten">
-              {dashboard.missionBottlenecks?.slice(0, 5).length ? (
-                dashboard.missionBottlenecks
-                  .slice(0, 5)
-                  .map((row: any) => (
-                    <div
-                      key={row.mission_id}
-                      className="flex justify-between bg-white px-5 py-3 text-sm"
-                    >
-                      <span>{row.mission_title}</span>
-                      <span>
-                        {Math.round(
-                          Number(row.completion_rate ?? 0) * 100,
-                        )}{" "}
-                        %
-                      </span>
+            <Panel title="Wo gibt es Schwierigkeiten?">
+              <p className="bg-white px-5 pt-4 text-xs leading-5 text-slate-500">
+                Missionen mit niedriger Abschlussquote sind mögliche Ansatzpunkte für Wiederholung oder gemeinsame Reflexion.
+              </p>
+              {missionBottlenecks.length ? (
+                missionBottlenecks.map((row: any) => {
+                  const rate = Math.max(0, Math.min(100, Number(row.completion_rate ?? 0) * 100));
+                  const tone = rate < 40 ? "bg-rose-500" : rate < 70 ? "bg-amber-500" : "bg-emerald-500";
+                  return (
+                    <div key={row.mission_id} className="bg-white px-5 py-4">
+                      <div className="flex items-start justify-between gap-3 text-sm">
+                        <span className="font-medium text-slate-800">{row.mission_title}</span>
+                        <span className="shrink-0 font-semibold text-slate-600">{Math.round(rate)}%</span>
+                      </div>
+                      <div className="mt-2 h-2 overflow-hidden rounded-full bg-slate-100">
+                        <div className={`h-full rounded-full ${tone}`} style={{ width: `${rate}%` }} />
+                      </div>
+                      <p className="mt-1 text-xs text-slate-400">{row.completed_count ?? "—"} von {row.student_count ?? "—"} Schüler:innen abgeschlossen</p>
                     </div>
-                  ))
+                  );
+                })
               ) : (
-                <div className="bg-white p-5 text-sm text-slate-400">
-                  Noch keine Daten.
-                </div>
+                <div className="bg-white px-5 py-4 text-sm text-slate-400">Noch keine auswertbaren Missionsabschlüsse.</div>
               )}
             </Panel>
+          </div>
+
+          <div className="border-t border-border">
+            <div className="px-6 py-5">
+              <h3 className="text-sm font-semibold text-slate-900">Fortschritt pro Schüler:in</h3>
+              <p className="mt-1 text-sm leading-5 text-slate-500">
+                Zeigt gespeicherte Kompetenz-Level und den Missionsfortschritt. Einzelne Klicks oder Likes werden nicht als Kompetenzgewinn gewertet.
+              </p>
+            </div>
+            <div className="overflow-x-auto">
+              <table className="w-full min-w-[680px] text-sm">
+                <thead className="bg-slate-50 text-left text-xs font-semibold uppercase tracking-wide text-slate-400">
+                  <tr>
+                    <th className="px-5 py-3">Schüler:in</th>
+                    {allCompetencyTitles.map((title) => <th key={title} className="px-3 py-3">{title}</th>)}
+                    <th className="px-4 py-3">Missionen</th>
+                    <th className="px-5 py-3">Report</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-border">
+                  {students.map((student: any) => {
+                    const row = studentRows.get(student.user_id);
+                    return (
+                      <tr key={student.user_id} className="bg-white hover:bg-slate-50/70">
+                        <td className="px-5 py-3 font-medium text-slate-800">{student.display_name || student.username || "Schüler:in"}</td>
+                        {allCompetencyTitles.map((title) => <td key={title} className="px-3 py-3 text-slate-500">{row?.competencies[title] ?? "—"}{row?.competencies[title] != null ? " / 5" : ""}</td>)}
+                        <td className="px-4 py-3 text-slate-600">{row && row.total > 0 ? `${row.completed}/${row.total}` : "—"}</td>
+                        <td className="px-5 py-3"><a href={`/classes/${classId}/reports/${student.user_id}`} className="inline-flex items-center rounded-lg border border-violet-200 px-3 py-1.5 text-xs font-semibold text-violet-700 transition hover:bg-violet-50">Report öffnen ↗</a></td>
+                      </tr>
+                    );
+                  })}
+                  {students.length === 0 && (
+                    <tr><td colSpan={allCompetencyTitles.length + 3} className="px-5 py-8 text-center text-slate-400">Noch keine Schüler:innen in dieser Klasseninstanz.</td></tr>
+                  )}
+                </tbody>
+              </table>
+            </div>
+            <div className="border-t border-border bg-slate-50/70 px-5 py-3 text-xs leading-5 text-slate-500">
+              Die Werte basieren ausschließlich auf Daten, die für diese Klasseninstanz zurückgegeben werden. „—“ bedeutet, dass aktuell kein Messwert vorliegt.
+            </div>
           </div>
         </section>
 
