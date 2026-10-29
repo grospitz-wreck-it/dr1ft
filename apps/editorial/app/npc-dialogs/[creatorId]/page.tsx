@@ -9,6 +9,7 @@ import {
 import { ReplyOptionsEditor } from "./ReplyOptionsEditor";
 import { ConsequenceEditor } from "./ConsequenceEditor";
 import { ContentStatusControl } from "../../scenarios/[scenarioId]/ContentStatusControl";
+import { AmbientInterestPicker } from "../../(protected)/ambient-content/AmbientInterestPicker";
 
 const AGE_BANDS = [
   ["9_11", "9–11"],
@@ -49,6 +50,7 @@ export default async function NpcDialogTreePage({ params, searchParams = {} }: P
     { data: links },
     { data: scenarios },
     { data: arcs },
+    { data: interestCatalog },
   ] = await Promise.all([
     supabase.from("creators").select("*").eq("id", creatorId).single(),
     supabase
@@ -63,6 +65,7 @@ export default async function NpcDialogTreePage({ params, searchParams = {} }: P
       .order("created_at", { ascending: false }),
     supabase.from("scenarios").select("id, title").order("title"),
     supabase.from("story_arcs").select("id, title, scenario_id").order("title"),
+    supabase.from("ambient_interests").select("key, label, emoji, category").eq("is_active", true).eq("is_selectable", true).eq("taxonomy_status", "active").order("sort_order").order("label"),
   ]);
 
   const selectedDialogId = searchParams.dialog || dialogs?.[0]?.id || "";
@@ -236,7 +239,7 @@ export default async function NpcDialogTreePage({ params, searchParams = {} }: P
                   <input type="hidden" name="recurringDetails" value={(persona.recurringDetails ?? []).join(", ")} />
                   <input type="hidden" name="worldview" value={persona.worldview ?? ""} />
                   <input type="hidden" name="boundaries" value={(persona.boundaries ?? []).join(", ")} />
-                  <label className="block space-y-1"><span className="text-xs font-medium text-slate-600">Interessen</span><textarea name="interests" defaultValue={(creator?.interest_tags ?? []).join(", ")} rows={6} placeholder="Fußball, TikTok, Gaming, Schule" className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm bg-white" /></label>
+                  <div><label className="block space-y-1"><span className="text-xs font-medium text-slate-600">Interessen aus dem gemeinsamen DR1FT-Katalog</span><span className="block text-[11px] text-slate-500">Die gespeicherten Keys bleiben stabil; die Labels werden für bestehende NPC-Logik mitgeführt.</span></label><div className="mt-2"><AmbientInterestPicker options={interestCatalog ?? []} initialValue={Array.isArray(persona.interestKeys) && persona.interestKeys.length ? persona.interestKeys.join(",") : (creator?.interest_tags ?? []).map((tag: string) => (interestCatalog ?? []).find((item: any) => item.label.toLocaleLowerCase("de") === tag.toLocaleLowerCase("de"))?.key).filter(Boolean).join(",")} maxSelections={12} fieldName="interestKeys" labelsFieldName="interestLabels" eventName="npc-interests-change" placeholder="Interessen suchen …" /></div></div>
                   <div><div className="text-xs font-medium text-slate-600 mb-2">Altersgruppen</div><div className="flex flex-wrap gap-2">{AGE_BANDS.map(([v,l]) => <label key={v} className="inline-flex items-center gap-2 rounded-lg border border-slate-200 bg-white px-2.5 py-2 text-xs"><input type="checkbox" name="ageBands" value={v} defaultChecked={(creator?.age_bands ?? []).includes(v)} />{l}</label>)}</div></div>
                   <button className="w-full bg-slate-900 text-white rounded-lg px-3 py-2.5 text-sm font-medium">Interessen speichern</button>
                 </form>
