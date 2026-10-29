@@ -57,7 +57,7 @@ export function AmbientInterestPicker({
   function remove(key: string) {
     const next = selected.filter((item) => item !== key);
     setSelected(next);
-    window.dispatchEvent(new CustomEvent("ambient-interests-change", { detail: next.map((selectedKey) => optionByKey.get(selectedKey)?.label ?? selectedKey) }));
+    window.dispatchEvent(new CustomEvent(eventName, { detail: next.map((selectedKey) => optionByKey.get(selectedKey)?.label ?? selectedKey) }));
   }
 
   return (
