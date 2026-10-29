@@ -1015,7 +1015,7 @@ export async function generateScenarioCover(scenarioId: string) {
     "Interpret the briefing as a clear visual story or metaphor. Make the illustration engaging for teenagers, emotionally intelligent, nuanced, safe for school, and immediately legible at small thumbnail size.",
     "Modern editorial illustration, layered shapes and depth, polished lighting, tactile subtle grain, strong focal point, sophisticated violet/indigo/electric-blue palette with restrained cyan highlights.",
     "Wide landscape cover, exact 16:9 composition, balanced negative space, no text, no letters, no logos, no watermark, no real-person likeness, no generic corporate stock imagery.",
-  ].join("\\n\\n");
+  ].join("\n\n");
 
   // Use the existing Editorial generator, which already implements FLUX and its
   // configured fallback, plus the production storage bucket and error handling.
