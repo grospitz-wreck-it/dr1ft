@@ -174,8 +174,8 @@ export default async function FeedPage() {
   // This guarantees personalization even when a generated learning design
   // would otherwise replace the generic recommendation feed entirely.
   const selectedInterestHierarchyKeys = new Set(addInterestAncestors(selectedInterestKeys));
-  const personalizedAmbientItems = selectedInterestHierarchyKeys.size
-    ? mappedPool
+  const personalizedAmbientItems = selectedInterestHierarchyKeys.size && (personalizedAmbientLimits[ambientDensity] ?? 3) > 0
+    ? densityAwarePool
         .filter((item) => {
           const ageOrder = { all_ages: 0, "12_plus": 1, "16_plus": 2 } as const;
           if (ageOrder[item.ageRating] > ageOrder[ageRating]) return false;
@@ -196,7 +196,7 @@ export default async function FeedPage() {
             new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
         })
         .filter((item) => !baseItems.some((baseItem) => baseItem.id === item.id))
-        .slice(0, 3)
+        .slice(0, personalizedAmbientLimits[ambientDensity] ?? 3)
     : [];
 
   const items = [...baseItems, ...personalizedAmbientItems];
