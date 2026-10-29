@@ -179,9 +179,10 @@ export default async function FeedPage({ searchParams }: { searchParams: Promise
     : mappedPool;
   const feedItemTargets: Record<string, number> = { off: 12, low: 16, medium: 20, high: 28 };
   const personalizedAmbientLimits: Record<string, number> = { off: 0, low: 1, medium: 3, high: 6 };
-  const selectedFeedItems = learningSequenceItems !== null
+  const selectedFeedItems = (learningSequenceItems !== null
     ? learningSequenceItems
-    : selectNextFeedItems(densityAwarePool, ctx, feedItemTargets[ambientDensity] ?? 20) as FeedItem[];
+    : selectNextFeedItems(densityAwarePool, ctx, feedItemTargets[ambientDensity] ?? 20) as FeedItem[])
+    .filter((item) => !excludedIds.has(item.id));
   // Explicit mission mappings are mandatory curriculum content, but must be
   // woven into the feed rather than shown as a block before ambient posts.
   const missionContentOrder = new Map((missionContentLinks ?? []).map((link) => [link.content_item_id, link.order_index]));
