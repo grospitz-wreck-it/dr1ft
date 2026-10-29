@@ -74,6 +74,31 @@ export default async function ScenarioDetailPage({ params, searchParams = {} }: 
     supabase.from("learning_designs").select("id,version,status,title,description,primary_learning_model,bloom_target,pedagogical_warnings").eq("scenario_id", scenarioId).order("version", { ascending: false }).limit(1).maybeSingle(),
   ]);
 
+  const [{ data: scenarioAssignments }, { data: activeClasses }, { data: missionProgress }] = await Promise.all([
+    supabase.from("class_scenario_assignments").select("class_id").eq("scenario_id", scenarioId),
+    supabase.from("classes").select("id, school_id, is_active"),
+    supabase.from("user_mission_progress").select("mission_id, user_id, status").eq("status", "completed"),
+  ]);
+  const activeClassById = new Map((activeClasses ?? []).map((item: any) => [item.id, item]));
+  const assignedClasses = new Set(
+    (scenarioAssignments ?? [])
+      .filter((assignment: any) => (activeClassById.get(assignment.class_id) as any)?.is_active !== false)
+      .map((assignment: any) => assignment.class_id)
+  );
+  const schoolsInUse = new Set(
+    Array.from(assignedClasses)
+      .map((classId) => (activeClassById.get(classId) as any)?.school_id)
+      .filter(Boolean)
+  ).size;
+  const classesInUse = assignedClasses.size;
+  const missionIds = new Set((missions ?? []).map((mission: any) => mission.id));
+  const learnersReached = new Set(
+    (missionProgress ?? [])
+      .filter((item: any) => missionIds.has(item.mission_id))
+      .map((item: any) => item.user_id)
+      .filter(Boolean)
+  ).size;
+
   const learningDesignId = latestLearningDesign?.id ?? null;
   const [{ data: learningSteps }, { data: frameworkMappings }, { data: learningObjectives }] = learningDesignId
     ? await Promise.all([
