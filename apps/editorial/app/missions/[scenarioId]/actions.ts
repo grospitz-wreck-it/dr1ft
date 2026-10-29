@@ -17,6 +17,7 @@ export async function createMission(scenarioId: string, formData: FormData) {
 
   const title = String(formData.get("title") ?? "").trim();
   const description = String(formData.get("description") ?? "").trim();
+  const thumbnailUrl = String(formData.get("thumbnailUrl") ?? "").trim();
   const event = String(formData.get("triggerEvent") ?? "PostViewed");
   const count = Number(formData.get("triggerCount") ?? 1);
   const techniqueFilterRaw = String(formData.get("techniqueFilter") ?? "");
@@ -36,6 +37,7 @@ export async function createMission(scenarioId: string, formData: FormData) {
     slug: slugify(title) + "-" + Date.now().toString(36),
     title,
     description,
+    thumbnail_url: thumbnailUrl || null,
     trigger_condition: triggerCondition,
     target_competencies: targetCompetencies,
     reflection_content_id: reflectionContentId,
@@ -152,5 +154,26 @@ export async function swapArcSteps(
     .eq("id", stepB.id);
 
   if (e1 || e2) throw new Error(e1?.message ?? e2?.message);
+  revalidatePath(`/missions/${scenarioId}`);
+}
+
+export async function saveMissionThumbnail(missionId: string, scenarioId: string, formData: FormData) {
+  const supabase = supabaseServerClient();
+  const thumbnailUrl = String(formData.get("thumbnailUrl") ?? "").trim();
+  if (thumbnailUrl) {
+    let parsed: URL;
+    try { parsed = new URL(thumbnailUrl); } catch { throw new Error("Bitte eine gültige Bild-URL eingeben."); }
+    if (parsed.protocol !== "https:" && parsed.protocol !== "http:") {
+      throw new Error("Die Bild-URL muss mit https:// oder http:// beginnen.");
+    }
+  }
+
+  const { error } = await supabase
+    .from("missions")
+    .update({ thumbnail_url: thumbnailUrl || null })
+    .eq("id", missionId)
+    .eq("scenario_id", scenarioId);
+
+  if (error) throw new Error(error.message);
   revalidatePath(`/missions/${scenarioId}`);
 }

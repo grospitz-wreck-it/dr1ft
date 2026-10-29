@@ -4,6 +4,7 @@ import { supabaseServerClient } from "../../../lib/supabaseServerClient";
 import {
   createMission,
   toggleMissionLive,
+  saveMissionThumbnail,
   createArc,
   toggleArcLive,
   addArcStep,
@@ -56,37 +57,30 @@ export default async function MissionsAndArcsPage({ params }: Props) {
     : { data: [] };
 
   return (
-    <div className="px-6 py-5 max-w-3xl space-y-8">
+    <div className="mx-auto max-w-6xl space-y-8 px-4 py-6 md:px-8">
       <h1 className="text-lg font-semibold text-slate-900">{scenario?.title} — Missionen &amp; Arcs</h1>
 
       {/* ---------- MISSIONEN ---------- */}
       <section>
         <h2 className="text-sm font-medium text-slate-500 uppercase text-xs2 mb-3">Missionen</h2>
-        <ul className="space-y-2 mb-6">
+        <ul className="mb-6 grid gap-4">
           {missions?.map((m) => (
-            <li key={m.id} className="bg-panel border border-border rounded-lg p-3">
-              <div className="flex justify-between items-start">
-                <div>
-                  <p className="font-medium text-sm text-slate-900">{m.title}</p>
-                  <p className="text-xs2 text-slate-400">
-                    Trigger: {EVENT_LABELS[m.trigger_condition?.event] ?? m.trigger_condition?.event}{" "}
-                    × {m.trigger_condition?.count ?? 1}
-                    {m.trigger_condition?.technique_filter?.length
-                      ? ` (nur: ${m.trigger_condition.technique_filter.join(", ")})`
-                      : ""}
-                  </p>
+            <li key={m.id} className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm transition hover:shadow-md">
+              <div className="grid gap-0 md:grid-cols-[180px_minmax(0,1fr)]">
+                <div className="relative min-h-32 overflow-hidden bg-gradient-to-br from-violet-700 via-indigo-600 to-cyan-400">
+                  {m.thumbnail_url ? <img src={m.thumbnail_url} alt={`Thumbnail: ${m.title}`} className="absolute inset-0 h-full w-full object-cover" /> : <div className="flex h-full min-h-32 flex-col items-center justify-center text-white"><span className="text-4xl">✦</span><span className="mt-2 text-[9px] font-bold tracking-[.25em]">DR1FT / MISSION</span></div>}
+                  <span className={`absolute left-3 top-3 rounded-full px-2.5 py-1 text-[10px] font-bold ${m.status === "live" ? "bg-emerald-100 text-emerald-700" : "bg-white/90 text-slate-600"}`}>{m.status === "live" ? "LIVE" : "ENTWURF"}</span>
                 </div>
-                <form>
-                  <button
-                    formAction={async () => {
-                      "use server";
-                      await toggleMissionLive(m.id, scenarioId, m.status !== "live");
-                    }}
-                    className="text-xs border border-border rounded-md px-2 py-1 hover:bg-canvas"
-                  >
-                    {m.status === "live" ? "live → deaktivieren" : "Entwurf → live schalten"}
-                  </button>
-                </form>
+                <div className="min-w-0 p-4 md:p-5">
+                  <div className="flex flex-col justify-between gap-3 sm:flex-row sm:items-start">
+                    <div className="min-w-0"><p className="font-semibold text-slate-950">{m.title}</p><p className="mt-1 text-xs leading-5 text-slate-500">{m.description || "Noch keine Beschreibung."}</p><p className="mt-2 text-xs text-slate-400">Trigger: {EVENT_LABELS[m.trigger_condition?.event] ?? m.trigger_condition?.event} × {m.trigger_condition?.count ?? 1}{m.trigger_condition?.technique_filter?.length ? ` · ${m.trigger_condition.technique_filter.join(", ")}` : ""}</p></div>
+                    <form className="shrink-0"><button formAction={async () => { "use server"; await toggleMissionLive(m.id, scenarioId, m.status !== "live"); }} className={`rounded-xl px-3 py-2 text-xs font-semibold ${m.status === "live" ? "border border-slate-200 bg-white text-slate-600" : "bg-gradient-to-r from-violet-600 to-indigo-600 text-white shadow-md shadow-violet-500/15"}`}>{m.status === "live" ? "Live deaktivieren" : "Live schalten"}</button></form>
+                  </div>
+                  <form action={saveMissionThumbnail.bind(null, m.id, scenarioId)} className="mt-4 flex flex-col gap-2 border-t border-slate-100 pt-3 sm:flex-row">
+                    <label className="min-w-0 flex-1"><span className="mb-1 block text-[10px] font-bold uppercase tracking-[.14em] text-slate-400">Mission-Thumbnail (URL)</span><input type="url" name="thumbnailUrl" defaultValue={m.thumbnail_url ?? ""} placeholder="https://…/mission-cover.webp" className="w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-xs" /></label>
+                    <button type="submit" className="self-end rounded-xl border border-violet-200 bg-violet-50 px-3 py-2 text-xs font-semibold text-violet-700 hover:bg-violet-100">Thumbnail speichern</button>
+                  </form>
+                </div>
               </div>
             </li>
           ))}
@@ -96,9 +90,10 @@ export default async function MissionsAndArcsPage({ params }: Props) {
           action={createMission.bind(null, scenarioId)}
           className="bg-panel border border-border rounded-lg p-4 space-y-3"
         >
-          <h3 className="font-medium text-sm text-slate-900">Neue Mission</h3>
+          <h3 className="font-semibold text-lg text-slate-950">Neue Mission</h3><p className="text-sm text-slate-500">Mission erstellen und ein Titelbild für die Kartenansicht hinterlegen.</p>
           <input name="title" placeholder="Titel" required className="border border-border rounded-md px-3 py-2 w-full text-sm" />
           <textarea name="description" placeholder="Beschreibung" className="border border-border rounded-md px-3 py-2 w-full text-sm" />
+          <label className="block"><span className="mb-1 block text-xs font-semibold text-slate-500">Mission-Thumbnail URL (optional)</span><input type="url" name="thumbnailUrl" placeholder="https://…/mission-cover.webp" className="border border-border rounded-xl px-3 py-2 w-full text-sm" /></label>
 
           <div className="flex gap-3">
             <select name="triggerEvent" className="border border-border rounded-md px-3 py-2 text-sm">
