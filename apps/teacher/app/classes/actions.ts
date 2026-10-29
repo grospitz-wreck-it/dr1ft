@@ -122,6 +122,50 @@ export async function updateScenarioPacing(
 }
 
 
+export async function updateScenarioSchedule(
+  classId: string,
+  scenarioId: string,
+  scheduledStartAt: string | null,
+  scheduledEndAt: string | null,
+  showReportsAtEnd: boolean
+) {
+  const supabase = supabaseServerClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) throw new Error("Nicht authentifiziert");
+
+  const { data: membership, error: membershipError } = await supabase
+    .from("class_instance_memberships")
+    .select("id,role")
+    .eq("class_instance_id", classId)
+    .eq("user_id", user.id)
+    .is("left_at", null)
+    .maybeSingle();
+
+  if (membershipError || !membership || !["teacher", "school_admin", "school_lead"].includes(membership.role)) {
+    throw new Error("Keine Berechtigung, den Zeitplan dieser Klasse zu ändern");
+  }
+
+  const start = scheduledStartAt ? new Date(scheduledStartAt) : null;
+  const end = scheduledEndAt ? new Date(scheduledEndAt) : null;
+  if (start && Number.isNaN(start.getTime())) throw new Error("Ungültiger Startzeitpunkt");
+  if (end && Number.isNaN(end.getTime())) throw new Error("Ungültiger Endzeitpunkt");
+  if (start && end && end <= start) throw new Error("Das Ende muss nach dem Start liegen");
+  if (showReportsAtEnd && !end) throw new Error("Für die automatische Reporting-Freigabe ist eine Endzeit erforderlich");
+
+  const { error } = await supabase
+    .from("class_instance_scenario_assignments")
+    .update({
+      scheduled_start_at: start?.toISOString() ?? null,
+      scheduled_end_at: end?.toISOString() ?? null,
+      show_reports_at_end: showReportsAtEnd,
+    })
+    .eq("class_instance_id", classId)
+    .eq("scenario_id", scenarioId);
+
+  if (error) throw new Error(error.message);
+  revalidatePath(`/classes/${classId}`);
+}
+
 export async function setClassActive(classId: string, isActive: boolean) {
   const supabase = supabaseServerClient();
   const { data: { user } } = await supabase.auth.getUser();

@@ -69,7 +69,7 @@ export default async function ClassDetailPage({
 
     supabase
       .from("class_instance_scenario_assignments")
-      .select("scenario_id,pacing_mode,scenarios(title)")
+      .select("scenario_id,pacing_mode,scheduled_start_at,scheduled_end_at,show_reports_at_end,scenarios(title)")
       .eq("class_instance_id", classId),
 
     instance.school_id
@@ -120,6 +120,7 @@ export default async function ClassDetailPage({
     }));
 
   const activeAssignment = (assignments ?? [])[0] as any;
+  const reportingUnlocked = !activeAssignment?.show_reports_at_end || Boolean(activeAssignment?.scheduled_end_at && new Date(activeAssignment.scheduled_end_at).getTime() <= Date.now());
 
   const { data: session } = await supabase.auth.getSession();
 
@@ -364,6 +365,9 @@ export default async function ClassDetailPage({
                 }
                 moduleStatus={activeAssignment?.scenario_id === scenario.id ? activeModuleStatus : "Nicht zugewiesen"}
                 moduleReport={activeAssignment?.scenario_id === scenario.id ? activeModuleReport : undefined}
+                scheduledStartAt={activeAssignment?.scenario_id === scenario.id ? activeAssignment.scheduled_start_at : null}
+                scheduledEndAt={activeAssignment?.scenario_id === scenario.id ? activeAssignment.scheduled_end_at : null}
+                showReportsAtEnd={activeAssignment?.scenario_id === scenario.id ? activeAssignment.show_reports_at_end : false}
               />
             ))}
           </ul>
@@ -373,6 +377,7 @@ export default async function ClassDetailPage({
           <StudentRoster
             classId={classId}
             initialStudents={students}
+            reportingUnlocked={reportingUnlocked}
           />
         </div>
 
