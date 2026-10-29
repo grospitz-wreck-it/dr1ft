@@ -47,8 +47,9 @@ export function AmbientNpcAssignment({
     const tokens = (value: unknown) => normalize(value).split(" ").filter((token) => token.length >= 4);
     const postRaw = [postText, postTopic, ...interestLabels].join(" ");
     const postNorm = normalize(postRaw);
-    const postTokens = new Set(tokens(postRaw));
-    const signals = [...new Set([...interestKeys, ...interestLabels].map(normalize).filter((value) => value.length > 2))];
+    const postTokens = tokens(postRaw).filter((token, index, all) => all.indexOf(token) === index);
+    const signalCandidates = [...interestKeys, ...interestLabels].map(normalize).filter((value) => value.length > 2);
+    const signals = signalCandidates.filter((value, index, all) => all.indexOf(value) === index);
 
     return creators
       .filter((creator) => creator.is_active !== false)
@@ -67,10 +68,10 @@ export function AmbientNpcAssignment({
           creator.npc_role,
         ].filter(Boolean).join(" ");
         const profileNorm = normalize(profileTextRaw);
-        const profileTokens = new Set(tokens(profileTextRaw));
+        const profileTokens = tokens(profileTextRaw).filter((token, index, all) => all.indexOf(token) === index);
         const exactKeyMatches = signals.filter((signal) => profileKeys.includes(signal)).length;
         const tagMatches = signals.filter((signal) => tags.includes(signal)).length;
-        const postTagOverlap = [...postTokens].filter((token) => profileTokens.has(token)).length;
+        const postTagOverlap = postTokens.filter((token) => profileTokens.includes(token)).length;
         const textMatches = signals.filter((signal) => profileNorm.includes(signal)).length;
 
         const identity = normalize([
@@ -88,7 +89,7 @@ export function AmbientNpcAssignment({
         const isRestricted = entityLike || isPoliticalOrCampaign;
         const identityTokens = tokens([creator.display_name, creator.npc_category, creator.npc_role, persona.organization, persona.brand, persona.party]);
         const identityMatch = identityTokens.some((word) => postNorm.includes(word));
-        const topicMatch = tags.some((tag) => tag.length > 3 && postNorm.includes(tag)) || [...postTokens].some((token) => tags.some((tag) => tokens(tag).includes(token))) || signals.some((signal) => signal.length > 3 && postNorm.includes(signal));
+        const topicMatch = tags.some((tag) => tag.length > 3 && postNorm.includes(tag)) || postTokens.some((token) => tags.some((tag) => tokens(tag).includes(token))) || signals.some((signal) => signal.length > 3 && postNorm.includes(signal));
         // Branded/institutional/political accounts only qualify when the post is specifically about their identity or a relevant topic.
         const allowed = !isRestricted || identityMatch || topicMatch;
 
