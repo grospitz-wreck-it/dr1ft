@@ -21,6 +21,7 @@ export function ScenarioCoverEditor({
   const [previewUrl, setPreviewUrl] = useState(coverImageUrl ?? "");
   const [savedMessage, setSavedMessage] = useState("");
   const [lightboxOpen, setLightboxOpen] = useState(false);
+  const [visualFeedback, setVisualFeedback] = useState("");
 
   function generate() {
     setError("");
@@ -28,7 +29,7 @@ export function ScenarioCoverEditor({
     startTransition(async () => {
       try {
         setPreviewUrl("");
-        const result = await generateScenarioCover(scenarioId);
+        const result = await generateScenarioCover(scenarioId, visualFeedback);
         setPreviewUrl(result.coverImageUrl);
         router.refresh();
       } catch (err) {
@@ -86,6 +87,19 @@ export function ScenarioCoverEditor({
             </button>
             {previewUrl && <span className="inline-flex items-center gap-1.5 rounded-full bg-emerald-50 px-3 py-1.5 text-xs font-semibold text-emerald-700">Bild hinterlegt</span>}
           </div>
+
+          <label className="block">
+            <span className="mb-1.5 block text-xs font-semibold text-slate-600">Bild konkretisieren (optional)</span>
+            <textarea
+              value={visualFeedback}
+              onChange={(event) => setVisualFeedback(event.target.value)}
+              maxLength={1200}
+              rows={2}
+              placeholder="z. B. weniger abstrakt, zwei Jugendliche im Vordergrund, Konflikt in einem Klassenchat visuell zeigen …"
+              className="w-full resize-y rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm leading-5 outline-none transition placeholder:text-slate-400 focus:border-violet-300 focus:ring-2 focus:ring-violet-100"
+            />
+            <span className="mt-1 block text-right text-[10px] text-slate-400">{visualFeedback.length}/1200 Zeichen · wird direkt an FLUX übergeben</span>
+          </label>
 
           <form onSubmit={saveUrl} className="flex min-w-0 flex-col gap-2 sm:flex-row">
             <label className="relative min-w-0 flex-1">
