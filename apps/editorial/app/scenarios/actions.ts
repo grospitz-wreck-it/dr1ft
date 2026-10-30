@@ -998,7 +998,12 @@ export async function updateArcDraft(arcId: string, scenarioId: string, formData
 
 
 /** Generiert ein Szenario-Cover mit FLUX auf Basis des vorhandenen Briefings. */
-export async function generateScenarioCover(scenarioId: string, visualFeedback = "") {
+export async function generateScenarioCover(
+  scenarioId: string,
+  visualFeedback = "",
+  visualStyle = "editorial",
+  primaryColor = "#7657E8",
+) {
   const supabase = supabaseServerClient();
   const { data: scenario, error } = await supabase
     .from("scenarios")
@@ -1008,16 +1013,27 @@ export async function generateScenarioCover(scenarioId: string, visualFeedback =
   if (error || !scenario) throw new Error(error?.message ?? "Szenario nicht gefunden.");
 
   const feedback = visualFeedback.trim().slice(0, 1200);
+  const styleDirections: Record<string, string> = {
+    editorial: "Contemporary youth editorial illustration: sophisticated, playful, bold shapes, tactile subtle grain, polished lighting and expressive visual storytelling.",
+    comic: "Modern graphic-novel illustration: confident ink contours, dynamic framing, expressive characters, energetic shapes and restrained halftone texture.",
+    "3d": "Stylized 3D illustration: rounded sculptural forms, tactile materials, soft cinematic lighting and appealing dimensional characters.",
+    watercolor: "Contemporary watercolor illustration: layered translucent pigments, visible paper texture, organic edges and carefully controlled color washes.",
+    pixel: "Refined pixel-art illustration: crisp pixel clusters, deliberate limited-palette shading, readable silhouettes and detailed retro-game composition.",
+  };
+  const selectedStyle = styleDirections[visualStyle] ? visualStyle : "editorial";
+  const color = /^#[0-9a-fA-F]{6}$/.test(primaryColor) ? primaryColor : "#7657E8";
   const prompt = [
-    "Create a premium, visually distinctive 16:9 editorial illustration for a contemporary German school media-literacy learning scenario.",
-    "SCENARIO TITLE (context only, never render as text): " + scenario.title,
+    "Create ONLY a text-free illustration: generate artwork with absolutely no text or text-like elements, and do not add any title, lettering, caption, typography, logo, label, watermark, interface, or written layer.",
+    "Create a premium, visually distinctive 16:9 illustration for a contemporary German school media-literacy learning scenario.",
+    "SCENARIO TITLE (context only; never render it): " + scenario.title,
     "SCENARIO BRIEFING: " + String(scenario.description ?? "").slice(0, 2200),
     "TARGET AGE GROUP: " + String(scenario.age_band ?? scenario.age_rating ?? "12+"),
-    "VISUAL DIRECTION: Translate the central conflict, emotion, or learning theme into one immediately understandable visual metaphor. Show a specific scene with a clear focal subject, expressive body language, cinematic composition, layered depth, and memorable visual storytelling. Avoid generic stock imagery.",
-    "ART DIRECTION: Contemporary youth editorial illustration, playful but sophisticated, bold shapes, tactile subtle grain, polished lighting, rich violet/indigo/electric-blue palette with restrained cyan highlights. Strong contrast and legibility at small thumbnail size.",
-    "ABSOLUTE TEXT BAN: The image must contain no text whatsoever: no letters, numbers, words, typography, logos, labels, captions, signs, watermarks, UI, speech bubbles, pseudo-writing, or text-like marks. Do not depict readable screens, papers, books, posters, signs, or branded clothing. Use abstract shapes instead of writing.",
-    "Composition: wide landscape 16:9, edge-to-edge artwork, no frame, no title card, no border, no real-person likeness.",
-    feedback ? "ADDITIONAL ART DIRECTION FROM THE EDITOR: " + feedback : ""
+    "VISUAL STORYTELLING: Depict one specific, immediately understandable scene that communicates the central conflict or learning theme. Prefer 1–3 age-appropriate characters in a relevant environment, with visible interaction, expressive body language and a clear emotional moment. Use one focal subject, cinematic composition and layered depth; avoid generic stock imagery and unrelated symbol collages.",
+    "ILLUSTRATION STYLE: " + styleDirections[selectedStyle],
+    "PRIMARY COLOR: " + color + ". Make this the dominant accent color in the illustration, supported by harmonious secondary colors. Do not turn the color into a graphic overlay or text element.",
+    "TEXT-FREE IMAGE RULE: No letters, numbers, words, typography, logos, labels, captions, signs, watermarks, UI, speech bubbles, pseudo-writing or text-like marks anywhere. Do not show readable screens, papers, books, posters, signs or branded clothing. If a phone or screen is relevant, show abstract shapes only.",
+    "COMPOSITION: Wide landscape 16:9, edge-to-edge artwork, no frame, no title card, no border, no real-person likeness.",
+    feedback ? "ADDITIONAL ART DIRECTION FROM THE EDITOR (must remain text-free): " + feedback : "",
   ].filter(Boolean).join("\n\n");
 
   // Clear the previous cover for every age variant before starting a fresh
