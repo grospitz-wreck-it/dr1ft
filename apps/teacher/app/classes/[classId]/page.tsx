@@ -68,8 +68,9 @@ export default async function ClassDetailPage({
 
     supabase
       .from("class_instance_scenario_assignments")
-      .select("scenario_id,pacing_mode,scheduled_start_at,scheduled_end_at,show_reports_at_end,scenarios(title)")
-      .eq("class_instance_id", classId),
+      .select("scenario_id,pacing_mode,scheduled_start_at,scheduled_end_at,show_reports_at_end,archived_at,scenarios(title)")
+      .eq("class_instance_id", classId)
+      .is("archived_at", null),
 
     instance.school_id
       ? supabase
@@ -118,7 +119,8 @@ export default async function ClassDetailPage({
       avatar_seed: row.user_profiles?.avatar_seed ?? null,
     }));
 
-  const activeAssignment = (assignments ?? [])[0] as any;
+  const activeAssignments = (assignments ?? []) as any[];
+  const activeAssignment = activeAssignments[0] ?? null;
   const reportingUnlocked = !activeAssignment?.show_reports_at_end || Boolean(activeAssignment?.scheduled_end_at && new Date(activeAssignment.scheduled_end_at).getTime() <= Date.now());
 
   const { data: session } = await supabase.auth.getSession();
@@ -306,13 +308,13 @@ export default async function ClassDetailPage({
             cover_image_url: scenario.cover_image_url ?? null,
             age_rating: scenario.age_rating ?? "Alle Altersgruppen",
           }))}
-          assignment={activeAssignment ? {
-            scenario_id: activeAssignment.scenario_id,
-            scheduled_start_at: activeAssignment.scheduled_start_at,
-            scheduled_end_at: activeAssignment.scheduled_end_at,
-            show_reports_at_end: Boolean(activeAssignment.show_reports_at_end),
-            title: activeAssignment.scenarios?.title ?? null,
-          } : null}
+          assignments={activeAssignments.map((item: any) => ({
+            scenario_id: item.scenario_id,
+            scheduled_start_at: item.scheduled_start_at,
+            scheduled_end_at: item.scheduled_end_at,
+            show_reports_at_end: Boolean(item.show_reports_at_end),
+            title: item.scenarios?.title ?? null,
+          }))}
           moduleStatus={activeModuleStatus as "Abgeschlossen" | "In Bearbeitung" | "Noch nicht begonnen"}
           moduleReport={activeModuleReport}
         />
