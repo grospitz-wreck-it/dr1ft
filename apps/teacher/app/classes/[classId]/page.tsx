@@ -310,6 +310,7 @@ export default async function ClassDetailPage({
           }))}
           assignments={activeAssignments.map((item: any) => ({
             scenario_id: item.scenario_id,
+            is_active: item.is_active !== false,
             scheduled_start_at: item.scheduled_start_at,
             scheduled_end_at: item.scheduled_end_at,
             show_reports_at_end: Boolean(item.show_reports_at_end),
