@@ -4,7 +4,6 @@ import { useState, useTransition } from "react";
 import { CalendarDays, GraduationCap, Pencil, ImagePlus, X } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { updateClassDetails } from "../actions";
-import { ClassStatusSelect } from "./ClassStatusSelect";
 import ClassImageEditor from "./ClassImageEditor";
 
 type Props = {
@@ -22,7 +21,6 @@ type Props = {
   classImagePositionY: number;
   classImageZoom: number;
   canEditClassImage: boolean;
-  status: "active" | "paused" | "ended";
 };
 
 export default function ClassImageWorkspace({
@@ -40,7 +38,6 @@ export default function ClassImageWorkspace({
   classImagePositionY,
   classImageZoom,
   canEditClassImage,
-  status,
 }: Props) {
   const [editorOpen, setEditorOpen] = useState(false);
   const [imageEditorOpen, setImageEditorOpen] = useState(false);
@@ -72,44 +69,29 @@ export default function ClassImageWorkspace({
           <div className="absolute inset-0 bg-[radial-gradient(circle_at_78%_20%,rgba(0,220,255,.3),transparent_28%),radial-gradient(circle_at_20%_80%,rgba(124,58,237,.55),transparent_42%),linear-gradient(120deg,#090B2C,#25206B_55%,#101A50)]" />
         )}
 
-        <div className="absolute inset-0 bg-[linear-gradient(90deg,rgba(7,9,39,.88)_0%,rgba(14,12,55,.62)_36%,rgba(13,17,55,.18)_100%)]" />
-        <div className="absolute inset-0 bg-[linear-gradient(0deg,rgba(5,7,28,.78)_0%,transparent_68%)]" />
-        <div className="pointer-events-none absolute -right-10 -top-24 h-72 w-72 rounded-full border border-cyan-300/20" />
-        <div className="pointer-events-none absolute -right-2 -top-16 h-56 w-56 rounded-full border border-violet-300/20" />
-        <div className="pointer-events-none absolute right-[28%] top-8 h-2 w-32 rotate-[-28deg] rounded-full bg-cyan-300/50 blur-[1px]" />
+        <img src="/classes_layer.webp" alt="" aria-hidden="true" className="pointer-events-none absolute inset-0 h-full w-full object-cover" />
+        <div className="absolute inset-0 bg-slate-950/20" />
 
         <div className="relative flex min-h-[270px] flex-col justify-between p-6 sm:min-h-[300px] sm:p-9">
           <div className="flex items-start justify-between gap-4">
             <div>
               <p className="text-[10px] font-bold uppercase tracking-[0.28em] text-white/65">DR1FT <span className="text-cyan-300">✦</span> KLASSENRAUM</p>
-              <p className="mt-2 text-xs font-medium text-white/45">GEMEINSAM MEDIENKOMPETENZ STÄRKEN</p>
             </div>
-            <div className="flex items-center gap-2">
-              <ClassStatusSelect classId={classId} status={status} />
-              {canEditClassImage && (
-                <button type="button" onClick={() => { setEditorOpen(true); setImageEditorOpen(false); setProfileMessage(""); }} aria-label="Klasse bearbeiten" title="Klasse bearbeiten" className="inline-flex h-10 w-10 items-center justify-center rounded-xl border border-white/25 bg-slate-950/35 text-white shadow-lg backdrop-blur-md transition hover:border-cyan-200/70 hover:bg-slate-900/70 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-300">
-                  <Pencil className="h-4 w-4" />
-                </button>
-              )}
-            </div>
+            {canEditClassImage && (
+              <button type="button" onClick={() => { setEditorOpen(true); setImageEditorOpen(false); setProfileMessage(""); }} aria-label="Klasse bearbeiten" title="Klasse bearbeiten" className="inline-flex h-11 w-11 items-center justify-center rounded-2xl border border-white/35 bg-white/15 text-white shadow-[0_8px_30px_rgba(0,0,0,.18)] backdrop-blur-xl transition hover:border-white/60 hover:bg-white/25 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-300">
+                <Pencil className="h-4 w-4" />
+              </button>
+            )}
           </div>
 
           <div className="flex flex-col gap-5 sm:flex-row sm:items-end sm:justify-between">
             <div className="relative max-w-xl">
               <h1 className="relative z-10 text-6xl font-black leading-[.9] tracking-[-0.06em] text-white drop-shadow-[0_5px_20px_rgba(0,0,0,.45)] sm:text-7xl">{className}</h1>
-              <svg aria-hidden="true" viewBox="0 0 330 42" className="pointer-events-none absolute -bottom-5 -left-1 h-9 w-[min(330px,95%)]" fill="none">
-                <path d="M8 25 C72 8 129 12 185 7 C231 3 276 10 319 2" stroke="#743BFF" strokeWidth="17" strokeLinecap="round" opacity=".78" />
-                <path d="M18 32 C91 18 153 25 215 14" stroke="#20D8F5" strokeWidth="5" strokeLinecap="round" opacity=".72" />
-              </svg>
               <div className="mt-8 flex flex-wrap items-center gap-x-5 gap-y-2 text-xs font-medium text-white/85 sm:text-sm">
                 <span className="inline-flex items-center gap-2"><GraduationCap className="h-4 w-4 text-cyan-200" />Jahrgang {gradeLevel ?? "—"}</span>
                 <span className="hidden h-4 w-px bg-white/25 sm:block" />
                 <span className="inline-flex items-center gap-2"><CalendarDays className="h-4 w-4 text-cyan-200" />Schuljahr {schoolYear}</span>
               </div>
-            </div>
-            <div className="rounded-2xl border border-white/20 bg-slate-950/30 px-4 py-3 text-xs text-white/75 shadow-lg backdrop-blur-md sm:max-w-[230px]">
-              <span className="mb-1 block text-[10px] font-bold uppercase tracking-[0.18em] text-cyan-200">Dein Klassenraum</span>
-              Ein gemeinsamer Ort zum Entdecken, Diskutieren und Lernen.
             </div>
           </div>
         </div>
