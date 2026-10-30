@@ -91,6 +91,7 @@ export default function TeacherAccountPage() {
       setName(cleanName);
       setNameDraft(cleanName);
     }
+    window.dispatchEvent(new Event("drift:profile-updated"));
     setSavingProfile(false);
   }
 
