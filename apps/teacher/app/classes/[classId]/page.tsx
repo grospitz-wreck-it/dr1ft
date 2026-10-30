@@ -64,7 +64,7 @@ export default async function ClassDetailPage({
 
     supabase
       .from("scenarios")
-      .select("id,title,age_rating")
+      .select("id,title,description,cover_image_url,age_rating")
       .order("title"),
 
     supabase
@@ -390,13 +390,15 @@ export default async function ClassDetailPage({
             </p>
           </div>
 
-          <ul className="divide-y divide-border">
+          <div className="grid gap-4 bg-slate-50/60 p-4 sm:grid-cols-2 xl:grid-cols-3">
             {(scenarios ?? []).map((scenario: any) => (
               <ScenarioToggle
                 key={scenario.id}
                 classId={classId}
                 scenarioId={scenario.id}
                 title={scenario.title}
+                description={scenario.description ?? ""}
+                coverImageUrl={scenario.cover_image_url ?? null}
                 ageRating={scenario.age_rating}
                 initiallyAssigned={
                   activeAssignment?.scenario_id === scenario.id
@@ -411,7 +413,7 @@ export default async function ClassDetailPage({
                 showReportsAtEnd={activeAssignment?.scenario_id === scenario.id ? activeAssignment.show_reports_at_end : false}
               />
             ))}
-          </ul>
+          </div>
         </section>
 
         <div className="mt-6">
