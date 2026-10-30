@@ -436,13 +436,13 @@ export function PostCard({ item, userId, classInstanceId, initiallyLiked, onView
             <button type="button" onClick={() => setLearningFeedback(null)} aria-label="Rückmeldung schließen" className="rounded-lg p-1 text-violet-700 hover:bg-violet-100"><X className="h-4 w-4" /></button>
           </div>
         </section>}
-        {learningTask.learnerAction?.trim() && <section className="mt-4 rounded-2xl border border-violet-200 bg-gradient-to-br from-violet-50 to-fuchsia-50/60 p-4">
+        {learningTask.learnerAction?.trim() && <section className="mt-4 min-w-0 rounded-2xl border border-violet-200 bg-gradient-to-br from-violet-50 to-fuchsia-50/60 p-4 pb-6 text-left">
           <div className="flex items-start gap-2.5">
             <span className="grid h-8 w-8 shrink-0 place-items-center rounded-xl bg-violet-600 text-white"><Sparkles className="h-4 w-4" /></span>
-            <div className="min-w-0 flex-1">
-              <p className="text-[10px] font-bold uppercase tracking-[0.16em] text-violet-700">Deine Aufgabe</p>
-              {learningTask.purpose?.trim() && <p className="mt-1 text-xs leading-relaxed text-violet-900/75">{learningTask.purpose}</p>}
-              <p className="mt-2 text-sm font-semibold leading-relaxed text-slate-900">{learningTask.learnerAction}</p>
+            <div className="min-w-0 flex-1 text-left">
+              <p className="text-left text-[10px] font-bold uppercase tracking-[0.16em] text-violet-700">Deine Aufgabe</p>
+              {learningTask.purpose?.trim() && <p className="mt-1 whitespace-pre-wrap break-words [overflow-wrap:anywhere] text-left text-xs leading-relaxed text-violet-900/75">{learningTask.purpose}</p>}
+              <p className="mt-2 whitespace-pre-wrap break-words [overflow-wrap:anywhere] text-left text-sm font-semibold leading-relaxed text-slate-900">{learningTask.learnerAction}</p>
               {!taskResponseSaved ? <>
                 <label htmlFor={`learning-task-response-${item.id}`} className="mt-3 block text-xs font-semibold text-slate-700">Deine Antwort</label>
                 <textarea id={`learning-task-response-${item.id}`} value={taskResponse} onChange={event => setTaskResponse(event.target.value)} rows={3} maxLength={3000} placeholder="Schreibe deine Überlegung auf …" className="mt-1.5 w-full rounded-xl border border-violet-200 bg-white px-3 py-2.5 text-sm text-slate-900 outline-none focus:border-violet-400 focus:ring-4 focus:ring-violet-100" />
