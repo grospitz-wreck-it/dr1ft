@@ -17,7 +17,8 @@ export function ScenarioCoverEditor({
   const router = useRouter();
   const [pending, startTransition] = useTransition();
   const [error, setError] = useState("");
-  const [url, setUrl] = useState(coverImageUrl ?? "");
+  const [url, setUrl] = useState(previewUrl ?? "");
+  const [previewUrl, setPreviewUrl] = useState(previewUrl ?? "");
   const [savedMessage, setSavedMessage] = useState("");
   const [lightboxOpen, setLightboxOpen] = useState(false);
 
@@ -26,9 +27,12 @@ export function ScenarioCoverEditor({
     setSavedMessage("");
     startTransition(async () => {
       try {
-        await generateScenarioCover(scenarioId);
+        setPreviewUrl("");
+        const result = await generateScenarioCover(scenarioId);
+        setPreviewUrl(result.coverImageUrl);
         router.refresh();
       } catch (err) {
+        setPreviewUrl("");
         setError(err instanceof Error ? err.message : "Teaserbild konnte nicht erstellt werden.");
       }
     });
@@ -43,6 +47,7 @@ export function ScenarioCoverEditor({
     startTransition(async () => {
       try {
         await saveScenarioCoverUrl(scenarioId, formData);
+        setPreviewUrl(url);
         setSavedMessage("Teaserbild gespeichert.");
         router.refresh();
       } catch (err) {
@@ -58,28 +63,28 @@ export function ScenarioCoverEditor({
           <button
             type="button"
             onClick={() => coverImageUrl && setLightboxOpen(true)}
-            disabled={!coverImageUrl}
-            aria-label={coverImageUrl ? `Teaserbild ${title} vergrößern` : "Noch kein Teaserbild vorhanden"}
-            className={`group relative block aspect-video w-full overflow-hidden rounded-xl border border-white bg-gradient-to-br from-violet-700 via-indigo-600 to-cyan-400 text-left shadow-sm ${coverImageUrl ? "cursor-zoom-in" : "cursor-default"}`}
+            disabled={!previewUrl}
+            aria-label={previewUrl ? `Teaserbild ${title} vergrößern` : "Noch kein Teaserbild vorhanden"}
+            className={`group relative block aspect-video w-full overflow-hidden rounded-xl border border-white bg-gradient-to-br from-violet-700 via-indigo-600 to-cyan-400 text-left shadow-sm ${previewUrl ? "cursor-zoom-in" : "cursor-default"}`}
           >
-            {coverImageUrl ? (
-              <img src={coverImageUrl} alt={`Teaserbild: ${title}`} className="absolute inset-0 h-full w-full object-cover transition duration-300 group-hover:scale-[1.02]" />
+            {previewUrl ? (
+              <img src={previewUrl} alt={`Teaserbild: ${title}`} className="absolute inset-0 h-full w-full object-cover transition duration-300 group-hover:scale-[1.02]" />
             ) : (
               <div className="absolute inset-0 flex flex-col items-center justify-center text-white">
                 <ImagePlus className="h-10 w-10 opacity-90" />
                 <span className="mt-2 text-[10px] font-bold tracking-[.2em]">16:9 TEASERBILD</span>
               </div>
             )}
-            {coverImageUrl && <span className="absolute bottom-3 left-3 rounded-lg bg-slate-950/75 px-2.5 py-1.5 text-xs font-semibold text-white">Zum Vergrößern anklicken</span>}
+            {previewUrl && <span className="absolute bottom-3 left-3 rounded-lg bg-slate-950/75 px-2.5 py-1.5 text-xs font-semibold text-white">Zum Vergrößern anklicken</span>}
             {pending && <span className="absolute inset-0 grid place-items-center bg-slate-950/45 text-white"><LoaderCircle className="h-9 w-9 animate-spin" /></span>}
           </button>
 
           <div className="flex flex-wrap items-center gap-2">
             <button type="button" onClick={generate} disabled={pending} className="inline-flex min-h-11 items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-violet-600 via-indigo-600 to-blue-600 px-4 py-2.5 text-sm font-bold text-white shadow-md shadow-violet-500/20 transition hover:-translate-y-0.5 hover:shadow-lg disabled:cursor-wait disabled:opacity-60">
               {pending ? <LoaderCircle className="h-4 w-4 animate-spin" /> : <Sparkles className="h-4 w-4" />}
-              {pending ? "Teaserbild wird erstellt …" : coverImageUrl ? "Teaserbild neu erstellen" : "Teaserbild erstellen"}
+              {pending ? "Teaserbild wird erstellt …" : previewUrl ? "Teaserbild neu erstellen" : "Teaserbild erstellen"}
             </button>
-            {coverImageUrl && <span className="inline-flex items-center gap-1.5 rounded-full bg-emerald-50 px-3 py-1.5 text-xs font-semibold text-emerald-700">Bild hinterlegt</span>}
+            {previewUrl && <span className="inline-flex items-center gap-1.5 rounded-full bg-emerald-50 px-3 py-1.5 text-xs font-semibold text-emerald-700">Bild hinterlegt</span>}
           </div>
 
           <form onSubmit={saveUrl} className="flex min-w-0 flex-col gap-2 sm:flex-row">
@@ -100,7 +105,7 @@ export function ScenarioCoverEditor({
             <X className="h-5 w-5" />
           </button>
           <div onClick={(event) => event.stopPropagation()} className="relative w-full max-w-6xl">
-            <img src={coverImageUrl} alt={`Teaserbild: ${title}`} className="max-h-[85vh] w-full rounded-2xl object-contain shadow-2xl" />
+            <img src={previewUrl} alt={`Teaserbild: ${title}`} className="max-h-[85vh] w-full rounded-2xl object-contain shadow-2xl" />
             <p className="mt-3 text-center text-sm font-medium text-white/80">{title}</p>
           </div>
         </div>
