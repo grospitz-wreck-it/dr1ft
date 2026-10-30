@@ -1,7 +1,7 @@
 import type { ReactNode } from "react";
 import { BookOpen, Users, Building2, CheckCircle2, Sparkles, GraduationCap, School, Flag, Layers3, ArrowUpRight } from "lucide-react";
 import { supabaseServerClient } from "../../lib/supabaseServerClient";
-import { ScenarioCoverEditor } from "./ScenarioCoverEditor";
+import { ScenarioLibrary } from "./ScenarioLibrary";
 
 const AGE_BANDS = [
   ["9_11", "9–11", "Kinder / frühe Lernende"],
@@ -103,6 +103,7 @@ export default async function ScenariosPage() {
 
     return {
       key,
+      createdAt: first.created_at ?? new Date(0).toISOString(),
       title: first.title?.replace(/\s*[–-]\s*(9–11|12–13|14–15|16–17|18\+).*$/i, "") || first.title,
       description: first.description?.split("\n\nLernziele")[0] || "",
       variants,
@@ -175,52 +176,7 @@ export default async function ScenariosPage() {
             <p className="text-xs text-slate-400">Die Einsatz-KPIs basieren auf Klassenzuweisungen und gespeicherten Missionsabschlüssen.</p>
           </div>
 
-          <div className="space-y-3">
-            {families.map((family) => (
-              <article key={family.key} className="overflow-hidden rounded-2xl border border-slate-200/90 bg-white p-4 shadow-[0_3px_18px_rgba(15,23,42,0.03)] transition hover:border-slate-300 hover:shadow-sm sm:p-5">
-                <div className="flex flex-wrap items-start justify-between gap-3">
-                  <div className="min-w-0 flex-1">
-                    <div className="flex flex-wrap items-center gap-2">
-                      <h3 className="text-lg font-bold tracking-tight text-slate-950">{family.title}</h3>
-                      <span className="rounded-full bg-slate-100 px-2.5 py-1 text-[11px] font-medium text-slate-600">{family.activeVariants} aktive Varianten</span>
-                    </div>
-                  </div>
-                </div>
-
-                <div className="mt-4 grid gap-4 lg:grid-cols-[minmax(0,0.95fr)_minmax(0,1.05fr)]">
-                  <div className="min-w-0">
-                    <ScenarioCoverEditor scenarioId={family.variants[0].id} title={family.title} coverImageUrl={family.coverImageUrl} />
-                  </div>
-                  <div className="flex min-w-0 flex-col gap-3">
-                    <a href={`/scenarios/${family.variants[0].id}`} className="group inline-flex min-h-12 w-full items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-violet-600 via-indigo-600 to-blue-600 px-5 py-3 text-sm font-bold text-white shadow-md shadow-violet-500/20 transition hover:-translate-y-0.5 hover:shadow-lg hover:shadow-violet-500/25 focus:outline-none focus:ring-2 focus:ring-violet-400 focus:ring-offset-2">
-                      <Sparkles className="h-4 w-4" /> Bearbeiten <ArrowUpRight className="h-4 w-4 transition-transform group-hover:-translate-y-0.5 group-hover:translate-x-0.5" />
-                    </a>
-                    <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
-                      <MiniKpi icon={<School className="h-4 w-4" />} tint="violet" label="Schulen" value={String(family.schoolsInUse)} />
-                      <MiniKpi icon={<Users className="h-4 w-4" />} tint="blue" label="Aktive Klassen" value={String(family.activeClasses)} />
-                      <MiniKpi icon={<GraduationCap className="h-4 w-4" />} tint="cyan" label="Lernende erreicht" value={String(family.learnersReached)} />
-                      <MiniKpi icon={<Flag className="h-4 w-4" />} tint="amber" label="Missionen" value={String(family.missionCount)} />
-                      <MiniKpi icon={<CheckCircle2 className="h-4 w-4" />} tint="emerald" label="Abschlüsse" value={String(family.completedMissions)} />
-                      <MiniKpi icon={<Layers3 className="h-4 w-4" />} tint="violet" label="Varianten / Inhalte" value={`${family.variants.length} / ${family.contentCount}`} />
-                    </div>
-                    {family.description && (
-                      <section className="rounded-2xl border border-slate-200/80 bg-slate-50/80 p-4">
-                        <p className="text-[11px] font-bold uppercase tracking-[0.14em] text-slate-400">Szenario-Beschreibung</p>
-                        <p className="mt-2 whitespace-pre-line text-sm leading-6 text-slate-600">{family.description}</p>
-                      </section>
-                    )}
-                  </div>
-                </div>
-              </article>
-            ))}
-            {families.length === 0 && (
-              <div className="rounded-2xl border border-dashed border-slate-300 bg-white p-10 text-center">
-                <BookOpen className="mx-auto h-7 w-7 text-slate-300" />
-                <p className="mt-3 text-sm font-medium text-slate-700">Noch kein Szenario vorhanden</p>
-                <p className="mt-1 text-xs text-slate-500">Lege dein erstes Szenario über den Button oben an.</p>
-              </div>
-            )}
-          </div>
+          <ScenarioLibrary families={families} />
         </section>
 
 
