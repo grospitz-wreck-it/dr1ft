@@ -10,7 +10,8 @@ import { ReflectionOverlay } from "../../components/ReflectionOverlay";
 export function FeedClient({ initialItems, userId, classInstanceId, likedContentIds, profile, scenarioIntro, scenarioSummaries = [], scenarioIds = [], scenarioMissionCount = 0, completedScenarioMissionCount = 0 }: {
   initialItems: FeedItem[]; userId: string; classInstanceId: string; likedContentIds: Set<string>;
   profile: { displayName: string; username: string; avatarSeed: string };
-  scenarioIntro: { id: string; title: string; description: string | null } | null;\n  scenarioSummaries?: Array<{ id: string; title: string; description: string | null }>;
+  scenarioIntro: { id: string; title: string; description: string | null } | null;
+  scenarioSummaries?: Array<{ id: string; title: string; description: string | null }>;
   scenarioIds?: string[];
   scenarioMissionCount?: number;
   completedScenarioMissionCount?: number;
