@@ -1,9 +1,7 @@
 import { supabaseServerClient } from "../../../lib/supabaseServerClient";
 import { ScenarioToggle } from "./ScenarioToggle";
 import { StudentRoster } from "./StudentRoster";
-import { updateClassDetails } from "../actions";
 import ClassImageWorkspace from "./ClassImageWorkspace";
-import { ClassStatusSelect } from "./ClassStatusSelect";
 
 export default async function ClassDetailPage({
   params,
@@ -278,100 +276,31 @@ export default async function ClassDetailPage({
           classImagePositionY={instance.class_image_position_y ?? 50}
           classImageZoom={instance.class_image_zoom ?? 1}
           canEditClassImage={canEditClassImage}
+          status={status === "paused" || status === "ended" ? status : "active"}
+          classGradeLevel={instance.grade_level}
+          schoolYear={instance.school_year}
         />
 
-        <section className="mt-6 overflow-hidden rounded-2xl border border-border bg-white">
-          <div className="grid divide-y divide-border sm:grid-cols-2 sm:divide-x sm:divide-y-0 lg:grid-cols-4">
-            <Metric label="Schüler:innen" value={students.length} />
+        <section className="mt-5 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+            <Metric label="Schüler:innen" value={students.length} icon="users" tone="blue" />
             <Metric
               label="Aktives Modul"
               value={activeAssignment?.scenarios?.title ?? "Keines"}
+              icon="target"
+              tone="violet"
             />
             <Metric
               label="Ø Kompetenz"
               value={average === null ? "—" : `${average.toFixed(1)} / 5`}
+              icon="chart"
+              tone="cyan"
             />
             <Metric
               label="Missionen"
               value={total ? `${completed}/${total}` : "—"}
+              icon="check"
+              tone="purple"
             />
-          </div>
-        </section>
-
-        <section className="mt-6 rounded-2xl border border-border bg-white">
-          <div className="border-b border-border px-6 py-5">
-            <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
-              <div>
-                <p className="text-xs font-semibold uppercase tracking-[0.14em] text-accent">
-                  Klassenprofil
-                </p>
-
-                <h2 className="mt-1.5 text-lg font-semibold text-slate-950">
-                  Klasse bearbeiten
-                </h2>
-
-                <p className="mt-1 text-sm text-slate-500">
-                  Name, Jahrgang und Schuljahr können jederzeit angepasst werden.
-                </p>
-              </div>
-
-              <div className="shrink-0">
-                <p className="mb-1.5 text-xs font-medium text-slate-400">
-                  Status
-                </p>
-                <ClassStatusSelect
-                  classId={classId}
-                  status={
-                    status === "paused" || status === "ended"
-                      ? status
-                      : "active"
-                  }
-                />
-              </div>
-            </div>
-          </div>
-
-          <form
-            action={updateClassDetails.bind(null, classId)}
-            className="grid gap-4 p-6 sm:grid-cols-3"
-          >
-            <label className="text-sm font-medium text-slate-700">
-              Klassenname
-              <input
-                name="name"
-                defaultValue={instance.name}
-                required
-                className="mt-1.5 w-full rounded-lg border border-border px-3 py-2.5 text-sm"
-              />
-            </label>
-
-            <label className="text-sm font-medium text-slate-700">
-              Jahrgang
-              <input
-                name="gradeLevel"
-                type="number"
-                min={1}
-                max={13}
-                defaultValue={instance.grade_level ?? ""}
-                placeholder="Jahrgang"
-                className="mt-1.5 w-full rounded-lg border border-border px-3 py-2.5 text-sm"
-              />
-            </label>
-
-            <label className="text-sm font-medium text-slate-700">
-              Schuljahr
-              <input
-                name="schoolYear"
-                defaultValue={instance.school_year}
-                required
-                className="mt-1.5 w-full rounded-lg border border-border px-3 py-2.5 text-sm"
-              />
-            </label>
-
-            <button className="sm:col-span-3 justify-self-start rounded-lg bg-violet-600 px-4 py-2.5 text-sm font-medium text-white transition hover:bg-violet-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-violet-400 focus-visible:ring-offset-2">
-              Änderungen speichern
-            </button>
-          </form>
         </section>
 
         <section className="mt-6 overflow-hidden rounded-2xl border border-border bg-white">
@@ -540,14 +469,28 @@ export default async function ClassDetailPage({
 function Metric({
   label,
   value,
+  icon,
+  tone,
 }: {
   label: string;
   value: string | number;
+  icon: "users" | "target" | "chart" | "check";
+  tone: "blue" | "violet" | "cyan" | "purple";
 }) {
+  const tones = {
+    blue: "bg-sky-100 text-sky-600",
+    violet: "bg-violet-100 text-violet-600",
+    cyan: "bg-cyan-100 text-cyan-600",
+    purple: "bg-fuchsia-100 text-fuchsia-600",
+  };
+  const glyphs = { users: "♟", target: "◎", chart: "▥", check: "✓" };
   return (
-    <div className="rounded-2xl bg-slate-50 p-4">
-      <p className="text-xs text-slate-400">{label}</p>
-      <p className="mt-2 truncate text-xl font-semibold">{value}</p>
+    <div className="flex min-w-0 items-center gap-3 rounded-2xl border border-slate-200/80 bg-white px-4 py-3 shadow-sm">
+      <span className={"flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-xl font-semibold " + tones[tone]}>{glyphs[icon]}</span>
+      <div className="min-w-0">
+        <p className="text-xs text-slate-400">{label}</p>
+        <p className="mt-0.5 truncate text-lg font-semibold tracking-tight text-slate-950">{value}</p>
+      </div>
     </div>
   );
 }
