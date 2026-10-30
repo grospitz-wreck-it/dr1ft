@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useTransition } from "react";
-import { CalendarDays, GraduationCap, Pencil, Users, ImagePlus, X } from "lucide-react";
+import { CalendarDays, GraduationCap, Pencil, ImagePlus, X } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { updateClassDetails } from "../actions";
 import { ClassStatusSelect } from "./ClassStatusSelect";
@@ -23,7 +23,6 @@ type Props = {
   classImageZoom: number;
   canEditClassImage: boolean;
   status: "active" | "paused" | "ended";
-  classGradeLevel: number | null;
 };
 
 export default function ClassImageWorkspace({
@@ -42,7 +41,6 @@ export default function ClassImageWorkspace({
   classImageZoom,
   canEditClassImage,
   status,
-  classGradeLevel,
 }: Props) {
   const [editorOpen, setEditorOpen] = useState(false);
   const [imageEditorOpen, setImageEditorOpen] = useState(false);
@@ -52,7 +50,8 @@ export default function ClassImageWorkspace({
 
   async function saveProfile(formData: FormData) {
     setProfileMessage("");
-    startProfileTransition(async () => {
+    startProfileTransition(() => {
+      void (async () => {
       try {
         await updateClassDetails(classId, formData);
         setProfileMessage("Klassenprofil gespeichert.");
@@ -60,6 +59,7 @@ export default function ClassImageWorkspace({
       } catch (error) {
         setProfileMessage(error instanceof Error ? error.message : "Änderungen konnten nicht gespeichert werden.");
       }
+      })();
     });
   }
 
