@@ -49,11 +49,12 @@ export default async function TeacherClassesPage() {
       class_image_url,
       school_name: schoolNames.get(item.school_id) ?? null,
     };
-  }))
-    .sort((a: any, b: any) => {
-      if (a.is_active !== b.is_active) return a.is_active ? -1 : 1;
-      return String(b.school_year).localeCompare(String(a.school_year));
-    });
+  }));
+
+  enrichedClasses.sort((a: any, b: any) => {
+    if (a.is_active !== b.is_active) return a.is_active ? -1 : 1;
+    return String(b.school_year).localeCompare(String(a.school_year));
+  });
 
   return (
     <main className="min-h-screen bg-slate-50 px-5 py-8 md:px-8">
