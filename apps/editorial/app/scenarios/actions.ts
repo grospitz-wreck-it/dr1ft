@@ -4,7 +4,7 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { supabaseServerClient } from "../../lib/supabaseServerClient";
-import { generateEditorialTeaserImage, validateEditorialImageHasNoText } from "../(protected)/ambient-content/actions";
+import { generateEditorialTeaserImage } from "../(protected)/ambient-content/actions";
 
 function slugify(input: string): string {
   return input
@@ -998,7 +998,7 @@ export async function updateArcDraft(arcId: string, scenarioId: string, formData
 
 
 /** Generiert ein Szenario-Cover mit FLUX auf Basis des vorhandenen Briefings. */
-export async function generateScenarioCover(scenarioId: string) {
+export async function generateScenarioCover(scenarioId: string, visualFeedback = "") {
   const supabase = supabaseServerClient();
   const { data: scenario, error } = await supabase
     .from("scenarios")
@@ -1007,16 +1007,18 @@ export async function generateScenarioCover(scenarioId: string) {
     .single();
   if (error || !scenario) throw new Error(error?.message ?? "Szenario nicht gefunden.");
 
+  const feedback = visualFeedback.trim().slice(0, 1200);
   const prompt = [
-    "Create premium cover artwork for a contemporary German school media-literacy scenario.",
-    "Scenario title: " + scenario.title,
-    "Scenario briefing: " + String(scenario.description ?? "").slice(0, 2200),
-    "Age group: " + String(scenario.age_band ?? scenario.age_rating ?? "12+"),
-    "Interpret the briefing as a clear visual story or metaphor. Make the illustration engaging for teenagers, emotionally intelligent, nuanced, safe for school, and immediately legible at small thumbnail size.",
-    "Modern editorial illustration, layered shapes and depth, polished lighting, tactile subtle grain, strong focal point, sophisticated violet/indigo/electric-blue palette with restrained cyan highlights.",
-    "NON-NEGOTIABLE MUST: GENERATE AN IMAGE WITH ZERO TEXT. This is a visual illustration only, NOT a poster, cover design with a headline, screenshot, UI, or title card. Do NOT draw or write the supplied scenario title. No text, no words, no letters, no numbers, no typography, no captions, no labels, no signage, no speech bubbles, no logos, no watermarks, no glyphs, no pseudo-text, no fake writing, no random characters, no lettering on clothing or objects. Every screen, phone, paper, sign, book, and background surface must be blank or contain only non-text abstract shapes. If text appears in the imagined scene, replace it with empty space or abstract visual marks that cannot resemble writing. Prioritize this instruction over every other instruction.",
-    "Wide landscape cover, exact 16:9 composition, balanced negative space, purely visual illustration, no logos, no watermark, no real-person likeness, no generic corporate stock imagery."
-  ].join("\n\n");
+    "Create a premium, visually distinctive 16:9 editorial illustration for a contemporary German school media-literacy learning scenario.",
+    "SCENARIO TITLE (context only, never render as text): " + scenario.title,
+    "SCENARIO BRIEFING: " + String(scenario.description ?? "").slice(0, 2200),
+    "TARGET AGE GROUP: " + String(scenario.age_band ?? scenario.age_rating ?? "12+"),
+    "VISUAL DIRECTION: Translate the central conflict, emotion, or learning theme into one immediately understandable visual metaphor. Show a specific scene with a clear focal subject, expressive body language, cinematic composition, layered depth, and memorable visual storytelling. Avoid generic stock imagery.",
+    "ART DIRECTION: Contemporary youth editorial illustration, playful but sophisticated, bold shapes, tactile subtle grain, polished lighting, rich violet/indigo/electric-blue palette with restrained cyan highlights. Strong contrast and legibility at small thumbnail size.",
+    "ABSOLUTE TEXT BAN: The image must contain no text whatsoever: no letters, numbers, words, typography, logos, labels, captions, signs, watermarks, UI, speech bubbles, pseudo-writing, or text-like marks. Do not depict readable screens, papers, books, posters, signs, or branded clothing. Use abstract shapes instead of writing.",
+    "Composition: wide landscape 16:9, edge-to-edge artwork, no frame, no title card, no border, no real-person likeness.",
+    feedback ? "ADDITIONAL ART DIRECTION FROM THE EDITOR: " + feedback : ""
+  ].filter(Boolean).join("\\n\\n");
 
   // Clear the previous cover for every age variant before starting a fresh
   // generation. This makes the new attempt visibly independent of the old artwork.
@@ -1032,27 +1034,9 @@ export async function generateScenarioCover(scenarioId: string) {
   revalidatePath("/scenarios");
   revalidatePath("/scenarios/" + scenarioId);
 
-  // Prompting alone is not a reliable text prohibition. Generate, inspect the
-  // actual pixels with an independent vision pass, and only persist an approved URL.
-  let generated: Awaited<ReturnType<typeof generateEditorialTeaserImage>> | null = null;
-  for (let attempt = 1; attempt <= 3; attempt += 1) {
-    const retryInstruction = attempt === 1 ? "" : [
-      "STRICT VISUAL QA RETRY " + attempt + ": The previous image contained text-like marks and was rejected.",
-      "Create a completely different visual composition with absolutely no writing-bearing objects.",
-      "Do not show phones, screens, books, paper, signs, labels, clothing logos, posters, interfaces, or any surface that could contain characters.",
-      "Use people, gestures, objects, lighting, colors and abstract shapes only. Zero text-like marks of any kind."
-    ].join(" ");
-    const candidate = await generateEditorialTeaserImage([prompt, retryInstruction].filter(Boolean).join("\n\n"));
-    const qa = await validateEditorialImageHasNoText(candidate.url);
-    if (qa.passed) {
-      generated = candidate;
-      break;
-    }
-    console.warn("[scenario-cover] rejected generated image", { scenarioId, attempt, verdict: qa.verdict });
-  }
-  if (!generated) {
-    throw new Error("Das Teaserbild enthielt auch nach drei Generierungsversuchen Schrift oder schriftähnliche Zeichen. Es wurde kein neues Bild übernommen. Bitte erneut versuchen oder ein eigenes Bild verwenden.");
-  }
+  // FLUX generiert direkt aus dem präzisierten Prompt. Keine Gemini-Prüfung,
+  // kein zusätzlicher externer Vision-Aufruf und keine QA-Retries.
+  const generated = await generateEditorialTeaserImage(prompt);
   const imageUrl = generated.url;
 
   const { error: updateError } = await supabase.from("scenarios")
