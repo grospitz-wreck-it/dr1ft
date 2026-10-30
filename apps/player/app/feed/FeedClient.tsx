@@ -19,7 +19,8 @@ export function FeedClient({ initialItems, userId, classInstanceId, likedContent
   const supabase = supabaseBrowserClient();
   const [reflection, setReflection] = useState<{ missionId: string; contentItemId: string } | null>(null);
   const [scenarioStarted, setScenarioStarted] = useState(false);
-  const [scenarioFinished, setScenarioFinished] = useState(false);\n  const [openScenarioInfo, setOpenScenarioInfo] = useState<string | null>(null);
+  const [scenarioFinished, setScenarioFinished] = useState(false);
+  const [openScenarioInfo, setOpenScenarioInfo] = useState<string | null>(null);
   const [scenarioStateLoaded, setScenarioStateLoaded] = useState(false);
   const scenarioStateKey = `dr1ft:scenario-state:${userId}:${classInstanceId}:${[...scenarioIds].sort().join(",") || scenarioIntro?.id || "none"}`;
   const multipleScenarios = scenarioIds.length > 1;
