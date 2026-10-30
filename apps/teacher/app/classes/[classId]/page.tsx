@@ -390,7 +390,7 @@ export default async function ClassDetailPage({
             </p>
           </div>
 
-          <div className="grid gap-4 bg-slate-50/60 p-4 sm:grid-cols-2 xl:grid-cols-3">
+          <div className="flex flex-col gap-2 bg-slate-50/60 p-3 sm:p-4">
             {(scenarios ?? []).map((scenario: any) => (
               <ScenarioToggle
                 key={scenario.id}
@@ -402,9 +402,6 @@ export default async function ClassDetailPage({
                 ageRating={scenario.age_rating}
                 initiallyAssigned={
                   activeAssignment?.scenario_id === scenario.id
-                }
-                initialPacingMode={
-                  activeAssignment?.pacing_mode ?? "compact"
                 }
                 moduleStatus={activeAssignment?.scenario_id === scenario.id ? activeModuleStatus : "Nicht zugewiesen"}
                 moduleReport={activeAssignment?.scenario_id === scenario.id ? activeModuleReport : undefined}
