@@ -55,7 +55,6 @@ export function TeacherNav() {
   const [email, setEmail] = useState<string | null>(null);
   const [school, setSchool] = useState<string | null>(null);
   const [region, setRegion] = useState<string | null>(null);
-  const [classCount, setClassCount] = useState(0);
   const [studentCount, setStudentCount] = useState(0);
   const [classAccessCode, setClassAccessCode] = useState<string | null>(null);
   const [accountOpen, setAccountOpen] = useState(false);
@@ -125,7 +124,6 @@ export function TeacherNav() {
         new Set((teacherClasses ?? []).map((row) => row.class_instance_id)),
       );
 
-      setClassCount(classIds.length);
 
       if (classIds.length) {
         const { count } = await supabase
