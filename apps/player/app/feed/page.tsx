@@ -175,8 +175,8 @@ export default async function FeedPage() {
   const scenarioItems = scenarioPool
     .filter((item, index, items) => items.findIndex((candidate) => candidate.id === item.id) === index)
     .slice(0, scenarioTarget);
-  const mixedItems = [...ambientItems, ...scenarioItems];
-  // Stable pseudo-random ordering: natural-looking clusters without reshuffling on every reload.
+  // Stable pseudo-random merge. The order inside each scenario's active step
+  // is preserved, while ambient and scenario queues form natural-looking clusters.
   let mixSeed = Array.from(user.id + classInstanceId + assignedScenarioIds.join("")).reduce((seed, char) => Math.imul(seed ^ char.charCodeAt(0), 16777619), 2166136261);
   const seededRandom = () => {
     mixSeed += 0x6D2B79F5;
@@ -185,10 +185,31 @@ export default async function FeedPage() {
     value ^= value + Math.imul(value ^ (value >>> 7), value | 61);
     return ((value ^ (value >>> 14)) >>> 0) / 4294967296;
   };
-  const baseItems = mixedItems
-    .map((item) => ({ item, sort: seededRandom() }))
-    .sort((a, b) => a.sort - b.sort)
-    .map(({ item }) => item);
+  const scenarioQueues = new Map<string, FeedItem[]>();
+  for (const item of scenarioItems) {
+    const key = item.scenarioId ?? "unassigned";
+    scenarioQueues.set(key, [...(scenarioQueues.get(key) ?? []), item]);
+  }
+  const activeScenarioQueues = Array.from(scenarioQueues.values());
+  const ambientQueue = [...ambientItems];
+  const baseItems: FeedItem[] = [];
+  while (baseItems.length < feedTarget && (ambientQueue.length > 0 || activeScenarioQueues.some((queue) => queue.length > 0))) {
+    const remainingScenario = activeScenarioQueues.reduce((sum, queue) => sum + queue.length, 0);
+    const remaining = ambientQueue.length + remainingScenario;
+    const ambientShare = remainingScenario === 0 ? 1 : ambientQueue.length === 0 ? 0 : ambientQueue.length / remaining;
+    const chooseAmbient = ambientQueue.length > 0 && (remainingScenario === 0 || (seededRandom() < Math.max(2 / 3, ambientShare)));
+    if (chooseAmbient) {
+      baseItems.push(ambientQueue.shift()!);
+      continue;
+    }
+    const availableQueues = activeScenarioQueues.filter((queue) => queue.length > 0);
+    if (!availableQueues.length) {
+      if (ambientQueue.length) baseItems.push(ambientQueue.shift()!);
+      break;
+    }
+    const chosenQueue = availableQueues[Math.floor(seededRandom() * availableQueues.length)];
+    baseItems.push(chosenQueue.shift()!);
+  }
 
   // Keep the learning sequence intact, but always supplement it with a small
   // set of live ambient posts that match this learner's chosen interests.
