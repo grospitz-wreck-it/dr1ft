@@ -494,13 +494,13 @@ const EDITORIAL_TEASER_NO_TEXT_RULE = [
   "All screens, paper, books, signs, labels, and other surfaces that could contain writing MUST be completely blank or excluded from the image.",
   "Do not depict, spell, typeset, illustrate, or otherwise reproduce any words from the supplied prompt. The prompt is visual context only.",
   "If any visual idea conflicts with this rule, omit that element and keep the image purely visual. This rule has higher priority than every other instruction in the prompt."
-].join("\\n");
+].join("\n");
 
 export async function generateEditorialTeaserImage(prompt: string) {
   if (!prompt.trim()) throw new Error("Für das Teaserbild fehlt die Bildbeschreibung.");
 
   // Enforce the no-text requirement centrally and append it AFTER all editorial
   // briefing content so scenario titles/descriptions cannot weaken the rule.
-  const enforcedPrompt = [prompt.trim(), EDITORIAL_TEASER_NO_TEXT_RULE].join("\\n\\n");
+  const enforcedPrompt = [prompt.trim(), EDITORIAL_TEASER_NO_TEXT_RULE].join("\n\n");
   return generateImage(enforcedPrompt, "16:9", Date.now());
 }
