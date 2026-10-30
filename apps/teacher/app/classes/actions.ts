@@ -78,32 +78,48 @@ export async function toggleScenarioAssignment(
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) throw new Error("Nicht authentifiziert");
 
-  if (shouldBeAssigned) {
-    // A class instance may have exactly one active module.
-    // Remove the previous assignment first; progress remains in the
-    // instance-scoped learning tables and is therefore not deleted.
-    const { error: clearError } = await supabase
-      .from("class_instance_scenario_assignments")
-      .delete()
-      .eq("class_instance_id", classId)
-      .neq("scenario_id", scenarioId);
-    if (clearError) throw new Error(clearError.message);
+  const { data: membership, error: membershipError } = await supabase
+    .from("class_instance_memberships")
+    .select("id,role")
+    .eq("class_instance_id", classId)
+    .eq("user_id", user.id)
+    .is("left_at", null)
+    .maybeSingle();
 
+  if (membershipError || !membership || !["teacher", "school_admin", "school_lead"].includes(membership.role)) {
+    throw new Error("Keine Berechtigung, die Lernmodule dieser Klasse zu ändern");
+  }
+
+  if (shouldBeAssigned) {
     const { error } = await supabase.rpc("upsert_class_instance_scenario_assignment", {
       p_instance_id: classId,
       p_scenario_id: scenarioId,
       p_pacing_mode: pacingMode,
     });
     if (error) throw new Error(error.message);
+
+    // Re-adding an archived module restores the same assignment row;
+    // its learning records remain untouched.
+    const { error: restoreError } = await supabase
+      .from("class_instance_scenario_assignments")
+      .update({ archived_at: null })
+      .eq("class_instance_id", classId)
+      .eq("scenario_id", scenarioId);
+    if (restoreError) throw new Error(restoreError.message);
   } else {
-    const { error } = await supabase.rpc("remove_class_instance_scenario_assignment", {
-      p_instance_id: classId,
-      p_scenario_id: scenarioId,
-    });
+    // Archive instead of deleting: preserve assignment metadata and all
+    // instance-scoped learning progress for future reporting/restoration.
+    const { error } = await supabase
+      .from("class_instance_scenario_assignments")
+      .update({ archived_at: new Date().toISOString() })
+      .eq("class_instance_id", classId)
+      .eq("scenario_id", scenarioId)
+      .is("archived_at", null);
     if (error) throw new Error(error.message);
   }
 
   revalidatePath(`/classes/${classId}`);
+  revalidatePath("/classes");
 }
 
 export async function updateScenarioPacing(
