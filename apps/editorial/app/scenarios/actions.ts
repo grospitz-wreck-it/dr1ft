@@ -1021,7 +1021,6 @@ export async function generateScenarioCover(scenarioId: string) {
   // Prompting alone is not a reliable text prohibition. Generate, inspect the
   // actual pixels with an independent vision pass, and only persist an approved URL.
   let generated: Awaited<ReturnType<typeof generateEditorialTeaserImage>> | null = null;
-  let lastVerdict = "UNCERTAIN";
   for (let attempt = 1; attempt <= 3; attempt += 1) {
     const retryInstruction = attempt === 1 ? "" : [
       "STRICT VISUAL QA RETRY " + attempt + ": The previous image contained text-like marks and was rejected.",
@@ -1029,9 +1028,8 @@ export async function generateScenarioCover(scenarioId: string) {
       "Do not show phones, screens, books, paper, signs, labels, clothing logos, posters, interfaces, or any surface that could contain characters.",
       "Use people, gestures, objects, lighting, colors and abstract shapes only. Zero text-like marks of any kind."
     ].join(" ");
-    const candidate = await generateEditorialTeaserImage([prompt, retryInstruction].filter(Boolean).join("\\n\\n"));
+    const candidate = await generateEditorialTeaserImage([prompt, retryInstruction].filter(Boolean).join("\n\n"));
     const qa = await validateEditorialImageHasNoText(candidate.url);
-    lastVerdict = qa.verdict;
     if (qa.passed) {
       generated = candidate;
       break;
