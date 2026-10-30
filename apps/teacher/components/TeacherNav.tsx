@@ -31,14 +31,11 @@ function NavItem({ href, label, icon, active, count }: NavItemProps) {
     <a
       href={href}
       className={`flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition ${
-        active
-          ? "bg-violet-50 text-violet-700"
-          : "text-slate-600 hover:bg-slate-50"
+        active ? "bg-violet-50 text-violet-700" : "text-slate-600 hover:bg-slate-50"
       }`}
     >
       {icon}
       <span>{label}</span>
-
       {typeof count === "number" && (
         <span className={`ml-auto text-[10px] ${active ? "opacity-50" : "text-slate-400"}`}>
           {count}
@@ -51,8 +48,9 @@ function NavItem({ href, label, icon, active, count }: NavItemProps) {
 export function TeacherNav() {
   const pathname = usePathname();
   const router = useRouter();
-
   const [email, setEmail] = useState<string | null>(null);
+  const [displayName, setDisplayName] = useState<string | null>(null);
+  const [role, setRole] = useState("Lehrkraft");
   const [school, setSchool] = useState<string | null>(null);
   const [region, setRegion] = useState<string | null>(null);
   const [studentCount, setStudentCount] = useState(0);
@@ -67,46 +65,31 @@ export function TeacherNav() {
 
   useEffect(() => {
     if (publicRoute) return;
-
     const supabase = client();
+    let alive = true;
 
-    (async () => {
-      const {
-        data: { user },
-      } = await supabase.auth.getUser();
-
-      setEmail(user?.email ?? null);
-
-      if (!user) return;
-      const classMatch = pathname.match(/^\/classes\/([^/]+)$/);
-      if (classMatch) {
-        const { data: classRow } = await supabase
-          .from("class_instances")
-          .select("access_code")
-          .eq("id", classMatch[1])
-          .maybeSingle();
-        setClassAccessCode(classRow?.access_code ?? null);
-      } else {
-        setClassAccessCode(null);
-      }
-
-
-      const { data: schoolMemberships } = await supabase
-        .from("school_memberships")
-        .select("school_id, created_at")
-        .eq("user_id", user.id)
-        .eq("active", true)
-        .order("created_at", { ascending: true });
+    async function loadAccountData(userId: string) {
+      const [{ data: profile }, { data: memberships }] = await Promise.all([
+        supabase.from("user_profiles").select("display_name").eq("id", userId).maybeSingle(),
+        supabase.from("school_memberships").select("school_id, role, created_at").eq("user_id", userId).eq("active", true).order("created_at", { ascending: true }),
+      ]);
+      if (!alive) return;
+      setDisplayName(profile?.display_name?.trim() || null);
+      const membership = memberships?.[0];
+      setRole(
+        membership?.role === "school_admin" ? "Schuladministration" :
+        membership?.role === "school_lead" ? "Schulleitung" : "Lehrkraft"
+      );
 
       const { data: teacherClasses } = await supabase
         .from("class_instance_memberships")
         .select("class_instance_id, class_instances(school_id)")
-        .eq("user_id", user.id)
+        .eq("user_id", userId)
         .eq("role", "teacher")
         .is("left_at", null);
 
       const schoolIds = Array.from(new Set([
-        ...(schoolMemberships ?? []).map((row) => row.school_id),
+        ...(memberships ?? []).map((row) => row.school_id),
         ...(teacherClasses ?? []).map((row: any) => row.class_instances?.school_id),
       ].filter(Boolean)));
 
@@ -115,16 +98,16 @@ export function TeacherNav() {
           .from("schools")
           .select("id, name, region")
           .in("id", schoolIds);
+        if (!alive) return;
         const primarySchool = (schoolData ?? []).find((row) => row.id === schoolIds[0]);
         setSchool(primarySchool?.name ?? null);
         setRegion(primarySchool?.region ?? null);
+      } else {
+        setSchool(null);
+        setRegion(null);
       }
 
-      const classIds = Array.from(
-        new Set((teacherClasses ?? []).map((row) => row.class_instance_id)),
-      );
-
-
+      const classIds = Array.from(new Set((teacherClasses ?? []).map((row) => row.class_instance_id)));
       if (classIds.length) {
         const { count } = await supabase
           .from("class_instance_memberships")
@@ -132,15 +115,48 @@ export function TeacherNav() {
           .in("class_instance_id", classIds)
           .eq("role", "student")
           .is("left_at", null);
-
-        setStudentCount(count ?? 0);
+        if (alive) setStudentCount(count ?? 0);
+      } else if (alive) {
+        setStudentCount(0);
       }
+    }
+
+    (async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!alive) return;
+      setEmail(user?.email ?? null);
+      if (!user) return;
+
+      const classMatch = pathname.match(/^\/classes\/([^/]+)$/);
+      if (classMatch) {
+        const { data: classRow } = await supabase
+          .from("class_instances")
+          .select("access_code")
+          .eq("id", classMatch[1])
+          .maybeSingle();
+        if (alive) setClassAccessCode(classRow?.access_code ?? null);
+      } else {
+        setClassAccessCode(null);
+      }
+      await loadAccountData(user.id);
     })();
+
+    function handleProfileUpdate() {
+      void supabase.auth.getUser().then(({ data: { user } }) => {
+        if (user) void loadAccountData(user.id);
+      });
+    }
+    window.addEventListener("drift:profile-updated", handleProfileUpdate);
+    return () => {
+      alive = false;
+      window.removeEventListener("drift:profile-updated", handleProfileUpdate);
+    };
   }, [publicRoute, pathname]);
 
   if (publicRoute) return null;
-
   const overviewActive = pathname === "/";
+  const accountLabel = displayName || role;
+  const avatarInitial = (displayName || email || "D").trim().charAt(0).toLocaleUpperCase("de-DE");
 
   async function logout() {
     await client().auth.signOut();
@@ -164,14 +180,15 @@ export function TeacherNav() {
             </div>
           )}
           <span className="hidden max-w-[260px] truncate rounded-full border border-slate-200 bg-white px-3 py-1.5 text-[11px] font-medium text-slate-600 sm:inline-flex" title={school ? `${school}${region ? " · " + region : ""}` : "Noch keine Schule zugeordnet"}>{school ? `${school}${region ? " · " + region : ""}` : "Noch keine Schule zugeordnet"}</span>
-          <button type="button" onClick={() => setAccountOpen((open) => !open)} className="editorial-avatar" aria-label="Kontomenü öffnen">D</button>
+          <button type="button" onClick={() => setAccountOpen((open) => !open)} className="editorial-avatar" aria-label="Kontomenü öffnen">{avatarInitial}</button>
           {accountOpen && (
-            <div className="absolute right-0 top-11 z-50 w-56 overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-xl">
+            <div className="absolute right-0 top-11 z-50 w-60 overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-xl">
               <div className="border-b border-slate-200 px-4 py-3">
-                <p className="text-sm font-semibold text-slate-900">Lehrkraft</p>
+                <p className="text-sm font-semibold text-slate-900">{accountLabel}</p>
                 <p className="mt-0.5 truncate text-xs text-slate-400">{email ?? "Konto"}</p>
-                <p className="mt-1 truncate text-xs text-slate-500">{school ?? "DR1FT"}{region ? " · " + region : ""}</p>
+                <p className="mt-1 truncate text-xs text-slate-500">{school ?? "Noch keine Schule zugeordnet"}{region ? " · " + region : ""}</p>
               </div>
+              <div className="border-b border-slate-100 px-4 py-2 text-[11px] font-medium text-slate-500">{role}</div>
               <div className="p-1.5"><a href="/account" className="flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-sm text-slate-700 transition hover:bg-slate-50"><Settings className="h-4 w-4 text-slate-400" />Einstellungen</a></div>
               <div className="border-t border-slate-200 p-1.5"><button type="button" onClick={logout} className="flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium text-red-600 transition hover:bg-red-50"><LogOut className="h-4 w-4" />Abmelden</button></div>
             </div>
@@ -189,41 +206,11 @@ export function TeacherNav() {
           </a>
           <div className="px-4 pb-2 pt-6 text-[10px] font-bold uppercase tracking-[0.16em] text-slate-400">Arbeitsbereiche</div>
           <nav aria-label="Hauptnavigation" className="px-3">
-
-            <NavItem
-              href="/"
-              label="Übersicht"
-              icon={<LayoutDashboard className="h-4 w-4" />}
-              active={overviewActive}
-            />
-
-            <div className="mt-1">
-              <NavItem
-                href="/students"
-                label="Schüler:innen"
-                icon={<Users className="h-4 w-4" />}
-                active={pathname.startsWith("/students")}
-                count={studentCount}
-              />
-            </div>
-
-            <div className="mt-1">
-              <NavItem
-                href="/insights"
-                label="Insights"
-                icon={<BarChart3 className="h-4 w-4" />}
-                active={pathname.startsWith("/insights")}
-              />
-            </div>
-
+            <NavItem href="/" label="Übersicht" icon={<LayoutDashboard className="h-4 w-4" />} active={overviewActive} />
+            <div className="mt-1"><NavItem href="/students" label="Schüler:innen" icon={<Users className="h-4 w-4" />} active={pathname.startsWith("/students")} count={studentCount} /></div>
+            <div className="mt-1"><NavItem href="/insights" label="Insights" icon={<BarChart3 className="h-4 w-4" />} active={pathname.startsWith("/insights")} /></div>
             <div className="my-2 border-t border-slate-200/80" />
-
-            <NavItem
-              href="/account"
-              label="Einstellungen"
-              icon={<Settings className="h-4 w-4" />}
-              active={pathname.startsWith("/account")}
-            />
+            <NavItem href="/account" label="Einstellungen" icon={<Settings className="h-4 w-4" />} active={pathname.startsWith("/account")} />
           </nav>
           <div className="mt-auto border-t border-slate-200/80 p-4">
             <div className="rounded-xl bg-slate-50 px-3 py-3">
