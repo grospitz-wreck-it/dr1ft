@@ -279,6 +279,29 @@ body.dark-mode {
 }
 
 /* DR1FT media stage styling restored from a72ce14 */
+/* Dark-mode media backlayer: retain the DR1FT pattern without the bright paper panel. */
+.dark-mode .post-media-stage {
+  background:
+    radial-gradient(ellipse at 12% 12%, rgba(139,92,246,.24), transparent 44%),
+    radial-gradient(ellipse at 88% 82%, rgba(34,211,238,.16), transparent 42%),
+    linear-gradient(135deg, #211a32 0%, #191528 52%, #242039 100%) !important;
+}
+.dark-mode .post-media-pattern {
+  background-image:
+    repeating-linear-gradient(135deg, transparent 0 27px, rgba(167,139,250,.18) 28px, transparent 30px 56px),
+    radial-gradient(circle, rgba(103,232,249,.38) 1px, transparent 1.8px);
+  opacity: .72;
+}
+.dark-mode .post-media-orb-one {
+  background: linear-gradient(135deg, rgba(168,85,247,.3), rgba(236,72,153,.08));
+}
+.dark-mode .post-media-orb-two {
+  background: linear-gradient(135deg, rgba(34,211,238,.22), rgba(124,58,237,.12));
+}
+.dark-mode .post-media-image {
+  box-shadow: 0 10px 32px rgba(0,0,0,.42);
+}
+
 .post-media-stage {
   isolation: isolate;
   display: grid;
