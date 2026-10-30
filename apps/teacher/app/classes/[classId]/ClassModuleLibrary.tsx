@@ -16,6 +16,7 @@ type Scenario = {
 
 type Assignment = {
   scenario_id: string;
+  is_active: boolean;
   scheduled_start_at: string | null;
   scheduled_end_at: string | null;
   show_reports_at_end: boolean;
@@ -94,6 +95,7 @@ export function ClassModuleLibrary({
                   coverImageUrl={scenario.cover_image_url}
                   ageRating={scenario.age_rating}
                   initiallyAssigned
+                  initiallyActive={assignment.is_active}
                   moduleStatus={moduleStatus}
                   moduleReport={moduleReport}
                   scheduledStartAt={assignment.scheduled_start_at}
