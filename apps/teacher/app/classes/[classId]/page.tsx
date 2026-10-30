@@ -277,7 +277,6 @@ export default async function ClassDetailPage({
           classImageZoom={instance.class_image_zoom ?? 1}
           canEditClassImage={canEditClassImage}
           status={status === "paused" || status === "ended" ? status : "active"}
-          classGradeLevel={instance.grade_level}
           schoolYear={instance.school_year}
         />
 
