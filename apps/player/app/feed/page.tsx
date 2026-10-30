@@ -140,7 +140,7 @@ export default async function FeedPage() {
       : { data: [] as { content_item_id: string }[] };
     const viewedIds = new Set((viewedRows ?? []).map((row) => row.content_item_id));
 
-    for (const [scenarioId, designId] of latestDesignByScenario) {
+    latestDesignByScenario.forEach((designId) => {
       const scenarioSteps = (allSteps ?? []).filter((step) => step.learning_design_id === designId);
       const stepsWithLiveContent = scenarioSteps.map((step) => {
         const stepLinks = usableLinks.filter((link) => link.learning_step_id === step.id).sort((a, b) => a.order_index - b.order_index);
@@ -149,12 +149,12 @@ export default async function FeedPage() {
         return { step, stepLinks, progressIds, done: progressIds.length > 0 && progressIds.every((id) => viewedIds.has(id)) };
       }).filter((entry) => entry.stepLinks.length > 0);
       const active = stepsWithLiveContent.find((entry) => !entry.done);
-      if (!active) continue;
+      if (!active) return;
       const order = new Map(active.stepLinks.map((link) => [link.content_item_id, link.order_index]));
       scenarioLearningItems.push(...mappedPool
         .filter((item) => active.stepLinks.some((link) => link.content_item_id === item.id))
         .sort((a, b) => (order.get(a.id) ?? 0) - (order.get(b.id) ?? 0)));
-    }
+    });
   }
 
   // Density controls both the mix and the amount of content a learner is expected to read.
