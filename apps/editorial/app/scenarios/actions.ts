@@ -1018,6 +1018,20 @@ export async function generateScenarioCover(scenarioId: string) {
     "Wide landscape cover, exact 16:9 composition, balanced negative space, purely visual illustration, no logos, no watermark, no real-person likeness, no generic corporate stock imagery."
   ].join("\n\n");
 
+  // Clear the previous cover for every age variant before starting a fresh
+  // generation. This makes the new attempt visibly independent of the old artwork.
+  const group = scenario.scenario_group || scenario.slug || scenario.id;
+  const { data: variants, error: variantsError } = await supabase
+    .from("scenarios").select("id").eq("scenario_group", group);
+  if (variantsError) throw new Error(variantsError.message);
+  const ids = (variants ?? []).map((variant) => variant.id);
+  const { error: clearError } = await supabase.from("scenarios")
+    .update({ cover_image_url: null }).in("id", ids.length ? ids : [scenarioId]);
+  if (clearError) throw new Error("Das bisherige Teaserbild konnte nicht geleert werden: " + clearError.message);
+
+  revalidatePath("/scenarios");
+  revalidatePath("/scenarios/" + scenarioId);
+
   // Prompting alone is not a reliable text prohibition. Generate, inspect the
   // actual pixels with an independent vision pass, and only persist an approved URL.
   let generated: Awaited<ReturnType<typeof generateEditorialTeaserImage>> | null = null;
@@ -1041,11 +1055,6 @@ export async function generateScenarioCover(scenarioId: string) {
   }
   const imageUrl = generated.url;
 
-  const group = scenario.scenario_group || scenario.slug || scenario.id;
-  const { data: variants, error: variantsError } = await supabase
-    .from("scenarios").select("id").eq("scenario_group", group);
-  if (variantsError) throw new Error(variantsError.message);
-  const ids = (variants ?? []).map((variant) => variant.id);
   const { error: updateError } = await supabase.from("scenarios")
     .update({ cover_image_url: imageUrl }).in("id", ids.length ? ids : [scenarioId]);
   if (updateError) throw new Error("Teaserbild wurde generiert, konnte aber nicht dem Szenario zugeordnet werden: " + updateError.message);
