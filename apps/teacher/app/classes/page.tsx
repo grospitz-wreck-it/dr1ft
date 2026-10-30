@@ -6,7 +6,7 @@ export default async function TeacherClassesPage() {
 
   const { data: memberships } = await supabase
     .from("class_instance_memberships")
-    .select("class_instance_id, role, class_instances(id,name,access_code,is_active,status,grade_level,school_year,school_id)")
+    .select("class_instance_id, role, class_instances(id,name,access_code,is_active,status,grade_level,school_year,school_id,class_image_path,class_image_position_x,class_image_position_y,class_image_zoom)")
     .in("role", ["teacher", "school_admin"])
     .is("left_at", null);
 
@@ -38,11 +38,18 @@ export default async function TeacherClassesPage() {
     : { data: [] };
 
   const schoolNames = new Map((schools ?? []).map((school) => [school.id, school.name]));
-  const enrichedClasses = classes
-    .map((item: any) => ({
+  const enrichedClasses = await Promise.all(classes.map(async (item: any) => {
+    let class_image_url: string | null = null;
+    if (item.class_image_path) {
+      const { data } = await supabase.storage.from("class-images").createSignedUrl(item.class_image_path, 60 * 60);
+      class_image_url = data?.signedUrl ?? null;
+    }
+    return {
       ...item,
+      class_image_url,
       school_name: schoolNames.get(item.school_id) ?? null,
-    }))
+    };
+  }))
     .sort((a: any, b: any) => {
       if (a.is_active !== b.is_active) return a.is_active ? -1 : 1;
       return String(b.school_year).localeCompare(String(a.school_year));
