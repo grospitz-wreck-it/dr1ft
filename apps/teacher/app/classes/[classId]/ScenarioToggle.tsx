@@ -92,7 +92,7 @@ export function ScenarioToggle({
   }
 
   return (
-    <li className={`group flex flex-col justify-between gap-4 overflow-hidden rounded-2xl border bg-white shadow-sm transition-all hover:-translate-y-0.5 hover:shadow-md ${selected ? "border-violet-300 ring-2 ring-violet-100" : "border-slate-200"}`}>
+    <article className={`group flex flex-col justify-between gap-4 overflow-hidden rounded-2xl border bg-white shadow-sm transition-all hover:-translate-y-0.5 hover:shadow-md ${selected ? "border-violet-300 ring-2 ring-violet-100" : "border-slate-200"}`}>
       <div className="relative aspect-[16/9] overflow-hidden bg-gradient-to-br from-violet-100 via-indigo-100 to-sky-100">
         {coverImageUrl ? <img src={coverImageUrl} alt={`Teaserbild: ${title}`} className="h-full w-full object-cover" loading="lazy" /> : <div className="flex h-full items-center justify-center text-violet-400"><Sparkles className="h-10 w-10" /></div>}
         <div className="absolute left-3 top-3 flex flex-wrap gap-2">
@@ -153,6 +153,6 @@ export function ScenarioToggle({
         </>}
       </div>}
       </div>
-    </li>
+    </article>
   );
 }
