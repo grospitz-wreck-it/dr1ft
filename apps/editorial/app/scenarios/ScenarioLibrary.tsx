@@ -116,7 +116,6 @@ export function ScenarioLibrary({ families }: { families: Family[] }) {
           <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm divide-y divide-slate-100">
             {visible.map((family) => {
               const statuses = familyStatuses(family);
-              const statusText = statuses.map((value) => value === "live" ? "Aktiv" : (STATUS_LABELS[value] || "Entwurf")).join(" · ");
               return (
                 <article key={family.key} className="flex items-center gap-3 px-3 py-3 transition hover:bg-slate-50 sm:gap-4 sm:px-4">
                   <div className="h-14 w-20 shrink-0 overflow-hidden rounded-lg border border-slate-200 bg-gradient-to-br from-violet-700 via-indigo-600 to-cyan-400 sm:h-16 sm:w-24">
