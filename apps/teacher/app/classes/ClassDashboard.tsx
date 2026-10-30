@@ -2,6 +2,8 @@
 
 import { useMemo, useState } from "react";
 import { Archive, ArrowRight, Plus, Search, Users, X } from "lucide-react";
+import { useRouter } from "next/navigation";
+import { setClassActive } from "./actions";
 import { createClass, changeClassState } from "./actions";
 
 type ClassItem = {
@@ -15,12 +17,18 @@ type ClassItem = {
   school_id: string | null;
   school_name?: string | null;
   student_count: number;
+  class_image_url?: string | null;
+  class_image_position_x?: number | null;
+  class_image_position_y?: number | null;
+  class_image_zoom?: number | null;
 };
 
 export function ClassDashboard({ classes }: { classes: ClassItem[] }) {
   const [query, setQuery] = useState("");
   const [showArchived, setShowArchived] = useState(false);
   const [showCreate, setShowCreate] = useState(false);
+  const [updatingClassId, setUpdatingClassId] = useState<string | null>(null);
+  const router = useRouter();
 
   const active = classes.filter((c) => c.status === "active");
   const archived = classes.filter((c) => c.status !== "active");
@@ -105,8 +113,12 @@ export function ClassDashboard({ classes }: { classes: ClassItem[] }) {
                   className={`group flex flex-col gap-4 px-5 py-4 transition hover:bg-canvas/70 sm:flex-row sm:items-center sm:justify-between ${index ? "border-t border-border" : ""}`}
                 >
                   <div className="flex min-w-0 items-center gap-4">
-                    <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-slate-100 text-slate-500">
-                      <Users className="h-4 w-4" />
+                    <div className="relative h-14 w-20 shrink-0 overflow-hidden rounded-xl bg-gradient-to-br from-violet-100 to-cyan-100">
+                      {c.class_image_url ? (
+                        <img src={c.class_image_url} alt="" className="h-full w-full object-cover" style={{ objectPosition: String(c.class_image_position_x ?? 50) + "% " + String(c.class_image_position_y ?? 50) + "%", transform: "scale(" + (c.class_image_zoom ?? 1) + ")" }} />
+                      ) : (
+                        <div className="flex h-full items-center justify-center text-violet-400"><Users className="h-5 w-5" /></div>
+                      )}
                     </div>
                     <div className="min-w-0">
                       <div className="flex flex-wrap items-center gap-2">
@@ -143,7 +155,28 @@ export function ClassDashboard({ classes }: { classes: ClassItem[] }) {
                       Klasse öffnen
                       <ArrowRight className="h-4 w-4" />
                     </a>
-                    {showArchived && c.status !== "active" && (
+                    {c.status !== "ended" && (
+                      <button
+                        type="button"
+                        role="switch"
+                        aria-checked={c.status === "active"}
+                        aria-label={c.status === "active" ? c.name + " deaktivieren" : c.name + " aktivieren"}
+                        disabled={updatingClassId === c.id}
+                        onClick={async () => {
+                          setUpdatingClassId(c.id);
+                          try {
+                            await setClassActive(c.id, c.status !== "active");
+                            router.refresh();
+                          } finally {
+                            setUpdatingClassId(null);
+                          }
+                        }}
+                        className={"relative inline-flex h-7 w-12 shrink-0 items-center rounded-full transition-colors disabled:opacity-50 " + (c.status === "active" ? "bg-violet-600" : "bg-slate-300")}
+                      >
+                        <span className={"inline-block h-5 w-5 rounded-full bg-white shadow transition-transform " + (c.status === "active" ? "translate-x-6" : "translate-x-1")} />
+                      </button>
+                    )}
+                    {showArchived && c.status === "ended" && (
                       <button
                         type="button"
                         onClick={() => changeClassState(c.id, true)}
