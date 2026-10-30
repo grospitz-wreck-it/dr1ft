@@ -78,7 +78,9 @@ export default async function FeedPage() {
   const scenarioFilter = assignedScenarioIds.length > 0 ? `scenario_id.in.(${assignedScenarioIds.join(",")}),scenario_id.is.null` : "scenario_id.is.null";
   const { data: pool } = await supabase.from("content_items").select("*, creators(id, display_name, handle, avatar_url)").eq("status", "live").eq("type", "post").or(scenarioFilter).or(`class_instance_id.eq.${classInstanceId},class_instance_id.is.null`);
   const contentIds = (pool ?? []).map((row: any) => row.id);
-  const creatorIds = Array.from(new Set((pool ?? []).map((row: any) => row.creator_id).filter((id: unknown): id is string => typeof id === "string")));\n  const { data: creatorRows } = creatorIds.length ? await supabase.from("creators").select("id, display_name, handle, avatar_url").in("id", creatorIds) : { data: [] as { id: string; display_name: string; handle: string; avatar_url: string | null }[] };\n  const creatorById = new Map((creatorRows ?? []).map((creator) => [creator.id, creator]));
+  const creatorIds = Array.from(new Set((pool ?? []).map((row: any) => row.creator_id).filter((id: unknown): id is string => typeof id === "string")));
+  const { data: creatorRows } = creatorIds.length ? await supabase.from("creators").select("id, display_name, handle, avatar_url").in("id", creatorIds) : { data: [] as { id: string; display_name: string; handle: string; avatar_url: string | null }[] };
+  const creatorById = new Map((creatorRows ?? []).map((creator) => [creator.id, creator]));
   const { data: instanceLikes } = contentIds.length ? await supabase.from("user_interactions").select("content_item_id, user_id").eq("class_instance_id", classInstanceId).eq("interaction_type", "like").in("content_item_id", contentIds) : { data: [] as { content_item_id: string; user_id: string }[] };
   const { data: npcLikes } = contentIds.length ? await supabase.from("npc_social_interactions").select("content_item_id").eq("class_instance_id", classInstanceId).eq("interaction_type", "like").in("content_item_id", contentIds) : { data: [] as { content_item_id: string }[] };
   const { data: classComments } = contentIds.length
