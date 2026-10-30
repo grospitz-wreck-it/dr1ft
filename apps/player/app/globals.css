@@ -277,3 +277,38 @@ body.dark-mode {
 .dark-mode main article [data-post-menu] > button[aria-label="Kommentare anzeigen"] svg {
   flex-shrink: 0;
 }
+
+/* DR1FT media stage styling restored from a72ce14 */
+.post-media-stage {
+  isolation: isolate;
+  display: grid;
+  place-items: center;
+  min-height: 9rem;
+  background:
+    radial-gradient(ellipse at 12% 12%, rgba(168,85,247,.17), transparent 42%),
+    radial-gradient(ellipse at 88% 82%, rgba(34,211,238,.17), transparent 40%),
+    linear-gradient(135deg, #f1eef9, #e8e8f1 48%, #f7f3fb);
+}
+.post-media-pattern {
+  z-index: 0;
+  background-image:
+    repeating-linear-gradient(135deg, transparent 0 27px, rgba(139,92,246,.19) 28px, transparent 30px 56px),
+    radial-gradient(circle, rgba(34,211,238,.55) 1px, transparent 1.8px);
+  background-size: auto, 18px 18px;
+  opacity: .9;
+}
+.post-media-orb {
+  z-index: 0;
+  filter: blur(1px);
+  opacity: .8;
+}
+.post-media-orb-one {
+  background: linear-gradient(135deg, rgba(168,85,247,.24), rgba(236,72,153,.06));
+}
+.post-media-orb-two {
+  background: linear-gradient(135deg, rgba(34,211,238,.23), rgba(124,58,237,.08));
+}
+.post-media-image {
+  max-width: 100%;
+  box-shadow: 0 8px 26px rgba(28,20,48,.14);
+}
