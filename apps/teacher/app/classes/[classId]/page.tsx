@@ -355,3 +355,32 @@ export default async function ClassDetailPage({
   );
 }
 
+
+function Metric({
+  label,
+  value,
+  icon,
+  tone,
+}: {
+  label: string;
+  value: string | number;
+  icon: "users" | "target" | "chart" | "check";
+  tone: "blue" | "violet" | "cyan" | "purple";
+}) {
+  const tones = {
+    blue: "bg-sky-100 text-sky-600",
+    violet: "bg-violet-100 text-violet-600",
+    cyan: "bg-cyan-100 text-cyan-600",
+    purple: "bg-fuchsia-100 text-fuchsia-600",
+  };
+  const glyphs = { users: "♟", target: "◎", chart: "▥", check: "✓" };
+  return (
+    <div className="flex min-w-0 items-center gap-3 rounded-2xl border border-slate-200/80 bg-white px-4 py-3 shadow-sm">
+      <span className={"flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-xl font-semibold " + tones[tone]}>{glyphs[icon]}</span>
+      <div className="min-w-0">
+        <p className="text-xs text-slate-400">{label}</p>
+        <p className="mt-0.5 truncate text-lg font-semibold tracking-tight text-slate-950">{value}</p>
+      </div>
+    </div>
+  );
+}
