@@ -5,7 +5,8 @@
   "scripts": {
     "dev": "next dev",
     "build": "next build",
-    "start": "next start"
+    "start": "next start",
+    "prebuild": "tsc --noEmit"
   },
   "dependencies": {
     "@dr1ft/shared-types": "*",
