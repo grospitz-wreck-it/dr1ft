@@ -241,12 +241,25 @@ export async function setClassActive(classId: string, isActive: boolean) {
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) throw new Error("Nicht authentifiziert");
 
+  const { data: membership, error: membershipError } = await supabase
+    .from("class_instance_memberships")
+    .select("id,role")
+    .eq("class_instance_id", classId)
+    .eq("user_id", user.id)
+    .is("left_at", null)
+    .maybeSingle();
+
+  if (membershipError || !membership || !["teacher", "school_admin", "school_lead"].includes(membership.role)) {
+    throw new Error("Keine Berechtigung, den Status dieser Klasse zu ändern");
+  }
+
   const { error } = await supabase
     .from("class_instances")
     .update({ is_active: isActive, status: isActive ? "active" : "paused" })
     .eq("id", classId);
 
   if (error) throw new Error(error.message);
+  revalidatePath("/");
   revalidatePath("/classes");
   revalidatePath(`/classes/${classId}`);
 }
