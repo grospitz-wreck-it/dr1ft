@@ -75,7 +75,7 @@ export function ScenarioLibrary({ families }: { families: Family[] }) {
           <SlidersHorizontal className="h-4 w-4 text-violet-600" /> Finden und sortieren
           <span className="ml-auto text-xs font-medium text-slate-400">{visible.length} von {families.length}</span>
         </div>
-        <div className="grid gap-2 sm:grid-cols-2 xl:grid-cols-[minmax(220px,1.6fr)_minmax(150px,1fr)_minmax(150px,1fr)_minmax(170px,1fr)]">
+        <div className="grid items-stretch gap-2 sm:grid-cols-2 xl:grid-cols-[minmax(200px,1.5fr)_minmax(130px,1fr)_minmax(130px,1fr)_minmax(150px,1fr)_auto]">
           <label className="relative block">
             <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
             <input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Stichwort, Titel oder Beschreibung …" aria-label="Szenarien nach Stichwort suchen" className="h-11 w-full rounded-xl border border-slate-200 bg-slate-50 pl-9 pr-3 text-sm outline-none transition focus:border-violet-300 focus:bg-white focus:ring-2 focus:ring-violet-100" />
@@ -94,20 +94,21 @@ export function ScenarioLibrary({ families }: { families: Family[] }) {
             <option value="missions">Meiste Missionen</option>
             <option value="active">Meiste aktive Varianten</option>
           </select>
+          <div className="flex items-center justify-end sm:col-span-2 xl:col-span-1">
+            <div className="inline-flex h-11 items-center rounded-xl border border-slate-200 bg-slate-50 p-1" aria-label="Darstellungsmodus">
+              <button type="button" onClick={() => setViewMode("cards")} aria-pressed={viewMode === "cards"} className={`inline-flex h-9 items-center gap-2 rounded-lg px-3 text-xs font-semibold transition ${viewMode === "cards" ? "bg-violet-600 text-white shadow-sm" : "text-slate-600 hover:bg-white"}`}>
+                <LayoutGrid className="h-4 w-4" /> Karten
+              </button>
+              <button type="button" onClick={() => setViewMode("list")} aria-pressed={viewMode === "list"} className={`inline-flex h-9 items-center gap-2 rounded-lg px-3 text-xs font-semibold transition ${viewMode === "list" ? "bg-violet-600 text-white shadow-sm" : "text-slate-600 hover:bg-white"}`}>
+                <List className="h-4 w-4" /> Kompakt
+              </button>
+            </div>
+          </div>
         </div>
         {(query || age !== "all" || status !== "all" || sort !== "newest") && (
           <button type="button" onClick={() => { setQuery(""); setAge("all"); setStatus("all"); setSort("newest"); }} className="mt-3 text-xs font-semibold text-violet-700 hover:text-violet-900">Filter und Sortierung zurücksetzen</button>
         )}
-        <div className="mt-3 flex justify-end">
-          <div className="inline-flex rounded-xl border border-slate-200 bg-slate-50 p-1" aria-label="Darstellungsmodus">
-            <button type="button" onClick={() => setViewMode("cards")} aria-pressed={viewMode === "cards"} className={`inline-flex h-8 items-center gap-2 rounded-lg px-3 text-xs font-semibold transition ${viewMode === "cards" ? "bg-violet-600 text-white shadow-sm" : "text-slate-600 hover:bg-white"}`}>
-              <LayoutGrid className="h-4 w-4" /> Karten
-            </button>
-            <button type="button" onClick={() => setViewMode("list")} aria-pressed={viewMode === "list"} className={`inline-flex h-8 items-center gap-2 rounded-lg px-3 text-xs font-semibold transition ${viewMode === "list" ? "bg-violet-600 text-white shadow-sm" : "text-slate-600 hover:bg-white"}`}>
-              <List className="h-4 w-4" /> Kompakt
-            </button>
-          </div>
-        </div>
+
       </section>
 
       <div className="space-y-3">
