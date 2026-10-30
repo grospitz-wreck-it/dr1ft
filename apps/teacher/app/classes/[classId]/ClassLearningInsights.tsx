@@ -6,7 +6,7 @@ import {
   ClipboardCheck, MessageSquare, Search, ShieldCheck, Target, Users
 } from "lucide-react";
 
-type Student = { user_id: string; display_name: string | null; username: string | null };
+type Student = { user_id: string; display_name: string | null; username: string | null; avatar_seed?: string | null };
 type StudentRow = { name: string; competencies: Record<string, number>; completed: number; total: number };
 type Evidence = { responses: number; assessed: number; successful: number; notYet: number };
 type Competency = { competency_id: string; competency_title: string; avg_level: number; student_count: number };
@@ -34,6 +34,15 @@ export function ClassLearningInsights({
   }), [students, query]);
 
   const hasCompetencies = competencies.length > 0;
+  const studentAvatarUrl = (seed: string | null | undefined, size = 96) => {
+    const styles = ["voxel-art", "adventurer", "adventurer-neutral", "avataaars", "bottts", "fun-emoji", "lorelei", "micah", "miniavs", "personas", "pixel-art-neutral", "thumbs"];
+    const value = seed || "dr1ft";
+    const separator = value.indexOf("::");
+    const candidate = separator > 0 ? value.slice(0, separator) : "";
+    const style = styles.includes(candidate) ? candidate : "voxel-art";
+    const avatarSeed = separator > 0 && styles.includes(candidate) ? value.slice(separator + 2) || "dr1ft" : value;
+    return "https://api.dicebear.com/10.x/" + style + "/svg?seed=" + encodeURIComponent(avatarSeed) + "&size=" + size + "&animationVariant=medium&borderRadius=18";
+  };
   const hasEvidence = evidence.responses > 0 || evidence.assessed > 0;
   const completionRate = total > 0 ? Math.round(completed / total * 100) : null;
 
@@ -81,33 +90,33 @@ export function ClassLearningInsights({
           </div>
         </section>
 
-        <section className="relative overflow-hidden rounded-2xl border border-indigo-900 bg-[#111638] p-5 text-white shadow-[0_12px_35px_rgba(23,29,75,.18)]">
-          <div className="pointer-events-none absolute -right-12 -top-20 h-64 w-64 rounded-full border border-cyan-300/10" />
+        <section className="relative overflow-hidden rounded-2xl border border-violet-100 bg-[linear-gradient(135deg,#fff_0%,#fbf7ff_48%,#f1fbff_100%)] p-5 text-slate-900 shadow-[0_10px_30px_rgba(124,58,237,.07)]">
+          <div className="pointer-events-none absolute -right-12 -top-20 h-64 w-64 rounded-full border border-cyan-200/50" /><div className="pointer-events-none absolute -right-4 bottom-[-5rem] h-48 w-48 rounded-full bg-gradient-to-br from-fuchsia-200/30 via-violet-200/20 to-cyan-200/30 blur-2xl" />
           <div className="relative flex items-center justify-between gap-3">
             <div className="flex items-center gap-3">
-              <span className="flex h-10 w-10 items-center justify-center rounded-xl border border-cyan-300/20 bg-cyan-400/10 text-cyan-300"><BarChart3 className="h-5 w-5" /></span>
-              <div><h3 className="text-sm font-bold">Kompetenzentwicklung · Klassendurchschnitt</h3><p className="text-xs text-indigo-200/65">Gespeicherte Kompetenz-Level · Skala 0–5</p></div>
+              <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-violet-100 via-fuchsia-50 to-sky-100 text-violet-600 shadow-sm"><BarChart3 className="h-5 w-5" /></span>
+              <div><h3 className="text-sm font-bold">Kompetenzentwicklung · Klassendurchschnitt</h3><p className="text-xs text-slate-500">Gespeicherte Kompetenz-Level · Skala 0–5</p></div>
             </div>
-            <span className="hidden rounded-lg border border-white/10 bg-white/5 px-3 py-2 text-xs text-indigo-100/70 sm:inline-flex">Aktueller Stand</span>
+            <span className="hidden rounded-lg border border-violet-100 bg-white/80 px-3 py-2 text-xs font-medium text-violet-600 shadow-sm sm:inline-flex">Aktueller Stand</span>
           </div>
           {hasCompetencies ? <div className="relative mt-6 space-y-4">
             {competencies.map((item, index) => {
               const value = Math.max(0, Math.min(5, Number(item.avg_level ?? 0)));
               const width = value / 5 * 100;
-              const gradients = ["from-violet-500 to-cyan-400", "from-cyan-400 to-sky-400", "from-fuchsia-500 to-violet-400", "from-emerald-400 to-cyan-300"];
+              const gradients = ["from-violet-400 to-fuchsia-300", "from-sky-400 to-cyan-300", "from-pink-400 to-fuchsia-300", "from-indigo-400 to-violet-300"];
               return <div key={item.competency_id}>
-                <div className="mb-2 flex items-center justify-between gap-3 text-sm"><span className="font-medium text-white/90">{item.competency_title}</span><span className="shrink-0 font-semibold tabular-nums text-cyan-200">Ø {value.toFixed(1)} / 5</span></div>
-                <div className="h-2.5 overflow-hidden rounded-full bg-white/10"><div className={"h-full rounded-full bg-gradient-to-r " + gradients[index % gradients.length]} style={{ width: width + "%" }} /></div>
-                <p className="mt-1 text-[10px] text-indigo-200/55">{item.student_count} Schüler:innen mit Daten</p>
+                <div className="mb-2 flex items-center justify-between gap-3 text-sm"><span className="font-semibold text-slate-700">{item.competency_title}</span><span className="shrink-0 font-semibold tabular-nums text-violet-700">Ø {value.toFixed(1)} / 5</span></div>
+                <div className="h-2.5 overflow-hidden rounded-full bg-slate-200/80"><div className={"h-full rounded-full bg-gradient-to-r " + gradients[index % gradients.length]} style={{ width: width + "%" }} /></div>
+                <p className="mt-1 text-[10px] text-slate-400">{item.student_count} Schüler:innen mit Daten</p>
               </div>;
             })}
-            <div className="mt-5 flex flex-wrap gap-2 border-t border-white/10 pt-4">
-              <div className="rounded-xl bg-white/[.07] px-3 py-2"><p className="text-[10px] text-indigo-200/60">Ø Kompetenz</p><p className="text-lg font-bold">{average === null ? "—" : average.toFixed(1) + " / 5"}</p></div>
+            <div className="mt-5 flex flex-wrap gap-2 border-t border-violet-100 pt-4">
+              <div className="rounded-xl border border-white/90 bg-white/75 px-3 py-2 shadow-sm"><p className="text-[10px] text-slate-400">Ø Kompetenz</p><p className="text-lg font-bold">{average === null ? "—" : average.toFixed(1) + " / 5"}</p></div>
               <div className="rounded-xl bg-white/[.07] px-3 py-2"><p className="text-[10px] text-indigo-200/60">Missionen abgeschlossen</p><p className="text-lg font-bold">{total ? completed + " / " + total : "—"}</p></div>
               <div className="rounded-xl bg-white/[.07] px-3 py-2"><p className="text-[10px] text-indigo-200/60">Abschlussquote</p><p className="text-lg font-bold">{completionRate === null ? "—" : completionRate + "%"}</p></div>
             </div>
-          </div> : <div className="relative mt-6 flex min-h-40 flex-col items-center justify-center rounded-xl border border-dashed border-white/15 bg-white/[.03] px-5 text-center">
-            <Target className="h-7 w-7 text-cyan-300/70" /><p className="mt-3 text-sm font-semibold text-white/85">Noch keine Kompetenzdaten vorhanden</p><p className="mt-1 max-w-sm text-xs leading-5 text-indigo-100/55">Sobald Kompetenz-Level gespeichert wurden, erscheinen sie hier als Klassenübersicht.</p>
+          </div> : <div className="relative mt-6 flex min-h-40 flex-col items-center justify-center rounded-xl border border-dashed border-violet-200 bg-white/75 px-5 text-center">
+            <Target className="h-7 w-7 text-violet-400" /><p className="mt-3 text-sm font-semibold text-slate-800">Noch keine Kompetenzdaten vorhanden</p><p className="mt-1 max-w-sm text-xs leading-5 text-slate-500">Sobald Kompetenz-Level gespeichert wurden, erscheinen sie hier als Klassenübersicht.</p>
           </div>}
         </section>
 
@@ -155,7 +164,7 @@ export function ClassLearningInsights({
             <tbody>{visibleStudents.map((student) => {
               const row = studentRows[student.user_id];
               return <tr key={student.user_id} className="group">
-                <td className="border-b border-slate-100 px-4 py-3.5"><div className="flex items-center gap-2.5"><span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-violet-100 to-cyan-100 text-[10px] font-bold text-violet-700">{(student.display_name || student.username || "S").slice(0, 2).toUpperCase()}</span><span className="font-semibold text-slate-800">{student.display_name || student.username || "Schüler:in"}</span></div></td>
+                <td className="border-b border-slate-100 px-4 py-3.5"><div className="flex items-center gap-2.5"><img src={studentAvatarUrl(student.avatar_seed || student.user_id, 96)} alt="" className="h-9 w-9 shrink-0 rounded-full border border-white object-cover shadow-sm ring-1 ring-violet-100" loading="lazy" /><span className="font-semibold text-slate-800">{student.display_name || student.username || "Schüler:in"}</span></div></td>
                 {competencyTitles.map((title) => {
                   const value = row?.competencies[title];
                   const width = value == null ? 0 : Math.max(0, Math.min(5, value)) / 5 * 100;
