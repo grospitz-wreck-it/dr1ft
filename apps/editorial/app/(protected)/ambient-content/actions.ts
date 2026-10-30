@@ -502,7 +502,7 @@ export async function generateEditorialTeaserImage(prompt: string) {
   // Enforce the no-text requirement centrally and append it AFTER all editorial
   // briefing content so scenario titles/descriptions cannot weaken the rule.
   const enforcedPrompt = [prompt.trim(), EDITORIAL_TEASER_NO_TEXT_RULE].join("\n\n");
-  return generateImage(enforcedPrompt, "16:9", Date.now());
+  // Scenario covers must always use Cloudflare FLUX. Do not silently switch providers here.\n  return generateCloudflareImage(enforcedPrompt, "16:9", Date.now());
 }
 
 /**
@@ -525,7 +525,7 @@ export async function validateEditorialImageHasNoText(imageUrl: string) {
       contents: [{
         role: "user",
         parts: [
-          { text: "You are a strict visual QA detector. Inspect the entire image, including background, screens, paper, clothing, signs and tiny details. Determine whether ANY visible text-like content exists: readable or unreadable letters, words, numbers, typography, logos, labels, captions, watermarks, pseudo-writing, gibberish glyphs or letter-like marks. Even one suspicious glyph means rejection. Return exactly one token: TEXT_PRESENT if any such mark exists or you are unsure; return NO_TEXT only if the image is completely free of all text and text-like marks. Do not describe the image. Be conservative." },
+          { text: "You are a visual quality-control checker for generated editorial artwork. Inspect the full image. Return exactly one token: TEXT_PRESENT only if you can clearly identify actual writing or text elements, such as recognizable letters or numbers, words, typography, a logo/brand mark, label, caption, watermark, sign, or interface text. Return NO_TEXT if none of those identifiable text elements are present. IMPORTANT: Do NOT treat abstract shapes, geometric patterns, decorative linework, image texture, fabric seams, blurred background detail, or random non-linguistic marks as text. Do not guess that a pattern might be writing. Only reject identifiable text elements, not visual noise. Do not describe the image." },
           { inlineData: { mimeType, data: imageBase64 } }
         ]
       }],
