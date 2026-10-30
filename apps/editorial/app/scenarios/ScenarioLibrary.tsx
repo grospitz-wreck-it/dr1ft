@@ -98,20 +98,20 @@ export function ScenarioLibrary({ families }: { families: Family[] }) {
         {(query || age !== "all" || status !== "all" || sort !== "newest") && (
           <button type="button" onClick={() => { setQuery(""); setAge("all"); setStatus("all"); setSort("newest"); }} className="mt-3 text-xs font-semibold text-violet-700 hover:text-violet-900">Filter und Sortierung zurücksetzen</button>
         )}
-      </section>
-
-      <div className="space-y-3">
-        <div className="flex items-center justify-between gap-3">
-          <p className="text-xs text-slate-500">{visible.length} Szenario-Themen</p>
-          <div className="inline-flex rounded-xl border border-slate-200 bg-white p-1 shadow-sm" aria-label="Darstellungsmodus">
-            <button type="button" onClick={() => setViewMode("cards")} aria-pressed={viewMode === "cards"} className={`inline-flex h-9 items-center gap-2 rounded-lg px-3 text-xs font-semibold transition ${viewMode === "cards" ? "bg-violet-600 text-white shadow-sm" : "text-slate-600 hover:bg-slate-50"}`}>
+        <div className="mt-3 flex justify-end">
+          <div className="inline-flex rounded-xl border border-slate-200 bg-slate-50 p-1" aria-label="Darstellungsmodus">
+            <button type="button" onClick={() => setViewMode("cards")} aria-pressed={viewMode === "cards"} className={`inline-flex h-8 items-center gap-2 rounded-lg px-3 text-xs font-semibold transition ${viewMode === "cards" ? "bg-violet-600 text-white shadow-sm" : "text-slate-600 hover:bg-white"}`}>
               <LayoutGrid className="h-4 w-4" /> Karten
             </button>
-            <button type="button" onClick={() => setViewMode("list")} aria-pressed={viewMode === "list"} className={`inline-flex h-9 items-center gap-2 rounded-lg px-3 text-xs font-semibold transition ${viewMode === "list" ? "bg-violet-600 text-white shadow-sm" : "text-slate-600 hover:bg-slate-50"}`}>
+            <button type="button" onClick={() => setViewMode("list")} aria-pressed={viewMode === "list"} className={`inline-flex h-8 items-center gap-2 rounded-lg px-3 text-xs font-semibold transition ${viewMode === "list" ? "bg-violet-600 text-white shadow-sm" : "text-slate-600 hover:bg-white"}`}>
               <List className="h-4 w-4" /> Kompakt
             </button>
           </div>
         </div>
+      </section>
+
+      <div className="space-y-3">
+        <p className="text-xs text-slate-500">{visible.length} Szenario-Themen</p>
         {viewMode === "list" ? (
           <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm divide-y divide-slate-100">
             {visible.map((family) => {
