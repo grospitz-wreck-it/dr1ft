@@ -4,7 +4,6 @@ import {
   BarChart3,
   LayoutDashboard,
   LogOut,
-  School,
   Settings,
   Users,
 } from "lucide-react";
@@ -144,10 +143,6 @@ export function TeacherNav() {
   if (publicRoute) return null;
 
   const overviewActive = pathname === "/";
-  const classesActive =
-    pathname === "/classes" ||
-    pathname.startsWith("/classes/") ||
-    pathname.startsWith("/grades");
 
   async function logout() {
     await client().auth.signOut();
@@ -203,16 +198,6 @@ export function TeacherNav() {
               icon={<LayoutDashboard className="h-4 w-4" />}
               active={overviewActive}
             />
-
-            <div className="mt-1">
-              <NavItem
-                href="/classes"
-                label="Klassen"
-                icon={<School className="h-4 w-4" />}
-                active={classesActive}
-                count={classCount}
-              />
-            </div>
 
             <div className="mt-1">
               <NavItem
