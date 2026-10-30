@@ -70,7 +70,6 @@ export default function ClassImageWorkspace({
         )}
 
         <img src="/classes_layer.webp" alt="" aria-hidden="true" className="pointer-events-none absolute inset-0 h-full w-full object-cover" />
-        <div className="absolute inset-0 bg-slate-950/20" />
 
         <div className="relative flex min-h-[270px] flex-col justify-between p-6 sm:min-h-[300px] sm:p-9">
           <div className="flex items-start justify-between gap-4">
