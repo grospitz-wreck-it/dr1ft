@@ -105,7 +105,7 @@ export function ScenarioToggle({
   }
 
   return (
-    <article className={"overflow-hidden rounded-xl border bg-white transition-colors " + (selected ? "border-violet-300 bg-violet-50/30" : "border-slate-200 hover:border-slate-300")}>
+    <article className={"overflow-hidden rounded-xl border bg-white transition-colors " + (selected ? "border-violet-300 bg-violet-50/30" : "border-slate-200 bg-slate-50/50 hover:border-slate-300")}>
       <div className="flex items-center gap-3 p-3 sm:gap-4 sm:p-4">
         <div className="relative h-[76px] w-[112px] shrink-0 overflow-hidden rounded-lg bg-gradient-to-br from-violet-100 to-sky-100 sm:h-[88px] sm:w-[132px]">
           {coverImageUrl ? <img src={coverImageUrl} alt="" className="h-full w-full object-cover" loading="lazy" /> : <div className="flex h-full items-center justify-center text-violet-300"><ImageIcon className="h-6 w-6" /></div>}
@@ -118,7 +118,7 @@ export function ScenarioToggle({
             {selected ? (
               <span className="inline-flex items-center gap-1 rounded-full bg-violet-100 px-2 py-0.5 text-[10px] font-semibold text-violet-700"><Check className="h-3 w-3" />Aktiv</span>
             ) : (
-              <span className="rounded-full bg-slate-100 px-2 py-0.5 text-[10px] font-medium text-slate-500">Nicht zugewiesen</span>
+              <span className="rounded-full bg-slate-100 px-2 py-0.5 text-[10px] font-medium text-slate-500">Inaktiv</span>
             )}
             {hasSchedule && <span className="inline-flex items-center gap-1 rounded-full bg-slate-100 px-2 py-0.5 text-[10px] text-slate-600"><Clock3 className="h-3 w-3" />{scheduleState}</span>}
           </div>
