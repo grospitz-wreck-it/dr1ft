@@ -518,24 +518,55 @@ export async function validateEditorialImageHasNoText(imageUrl: string) {
   if (!imageResponse.ok) throw new Error("Teaserbild-QA konnte das generierte Bild nicht laden.");
   const mimeType = imageResponse.headers.get("content-type")?.split(";")[0] || "image/jpeg";
   const imageBase64 = Buffer.from(await imageResponse.arrayBuffer()).toString("base64");
+  const prompt = "You are a visual quality-control checker for generated editorial artwork. Inspect the full image. Return exactly one token: TEXT_PRESENT only if you can clearly identify actual writing or text elements, such as recognizable letters or numbers, words, typography, a logo/brand mark, label, caption, watermark, sign, or interface text. Return NO_TEXT if none of those identifiable text elements are present. IMPORTANT: Do NOT treat abstract shapes, geometric patterns, decorative linework, image texture, fabric seams, blurred background detail, or random non-linguistic marks as text. Do not guess that a pattern might be writing. Only reject identifiable text elements, not visual noise. Do not describe the image.";
 
-  const response = await fetch("https://generativelanguage.googleapis.com/v1beta/models/gemini-3.6-flash:generateContent", {
-    method: "POST",
-    headers: { "Content-Type": "application/json", "x-goog-api-key": apiKey },
-    body: JSON.stringify({
-      contents: [{
-        role: "user",
-        parts: [
-          { text: "You are a visual quality-control checker for generated editorial artwork. Inspect the full image. Return exactly one token: TEXT_PRESENT only if you can clearly identify actual writing or text elements, such as recognizable letters or numbers, words, typography, a logo/brand mark, label, caption, watermark, sign, or interface text. Return NO_TEXT if none of those identifiable text elements are present. IMPORTANT: Do NOT treat abstract shapes, geometric patterns, decorative linework, image texture, fabric seams, blurred background detail, or random non-linguistic marks as text. Do not guess that a pattern might be writing. Only reject identifiable text elements, not visual noise. Do not describe the image." },
-          { inlineData: { mimeType, data: imageBase64 } }
-        ]
-      }],
-      generationConfig: { temperature: 0, maxOutputTokens: 8 }
-    }),
-    cache: "no-store"
-  });
-  if (!response.ok) throw new Error("Teaserbild-QA fehlgeschlagen (" + response.status + "): " + (await response.text()).slice(0, 500));
-  const data = await response.json();
-  const verdict = String(data.candidates?.[0]?.content?.parts?.map((part: any) => part.text ?? "").join("") ?? "").trim().toUpperCase();
-  return { passed: verdict === "NO_TEXT", verdict: verdict || "UNCERTAIN" };
+  let lastError = "Unbekannter QA-Fehler";
+  for (let attempt = 1; attempt <= 3; attempt += 1) {
+    let response: Response;
+    try {
+      response = await fetch("https://generativelanguage.googleapis.com/v1beta/models/gemini-3.6-flash:generateContent", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", "x-goog-api-key": apiKey },
+        body: JSON.stringify({
+          contents: [{ role: "user", parts: [{ text: prompt }, { inlineData: { mimeType, data: imageBase64 } }] }],
+          generationConfig: { temperature: 0, maxOutputTokens: 8 }
+        }),
+        cache: "no-store",
+        signal: AbortSignal.timeout(45000)
+      });
+    } catch (error) {
+      lastError = error instanceof Error ? error.message : "Netzwerkfehler";
+      console.error("[scenario-cover-qa] request failed", { attempt, error: lastError });
+      if (attempt < 3) await new Promise((resolve) => setTimeout(resolve, attempt * 1500));
+      continue;
+    }
+
+    if (!response.ok) {
+      const errorText = (await response.text()).slice(0, 500);
+      lastError = "HTTP " + response.status + ": " + errorText;
+      console.error("[scenario-cover-qa] API unavailable", { attempt, status: response.status, detail: errorText.slice(0, 180) });
+      const retryable = response.status === 429 || response.status >= 500;
+      if (retryable && attempt < 3) {
+        await new Promise((resolve) => setTimeout(resolve, attempt * 2000));
+        continue;
+      }
+      throw new Error("Teaserbild-QA fehlgeschlagen (" + response.status + "): " + errorText);
+    }
+
+    const data = await response.json();
+    const raw = String(data.candidates?.[0]?.content?.parts?.map((part: any) => part.text ?? "").join("") ?? "").trim();
+    const normalized = raw.toUpperCase().replace(/[\\s.!,:;]+/g, "");
+    const verdict = normalized === "NO_TEXT" ? "NO_TEXT" : normalized === "TEXT_PRESENT" ? "TEXT_PRESENT" : "UNCERTAIN";
+    console.info("[scenario-cover-qa] verdict", {
+      attempt,
+      verdict,
+      raw: raw.slice(0, 120),
+      finishReason: data.candidates?.[0]?.finishReason ?? null,
+      promptFeedback: data.promptFeedback?.blockReason ?? null,
+      safetyRatings: data.candidates?.[0]?.safetyRatings ?? null
+    });
+    return { passed: verdict === "NO_TEXT", verdict };
+  }
+
+  throw new Error("Teaserbild-QA nach drei Netzwerkversuchen nicht erreichbar: " + lastError.slice(0, 300));
 }
