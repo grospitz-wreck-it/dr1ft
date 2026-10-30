@@ -164,17 +164,23 @@ export default async function FeedPage() {
     : mappedPool;
   const feedItemTargets: Record<string, number> = { off: 12, low: 16, medium: 20, high: 28 };
   const personalizedAmbientLimits: Record<string, number> = { off: 0, low: 1, medium: 3, high: 6 };
-  const feedTarget = feedItemTargets[ambientDensity] ?? 20;
-  const ambientTarget = ambientDensity === "off" ? 0 : Math.ceil(feedTarget * (2 / 3));
-  const scenarioTarget = Math.max(0, feedTarget - ambientTarget);
+  const initialBatchSize = feedItemTargets[ambientDensity] ?? 20;
   const ambientPool = densityAwarePool.filter((item) => item.scenarioId === null);
-  const scenarioPool = scenarioLearningItems.length > 0
+  const scenarioPool = (scenarioLearningItems.length > 0
     ? scenarioLearningItems
-    : densityAwarePool.filter((item) => item.scenarioId !== null);
+    : densityAwarePool.filter((item) => item.scenarioId !== null))
+    .filter((item, index, items) => items.findIndex((candidate) => candidate.id === item.id) === index);
+  // Prepare the complete eligible feed once; the client reveals it in small batches.
+  // Ambient content stays at >= 2/3 whenever enough ambient posts are available.
+  const availableScenarioCount = scenarioPool.length;
+  const availableAmbientCount = ambientDensity === "off" ? 0 : ambientPool.length;
+  const totalFeedItems = availableScenarioCount + availableAmbientCount;
+  const ambientTarget = ambientDensity === "off"
+    ? 0
+    : Math.min(availableAmbientCount, Math.max(Math.ceil(totalFeedItems * (2 / 3)), Math.min(initialBatchSize, availableAmbientCount)));
+  const scenarioTarget = Math.min(availableScenarioCount, Math.max(0, totalFeedItems - ambientTarget));
   const ambientItems = selectNextFeedItems(ambientPool, ctx, ambientTarget) as FeedItem[];
-  const scenarioItems = scenarioPool
-    .filter((item, index, items) => items.findIndex((candidate) => candidate.id === item.id) === index)
-    .slice(0, scenarioTarget);
+  const scenarioItems = scenarioPool.slice(0, scenarioTarget);
   // Stable pseudo-random merge. The order inside each scenario's active step
   // is preserved, while ambient and scenario queues form natural-looking clusters.
   let mixSeed = Array.from(user.id + classInstanceId + assignedScenarioIds.join("")).reduce((seed, char) => Math.imul(seed ^ char.charCodeAt(0), 16777619), 2166136261);
@@ -193,7 +199,7 @@ export default async function FeedPage() {
   const activeScenarioQueues = Array.from(scenarioQueues.values());
   const ambientQueue = [...ambientItems];
   const baseItems: FeedItem[] = [];
-  while (baseItems.length < feedTarget && (ambientQueue.length > 0 || activeScenarioQueues.some((queue) => queue.length > 0))) {
+  while (baseItems.length < totalFeedItems && (ambientQueue.length > 0 || activeScenarioQueues.some((queue) => queue.length > 0))) {
     const remainingScenario = activeScenarioQueues.reduce((sum, queue) => sum + queue.length, 0);
     const remaining = ambientQueue.length + remainingScenario;
     const ambientShare = remainingScenario === 0 ? 1 : ambientQueue.length === 0 ? 0 : ambientQueue.length / remaining;
