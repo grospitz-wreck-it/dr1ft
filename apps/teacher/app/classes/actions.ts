@@ -98,25 +98,79 @@ export async function toggleScenarioAssignment(
     });
     if (error) throw new Error(error.message);
 
-    // Re-adding an archived module restores the same assignment row;
-    // its learning records remain untouched.
     const { error: restoreError } = await supabase
       .from("class_instance_scenario_assignments")
-      .update({ archived_at: null })
+      .update({ archived_at: null, is_active: true })
       .eq("class_instance_id", classId)
       .eq("scenario_id", scenarioId);
     if (restoreError) throw new Error(restoreError.message);
   } else {
-    // Archive instead of deleting: preserve assignment metadata and all
-    // instance-scoped learning progress for future reporting/restoration.
+    // Legacy false calls now mean "deactivate", never archive.
     const { error } = await supabase
       .from("class_instance_scenario_assignments")
-      .update({ archived_at: new Date().toISOString() })
+      .update({ is_active: false })
       .eq("class_instance_id", classId)
       .eq("scenario_id", scenarioId)
       .is("archived_at", null);
     if (error) throw new Error(error.message);
   }
+
+  revalidatePath(`/classes/${classId}`);
+  revalidatePath("/classes");
+}
+
+export async function setScenarioAssignmentActive(classId: string, scenarioId: string, isActive: boolean) {
+  const supabase = supabaseServerClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) throw new Error("Nicht authentifiziert");
+
+  const { data: membership, error: membershipError } = await supabase
+    .from("class_instance_memberships")
+    .select("id,role")
+    .eq("class_instance_id", classId)
+    .eq("user_id", user.id)
+    .is("left_at", null)
+    .maybeSingle();
+
+  if (membershipError || !membership || !["teacher", "school_admin", "school_lead"].includes(membership.role)) {
+    throw new Error("Keine Berechtigung, den Modulstatus dieser Klasse zu ändern");
+  }
+
+  const { error } = await supabase
+    .from("class_instance_scenario_assignments")
+    .update({ is_active: isActive })
+    .eq("class_instance_id", classId)
+    .eq("scenario_id", scenarioId)
+    .is("archived_at", null);
+  if (error) throw new Error(error.message);
+
+  revalidatePath(`/classes/${classId}`);
+}
+
+export async function archiveScenarioAssignment(classId: string, scenarioId: string) {
+  const supabase = supabaseServerClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) throw new Error("Nicht authentifiziert");
+
+  const { data: membership, error: membershipError } = await supabase
+    .from("class_instance_memberships")
+    .select("id,role")
+    .eq("class_instance_id", classId)
+    .eq("user_id", user.id)
+    .is("left_at", null)
+    .maybeSingle();
+
+  if (membershipError || !membership || !["teacher", "school_admin", "school_lead"].includes(membership.role)) {
+    throw new Error("Keine Berechtigung, Module dieser Klasse zu archivieren");
+  }
+
+  const { error } = await supabase
+    .from("class_instance_scenario_assignments")
+    .update({ archived_at: new Date().toISOString(), is_active: false })
+    .eq("class_instance_id", classId)
+    .eq("scenario_id", scenarioId)
+    .is("archived_at", null);
+  if (error) throw new Error(error.message);
 
   revalidatePath(`/classes/${classId}`);
   revalidatePath("/classes");
