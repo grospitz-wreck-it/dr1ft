@@ -277,7 +277,6 @@ export default async function ClassDetailPage({
           classImageZoom={instance.class_image_zoom ?? 1}
           canEditClassImage={canEditClassImage}
           status={status === "paused" || status === "ended" ? status : "active"}
-          schoolYear={instance.school_year}
         />
 
         <section className="mt-5 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
