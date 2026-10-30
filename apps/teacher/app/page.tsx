@@ -1,4 +1,5 @@
 import { redirect } from "next/navigation";
+import { OverviewClasses } from "./OverviewClasses";
 import {
   ArrowRight,
   BarChart3,
@@ -56,6 +57,31 @@ export default async function TeacherHomePage() {
   }
 
   const activeClasses = classes.filter((item: any) => item.is_active);
+  const [{ data: studentMemberships }, { data: scenarioAssignments }] = await Promise.all([
+    classIds.length ? supabase.from("class_instance_memberships").select("class_instance_id").in("class_instance_id", classIds).eq("role", "student").is("left_at", null) : Promise.resolve({ data: [] as any[] }),
+    classIds.length ? supabase.from("class_instance_scenario_assignments").select("class_instance_id,scenario_id,is_active,archived_at,scenarios(id,title,cover_image_url)").in("class_instance_id", classIds).is("archived_at", null).eq("is_active", true) : Promise.resolve({ data: [] as any[] }),
+  ]);
+  const studentsByClass = new Map<string, number>();
+  (studentMemberships ?? []).forEach((row: any) => studentsByClass.set(row.class_instance_id, (studentsByClass.get(row.class_instance_id) ?? 0) + 1));
+  const assignmentsByClass = new Map<string, any[]>();
+  (scenarioAssignments ?? []).forEach((row: any) => {
+    const current = assignmentsByClass.get(row.class_instance_id) ?? [];
+    if (row.scenarios) current.push(row.scenarios);
+    assignmentsByClass.set(row.class_instance_id, current);
+  });
+  const overviewClasses = await Promise.all(classes.map(async (item: any) => {
+    let thumbnailUrl: string | null = null;
+    if (item.class_image_path) {
+      const { data } = await supabase.storage.from("class-images").createSignedUrl(item.class_image_path, 60 * 60);
+      thumbnailUrl = data?.signedUrl ?? null;
+    }
+    return {
+      id: item.id, name: item.name, gradeLevel: item.grade_level, schoolYear: item.school_year,
+      isActive: item.is_active, thumbnailUrl, studentCount: studentsByClass.get(item.id) ?? 0,
+      missions: assignmentsByClass.get(item.id) ?? [],
+    };
+  }));
+
 
   return (
     <main className="min-h-screen">
@@ -71,8 +97,8 @@ export default async function TeacherHomePage() {
           <p className="mt-4 max-w-xl text-sm leading-6 text-slate-600 sm:text-base">
             Verwalte deine Klassen, begleite deine Schüler:innen und behalte Lernfortschritte und Szenarien im Blick.
           </p>
-          <a href="/classes" className="mt-5 inline-flex items-center gap-2 rounded-xl bg-gradient-to-r from-violet-600 to-indigo-600 px-4 py-2.5 text-sm font-bold text-white shadow-lg shadow-violet-500/20 transition hover:-translate-y-0.5 hover:shadow-xl">
-            Meine Klassen <ArrowRight className="h-4 w-4" />
+          <a href="#deine-klassen" className="mt-5 inline-flex items-center gap-2 rounded-xl bg-gradient-to-r from-violet-600 to-indigo-600 px-4 py-2.5 text-sm font-bold text-white shadow-lg shadow-violet-500/20 transition hover:-translate-y-0.5 hover:shadow-xl">
+            Zu deinen Klassen <ArrowRight className="h-4 w-4" />
           </a>
         </div>
 
@@ -107,76 +133,16 @@ export default async function TeacherHomePage() {
           </div>
         </div>
         <div className="relative mt-5 grid gap-3 md:grid-cols-3">
-          <Metric label="Klassen" value={activeClasses.length} detail={`davon ${activeClasses.length} aktiv`} icon={<Users />} tone="violet" href="/classes" />
+          <Metric label="Aktive Klassen" value={activeClasses.length} detail="bereit für den Unterricht" icon={<Users />} tone="violet" href="#deine-klassen" />
           <Metric label="Schüler:innen" value={studentCount} detail="aktiv in deinen Klassen" icon={<GraduationCap />} tone="cyan" href="/students" />
-          <Metric label="Klassen insgesamt" value={classes.length} detail="in deinem Lehrkraftbereich" icon={<BookOpen />} tone="pink" href="/classes" />
+          <Metric label="Aktive Missionen" value={scenarioAssignments?.length ?? 0} detail="in deinen Klassen zugewiesen" icon={<BookOpen />} tone="pink" href="#deine-klassen" />
         </div>
       </section>
 
-      <section className="mt-5 grid gap-5 xl:grid-cols-[1fr_1.08fr]">
-        <article className="drift-panel overflow-hidden p-5 sm:p-6">
-          <div className="flex flex-wrap items-start justify-between gap-3">
-            <div>
-              <p className="text-[10px] font-extrabold uppercase tracking-[.2em] text-violet-600">Unterricht</p>
-              <h2 className="mt-1 text-xl font-extrabold tracking-tight text-slate-950">Deine Klassen</h2>
-              <p className="mt-1 text-xs leading-5 text-slate-500">Verwalte deine Klassen, starte neue Lernräume und weise Szenarien zu.</p>
-            </div>
-            <a href="/classes" className="inline-flex items-center gap-2 rounded-xl bg-gradient-to-r from-violet-600 to-indigo-600 px-3.5 py-2.5 text-xs font-bold text-white shadow-md shadow-violet-500/15 transition hover:-translate-y-0.5">
-              <Plus className="h-4 w-4" /> Neue Klasse erstellen
-            </a>
-          </div>
-          <div className="mt-4 space-y-2">
-            {activeClasses.length ? activeClasses.slice(0, 5).map((item: any, index: number) => (
-              <a key={item.id} href={`/classes/${item.id}`} className="group flex items-center gap-3 rounded-2xl border border-slate-200/90 bg-gradient-to-r from-white to-slate-50/70 p-3 transition hover:-translate-y-0.5 hover:border-violet-200 hover:shadow-md">
-                <span className={`grid h-12 w-12 shrink-0 place-items-center rounded-2xl ${index % 2 === 0 ? "bg-gradient-to-br from-violet-600 to-indigo-500" : "bg-gradient-to-br from-cyan-500 to-blue-500"} text-white shadow-md`}><Users className="h-5 w-5" /></span>
-                <span className="min-w-0 flex-1">
-                  <span className="block truncate text-sm font-extrabold text-slate-900">{item.name}</span>
-                  <span className="mt-0.5 block text-xs text-slate-400">Jahrgang {item.grade_level ?? "—"} · {item.school_year}</span>
-                </span>
-                <span className="hidden rounded-full bg-emerald-50 px-2.5 py-1 text-[10px] font-bold text-emerald-700 sm:inline-flex"><span className="mr-1.5 mt-1 h-1.5 w-1.5 rounded-full bg-emerald-500" />Aktiv</span>
-                <ArrowRight className="h-4 w-4 shrink-0 text-slate-300 transition group-hover:translate-x-1 group-hover:text-violet-600" />
-              </a>
-            )) : (
-              <div className="rounded-2xl border border-dashed border-violet-200 bg-violet-50/40 px-4 py-8 text-center">
-                <BookOpen className="mx-auto h-7 w-7 text-violet-400" />
-                <p className="mt-2 text-sm font-semibold text-slate-700">Noch keine aktive Klasse.</p>
-                <p className="mt-1 text-xs text-slate-500">Lege einen Lernraum an, um loszulegen.</p>
-              </div>
-            )}
-          </div>
-          <a href="/classes" className="mt-4 inline-flex items-center gap-2 text-xs font-bold text-violet-700 hover:text-violet-900">Alle Klassen anzeigen <ArrowRight className="h-3.5 w-3.5" /></a>
-        </article>
-
-        <article className="drift-panel relative overflow-hidden p-5 sm:p-6">
-          <div className="pointer-events-none absolute -bottom-20 -right-14 h-64 w-64 rounded-full bg-violet-100/70 blur-3xl" />
-          <div className="relative flex flex-wrap items-start justify-between gap-3">
-            <div>
-              <p className="text-[10px] font-extrabold uppercase tracking-[.2em] text-violet-600">Analyse</p>
-              <h2 className="mt-1 text-xl font-extrabold tracking-tight text-slate-950">DR1FT Insights</h2>
-              <p className="mt-1 max-w-lg text-xs leading-5 text-slate-500">Lernfortschritte, Kompetenzen und mögliche Schwierigkeiten deiner Klassen zentral auswerten.</p>
-            </div>
-            <a href="/insights" className="inline-flex items-center gap-2 rounded-xl border border-violet-200 bg-violet-50/70 px-3.5 py-2.5 text-xs font-bold text-violet-700 transition hover:bg-violet-100">Insights öffnen <ArrowRight className="h-3.5 w-3.5" /></a>
-          </div>
-          <div className="relative mt-5 grid gap-3 sm:grid-cols-[1fr_132px]">
-            <div className="rounded-2xl border border-slate-200/90 bg-white/85 p-3.5">
-              <p className="mb-3 text-[11px] font-extrabold text-slate-700">Kompetenzbereiche</p>
-              <InsightLegend tone="violet" icon="✦" label="Medienkompetenz" />
-              <InsightLegend tone="cyan" icon="◎" label="Kritisches Denken" />
-              <InsightLegend tone="pink" icon="◉" label="Quellenbewertung" />
-              <InsightLegend tone="orange" icon="✳" label="Respekt & Vielfalt" />
-              <p className="mt-3 text-[10px] leading-4 text-slate-400">Detaillierte Auswertungen findest du in DR1FT Insights.</p>
-            </div>
-            <div className="relative flex min-h-[170px] flex-col items-center justify-center overflow-hidden rounded-2xl border border-violet-100 bg-gradient-to-br from-violet-50 via-white to-cyan-50 p-3 text-center">
-              <div className="absolute -right-5 -top-5 h-20 w-20 rounded-full bg-pink-100/80 blur-xl" />
-              <div className="relative grid h-20 w-20 place-items-center rounded-full bg-[conic-gradient(from_220deg,#7c3aed_0deg,#22d3ee_170deg,#f3e8ff_171deg)] p-[5px] shadow-lg shadow-violet-500/15">
-                <div className="grid h-full w-full place-items-center rounded-full bg-white"><BarChart3 className="h-7 w-7 text-violet-600" /></div>
-              </div>
-              <p className="relative mt-3 text-[11px] font-extrabold text-slate-700">Deine Lernanalyse</p>
-              <p className="relative mt-1 text-[10px] text-slate-400">Alle Klassen im Blick</p>
-            </div>
-          </div>
-        </article>
+      <section id="deine-klassen" className="drift-panel mt-5 overflow-hidden p-5 sm:p-6">
+        <OverviewClasses classes={overviewClasses} />
       </section>
+
     </main>
   );
 }
