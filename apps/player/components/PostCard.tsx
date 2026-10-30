@@ -425,7 +425,7 @@ export function PostCard({ item, userId, classInstanceId, initiallyLiked, onView
         <div aria-hidden="true" className="pointer-events-none absolute -left-16 -top-24 h-64 w-64 rounded-full bg-fuchsia-500/15 blur-3xl"/>
         <div aria-hidden="true" className="pointer-events-none absolute -bottom-28 -right-12 h-72 w-72 rounded-full bg-cyan-400/15 blur-3xl"/>
         <div aria-hidden="true" className="pointer-events-none absolute inset-0 bg-[linear-gradient(115deg,rgba(255,255,255,0.035),transparent_42%,rgba(255,255,255,0.025))]"/>
-        <img src={item.mediaUrl} alt="" className="relative z-10 h-full w-full object-contain px-3 py-2 sm:px-5 sm:py-3 drop-shadow-[0_8px_24px_rgba(0,0,0,0.22)]" loading="lazy"/>
+        <img src={item.mediaUrl} alt="" className="relative z-10 block h-auto w-auto max-h-full max-w-full object-contain drop-shadow-[0_8px_24px_rgba(0,0,0,0.22)]" loading="lazy"/>
       </div>}
       {item.mediaUrl && item.mediaType === "video" && <video src={item.mediaUrl} controls className="block w-full aspect-video object-cover bg-black"/>}
       <div className="p-4 pt-3">
