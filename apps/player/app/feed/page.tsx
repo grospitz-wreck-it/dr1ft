@@ -165,7 +165,7 @@ export default async function FeedPage() {
   const feedItemTargets: Record<string, number> = { off: 12, low: 16, medium: 20, high: 28 };
   const personalizedAmbientLimits: Record<string, number> = { off: 0, low: 1, medium: 3, high: 6 };
   const feedTarget = feedItemTargets[ambientDensity] ?? 20;
-  const ambientTarget = Math.ceil(feedTarget * (2 / 3));
+  const ambientTarget = ambientDensity === "off" ? 0 : Math.ceil(feedTarget * (2 / 3));
   const scenarioTarget = Math.max(0, feedTarget - ambientTarget);
   const ambientPool = densityAwarePool.filter((item) => item.scenarioId === null);
   const scenarioPool = scenarioLearningItems.length > 0
@@ -223,5 +223,5 @@ export default async function FeedPage() {
   const items = [...baseItems, ...personalizedAmbientItems];
   const likedContentIds = new Set((recentInteractions ?? []).filter((i) => i.interaction_type === "like").map((i) => i.content_item_id));
 
-  return <FeedClient initialItems={items} userId={user.id} classInstanceId={classInstanceId} likedContentIds={likedContentIds} scenarioIntro={scenarioIntro ? { ...scenarioIntro, title: scenarioIntroTitle ?? scenarioIntro.title, description: scenarioIntroDescription } : null} scenarioMissionCount={scenarioMissionIds.length} completedScenarioMissionCount={new Set((completedScenarioMissions ?? []).map((mission) => mission.mission_id)).size} profile={{ displayName: currentProfile?.display_name ?? "DR1FT User", username: currentProfile?.username ?? "user", avatarSeed: currentProfile?.avatar_seed ?? user.id }} />;
+  return <FeedClient initialItems={items} userId={user.id} classInstanceId={classInstanceId} likedContentIds={likedContentIds} scenarioIntro={scenarioIntro ? { ...scenarioIntro, title: scenarioIntroTitle ?? scenarioIntro.title, description: scenarioIntroDescription } : null} scenarioIds={assignedScenarioIds} scenarioMissionCount={scenarioMissionIds.length} completedScenarioMissionCount={new Set((completedScenarioMissions ?? []).map((mission) => mission.mission_id)).size} profile={{ displayName: currentProfile?.display_name ?? "DR1FT User", username: currentProfile?.username ?? "user", avatarSeed: currentProfile?.avatar_seed ?? user.id }} />;
 }
