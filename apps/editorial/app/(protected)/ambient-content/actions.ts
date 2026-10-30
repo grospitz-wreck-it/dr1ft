@@ -529,7 +529,7 @@ export async function validateEditorialImageHasNoText(imageUrl: string) {
         headers: { "Content-Type": "application/json", "x-goog-api-key": apiKey },
         body: JSON.stringify({
           contents: [{ role: "user", parts: [{ text: prompt }, { inlineData: { mimeType, data: imageBase64 } }] }],
-          generationConfig: { temperature: 0, maxOutputTokens: 8 }
+          generationConfig: { temperature: 0, maxOutputTokens: 32 }
         }),
         cache: "no-store",
         signal: AbortSignal.timeout(45000)
