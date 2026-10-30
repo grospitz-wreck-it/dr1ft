@@ -504,3 +504,37 @@ export async function generateEditorialTeaserImage(prompt: string) {
   const enforcedPrompt = [prompt.trim(), EDITORIAL_TEASER_NO_TEXT_RULE].join("\n\n");
   return generateImage(enforcedPrompt, "16:9", Date.now());
 }
+
+/**
+ * Independent visual QA for editorial teaser artwork.
+ * Fail closed: only an explicit NO_TEXT verdict is accepted.
+ */
+export async function validateEditorialImageHasNoText(imageUrl: string) {
+  const apiKey = process.env.GEMINI_API_KEY?.trim();
+  if (!apiKey) throw new Error("Teaserbild-QA nicht möglich: GEMINI_API_KEY fehlt. Das Bild wurde nicht freigegeben.");
+
+  const imageResponse = await fetch(imageUrl, { cache: "no-store" });
+  if (!imageResponse.ok) throw new Error("Teaserbild-QA konnte das generierte Bild nicht laden.");
+  const mimeType = imageResponse.headers.get("content-type")?.split(";")[0] || "image/jpeg";
+  const imageBase64 = Buffer.from(await imageResponse.arrayBuffer()).toString("base64");
+
+  const response = await fetch("https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent", {
+    method: "POST",
+    headers: { "Content-Type": "application/json", "x-goog-api-key": apiKey },
+    body: JSON.stringify({
+      contents: [{
+        role: "user",
+        parts: [
+          { text: "You are a strict visual QA detector. Inspect the entire image, including background, screens, paper, clothing, signs and tiny details. Determine whether ANY visible text-like content exists: readable or unreadable letters, words, numbers, typography, logos, labels, captions, watermarks, pseudo-writing, gibberish glyphs or letter-like marks. Even one suspicious glyph means rejection. Return exactly one token: TEXT_PRESENT if any such mark exists or you are unsure; return NO_TEXT only if the image is completely free of all text and text-like marks. Do not describe the image. Be conservative." },
+          { inline_data: { mime_type: mimeType, data: imageBase64 } }
+        ]
+      }],
+      generationConfig: { temperature: 0, maxOutputTokens: 8 }
+    }),
+    cache: "no-store"
+  });
+  if (!response.ok) throw new Error("Teaserbild-QA fehlgeschlagen: " + response.status);
+  const data = await response.json();
+  const verdict = String(data.candidates?.[0]?.content?.parts?.map((part: any) => part.text ?? "").join("") ?? "").trim().toUpperCase();
+  return { passed: verdict === "NO_TEXT", verdict: verdict || "UNCERTAIN" };
+}
