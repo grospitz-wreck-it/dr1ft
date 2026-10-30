@@ -114,14 +114,14 @@ export function ScenarioToggle({
             {selected && moduleReport && <span className="mt-2 inline-flex rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs leading-5 text-slate-600">{moduleReport}</span>}
           </span>
         </div>
-        <div className="flex items-center gap-2 md:shrink-0">
+        <div className="flex flex-col items-center gap-1 md:shrink-0">
+          {hasSchedule && <span title={scheduleState} className={`inline-flex items-center gap-1 text-[10px] font-semibold ${scheduleTone.replace("bg-emerald-50 ", "").replace("bg-violet-50 ", "").replace("bg-slate-100 ", "")}`}><Clock3 className="h-3 w-3" />{scheduleState}</span>}
           <button type="button" role="switch" aria-checked={selected} aria-label={selected ? title + " deaktivieren" : title + " aktivieren"} onClick={() => { const next = !selected; setSelected(next); startTransition(() => toggleScenarioAssignment(classId, scenarioId, next, pacing)); }} disabled={pending} className={`relative inline-flex h-7 w-12 shrink-0 items-center rounded-full transition-colors disabled:opacity-50 ${selected ? "bg-violet-600" : "bg-slate-300"}`}>
             <span className={`inline-block h-5 w-5 rounded-full bg-white shadow transition-transform ${selected ? "translate-x-6" : "translate-x-1"}`} />
           </button>
         </div>
         {selected && <div className="flex items-center gap-2 md:shrink-0">
           <select value={pacing} disabled={pending} onChange={(e) => { const next = e.target.value as "compact" | "as_designed"; setPacing(next); startTransition(() => updateScenarioPacing(classId, scenarioId, next)); }} className="rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs text-slate-700 shadow-sm outline-none focus:border-violet-300 focus:ring-2 focus:ring-violet-100"><option value="compact">Kompakt</option><option value="as_designed">Verteilt</option></select>
-          <button type="button" onClick={() => { setSelected(false); startTransition(() => toggleScenarioAssignment(classId, scenarioId, false, pacing)); }} disabled={pending} className="rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs font-medium text-slate-600 transition hover:border-slate-300 hover:bg-slate-50">Deaktivieren</button>
         </div>}
       </div>
 
