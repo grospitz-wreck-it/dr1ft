@@ -132,7 +132,7 @@ export default function ClassImageWorkspace({
                   <input name="name" defaultValue={className} required className="mt-1.5 w-full rounded-xl border border-slate-200 px-3 py-2.5 text-sm font-medium text-slate-900 outline-none focus:border-violet-400 focus:ring-2 focus:ring-violet-100" />
                 </label>
                 <label className="text-xs font-semibold text-slate-600">Jahrgang
-                  <input name="gradeLevel" type="number" min="1" max="13" defaultValue={classGradeLevel ?? ""} placeholder="Jahrgang" className="mt-1.5 w-full rounded-xl border border-slate-200 px-3 py-2.5 text-sm font-medium text-slate-900 outline-none focus:border-violet-400 focus:ring-2 focus:ring-violet-100" />
+                  <input name="gradeLevel" type="number" min="1" max="13" defaultValue={gradeLevel ?? ""} placeholder="Jahrgang" className="mt-1.5 w-full rounded-xl border border-slate-200 px-3 py-2.5 text-sm font-medium text-slate-900 outline-none focus:border-violet-400 focus:ring-2 focus:ring-violet-100" />
                 </label>
                 <label className="text-xs font-semibold text-slate-600">Schuljahr
                   <input name="schoolYear" defaultValue={schoolYear} required className="mt-1.5 w-full rounded-xl border border-slate-200 px-3 py-2.5 text-sm font-medium text-slate-900 outline-none focus:border-violet-400 focus:ring-2 focus:ring-violet-100" />
