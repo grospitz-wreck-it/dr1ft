@@ -2,7 +2,8 @@
 
 import { useEffect, useState, useTransition } from "react";
 import { CalendarClock, Check, Clock3, Image as ImageIcon, Trash2 } from "lucide-react";
-import { toggleScenarioAssignment, updateScenarioSchedule } from "../actions";
+import { archiveScenarioAssignment, setScenarioAssignmentActive, updateScenarioSchedule } from "../actions";
+import { useRouter } from "next/navigation";
 
 type ModuleStatus = "Abgeschlossen" | "In Bearbeitung" | "Noch nicht begonnen" | "Nicht zugewiesen";
 
@@ -18,7 +19,7 @@ function timePart(value?: string | null) {
 }
 
 export function ScenarioToggle({
-  classId, scenarioId, title, description, coverImageUrl, ageRating, initiallyAssigned,
+  classId, scenarioId, title, description, coverImageUrl, ageRating, initiallyAssigned, initiallyActive,
   moduleStatus, moduleReport, scheduledStartAt = null, scheduledEndAt = null, showReportsAtEnd = false,
 }: {
   classId: string;
@@ -28,6 +29,7 @@ export function ScenarioToggle({
   coverImageUrl: string | null;
   ageRating: string;
   initiallyAssigned: boolean;
+  initiallyActive: boolean;
   initialPacingMode?: "compact" | "as_designed";
   moduleStatus?: ModuleStatus;
   moduleReport?: string;
@@ -35,7 +37,9 @@ export function ScenarioToggle({
   scheduledEndAt?: string | null;
   showReportsAtEnd?: boolean;
 }) {
-  const [selected, setSelected] = useState(initiallyAssigned);
+  const [selected, setSelected] = useState(initiallyActive);
+  const [archiveMessage, setArchiveMessage] = useState("");
+  const router = useRouter();
   const [startDate, setStartDate] = useState(datePart(scheduledStartAt));
   const [startTime, setStartTime] = useState(timePart(scheduledStartAt));
   const [endDate, setEndDate] = useState(datePart(scheduledEndAt));
@@ -46,13 +50,13 @@ export function ScenarioToggle({
   const [scheduleOpen, setScheduleOpen] = useState(false);
 
   useEffect(() => {
-    setSelected(initiallyAssigned);
+    setSelected(initiallyActive);
     setStartDate(datePart(scheduledStartAt));
     setStartTime(timePart(scheduledStartAt));
     setEndDate(datePart(scheduledEndAt));
     setEndTime(timePart(scheduledEndAt));
     setReleaseReports(showReportsAtEnd);
-  }, [initiallyAssigned, scheduledStartAt, scheduledEndAt, showReportsAtEnd]);
+  }, [initiallyActive, scheduledStartAt, scheduledEndAt, showReportsAtEnd]);
 
   const status = moduleStatus ?? (initiallyAssigned ? "Noch nicht begonnen" : "Nicht zugewiesen");
   const now = Date.now();
@@ -66,7 +70,7 @@ export function ScenarioToggle({
     setSelected(next);
     startTransition(async () => {
       try {
-        await toggleScenarioAssignment(classId, scenarioId, next, "compact");
+        await setScenarioAssignmentActive(classId, scenarioId, next);
       } catch (error) {
         setSelected(!next);
         setScheduleMessage(error instanceof Error ? error.message : "Modulstatus konnte nicht geändert werden.");
@@ -116,7 +120,7 @@ export function ScenarioToggle({
             ) : (
               <span className="rounded-full bg-slate-100 px-2 py-0.5 text-[10px] font-medium text-slate-500">Nicht zugewiesen</span>
             )}
-            {selected && hasSchedule && <span className="inline-flex items-center gap-1 rounded-full bg-slate-100 px-2 py-0.5 text-[10px] text-slate-600"><Clock3 className="h-3 w-3" />{scheduleState}</span>}
+            {hasSchedule && <span className="inline-flex items-center gap-1 rounded-full bg-slate-100 px-2 py-0.5 text-[10px] text-slate-600"><Clock3 className="h-3 w-3" />{scheduleState}</span>}
           </div>
           <p className="mt-1 line-clamp-2 text-xs leading-4 text-slate-600">{description?.trim() || "Für dieses Szenario liegt noch keine Kurzbeschreibung vor."}</p>
           {selected && moduleReport && <p className="mt-1 line-clamp-1 text-[10px] text-slate-500">{moduleReport}</p>}
@@ -127,12 +131,22 @@ export function ScenarioToggle({
           <button type="button" role="switch" aria-checked={selected} aria-label={selected ? title + " deaktivieren" : title + " aktivieren"} onClick={() => changeAssignment(!selected)} disabled={pending} className={"relative inline-flex h-6 w-11 items-center rounded-full transition-colors disabled:opacity-50 " + (selected ? "bg-violet-600" : "bg-slate-300")}>
             <span className={"inline-block h-4 w-4 rounded-full bg-white shadow transition-transform " + (selected ? "translate-x-6" : "translate-x-1")} />
           </button>
-          <span className="text-[9px] text-slate-400">{pending ? "…" : selected ? "Aktiv" : "Aktivieren"}</span>
-          {selected && (
-            <button type="button" onClick={() => changeAssignment(false)} disabled={pending} aria-label="Modul aus dieser Klasse entfernen" title="Modul entfernen" className="mt-1 inline-flex h-8 w-8 items-center justify-center rounded-xl border border-white/80 bg-white/65 text-slate-500 shadow-[0_4px_14px_rgba(30,41,59,.10)] backdrop-blur-xl transition hover:border-rose-200 hover:bg-rose-50 hover:text-rose-600 disabled:opacity-50">
-              <Trash2 className="h-3.5 w-3.5" />
-            </button>
-          )}
+          <span className="text-[9px] text-slate-400">{pending ? "…" : selected ? "Aktiv" : "Inaktiv"}</span>
+          {archiveMessage && <span role="alert" className="max-w-28 text-center text-[9px] text-rose-600">{archiveMessage}</span>}
+          <button type="button" onClick={() => {
+            if (pending || !window.confirm("Dieses Modul archivieren? Alle Lernfortschritte und Antworten bleiben erhalten.")) return;
+            setArchiveMessage("");
+            startTransition(async () => {
+              try {
+                await archiveScenarioAssignment(classId, scenarioId);
+                router.refresh();
+              } catch (error) {
+                setArchiveMessage(error instanceof Error ? error.message : "Modul konnte nicht archiviert werden.");
+              }
+            });
+          }} disabled={pending} aria-label="Modul archivieren" title="Modul archivieren – Lernstände bleiben erhalten" className="mt-1 inline-flex h-8 w-8 items-center justify-center rounded-xl border border-white/80 bg-white/65 text-slate-500 shadow-[0_4px_14px_rgba(30,41,59,.10)] backdrop-blur-xl transition hover:border-rose-200 hover:bg-rose-50 hover:text-rose-600 disabled:opacity-50">
+            <Trash2 className="h-3.5 w-3.5" />
+          </button>
         </div>
       </div>
 
