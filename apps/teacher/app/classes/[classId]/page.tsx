@@ -1,5 +1,5 @@
 import { supabaseServerClient } from "../../../lib/supabaseServerClient";
-import { ScenarioToggle } from "./ScenarioToggle";
+import { ClassModuleLibrary } from "./ClassModuleLibrary";
 import { StudentRoster } from "./StudentRoster";
 import ClassImageWorkspace from "./ClassImageWorkspace";
 
@@ -296,44 +296,25 @@ export default async function ClassDetailPage({
             />
         </section>
 
-        <section className="mt-6 overflow-hidden rounded-2xl border border-border bg-white">
-          <div className="border-b border-border px-6 py-5">
-            <p className="text-xs font-semibold uppercase tracking-[0.14em] text-accent">
-              Lerninhalt
-            </p>
-
-            <h2 className="mt-1.5 text-lg font-semibold text-slate-950">
-              Modul für diese Klasse
-            </h2>
-
-            <p className="mt-1 text-sm text-slate-500">
-              Immer genau ein Modul aktiv. Vorhandene Lernfortschritte bleiben
-              beim Wechsel erhalten.
-            </p>
-          </div>
-
-          <div className="flex flex-col gap-2 bg-slate-50/60 p-3 sm:p-4">
-            {(scenarios ?? []).map((scenario: any) => (
-              <ScenarioToggle
-                key={scenario.id}
-                classId={classId}
-                scenarioId={scenario.id}
-                title={scenario.title}
-                description={scenario.description ?? ""}
-                coverImageUrl={scenario.cover_image_url ?? null}
-                ageRating={scenario.age_rating}
-                initiallyAssigned={
-                  activeAssignment?.scenario_id === scenario.id
-                }
-                moduleStatus={activeAssignment?.scenario_id === scenario.id ? activeModuleStatus : "Nicht zugewiesen"}
-                moduleReport={activeAssignment?.scenario_id === scenario.id ? activeModuleReport : undefined}
-                scheduledStartAt={activeAssignment?.scenario_id === scenario.id ? activeAssignment.scheduled_start_at : null}
-                scheduledEndAt={activeAssignment?.scenario_id === scenario.id ? activeAssignment.scheduled_end_at : null}
-                showReportsAtEnd={activeAssignment?.scenario_id === scenario.id ? activeAssignment.show_reports_at_end : false}
-              />
-            ))}
-          </div>
-        </section>
+        <ClassModuleLibrary
+          classId={classId}
+          scenarios={(scenarios ?? []).map((scenario: any) => ({
+            id: scenario.id,
+            title: scenario.title,
+            description: scenario.description ?? null,
+            cover_image_url: scenario.cover_image_url ?? null,
+            age_rating: scenario.age_rating ?? "Alle Altersgruppen",
+          }))}
+          assignment={activeAssignment ? {
+            scenario_id: activeAssignment.scenario_id,
+            scheduled_start_at: activeAssignment.scheduled_start_at,
+            scheduled_end_at: activeAssignment.scheduled_end_at,
+            show_reports_at_end: Boolean(activeAssignment.show_reports_at_end),
+            title: activeAssignment.scenarios?.title ?? null,
+          } : null}
+          moduleStatus={activeModuleStatus as "Abgeschlossen" | "In Bearbeitung" | "Noch nicht begonnen"}
+          moduleReport={activeModuleReport}
+        />
 
         <div className="mt-6">
           <StudentRoster
