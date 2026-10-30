@@ -502,7 +502,8 @@ export async function generateEditorialTeaserImage(prompt: string) {
   // Enforce the no-text requirement centrally and append it AFTER all editorial
   // briefing content so scenario titles/descriptions cannot weaken the rule.
   const enforcedPrompt = [prompt.trim(), EDITORIAL_TEASER_NO_TEXT_RULE].join("\n\n");
-  // Scenario covers must always use Cloudflare FLUX. Do not silently switch providers here.\n  return generateCloudflareImage(enforcedPrompt, "16:9", Date.now());
+  // Scenario covers must always use Cloudflare FLUX. Do not silently switch providers here.
+  return generateCloudflareImage(enforcedPrompt, "16:9", Date.now());
 }
 
 /**
