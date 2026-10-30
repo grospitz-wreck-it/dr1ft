@@ -68,7 +68,7 @@ export default async function ClassDetailPage({
 
     supabase
       .from("class_instance_scenario_assignments")
-      .select("scenario_id,pacing_mode,scheduled_start_at,scheduled_end_at,show_reports_at_end,archived_at,scenarios(title)")
+      .select("scenario_id,pacing_mode,scheduled_start_at,scheduled_end_at,show_reports_at_end,archived_at,is_active,scenarios(title)")
       .eq("class_instance_id", classId)
       .is("archived_at", null),
 
