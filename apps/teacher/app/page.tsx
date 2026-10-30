@@ -21,7 +21,7 @@ export default async function TeacherHomePage() {
 
   const { data: memberships } = await supabase
     .from("class_instance_memberships")
-    .select("class_instance_id, role, class_instances(id,name,is_active,grade_level,school_year,school_id)")
+    .select("class_instance_id, role, class_instances(id,name,is_active,grade_level,school_year,school_id,class_image_path)")
     .eq("role", "teacher")
     .is("left_at", null);
 
