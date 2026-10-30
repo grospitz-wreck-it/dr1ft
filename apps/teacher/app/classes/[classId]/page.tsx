@@ -226,10 +226,6 @@ export default async function ClassDetailPage({
     ? `${completed} von ${total} Mission-Abschlüssen über alle Schüler:innen · ${studentsWithCompletedModule} von ${studentsWithMissionData.length} Schüler:innen haben alle Missionen abgeschlossen`
     : "Noch keine auswertbaren Missionsfortschritte vorhanden.";
 
-  const status =
-    instance.status ??
-    (instance.is_active ? "active" : "paused");
-
   const schoolImageUrl = school?.school_image_path
     ? `${process.env.NEXT_PUBLIC_SUPABASE_URL}/storage/v1/object/public/school-images/${school.school_image_path}`
     : null;
@@ -276,7 +272,6 @@ export default async function ClassDetailPage({
           classImagePositionY={instance.class_image_position_y ?? 50}
           classImageZoom={instance.class_image_zoom ?? 1}
           canEditClassImage={canEditClassImage}
-          status={status === "paused" || status === "ended" ? status : "active"}
         />
 
         <section className="mt-5 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
