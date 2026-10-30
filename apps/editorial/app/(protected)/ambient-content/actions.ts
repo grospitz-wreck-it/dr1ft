@@ -514,11 +514,41 @@ export async function validateEditorialImageHasNoText(imageUrl: string) {
   const apiKey = process.env.GEMINI_API_KEY?.trim();
   if (!apiKey) throw new Error("Teaserbild-QA nicht möglich: GEMINI_API_KEY fehlt. Das Bild wurde nicht freigegeben.");
 
-  const imageResponse = await fetch(imageUrl, { cache: "no-store" });
-  if (!imageResponse.ok) throw new Error("Teaserbild-QA konnte das generierte Bild nicht laden.");
-  const mimeType = imageResponse.headers.get("content-type")?.split(";")[0] || "image/jpeg";
-  const imageBase64 = Buffer.from(await imageResponse.arrayBuffer()).toString("base64");
-  const prompt = "You are a visual quality-control checker for generated editorial artwork. Inspect the full image. Return exactly one token: TEXT_PRESENT only if you can clearly identify actual writing or text elements, such as recognizable letters or numbers, words, typography, a logo/brand mark, label, caption, watermark, sign, or interface text. Return NO_TEXT if none of those identifiable text elements are present. IMPORTANT: Do NOT treat abstract shapes, geometric patterns, decorative linework, image texture, fabric seams, blurred background detail, or random non-linguistic marks as text. Do not guess that a pattern might be writing. Only reject identifiable text elements, not visual noise. Do not describe the image.";
+  let mimeType = "image/jpeg";
+  let imageBase64 = "";
+  let imageDownloadError = "Unbekannter Download-Fehler";
+
+  // Storage/CDN-Verbindungen können kurzzeitig abbrechen. Den Bildabruf
+  // deshalb unabhängig von der Gemini-Anfrage wiederholen.
+  for (let downloadAttempt = 1; downloadAttempt <= 3; downloadAttempt += 1) {
+    try {
+      const imageResponse = await fetch(imageUrl, {
+        cache: "no-store",
+        signal: AbortSignal.timeout(30000)
+      });
+      if (!imageResponse.ok) {
+        throw new Error("HTTP " + imageResponse.status);
+      }
+      mimeType = imageResponse.headers.get("content-type")?.split(";")[0] || "image/jpeg";
+      imageBase64 = Buffer.from(await imageResponse.arrayBuffer()).toString("base64");
+      if (!imageBase64) throw new Error("Leere Bilddatei erhalten.");
+      break;
+    } catch (error) {
+      imageDownloadError = error instanceof Error ? error.message : "Unbekannter Netzwerkfehler";
+      console.error("[scenario-cover-qa] image download failed", {
+        attempt: downloadAttempt,
+        error: imageDownloadError
+      });
+      if (downloadAttempt < 3) {
+        await new Promise((resolve) => setTimeout(resolve, downloadAttempt * 1500));
+      }
+    }
+  }
+
+  if (!imageBase64) {
+    throw new Error("Teaserbild-QA konnte das generierte Bild nach drei Download-Versuchen nicht laden: " + imageDownloadError);
+  }
+  const prompt = "Inspect this image for clearly identifiable writing. Reply with exactly NO_TEXT if there are no recognizable letters, numbers, words, logos, labels, captions, watermarks, signs, or interface text. Reply with exactly TEXT_PRESENT if any such writing is visible. Do not count abstract shapes, decorative lines, texture, or random non-linguistic marks as text. Do not explain your answer.";
 
   let lastError = "Unbekannter QA-Fehler";
   for (let attempt = 1; attempt <= 3; attempt += 1) {
@@ -529,7 +559,7 @@ export async function validateEditorialImageHasNoText(imageUrl: string) {
         headers: { "Content-Type": "application/json", "x-goog-api-key": apiKey },
         body: JSON.stringify({
           contents: [{ role: "user", parts: [{ text: prompt }, { inlineData: { mimeType, data: imageBase64 } }] }],
-          generationConfig: { temperature: 0, maxOutputTokens: 32 }
+          generationConfig: { temperature: 0, maxOutputTokens: 256 }
         }),
         cache: "no-store",
         signal: AbortSignal.timeout(45000)
