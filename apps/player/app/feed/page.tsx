@@ -250,7 +250,10 @@ export default async function FeedPage() {
         .slice(0, personalizedAmbientLimits[ambientDensity] ?? 3)
     : [];
 
-  const items = [...baseItems, ...personalizedAmbientItems];
+  const items = [...baseItems, ...personalizedAmbientItems].map((item) => ({
+    ...item,
+    creator: item.creator ?? (item.creatorId ? mapCreatorRow(creatorById.get(item.creatorId)) : undefined),
+  }));
   const likedContentIds = new Set((recentInteractions ?? []).filter((i) => i.interaction_type === "like").map((i) => i.content_item_id));
 
   return <FeedClient scenarioSummaries={scenarioIntros.map((scenario) => ({ id: scenario.id, title: scenario.title, description: scenario.description, coverImageUrl: scenario.cover_image_url ?? null }))} initialItems={items} userId={user.id} classInstanceId={classInstanceId} likedContentIds={likedContentIds} scenarioIntro={scenarioIntro ? { ...scenarioIntro, title: scenarioIntroTitle ?? scenarioIntro.title, description: scenarioIntroDescription } : null} scenarioIds={assignedScenarioIds} scenarioMissionCount={scenarioMissionIds.length} completedScenarioMissionCount={new Set((completedScenarioMissions ?? []).map((mission) => mission.mission_id)).size} profile={{ displayName: currentProfile?.display_name ?? "DR1FT User", username: currentProfile?.username ?? "user", avatarSeed: currentProfile?.avatar_seed ?? user.id }} />;
