@@ -421,12 +421,7 @@ export function PostCard({ item, userId, classInstanceId, initiallyLiked, onView
   return <>
     <article id={`post-${item.id}`} ref={ref} className="relative bg-paper text-ink rounded-card overflow-visible shadow-sm">
       <div className="p-4 pb-0"><AuthorRow creator={item.creator}/><p className="font-mono text-[11px] text-ink/50 mb-2 uppercase tracking-wide">{item.type}</p></div>
-      {item.mediaUrl && item.mediaType === "image" && <div className="relative isolate flex w-full aspect-video items-center justify-center overflow-hidden bg-[radial-gradient(ellipse_at_12%_18%,rgba(217,70,239,0.18),transparent_38%),radial-gradient(ellipse_at_88%_82%,rgba(34,211,238,0.16),transparent_42%),linear-gradient(135deg,#111027_0%,#19133a_48%,#101b36_100%)]">
-        <div aria-hidden="true" className="pointer-events-none absolute -left-16 -top-24 h-64 w-64 rounded-full bg-fuchsia-500/15 blur-3xl"/>
-        <div aria-hidden="true" className="pointer-events-none absolute -bottom-28 -right-12 h-72 w-72 rounded-full bg-cyan-400/15 blur-3xl"/>
-        <div aria-hidden="true" className="pointer-events-none absolute inset-0 bg-[linear-gradient(115deg,rgba(255,255,255,0.035),transparent_42%,rgba(255,255,255,0.025))]"/>
-        <img src={item.mediaUrl} alt="" className="relative z-10 block h-auto w-auto max-h-full max-w-full object-contain drop-shadow-[0_8px_24px_rgba(0,0,0,0.22)]" loading="lazy"/>
-      </div>}
+      {item.mediaUrl && item.mediaType === "image" && <div className="post-media-stage relative isolate mx-2 overflow-hidden rounded-[22px] sm:mx-3"><div aria-hidden="true" className="post-media-pattern pointer-events-none absolute inset-0"/><div aria-hidden="true" className="post-media-orb post-media-orb-one pointer-events-none absolute -left-8 top-8 h-24 w-24 rounded-full"/><div aria-hidden="true" className="post-media-orb post-media-orb-two pointer-events-none absolute -bottom-8 right-8 h-28 w-28 rounded-full"/><img src={item.mediaUrl} alt="" className="post-media-image relative z-[1] mx-auto block h-auto max-h-[75vh] w-auto max-w-full object-contain" loading="lazy" onError={(event) => { event.currentTarget.style.display = "none"; }}/></div>}
       {item.mediaUrl && item.mediaType === "video" && <video src={item.mediaUrl} controls className="block w-full aspect-video object-cover bg-black"/>}
       <div className="p-4 pt-3">
         <p className="font-body text-[15px] leading-relaxed">{item.body}</p>
