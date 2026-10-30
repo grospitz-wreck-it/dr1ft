@@ -1018,7 +1018,7 @@ export async function generateScenarioCover(scenarioId: string, visualFeedback =
     "ABSOLUTE TEXT BAN: The image must contain no text whatsoever: no letters, numbers, words, typography, logos, labels, captions, signs, watermarks, UI, speech bubbles, pseudo-writing, or text-like marks. Do not depict readable screens, papers, books, posters, signs, or branded clothing. Use abstract shapes instead of writing.",
     "Composition: wide landscape 16:9, edge-to-edge artwork, no frame, no title card, no border, no real-person likeness.",
     feedback ? "ADDITIONAL ART DIRECTION FROM THE EDITOR: " + feedback : ""
-  ].filter(Boolean).join("\\n\\n");
+  ].filter(Boolean).join("\n\n");
 
   // Clear the previous cover for every age variant before starting a fresh
   // generation. This makes the new attempt visibly independent of the old artwork.
