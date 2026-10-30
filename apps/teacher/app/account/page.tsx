@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { createBrowserClient } from "@supabase/ssr";
-import { ArrowLeft, AtSign, BadgeCheck, Building2, Check, KeyRound, LockKeyhole, Mail, Save, ShieldCheck, UserRound, X } from "lucide-react";
+import { ArrowLeft, AtSign, Building2, Check, KeyRound, LockKeyhole, Save, ShieldCheck, UserRound, X } from "lucide-react";
 
 function client() {
   return createBrowserClient(
