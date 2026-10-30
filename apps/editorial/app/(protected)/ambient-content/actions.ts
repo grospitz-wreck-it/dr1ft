@@ -486,7 +486,21 @@ export async function assignAmbientPostCreator(formData: FormData) {
  * teaser artwork. This preserves the existing FLUX -> Gemini fallback and
  * storage handling instead of maintaining a separate image endpoint.
  */
+const EDITORIAL_TEASER_NO_TEXT_RULE = [
+  "ABSOLUTE NON-NEGOTIABLE OVERRIDING RULE: THE GENERATED IMAGE MUST CONTAIN ZERO TEXT.",
+  "DO NOT RENDER OR GENERATE ANY TEXTUAL CONTENT IN THE IMAGE UNDER ANY CIRCUMSTANCES.",
+  "No text, no writing, no letters, no words, no numbers, no typography, no captions, no subtitles, no labels, no logos, no watermarks, no signatures, no symbols that resemble writing, no pseudo-text, no gibberish, no fake characters.",
+  "Do not create posters, title cards, banners, signs, interface elements, screenshots, speech bubbles, book pages, documents, packaging, clothing marks, or any other text-bearing design.",
+  "All screens, paper, books, signs, labels, and other surfaces that could contain writing MUST be completely blank or excluded from the image.",
+  "Do not depict, spell, typeset, illustrate, or otherwise reproduce any words from the supplied prompt. The prompt is visual context only.",
+  "If any visual idea conflicts with this rule, omit that element and keep the image purely visual. This rule has higher priority than every other instruction in the prompt."
+].join("\\n");
+
 export async function generateEditorialTeaserImage(prompt: string) {
   if (!prompt.trim()) throw new Error("Für das Teaserbild fehlt die Bildbeschreibung.");
-  return generateImage(prompt, "16:9", Date.now());
+
+  // Enforce the no-text requirement centrally and append it AFTER all editorial
+  // briefing content so scenario titles/descriptions cannot weaken the rule.
+  const enforcedPrompt = [prompt.trim(), EDITORIAL_TEASER_NO_TEXT_RULE].join("\\n\\n");
+  return generateImage(enforcedPrompt, "16:9", Date.now());
 }
