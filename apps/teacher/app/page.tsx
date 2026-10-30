@@ -3,13 +3,11 @@ import {
   ArrowRight,
   BarChart3,
   BookOpen,
-  Check,
   GraduationCap,
   Image as ImageIcon,
   MessageCircle,
   Plus,
   Send,
-  Sparkles,
   Users,
 } from "lucide-react";
 import { supabaseServerClient } from "../lib/supabaseServerClient";
@@ -65,7 +63,7 @@ export default async function TeacherHomePage() {
         <div className="drift-orb drift-orb-one" aria-hidden="true" />
         <div className="drift-orb drift-orb-two" aria-hidden="true" />
         <div className="drift-orb drift-orb-three" aria-hidden="true" />
-        <div className="relative z-10 max-w-[54%] max-lg:max-w-[62%] max-sm:max-w-full">
+        <div className="relative z-10 max-w-[48%] max-lg:max-w-[62%] max-sm:max-w-full">
           <p className="text-[11px] font-extrabold uppercase tracking-[.2em] text-violet-600">Willkommen im Lehrkraft Studio</p>
           <h1 className="mt-3 text-3xl font-extrabold leading-[1.08] tracking-[-.045em] text-slate-950 sm:text-4xl lg:text-[42px]">
             Dein Unterricht.<br />Mehr <span className="bg-gradient-to-r from-violet-600 via-indigo-600 to-cyan-500 bg-clip-text text-transparent">Medienkompetenz.</span>
