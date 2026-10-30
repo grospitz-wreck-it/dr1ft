@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState, useTransition } from "react";
-import { CalendarClock, Check, Clock3, Image as ImageIcon } from "lucide-react";
+import { CalendarClock, Check, Clock3, Image as ImageIcon, Trash2 } from "lucide-react";
 import { toggleScenarioAssignment, updateScenarioSchedule } from "../actions";
 
 type ModuleStatus = "Abgeschlossen" | "In Bearbeitung" | "Noch nicht begonnen" | "Nicht zugewiesen";
@@ -128,6 +128,11 @@ export function ScenarioToggle({
             <span className={"inline-block h-4 w-4 rounded-full bg-white shadow transition-transform " + (selected ? "translate-x-6" : "translate-x-1")} />
           </button>
           <span className="text-[9px] text-slate-400">{pending ? "…" : selected ? "Aktiv" : "Aktivieren"}</span>
+          {selected && (
+            <button type="button" onClick={() => changeAssignment(false)} disabled={pending} aria-label="Modul aus dieser Klasse entfernen" title="Modul entfernen" className="mt-1 inline-flex h-8 w-8 items-center justify-center rounded-xl border border-white/80 bg-white/65 text-slate-500 shadow-[0_4px_14px_rgba(30,41,59,.10)] backdrop-blur-xl transition hover:border-rose-200 hover:bg-rose-50 hover:text-rose-600 disabled:opacity-50">
+              <Trash2 className="h-3.5 w-3.5" />
+            </button>
+          )}
         </div>
       </div>
 
