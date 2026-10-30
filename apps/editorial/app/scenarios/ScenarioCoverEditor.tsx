@@ -17,8 +17,8 @@ export function ScenarioCoverEditor({
   const router = useRouter();
   const [pending, startTransition] = useTransition();
   const [error, setError] = useState("");
-  const [url, setUrl] = useState(previewUrl ?? "");
-  const [previewUrl, setPreviewUrl] = useState(previewUrl ?? "");
+  const [url, setUrl] = useState(coverImageUrl ?? "");
+  const [previewUrl, setPreviewUrl] = useState(coverImageUrl ?? "");
   const [savedMessage, setSavedMessage] = useState("");
   const [lightboxOpen, setLightboxOpen] = useState(false);
 
@@ -62,7 +62,7 @@ export function ScenarioCoverEditor({
         <div className="space-y-3">
           <button
             type="button"
-            onClick={() => coverImageUrl && setLightboxOpen(true)}
+            onClick={() => previewUrl && setLightboxOpen(true)}
             disabled={!previewUrl}
             aria-label={previewUrl ? `Teaserbild ${title} vergrößern` : "Noch kein Teaserbild vorhanden"}
             className={`group relative block aspect-video w-full overflow-hidden rounded-xl border border-white bg-gradient-to-br from-violet-700 via-indigo-600 to-cyan-400 text-left shadow-sm ${previewUrl ? "cursor-zoom-in" : "cursor-default"}`}
@@ -99,7 +99,7 @@ export function ScenarioCoverEditor({
         </div>
       </section>
 
-      {lightboxOpen && coverImageUrl && (
+      {lightboxOpen && previewUrl && (
         <div role="dialog" aria-modal="true" aria-label={`Teaserbild: ${title}`} onClick={() => setLightboxOpen(false)} onKeyDown={(event) => { if (event.key === "Escape") setLightboxOpen(false); }} className="fixed inset-0 z-[100] flex items-center justify-center bg-slate-950/85 p-4 backdrop-blur-sm sm:p-8">
           <button type="button" onClick={() => setLightboxOpen(false)} aria-label="Lightbox schließen" className="absolute right-4 top-4 z-10 grid h-11 w-11 place-items-center rounded-full border border-white/20 bg-white/10 text-white transition hover:bg-white/20">
             <X className="h-5 w-5" />
