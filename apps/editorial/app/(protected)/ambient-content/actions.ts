@@ -555,7 +555,7 @@ export async function validateEditorialImageHasNoText(imageUrl: string) {
 
     const data = await response.json();
     const raw = String(data.candidates?.[0]?.content?.parts?.map((part: any) => part.text ?? "").join("") ?? "").trim();
-    const normalized = raw.toUpperCase().replace(/[\\s.!,:;]+/g, "");
+    const normalized = raw.toUpperCase().replace(/[\s.!,:;]+/g, "");
     const verdict = normalized === "NO_TEXT" ? "NO_TEXT" : normalized === "TEXT_PRESENT" ? "TEXT_PRESENT" : "UNCERTAIN";
     console.info("[scenario-cover-qa] verdict", {
       attempt,
