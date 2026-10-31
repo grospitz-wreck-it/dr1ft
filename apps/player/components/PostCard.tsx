@@ -158,13 +158,17 @@ export function PostCard({ item, userId, classInstanceId, initiallyLiked, onView
   function showFeedback(message: string) { setFeedback(message); window.setTimeout(() => setFeedback(null), 2800); }
 
   async function track(interactionType: "inspect_source" | "inspect_media" | "inspect_context" | "inspect_profile" | "compare_information" | "share" | "report" | "ignore", metadata: Record<string, unknown> = { ui: "generic_card_actions" }) {
-    await recordInteraction(supabase, {
+    const saved = await recordInteraction(supabase, {
       userId,
       contentItemId: item.id,
       interactionType,
       metadata,
       classInstanceId,
     });
+    if (!saved) {
+      showFeedback("Deine Aktion konnte nicht gespeichert werden. Bitte versuche es erneut.");
+      return;
+    }
 
     // Learning feedback is shown only when this interaction was explicitly
     // configured for the content. It is instructional feedback, not a score.
@@ -194,7 +198,15 @@ export function PostCard({ item, userId, classInstanceId, initiallyLiked, onView
     }
   }
 
-  function toggleLike() { if (!liked) { setLiked(true); recordInteraction(supabase, { userId, contentItemId: item.id, interactionType: "like", classInstanceId }); } }
+  async function toggleLike() {
+    if (liked) return;
+    setLiked(true);
+    const saved = await recordInteraction(supabase, { userId, contentItemId: item.id, interactionType: "like", classInstanceId });
+    if (!saved) {
+      setLiked(false);
+      showFeedback("Dein Like konnte nicht gespeichert werden. Bitte versuche es erneut.");
+    }
+  }
 
   async function loadComments() {
     const commentSelect = "*, creators(id, display_name, handle, avatar_url)";
@@ -251,7 +263,7 @@ export function PostCard({ item, userId, classInstanceId, initiallyLiked, onView
     if (!response || taskResponseSaving || taskResponseSaved) return;
     setTaskResponseSaving(true);
     try {
-      await recordInteraction(supabase, {
+      const saved = await recordInteraction(supabase, {
         userId,
         contentItemId: item.id,
         interactionType: "learning_task_response",
@@ -263,6 +275,7 @@ export function PostCard({ item, userId, classInstanceId, initiallyLiked, onView
           submittedAt: new Date().toISOString(),
         },
       });
+      if (!saved) throw new Error("Learning task response was not persisted.");
       setTaskResponseSaved(true);
       showFeedback(learningTask.feedback?.trim() || "Danke für deine Antwort. Sie wurde gespeichert und kann in der Auswertung berücksichtigt werden.");
     } catch {
