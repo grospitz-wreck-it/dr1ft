@@ -54,7 +54,7 @@ export function PostCard({ item, userId, classInstanceId, initiallyLiked, onView
   const baseLikeCount = Number((item.extra as any)?.baseEngagement ?? 0);
   const commentCount = Number((item.extra as any)?.classCommentCount ?? (item.extra as any)?.baseCommentCount ?? 0);
   const extra = (item.extra ?? {}) as Record<string, unknown>;
-  const learningTask = (extra.learningTask ?? {}) as { purpose?: string; learnerAction?: string; interactionType?: string; expectedResponse?: string; evaluationMethod?: string; successCriteria?: string; feedback?: string; interactions?: Array<{ id: string; label: string; instruction?: string; custom?: boolean; assessment?: { acceptableActions?: string[]; evidenceKey?: string } }> };
+  const learningTask = (extra.learningTask ?? {}) as { purpose?: string; learnerAction?: string; interactionType?: string; expectedResponse?: string; evaluationMethod?: string; successCriteria?: string; feedback?: string; interactions?: Array<{ id: string; label: string; instruction?: string; custom?: boolean }>; assessment?: { assessedActions?: string[]; acceptableActions?: string[]; evidenceKey?: string } };
   const configuredLearningInteractions = new Set((learningTask.interactions ?? []).map((interaction) => interaction.id));
   useEffect(() => {
     setLiveCommentCount(commentCount);
@@ -197,14 +197,22 @@ export function PostCard({ item, userId, classInstanceId, initiallyLiked, onView
       });
     }
 
-    // Discrete in-feed actions can be assessed without asking the learner
-    // for free text. The server reads acceptable alternatives from editorial
-    // configuration and derives the outcome itself.
-    const assessment = (configured as any)?.assessment;
-    const acceptableActions = Array.isArray(assessment?.acceptableActions)
-      ? assessment.acceptableActions.filter((value: unknown): value is string => typeof value === "string")
-      : [];
-    if (acceptableActions.length > 0) {
+    // Only editorially assessed actions create learning evidence. The server
+    // reads the shared rule from learningTask.assessment and derives the outcome.
+    const assessment = learningTask.assessment;
+    const actionAliases: Record<string, string[]> = {
+      inspect_context: ["inspect_context", "fact_check"],
+      inspect_source: ["inspect_source"],
+      inspect_media: ["inspect_media"],
+      inspect_profile: ["inspect_profile"],
+      compare_information: ["compare_information"],
+      report: ["report"],
+      ignore: ["ignore"],
+      share: ["share"],
+    };
+    const assessedActions = Array.isArray(assessment?.assessedActions) ? assessment.assessedActions : [];
+    const isAssessed = (actionAliases[interactionType] ?? [interactionType]).some((id) => assessedActions.includes(id));
+    if (configured && isAssessed) {
       const { error } = await supabase.rpc("record_discrete_action_assessment", {
         p_class_instance_id: classInstanceId,
         p_content_item_id: item.id,
