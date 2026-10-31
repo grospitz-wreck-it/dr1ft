@@ -123,9 +123,15 @@ export default function MessagesWorkspace({
         const payload = await response.json();
         if (!response.ok) throw new Error(payload.error || "Unterhaltung konnte nicht aktualisiert werden.");
         if (active) {
-          setDirectMessages(payload.messages ?? []);
+          const incomingMessages = payload.messages ?? [];
+          setDirectMessages((current) => {
+            const merged = new Map(current.map((message) => [message.id, message]));
+            for (const message of incomingMessages) merged.set(message.id, message);
+            return Array.from(merged.values()).sort((a, b) => Date.parse(a.created_at) - Date.parse(b.created_at));
+          });
+          const latestMessage = incomingMessages[incomingMessages.length - 1];
           setStudentContacts((current) => current.map((contact) => contact.id === selectedStudent.id
-            ? { ...contact, isDue: false, lastMessage: payload.messages?.at(-1)?.body ?? contact.lastMessage, lastMessageAt: payload.messages?.at(-1)?.created_at ?? contact.lastMessageAt }
+            ? { ...contact, isDue: false, lastMessage: latestMessage?.body ?? contact.lastMessage, lastMessageAt: latestMessage?.created_at ?? contact.lastMessageAt }
             : contact));
           window.dispatchEvent(new Event("dr1ft:messages-read"));
         }
