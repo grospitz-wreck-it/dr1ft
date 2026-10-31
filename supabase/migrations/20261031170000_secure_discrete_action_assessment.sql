@@ -127,8 +127,8 @@ begin
   -- A selected action must be in the editorial assessment scope.
   if not exists (
     select 1
-    from jsonb_array_elements_text(v_assessed_actions) action_id
-    where action_id = any(v_action_aliases)
+    from jsonb_array_elements_text(v_assessed_actions) as assessed(action_id)
+    where assessed.action_id = any(v_action_aliases)
   ) then
     raise exception 'Action is not part of the assessment scope' using errcode = '22023';
   end if;
@@ -136,8 +136,8 @@ begin
   -- Every acceptable action must also be in the assessed action set.
   if exists (
     select 1
-    from jsonb_array_elements_text(v_acceptable_actions) accepted_id
-    where not (v_assessed_actions @> jsonb_build_array(accepted_id))
+    from jsonb_array_elements_text(v_acceptable_actions) as accepted(accepted_id)
+    where not (v_assessed_actions @> jsonb_build_array(accepted.accepted_id))
   ) then
     raise exception 'Acceptable actions must be assessed actions' using errcode = '22023';
   end if;
@@ -150,8 +150,8 @@ begin
   v_outcome := case
     when exists (
       select 1
-      from jsonb_array_elements_text(v_acceptable_actions) accepted_id
-      where accepted_id = any(v_action_aliases)
+      from jsonb_array_elements_text(v_acceptable_actions) as accepted(accepted_id)
+      where accepted.accepted_id = any(v_action_aliases)
     ) then 'success'
     else 'not_yet'
   end;
