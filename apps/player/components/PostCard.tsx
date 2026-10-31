@@ -154,7 +154,7 @@ export function PostCard({ item, userId, classInstanceId, initiallyLiked, onView
 
   function showFeedback(message: string) { setFeedback(message); window.setTimeout(() => setFeedback(null), 2800); }
 
-  async function track(interactionType: "inspect_source" | "inspect_media" | "inspect_context" | "inspect_profile" | "compare_information" | "share" | "report" | "ignore", metadata: Record<string, unknown> = { ui: "generic_card_actions" }): Promise<boolean> {
+  async function track(interactionType: "inspect_source" | "inspect_media" | "inspect_context" | "inspect_profile" | "compare_information" | "share" | "report" | "ignore", metadata: Record<string, unknown> = { ui: "generic_card_actions" }): Promise<{ saved: boolean; outcome?: "success" | "not_yet" }> {
     const saved = await recordInteraction(supabase, {
       userId,
       contentItemId: item.id,
@@ -164,11 +164,11 @@ export function PostCard({ item, userId, classInstanceId, initiallyLiked, onView
     });
     if (!saved) {
       showFeedback("Deine Aktion konnte nicht gespeichert werden. Bitte versuche es erneut.");
-      return false;
+      return { saved: false };
     }
 
-    // Learning feedback is shown only when this interaction was explicitly
-    // configured for the content. It is instructional feedback, not a score.
+    // Editorial-authored reactions are shown only after the server confirms
+    // that the action satisfies the learning rule.
     const aliases: Record<string, string[]> = {
       inspect_context: ["inspect_context", "fact_check"],
       inspect_source: ["inspect_source"],
@@ -194,8 +194,9 @@ export function PostCard({ item, userId, classInstanceId, initiallyLiked, onView
     };
     const assessedActions = Array.isArray(assessment?.assessedActions) ? assessment.assessedActions : [];
     const isAssessed = (actionAliases[interactionType] ?? [interactionType]).some((id) => assessedActions.includes(id));
+    let outcome: "success" | "not_yet" | undefined;
     if (configured && isAssessed) {
-      const { error } = await supabase.rpc("record_discrete_action_assessment", {
+      const { data, error } = await supabase.rpc("record_discrete_action_assessment", {
         p_class_instance_id: classInstanceId,
         p_content_item_id: item.id,
         p_action_id: interactionType,
@@ -203,8 +204,13 @@ export function PostCard({ item, userId, classInstanceId, initiallyLiked, onView
       // Assessment failures stay invisible to learners: the interaction itself
       // has already been saved, and assessment status must not reveal mission membership.
       if (error) console.error("Discrete action assessment failed", error);
+      else {
+        const row = Array.isArray(data) ? data[0] : data;
+        outcome = row?.outcome === "success" || row?.outcome === "not_yet" ? row.outcome : undefined;
+      }
     }
-    return true;
+    if (outcome === "success" && configured?.discoveryMessage?.trim()) showFeedback(configured.discoveryMessage.trim());
+    return { saved: true, outcome };
   }
 
   async function toggleLike() {
@@ -323,9 +329,8 @@ export function PostCard({ item, userId, classInstanceId, initiallyLiked, onView
   }
 
   async function inspectSource() {
-    await track("inspect_source");
-    const configured = checkFeedback("inspect_source");
-    if (configured) { showFeedback(configured); return; }
+    const result = await track("inspect_source");
+    if (!result.saved || result.outcome === "success") return;
     const observations = getStringArray(action.expected_observation);
     if (item.sourceRefs?.length) showFeedback(`Quelle: ${item.sourceRefs[0].label}`);
     else if (observations.includes("no_named_author")) showFeedback("Hier ist keine konkrete Autorin oder kein konkreter Autor genannt.");
@@ -334,9 +339,8 @@ export function PostCard({ item, userId, classInstanceId, initiallyLiked, onView
   }
 
   async function inspectMedia() {
-    await track("inspect_media");
-    const configured = checkFeedback("inspect_media");
-    if (configured) { showFeedback(configured); return; }
+    const result = await track("inspect_media");
+    if (!result.saved || result.outcome === "success") return;
     if (getString(mediaContext.current_claim)) {
       const detail = [getString(mediaContext.original_date), getString(mediaContext.original_location)].filter(Boolean).join(" · ");
       showFeedback(detail ? `Bildkontext: ${detail}.` : "Das Bild lässt sich hier im Kontext prüfen.");
@@ -344,13 +348,12 @@ export function PostCard({ item, userId, classInstanceId, initiallyLiked, onView
   }
 
   async function inspectContext() {
-    await track("inspect_context");
-    const configured = checkFeedback("inspect_context");
-    if (configured) { showFeedback(configured); return; }
+    const result = await track("inspect_context");
+    if (!result.saved || result.outcome === "success") return;
     showFeedback(getString(mediaContext.current_claim) ? "Der Kontext dieses Beitrags sollte mit weiteren Informationen abgeglichen werden." : "Für diesen Beitrag sind keine konkreten Kontextdaten hinterlegt. Ob die Aussage stimmt, lässt sich mit diesem Check nicht beurteilen.");
   }
 
-  async function inspectProfile() { await track("inspect_profile"); showFeedback(checkFeedback("inspect_profile") || "Für dieses Profil ist keine konkrete Vertrauens- oder Herkunftsbewertung hinterlegt. Prüfe Angaben und frühere Beiträge selbst."); }
+  async function inspectProfile() { const result = await track("inspect_profile"); if (!result.saved || result.outcome === "success") return; showFeedback("Für dieses Profil ist keine konkrete Vertrauens- oder Herkunftsbewertung hinterlegt. Prüfe Angaben und frühere Beiträge selbst."); }
 
   async function compareInformation() {
     await track("compare_information", { ui: "generic_card_actions", phase: "open_comparison" });
@@ -438,15 +441,15 @@ export function PostCard({ item, userId, classInstanceId, initiallyLiked, onView
     }
   }
   async function report() {
-    const saved = await track("report");
+    const result = await track("report");
     setMenuOpen(false);
-    if (!saved) return;
+    if (!result.saved || result.outcome === "success") return;
     showFeedback("Deine Meldung wurde aufgenommen.");
   }
   async function ignore() {
-    const saved = await track("ignore");
+    const result = await track("ignore");
     setMenuOpen(false);
-    if (!saved) return;
+    if (!result.saved || result.outcome === "success") return;
     showFeedback("Beitrag wird für dich ausgeblendet.");
   }
 
