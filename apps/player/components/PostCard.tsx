@@ -54,7 +54,7 @@ export function PostCard({ item, userId, classInstanceId, initiallyLiked, onView
   const baseLikeCount = Number((item.extra as any)?.baseEngagement ?? 0);
   const commentCount = Number((item.extra as any)?.classCommentCount ?? (item.extra as any)?.baseCommentCount ?? 0);
   const extra = (item.extra ?? {}) as Record<string, unknown>;
-  const learningTask = (extra.learningTask ?? {}) as { purpose?: string; learnerAction?: string; interactionType?: string; expectedResponse?: string; evaluationMethod?: string; successCriteria?: string; feedback?: string; interactions?: Array<{ id: string; label: string; instruction?: string; custom?: boolean }> };
+  const learningTask = (extra.learningTask ?? {}) as { purpose?: string; learnerAction?: string; interactionType?: string; expectedResponse?: string; evaluationMethod?: string; successCriteria?: string; feedback?: string; interactions?: Array<{ id: string; label: string; instruction?: string; custom?: boolean; assessment?: { acceptableActions?: string[]; evidenceKey?: string } }> };
   const configuredLearningInteractions = new Set((learningTask.interactions ?? []).map((interaction) => interaction.id));
   useEffect(() => {
     setLiveCommentCount(commentCount);
@@ -157,7 +157,7 @@ export function PostCard({ item, userId, classInstanceId, initiallyLiked, onView
 
   function showFeedback(message: string) { setFeedback(message); window.setTimeout(() => setFeedback(null), 2800); }
 
-  async function track(interactionType: "inspect_source" | "inspect_media" | "inspect_context" | "inspect_profile" | "compare_information" | "share" | "report" | "ignore", metadata: Record<string, unknown> = { ui: "generic_card_actions" }) {
+  async function track(interactionType: "inspect_source" | "inspect_media" | "inspect_context" | "inspect_profile" | "compare_information" | "share" | "report" | "ignore", metadata: Record<string, unknown> = { ui: "generic_card_actions" }): Promise<boolean> {
     const saved = await recordInteraction(supabase, {
       userId,
       contentItemId: item.id,
@@ -167,7 +167,7 @@ export function PostCard({ item, userId, classInstanceId, initiallyLiked, onView
     });
     if (!saved) {
       showFeedback("Deine Aktion konnte nicht gespeichert werden. Bitte versuche es erneut.");
-      return;
+      return false;
     }
 
     // Learning feedback is shown only when this interaction was explicitly
@@ -196,6 +196,25 @@ export function PostCard({ item, userId, classInstanceId, initiallyLiked, onView
         action: interactionType,
       });
     }
+
+    // Discrete in-feed actions can be assessed without asking the learner
+    // for free text. The server reads acceptable alternatives from editorial
+    // configuration and derives the outcome itself.
+    const assessment = (configured as any)?.assessment;
+    const acceptableActions = Array.isArray(assessment?.acceptableActions)
+      ? assessment.acceptableActions.filter((value: unknown): value is string => typeof value === "string")
+      : [];
+    if (acceptableActions.includes(interactionType)) {
+      const { error } = await supabase.rpc("record_discrete_action_assessment", {
+        p_class_instance_id: classInstanceId,
+        p_content_item_id: item.id,
+        p_action_id: interactionType,
+      });
+      if (error) {
+        showFeedback("Deine Aktion wurde gespeichert, konnte aber nicht als Lernnachweis ausgewertet werden.");
+      }
+    }
+    return true;
   }
 
   async function toggleLike() {
