@@ -155,9 +155,9 @@ export default function MessagesWorkspace({
   const selectedGroup = groupChats.find((chat) => chat.id === selected);
 
   return (
-    <main className="drift-messenger relative -mt-4 flex h-[calc(100dvh-6rem)] min-h-[480px] flex-col overflow-hidden rounded-[28px] border shadow-2xl lg:h-[calc(100dvh-4rem)] lg:min-h-[520px]">
+    <main className="drift-messenger relative -mt-4 flex h-[calc(100dvh-6rem)] min-h-0 flex-col overflow-hidden rounded-[28px] border shadow-2xl lg:h-[calc(100dvh-4rem)] lg:min-h-0">
       <img src="/branding/bg-neon-circle.webp" alt="" aria-hidden="true" className="drift-neon-background pointer-events-none absolute bottom-0 right-0 z-0 w-[min(38vw,34rem)] max-w-none" />
-      <div className="relative z-[1] grid min-h-0 flex-1 grid-cols-1 lg:grid-cols-[minmax(280px,32%)_minmax(0,1fr)]">
+      <div className="relative z-[1] grid min-h-0 flex-1 grid-rows-[minmax(0,1fr)] grid-cols-1 lg:grid-cols-[minmax(280px,32%)_minmax(0,1fr)]">
         <aside className={`drift-messenger-list border-b border-white/10 lg:border-b-0 lg:border-r ${!showContacts ? "hidden lg:block" : ""}`}>
           <div className="flex items-center justify-between gap-3 border-b border-white/[.07] px-5 py-5">
             <div>
@@ -236,7 +236,7 @@ export default function MessagesWorkspace({
               <div ref={messageEndRef} />
               {messageError && <p role="alert" className="rounded-xl border border-rose-300/20 bg-rose-300/5 p-3 text-xs text-rose-200">{messageError}</p>}
             </div>
-            <div className="dm-compose-area relative shrink-0 border-t border-white/[.08] p-3 pb-[calc(.75rem+env(safe-area-inset-bottom))] sm:p-4">
+            <div className="dm-compose-area sticky bottom-0 z-10 flex-none border-t border-white/[.08] p-3 pb-[calc(.75rem+env(safe-area-inset-bottom))] sm:p-4">
               {emojiOpen && <div className="dm-picker mb-3 overflow-hidden rounded-2xl border p-2 sm:p-3" role="dialog" aria-label="Emoji auswählen">
                 <div className="mb-2 flex flex-wrap items-center justify-between gap-2 px-1">
                   <span className="text-sm font-semibold">Alle Emojis</span>
