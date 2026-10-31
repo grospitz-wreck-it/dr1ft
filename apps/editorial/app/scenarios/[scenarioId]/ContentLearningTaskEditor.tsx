@@ -91,7 +91,7 @@ export function ContentLearningTaskEditor({ scenarioId, contentItemId, initialTa
   const assessableSelected = task.interactions.filter(item => ASSESSABLE_INTERACTIONS.has(item.id));
   function updateAssessment(actionId: string, field: "assessedActions" | "acceptableActions", checked: boolean) {
     const current = task.assessment[field];
-    const next = checked ? [...new Set([...current, actionId])] : current.filter(id => id !== actionId);
+    const next = checked ? Array.from(new Set([...current, actionId])) : current.filter(id => id !== actionId);
     const assessment = { ...task.assessment, [field]: next };
     if (field === "assessedActions" && !checked) assessment.acceptableActions = assessment.acceptableActions.filter(id => id !== actionId);
     if (field === "acceptableActions" && checked && !assessment.assessedActions.includes(actionId)) assessment.assessedActions = [...assessment.assessedActions, actionId];
