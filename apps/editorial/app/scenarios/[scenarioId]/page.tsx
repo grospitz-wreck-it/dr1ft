@@ -381,16 +381,10 @@ export default async function ScenarioDetailPage({ params, searchParams = {} }: 
                                         </div>
                                       )}
             
-                                      <details className="mt-3 rounded-xl border border-slate-200 bg-slate-50/70">
-                                        <summary className="cursor-pointer list-none px-3 py-2.5 text-xs font-semibold text-slate-700">
-                                          Lernwirkung & Verknüpfungen <span className="font-normal text-slate-400">· optional</span>
-                                        </summary>
-                                        <div className="space-y-3 border-t border-slate-200 p-3">
-                                          <p className="text-[11px] leading-4 text-slate-500">Nur öffnen, wenn dieser Inhalt eine konkrete Lernaufgabe, einen Nachweis oder eine besondere Verknüpfung braucht.</p>
-                                          <ContentLearningTaskEditor scenarioId={scenarioId} contentItemId={item.id} initialTask={item.extra?.learningTask ?? null} />
-                                          <ContentAttachmentEditor scenarioId={scenarioId} contentItemId={item.id} />
-                                        </div>
-                                      </details>
+                                      <div className="mt-3 space-y-3">
+                                        <ContentLearningTaskEditor scenarioId={scenarioId} contentItemId={item.id} initialTask={item.extra?.learningTask ?? null} />
+                                        <ContentAttachmentEditor scenarioId={scenarioId} contentItemId={item.id} />
+                                      </div>
                                       <div className="mt-2"><ContentStatusControl contentItemId={item.id} status={item.status} /></div>
                                     </div>
                                   </li>
