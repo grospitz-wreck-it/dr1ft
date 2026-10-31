@@ -312,7 +312,9 @@ export default async function ScenarioDetailPage({ params, searchParams = {} }: 
                                   <li key={item.id} className="border border-slate-200 rounded-xl overflow-hidden">
                                     {item.media_url && item.media_type === "image" && (
                                       <div className="group/image relative bg-slate-100">
-                                        <img src={item.media_url} alt="" className="mx-auto block h-auto w-auto max-h-[560px] max-w-full object-contain" />
+                                        <div className={"mx-auto overflow-hidden " + (((item.extra as any)?.imageEdit?.aspect === "1:1") ? "aspect-square max-w-[560px]" : ((item.extra as any)?.imageEdit?.aspect === "4:5") ? "aspect-[4/5] max-w-[448px]" : ((item.extra as any)?.imageEdit?.aspect === "16:9") ? "aspect-video max-w-[760px]" : "")}>
+                                          <img src={item.media_url} alt="" className="mx-auto block h-full w-full object-cover" style={{ filter: `brightness(${(item.extra as any)?.imageEdit?.brightness ?? 100}%) contrast(${(item.extra as any)?.imageEdit?.contrast ?? 100}%) saturate(${(item.extra as any)?.imageEdit?.saturation ?? 100}%) grayscale(${(item.extra as any)?.imageEdit?.grayscale ?? 0}%)`, transform: `scale(${(item.extra as any)?.imageEdit?.scale ?? 1})`, transformOrigin: `${(item.extra as any)?.imageEdit?.positionX ?? 50}% ${(item.extra as any)?.imageEdit?.positionY ?? 50}%` }} />
+                                        </div>
                                         <ImageEditPopover contentItemId={item.id} scenarioId={scenarioId} />
                                       </div>
                                     )}
