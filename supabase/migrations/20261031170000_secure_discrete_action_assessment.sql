@@ -101,10 +101,13 @@ begin
   v_assessed_actions := v_assessment -> 'assessedActions';
   v_acceptable_actions := v_assessment -> 'acceptableActions';
 
-  if jsonb_typeof(v_assessed_actions) <> 'array'
-     or jsonb_array_length(v_assessed_actions) = 0
-     or jsonb_typeof(v_acceptable_actions) <> 'array' then
+  if jsonb_typeof(v_assessed_actions) is distinct from 'array'
+     or jsonb_typeof(v_acceptable_actions) is distinct from 'array' then
     raise exception 'No explicit in-feed assessment rule configured' using errcode = '22023';
+  end if;
+
+  if jsonb_array_length(v_assessed_actions) = 0 then
+    raise exception 'No assessed actions configured' using errcode = '22023';
   end if;
 
   if exists (
