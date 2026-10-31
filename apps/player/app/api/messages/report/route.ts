@@ -42,6 +42,18 @@ export async function POST(request: Request) {
     });
 
   if (insertError) {
+    // Keep the student-facing response calm, but retain the actual database
+    // error in the server log so schema/RLS issues are traceable.
+    console.error("DR1FT message report insert failed", {
+      code: insertError.code,
+      message: insertError.message,
+      details: insertError.details,
+      hint: insertError.hint,
+    });
+    // A repeated tap on an already stored report should not look like a failure.
+    if (insertError.code === "23505") {
+      return NextResponse.json({ ok: true, duplicate: true }, { status: 200 });
+    }
     return NextResponse.json({ error: "Die Meldung konnte nicht gespeichert werden." }, { status: 500 });
   }
 
