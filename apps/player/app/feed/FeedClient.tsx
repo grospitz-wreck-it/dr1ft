@@ -134,7 +134,14 @@ export function FeedClient({ initialItems, userId, classInstanceId, likedContent
   function handleView(item: FeedItem) {
     if (seenRef.current.has(item.id)) return;
     seenRef.current.add(item.id);
-    void recordInteraction(supabase, { userId, contentItemId: item.id, interactionType: "view", classInstanceId });
+    void recordInteraction(supabase, { userId, contentItemId: item.id, interactionType: "view", classInstanceId })
+      .then((saved) => {
+        if (!saved) seenRef.current.delete(item.id);
+      })
+      .catch((error) => {
+        seenRef.current.delete(item.id);
+        console.error("[FeedClient] View-Interaktion fehlgeschlagen:", error);
+      });
   }
   function handleScenarioStart() {
     if (scenarioStarted) return;
