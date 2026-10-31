@@ -597,7 +597,7 @@ export async function updateContentLearningTask(
   const configuredIds = new Set(normalizedInteractions.map((interaction) => interaction.id));
   const assessedActions = Array.from(new Set((task.assessment?.assessedActions ?? [])
     .filter((id): id is string => typeof id === "string")
-    .map((id) => id.trim())
+    .map((id) => id.trim() === "fact_check" ? "inspect_context" : id.trim())
     .filter((id) => configuredIds.has(id)))).slice(0, 20);
   const acceptableActions = Array.from(new Set((task.assessment?.acceptableActions ?? [])
     .filter((id): id is string => typeof id === "string")
