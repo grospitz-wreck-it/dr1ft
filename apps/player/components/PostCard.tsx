@@ -204,7 +204,7 @@ export function PostCard({ item, userId, classInstanceId, initiallyLiked, onView
     const acceptableActions = Array.isArray(assessment?.acceptableActions)
       ? assessment.acceptableActions.filter((value: unknown): value is string => typeof value === "string")
       : [];
-    if (acceptableActions.includes(interactionType)) {
+    if (acceptableActions.length > 0) {
       const { error } = await supabase.rpc("record_discrete_action_assessment", {
         p_class_instance_id: classInstanceId,
         p_content_item_id: item.id,
