@@ -66,7 +66,7 @@ Deno.serve(async (req) => {
     supabase.rpc("get_class_student_competency_progress", { p_class_id: classId }),
     supabase.rpc("get_class_student_competency_evidence", { p_class_id: classId }),
     supabase.rpc("get_class_student_mission_progress", { p_class_id: classId }),
-    supabase.rpc("get_class_student_learning_evidence", { p_class_id: classId }),
+    supabase.rpc("get_class_student_learning_evidence_v1", { p_class_id: classId }),
     supabase.rpc("get_class_mission_bottlenecks", { p_class_id: classId }),
   ]);
 
