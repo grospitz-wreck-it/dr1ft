@@ -119,24 +119,16 @@ export function ContentLearningTaskEditor({ scenarioId, contentItemId, initialTa
 
       {open && (
         <form onSubmit={submit} className="space-y-5 border-t border-slate-100 p-4 sm:p-5">
-          <div className="overflow-hidden rounded-3xl border border-violet-100 bg-gradient-to-br from-violet-50/80 via-white to-emerald-50/40 shadow-[0_12px_40px_-24px_rgba(109,40,217,0.35)]">
-            <div className="border-b border-violet-100 bg-white/70 px-4 py-4 backdrop-blur sm:px-5">
-              <div className="flex flex-wrap items-start justify-between gap-3">
-                <div className="flex min-w-0 items-start gap-3">
-                  <span className="grid h-10 w-10 shrink-0 place-items-center rounded-2xl bg-gradient-to-br from-violet-500 to-fuchsia-500 text-white shadow-lg shadow-violet-200"><GraduationCap className="h-5 w-5" /></span>
-                  <div>
-                    <h3 className="text-sm font-bold text-slate-900">Lerninteraktion konfigurieren</h3>
-                    <p className="mt-0.5 max-w-2xl text-xs leading-relaxed text-slate-500">Alle Aktionen sind im Player immer sichtbar. Hier legst du nur fest, welche davon als Lernnachweis zählen – und welche Rückmeldung Lernende erhalten.</p>
-                  </div>
-                </div>
-                <div className="flex gap-2 text-[11px] font-bold">
-                  <span className="rounded-full bg-violet-100 px-2.5 py-1 text-violet-700">{assessmentCount} bewertet</span>
-                  {acceptableCount > 0 && <span className="rounded-full bg-emerald-100 px-2.5 py-1 text-emerald-700">{acceptableCount} passend</span>}
-                </div>
+          <div className="space-y-3">
+            <div className="flex flex-wrap items-center justify-between gap-3">
+              <p className="max-w-2xl text-xs leading-relaxed text-slate-500">Alle Aktionen sind im Player immer sichtbar. Hier legst du fest, welche davon als Lernnachweis zählen und wann Lernende eine Rückmeldung erhalten.</p>
+              <div className="flex gap-2 text-[11px] font-bold">
+                <span className="rounded-full bg-violet-100 px-2.5 py-1 text-violet-700">{assessmentCount} bewertet</span>
+                {acceptableCount > 0 && <span className="rounded-full bg-emerald-100 px-2.5 py-1 text-emerald-700">{acceptableCount} passend</span>}
               </div>
             </div>
 
-            <div className="p-3 sm:p-4">
+            <div className="rounded-2xl border border-violet-100 bg-gradient-to-br from-violet-50/50 via-white to-emerald-50/30 p-3 sm:p-4">
               <div className="mb-2 hidden grid-cols-[minmax(180px,1fr)_110px_120px_44px] items-center gap-3 px-3 text-[10px] font-bold uppercase tracking-[0.08em] text-slate-400 md:grid">
                 <span>Aktion</span><span className="text-center">Lernnachweis</span><span className="text-center">Angemessen</span><span />
               </div>
