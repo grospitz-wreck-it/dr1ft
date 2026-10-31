@@ -68,7 +68,7 @@ export async function middleware(request: NextRequest) {
     return NextResponse.redirect(url);
   }
 
-  const { data: membership, error: membershipError } = await supabase
+  const { data: membership } = await supabase
     .from("school_memberships")
     .select("school_id, role")
     .eq("user_id", user.id)
@@ -76,14 +76,6 @@ export async function middleware(request: NextRequest) {
     .in("role", ["school_admin", "school_lead"])
     .maybeSingle();
 
-  console.error("[DR1FT SCHOOL AUTH]", {
-    hostname,
-    pathname,
-    userId: user.id,
-    userEmail: user.email,
-    membership,
-    membershipError: membershipError?.message ?? null,
-  });
 
   if (isSchoolHost) {
     if (!membership) {
