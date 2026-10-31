@@ -4,7 +4,7 @@ import { Check, RotateCcw, SlidersHorizontal, Sparkles, Wand2 } from "lucide-rea
 import { regenerateLearningImage, saveImageEditSettings } from "../learning-content-actions";
 
 const aspects=["original","1:1","4:5","16:9"];
-const defaults={brightness:100,contrast:100,saturation:100,grayscale:0,scale:1,positionX:50,positionY:50,aspect:"original"};
+const defaults={brightness:100,contrast:100,saturation:100,grayscale:0,scale:1,positionX:50,positionY:50};
 
 export function ImageEditPopover({contentItemId,scenarioId}:{contentItemId:string;scenarioId:string}){
  const [open,setOpen]=useState(false),[tab,setTab]=useState<"edit"|"ai">("edit"),[pending,startTransition]=useTransition(),[feedback,setFeedback]=useState("");
