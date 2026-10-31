@@ -1,6 +1,6 @@
 # DR1FT Learning Results — Datenmodell v1
 
-Status: Konzeptentwurf, noch keine Runtime- oder Datenbankänderung.
+Status: Datenvertrag; diskrete In-Feed-Bewertung und klassenbezogene Evidenz-Reports sind teilweise implementiert. Kompetenzaggregation und umfassende Ergebnisprojektionen bleiben offen.
 
 ## Ziel
 
@@ -81,6 +81,29 @@ Logische Ausgabe pro Lernendem, Klasseninstanz und Mission:
 
 Für v1 werden die bewertbaren Missions-Contents gleich gewichtet: Mittelwert ihrer Content-Erfüllungsgrade. Contents ohne Lernanforderungen werden nicht als 0 % gewertet, sondern als nicht anwendbar ausgeschlossen. Eine Mission ohne bewertbare Contents hat `null` statt eines erfundenen Prozentwerts. Ob ein Content zu einer Mission gehört, muss explizit und deterministisch festgelegt sein; nicht alle Contents eines Szenarios dürfen automatisch in jede Mission einfließen.
 
+### F. Diskrete In-Feed-Bewertung — implementierter Teilumfang
+
+Für natürlich ausgeführte Feed-Aktionen kann die Redaktion eine gemeinsame Bewertungsregel unter `content_items.extra.learningTask.assessment` speichern:
+
+```json
+{
+  "assessedActions": ["report", "ignore", "share"],
+  "acceptableActions": ["report", "ignore"],
+  "evidenceKey": "in_feed_decision"
+}
+```
+
+- `assessedActions` definiert, welche ausgewählten Interaktionen tatsächlich bewertet werden.
+- `acceptableActions` ist eine Teilmenge davon. Mehrere akzeptable Alternativen erfüllen dieselbe Anforderung.
+- Aktionen außerhalb des Bewertungsumfangs erzeugen keinen bewerteten Lernnachweis.
+- Das Player-Feedback bleibt eine redaktionelle Rückmeldung und ist für sich allein kein Erfolgskriterium.
+- Der Player persistiert die Interaktion zuerst in `user_interactions` und ruft danach `record_discrete_action_assessment` auf.
+- Die SECURITY DEFINER RPC prüft aktive Schüler-Mitgliedschaft, aktive Klassen-Szenario-Zuordnung, Live-Content, konfigurierte Aktion und das gespeicherte Interaktionsereignis. Sie leitet `success` oder `not_yet` ausschließlich aus der gespeicherten Regel ab.
+- Die Legacy-Aktion `fact_check` wird bei der Player-Aktion `inspect_context` als Alias berücksichtigt.
+- Wiederholte Versuche können mehrere Rohereignisse erzeugen. Die Teacher-Evidence-Projektion fasst dieselbe Anforderung je Lernendem, Klasseninstanz, Content und `evidence_key` zusammen; ein erfolgreicher Versuch erfüllt sie.
+
+Diese Bewertung erfasst die Angemessenheit einer konkret ausgeführten Social-App-Handlung. Sie ist kein automatischer Kompetenzlevel und ersetzt keine übergreifende Kompetenz-Evidenz über mehrere Situationen.
+
 ### E. Kompetenz-Evidenz
 
 Erfolgreiche Anforderungen können optional auf bestehende `competencies` abgebildet werden. Die Ergebnis-Engine speichert den konkreten Nachweis und seine Quelle. Ein Kompetenzniveau wird nicht allein aus dem Missionsprozentsatz abgeleitet. Kompetenztrends sollten mehrere Evidenzen über Zeit und unterschiedliche Aufgaben berücksichtigen.
@@ -94,7 +117,7 @@ Erfolgreiche Anforderungen können optional auf bestehende `competencies` abgebi
 - Insights und Einzelreports lesen dieselben berechneten Resultate. Sie implementieren keine eigene Prozentrechnung.
 - Lehrkräfte sehen nur die Klasseninstanzen, für die sie berechtigt sind; Schülerdaten dürfen nicht klassenübergreifend aggregiert offengelegt werden.
 
-## Noch zu entscheiden, bevor Migrationen geschrieben werden
+## Noch zu entscheiden für die vollständige Ergebnis-Engine
 
 1. **Missions-Content-Zuordnung:** Gibt es bereits eine verlässliche Tabelle/Relation für Mission ↔ Content? Falls nicht, eine explizite Zuordnung ergänzen statt über Szenario-ID zu raten.
 2. **Erfolgsnachweis je Interaktion:** Welche Aktionen können deterministisch bewertet werden, und welche benötigen eine Schülerantwort oder eine redaktionell definierte Lösung? Feedback-Text allein ist kein Erfolgsnachweis.
@@ -110,4 +133,4 @@ Erfolgreiche Anforderungen können optional auf bestehende `competencies` abgebi
 4. Tests für 0/1/2 Anforderungen, doppelte Events, Wiederholungen, nicht bewertbare Inhalte und Klassen-Isolation.
 5. Insights und Einzelreportings an die zentrale Ausgabe anbinden.
 
-Dieses Dokument definiert den vorgeschlagenen Datenvertrag. Es nimmt keine Datenbank-, API- oder Player-Änderungen vor.
+Dieses Dokument beschreibt den Datenvertrag und den aktuell implementierten Teilumfang. Es ist keine vollständige Spezifikation der noch offenen Content-, Missions- und Kompetenzprojektionen.
