@@ -142,10 +142,14 @@ export default function MessagesWorkspace({
   }
 
   const allContacts = useMemo(() => [...contacts, ...studentContacts], [contacts, studentContacts]);
-  const filteredContacts = useMemo(() => allContacts.filter((contact) => {
-    const matchesQuery = `${contact.display_name} ${contact.handle}`.toLowerCase().includes(query.toLowerCase());
-    return matchesQuery && (filter === "all" || contact.isDue);
-  }), [allContacts, query, filter]);
+  const filteredContacts = useMemo(() => allContacts
+    .filter((contact) => {
+      const matchesQuery = (contact.display_name + " " + contact.handle).toLowerCase().includes(query.toLowerCase());
+      return matchesQuery && (filter === "all" || contact.isDue);
+    })
+    .sort((a, b) => Number(b.isDue) - Number(a.isDue)
+      || (Date.parse(b.lastMessageAt ?? "") || 0) - (Date.parse(a.lastMessageAt ?? "") || 0)),
+  [allContacts, query, filter]);
 
   const selectedContact = contacts.find((contact) => contact.id === selected);
   const selectedGroup = groupChats.find((chat) => chat.id === selected);
@@ -178,7 +182,7 @@ export default function MessagesWorkspace({
               {filteredContacts.map((contact) => (
                 <button key={contact.id} onClick={() => { setDirectMessages([]); setMessageError(""); setMessageLoading(true); setSelected(contact.id); setShowContacts(false); }} className={`group flex w-full items-center gap-3 rounded-2xl border p-3 text-left transition ${selected === contact.id ? "border-cyan-300/25 bg-gradient-to-r from-fuchsia-500/15 via-violet-500/10 to-cyan-400/10" : "border-transparent hover:border-white/10 hover:bg-white/[.045]"}`}>
                   <span className="relative grid h-11 w-11 shrink-0 place-items-center rounded-[15px] bg-gradient-to-br from-fuchsia-500/30 via-violet-500/25 to-cyan-400/25 text-sm font-bold ring-1 ring-white/10">{contact.display_name.slice(0, 1).toUpperCase()}{contact.isDue && <span className="absolute -right-0.5 -top-0.5 h-2.5 w-2.5 rounded-full bg-pink-400 shadow-[0_0_10px_rgba(236,72,153,.75)]" />}</span>
-                  <span className="min-w-0 flex-1"><span className="block truncate text-sm font-semibold text-white/90">{contact.display_name}</span><span className="mt-1 block truncate text-xs text-white/50">{contact.lastMessage ? `${contact.lastMessageFromMe ? "Du: " : ""}${contact.lastMessage}` : contact.handle}</span></span>
+                  <span className="min-w-0 flex-1"><span className="flex min-w-0 items-center justify-between gap-2"><span className="block truncate text-sm font-semibold text-white/90">{contact.display_name}</span>{contact.lastMessageAt && <time className="shrink-0 text-[10px] text-white/40">{new Date(contact.lastMessageAt).toLocaleTimeString("de-DE", { hour: "2-digit", minute: "2-digit" })}</time>}</span><span className="mt-1 block truncate text-xs text-white/50">{contact.lastMessage ? (contact.lastMessageFromMe ? "Du: " : "") + contact.lastMessage : contact.handle}</span></span>
                   <MessageCircle className="h-4 w-4 shrink-0 text-white/25 group-hover:text-cyan-200" />
                 </button>
               ))}
@@ -218,7 +222,17 @@ export default function MessagesWorkspace({
             <div className="dm-message-list min-h-0 flex-1 space-y-3 overflow-y-auto overscroll-contain px-4 py-5 sm:px-7">
               {messageLoading && directMessages.length === 0 && <p className="py-10 text-center text-sm text-white/45">Unterhaltung wird geladen …</p>}
               {!messageLoading && directMessages.length === 0 && <div className="flex h-full min-h-52 flex-col items-center justify-center text-center"><ChatDoodle /><p className="mt-2 text-lg font-semibold">Sag Hallo!</p><p className="mt-1 text-sm text-white/45">Das ist der Anfang eurer Unterhaltung.</p></div>}
-              {directMessages.map((message) => <div key={message.id} className={`group flex ${message.sender_id === selectedStudent.id ? "justify-start" : "justify-end"}`}><div className="relative"><div className={`dm-bubble max-w-[82%] rounded-xl px-3 py-2 sm:max-w-[64%] ${message.sender_id === selectedStudent.id ? "dm-bubble-in rounded-bl-sm" : "dm-bubble-out rounded-br-sm"}`}><p className="dm-message-body whitespace-pre-wrap break-words text-lg leading-[1.4] sm:text-xl">{message.body}</p><p className="dm-message-time mt-1 text-right text-xs sm:text-sm">{new Date(message.created_at).toLocaleString("de-DE", { hour: "2-digit", minute: "2-digit" })}</p></div><button type="button" onClick={() => { setReportMessage(message); setReportError(""); setReportDone(false); }} className="absolute -right-2 -top-2 grid h-7 w-7 place-items-center rounded-full border border-violet-200 bg-white text-violet-600 opacity-0 shadow-sm transition group-hover:opacity-100 focus:opacity-100" aria-label="Nachricht melden" title="Nachricht melden"><Flag className="h-3.5 w-3.5" /></button></div></div>)}
+              {directMessages.map((message) => (
+                <div key={message.id} className={"group flex w-full min-w-0 " + (message.sender_id === selectedStudent.id ? "justify-start" : "justify-end")}>
+                  <div className="relative min-w-0 max-w-[82%] sm:max-w-[64%]">
+                    <div className={"dm-bubble w-full max-w-none rounded-xl px-3 py-2 " + (message.sender_id === selectedStudent.id ? "dm-bubble-in rounded-bl-sm" : "dm-bubble-out rounded-br-sm")}>
+                      <p className="dm-message-body whitespace-pre-wrap break-words text-lg leading-[1.4] sm:text-xl">{message.body}</p>
+                      <p className="dm-message-time mt-1 text-right text-xs sm:text-sm">{new Date(message.created_at).toLocaleString("de-DE", { hour: "2-digit", minute: "2-digit" })}</p>
+                    </div>
+                    <button type="button" onClick={() => { setReportMessage(message); setReportError(""); setReportDone(false); }} className="dm-report-button absolute -right-2 -top-2 grid h-7 w-7 place-items-center rounded-full border border-violet-200 bg-white text-violet-600 opacity-0 shadow-sm transition group-hover:opacity-100 focus:opacity-100" aria-label="Nachricht melden" title="Nachricht melden"><Flag className="h-3.5 w-3.5" /></button>
+                  </div>
+                </div>
+              ))}
               <div ref={messageEndRef} />
               {messageError && <p role="alert" className="rounded-xl border border-rose-300/20 bg-rose-300/5 p-3 text-xs text-rose-200">{messageError}</p>}
             </div>
@@ -286,6 +300,7 @@ export default function MessagesWorkspace({
         .dm-bubble-out p { color:#29243a !important; }
         .dm-bubble .dm-message-body { overflow-wrap:anywhere; }
         .dm-message-time { color:inherit !important; opacity:.62; font-variant-numeric:tabular-nums; }
+        @media (hover:none) { .dm-report-button { opacity:1; } }
         .dm-composer { color:#29243a; background:#ffffff; border-color:#ddd6ec; }
         .dm-composer::placeholder { color:#716a82; opacity:1; }
         .dm-picker { color:#302842; background:#ffffff; border-color:#ddd6ec; box-shadow:0 12px 36px rgba(35,25,60,.12); }
