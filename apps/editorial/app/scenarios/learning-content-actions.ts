@@ -595,14 +595,14 @@ export async function updateContentLearningTask(
       })).filter((interaction) => interaction.id && interaction.label)
     : [];
   const configuredIds = new Set(normalizedInteractions.map((interaction) => interaction.id));
-  const assessedActions = [...new Set((task.assessment?.assessedActions ?? [])
+  const assessedActions = Array.from(new Set((task.assessment?.assessedActions ?? [])
     .filter((id): id is string => typeof id === "string")
     .map((id) => id.trim())
-    .filter((id) => configuredIds.has(id)))].slice(0, 20);
-  const acceptableActions = [...new Set((task.assessment?.acceptableActions ?? [])
+    .filter((id) => configuredIds.has(id)))).slice(0, 20);
+  const acceptableActions = Array.from(new Set((task.assessment?.acceptableActions ?? [])
     .filter((id): id is string => typeof id === "string")
     .map((id) => id.trim())
-    .filter((id) => assessedActions.includes(id)))].slice(0, 20);
+    .filter((id) => assessedActions.includes(id)))).slice(0, 20);
   const normalizedTask: ContentLearningTask = {
     purpose: String(task.purpose || "").trim().slice(0, 1000),
     learnerAction: String(task.learnerAction || "").trim().slice(0, 1500),
