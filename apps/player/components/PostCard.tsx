@@ -458,7 +458,7 @@ export function PostCard({ item, userId, classInstanceId, initiallyLiked, onView
       {item.mediaUrl && item.mediaType === "video" && <video src={item.mediaUrl} controls className="block w-full aspect-video object-cover bg-black"/>}
       <div className="p-4 pt-3">
         <p className="font-body text-[15px] leading-relaxed">{item.body}</p>
-        {!learningTask.assessment?.assessedActions?.length && learningTask.learnerAction?.trim() && <section className="mt-4 min-w-0 rounded-2xl border border-violet-200 bg-gradient-to-br from-violet-50 to-fuchsia-50/60 p-4 pb-6 text-left">
+        {!learningTask.interactions?.length && !learningTask.assessment?.assessedActions?.length && learningTask.learnerAction?.trim() && <section className="mt-4 min-w-0 rounded-2xl border border-violet-200 bg-gradient-to-br from-violet-50 to-fuchsia-50/60 p-4 pb-6 text-left">
           <div className="flex items-start gap-2.5">
             <span className="grid h-8 w-8 shrink-0 place-items-center rounded-xl bg-violet-600 text-white"><Sparkles className="h-4 w-4" /></span>
             <div className="min-w-0 flex-1 text-left">
