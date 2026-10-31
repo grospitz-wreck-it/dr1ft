@@ -455,8 +455,18 @@ export function PostCard({ item, userId, classInstanceId, initiallyLiked, onView
       setShareSaving(false);
     }
   }
-  async function report() { await track("report"); showFeedback("Deine Meldung wurde aufgenommen."); setMenuOpen(false); }
-  async function ignore() { await track("ignore"); showFeedback("Beitrag wird für dich ausgeblendet."); setMenuOpen(false); }
+  async function report() {
+    const saved = await track("report");
+    setMenuOpen(false);
+    if (!saved) return;
+    showFeedback("Deine Meldung wurde aufgenommen.");
+  }
+  async function ignore() {
+    const saved = await track("ignore");
+    setMenuOpen(false);
+    if (!saved) return;
+    showFeedback("Beitrag wird für dich ausgeblendet.");
+  }
 
   return <>
     <article id={`post-${item.id}`} ref={ref} className="relative bg-paper text-ink rounded-card overflow-visible shadow-sm">
