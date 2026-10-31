@@ -15,7 +15,7 @@ import { mapCreatorRow } from "../lib/types";
 import { recordInteraction } from "@dr1ft/engine-core";
 import { supabaseBrowserClient } from "../lib/supabaseBrowserClient";
 import { CommentSkeleton } from "./Skeleton";
-import { Send, Sparkles } from "lucide-react";
+import { Send } from "lucide-react";
 
 function initials(name: string): string { return name.split(" ").map((p) => p[0]).slice(0, 2).join("").toUpperCase(); }
 function getString(value: unknown): string | undefined { return typeof value === "string" ? value : undefined; }
@@ -45,7 +45,6 @@ export function PostCard({ item, userId, classInstanceId, initiallyLiked, onView
   const [shareRecipients, setShareRecipients] = useState<Array<{ id: string; displayName: string; username: string }>>([]);
   const [selectedRecipients, setSelectedRecipients] = useState<string[]>([]);
   const [feedback, setFeedback] = useState<string | null>(null);
-  const [learningFeedback, setLearningFeedback] = useState<{ title: string; message: string; action: string } | null>(null);
   const [comparison, setComparison] = useState<{ related: FeedItem | null; loading: boolean; selected?: "contradict" | "support"; assessmentOutcome?: "success" | "not_yet" | "not_assessed"; error?: string } | null>(null);
   const [taskResponse, setTaskResponse] = useState("");
   const [taskResponseSaved, setTaskResponseSaved] = useState(false);
@@ -182,21 +181,6 @@ export function PostCard({ item, userId, classInstanceId, initiallyLiked, onView
     const configured = (learningTask.interactions ?? []).find((entry) =>
       (aliases[interactionType] ?? [interactionType]).includes(entry.id)
     );
-    const discovery = interactionDiscoveries[interactionType];
-    const message = String(
-      (discovery?.discoveryMessage ?? discovery?.message) ??
-      (configured as any)?.discoveryMessage ??
-      (configured as any)?.message ??
-      ""
-    ).trim();
-    if (configured && message) {
-      setLearningFeedback({
-        title: String(discovery?.title ?? "Gut entdeckt!"),
-        message,
-        action: interactionType,
-      });
-    }
-
     // Only editorially assessed actions create learning evidence. The server
     // reads the shared rule from learningTask.assessment and derives the outcome.
     const assessment = learningTask.assessment;
@@ -218,9 +202,9 @@ export function PostCard({ item, userId, classInstanceId, initiallyLiked, onView
         p_content_item_id: item.id,
         p_action_id: interactionType,
       });
-      if (error) {
-        showFeedback("Deine Aktion wurde gespeichert, konnte aber nicht als Lernnachweis ausgewertet werden.");
-      }
+      // Assessment failures stay invisible to learners: the interaction itself
+      // has already been saved, and assessment status must not reveal mission membership.
+      if (error) console.error("Discrete action assessment failed", error);
     }
     return true;
   }
@@ -400,8 +384,8 @@ export function PostCard({ item, userId, classInstanceId, initiallyLiked, onView
       p_selected: result,
     });
     if (error) {
+      console.error("Comparison assessment failed", error);
       setComparison((current) => current ? { ...current, assessmentOutcome: undefined } : current);
-      showFeedback("Deine Entscheidung wurde angezeigt, konnte aber nicht als Lernnachweis gespeichert werden.");
       return;
     }
     const outcome = Array.isArray(data) ? data[0]?.outcome : undefined;
@@ -475,18 +459,7 @@ export function PostCard({ item, userId, classInstanceId, initiallyLiked, onView
       {item.mediaUrl && item.mediaType === "video" && <video src={item.mediaUrl} controls className="block w-full aspect-video object-cover bg-black"/>}
       <div className="p-4 pt-3">
         <p className="font-body text-[15px] leading-relaxed">{item.body}</p>
-        {learningFeedback && <section className="mt-3 overflow-hidden rounded-2xl border border-violet-200 bg-gradient-to-br from-violet-50 via-white to-sky-50 shadow-sm" aria-live="polite">
-          <div className="flex items-start gap-3 p-4">
-            <span className="grid h-9 w-9 shrink-0 place-items-center rounded-xl bg-gradient-to-br from-violet-600 to-sky-500 text-white"><Sparkles className="h-4 w-4" /></span>
-            <div className="min-w-0 flex-1">
-              <p className="text-[10px] font-bold uppercase tracking-[0.14em] text-violet-700">DR1FT · Erkenntnis</p>
-              <h3 className="mt-1 text-sm font-bold text-slate-900">{learningFeedback.title}</h3>
-              <p className="mt-1 text-sm leading-relaxed text-slate-700">{learningFeedback.message}</p>
-            </div>
-            <button type="button" onClick={() => setLearningFeedback(null)} aria-label="Rückmeldung schließen" className="rounded-lg p-1 text-violet-700 hover:bg-violet-100"><X className="h-4 w-4" /></button>
-          </div>
-        </section>}
-        {learningTask.learnerAction?.trim() && <section className="mt-4 min-w-0 rounded-2xl border border-violet-200 bg-gradient-to-br from-violet-50 to-fuchsia-50/60 p-4 pb-6 text-left">
+        {!learningTask.assessment?.assessedActions?.length && learningTask.learnerAction?.trim() && <section className="mt-4 min-w-0 rounded-2xl border border-violet-200 bg-gradient-to-br from-violet-50 to-fuchsia-50/60 p-4 pb-6 text-left">
           <div className="flex items-start gap-2.5">
             <span className="grid h-8 w-8 shrink-0 place-items-center rounded-xl bg-violet-600 text-white"><Sparkles className="h-4 w-4" /></span>
             <div className="min-w-0 flex-1 text-left">
@@ -596,7 +569,7 @@ export function PostCard({ item, userId, classInstanceId, initiallyLiked, onView
             <div className="rounded-xl border border-ink/10 bg-ink/[0.025] p-4"><p className="font-mono text-[10px] uppercase tracking-wider text-ink/40 mb-3">Aussage 2</p><AuthorRow creator={comparison.related.creator}/><p className="text-sm leading-relaxed">{comparison.related.body}</p></div>
           </div>
           <div className="mt-5 border-t border-ink/10 pt-5"><p className="text-sm font-medium mb-3">Wie verhalten sich die beiden Aussagen zueinander?</p><div className="grid grid-cols-1 sm:grid-cols-2 gap-3"><button onClick={() => chooseComparison("contradict")} className={`rounded-xl border px-4 py-3 text-left text-sm transition ${comparison.selected === "contradict" ? "border-ink bg-ink text-paper" : "border-ink/15 hover:bg-ink/5"}`}>Sie widersprechen sich.</button><button onClick={() => chooseComparison("support")} className={`rounded-xl border px-4 py-3 text-left text-sm transition ${comparison.selected === "support" ? "border-ink bg-ink text-paper" : "border-ink/15 hover:bg-ink/5"}`}>Sie stützen dieselbe Aussage.</button></div>
-            {comparison.selected && <div className="mt-4 rounded-xl bg-ink/5 px-4 py-3 text-sm leading-relaxed" role="status">{comparison.assessmentOutcome === "success" ? (checkFeedback("compare_information") || "Richtig eingeordnet. Deine Entscheidung wurde geprüft.") : comparison.assessmentOutcome === "not_yet" ? "Noch nicht richtig eingeordnet. Vergleiche die Aussagen noch einmal und prüfe, ob sie sich widersprechen oder gegenseitig stützen." : comparison.assessmentOutcome === "not_assessed" ? "Das ist eine allgemeine Vergleichshilfe. Für diesen Beitrag ist keine bewertete Lernanforderung eingerichtet." : "Deine Entscheidung wurde ausgewählt. Die Bewertung wird geprüft."}</div>}
+            {comparison.selected && <div className="mt-4 rounded-xl bg-ink/5 px-4 py-3 text-sm leading-relaxed" role="status">"Danke fürs Vergleichen. Schau dir beide Aussagen noch einmal im Zusammenhang an."</div>}
           </div>
         </div>}
       </div>
