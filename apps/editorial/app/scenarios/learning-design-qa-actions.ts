@@ -11,17 +11,25 @@ type QaResult = {
 
 export async function runLearningDesignQa(designId: string, scenarioId: string): Promise<QaResult> {
   const supabase = supabaseServerClient();
-  const [{ data: design, error: designError }, { data: objectives }, { data: steps }] = await Promise.all([
+  const [
+    { data: design, error: designError },
+    { data: objectives, error: objectivesError },
+    { data: steps, error: stepsError },
+  ] = await Promise.all([
     supabase.from("learning_designs").select("id,scenario_id,desired_results,acceptable_evidence,learning_experiences,pedagogical_warnings,source_notes").eq("id", designId).single(),
     supabase.from("learning_objectives").select("id,title,description,bloom_level").eq("learning_design_id", designId),
     supabase.from("learning_steps").select("id,title,description,bloom_level,activity_type,objective_ids,competency_ids,reflection_prompt,creation_task,transfer_task,estimated_minutes,activity_config").eq("learning_design_id", designId).order("step_index"),
   ]);
   if (designError || !design) throw new Error(designError?.message ?? "Learning Design nicht gefunden.");
+  if (design.scenario_id !== scenarioId) throw new Error("Das Learning Design gehört nicht zu diesem Szenario.");
+  if (objectivesError) throw new Error("Lernziele konnten nicht geladen werden: " + objectivesError.message);
+  if (stepsError) throw new Error("Lernschritte konnten nicht geladen werden: " + stepsError.message);
 
   const stepIds = (steps ?? []).map((step) => step.id);
-  const { data: evidence } = stepIds.length
+  const { data: evidence, error: evidenceError } = stepIds.length
     ? await supabase.from("evidence_indicators").select("id,learning_step_id").in("learning_step_id", stepIds)
-    : { data: [] };
+    : { data: [], error: null };
+  if (evidenceError) throw new Error("Evidenzindikatoren konnten nicht geladen werden: " + evidenceError.message);
 
   const checks = [
     { label: "Lernziel vorhanden", ok: (objectives ?? []).length > 0 },
