@@ -151,7 +151,7 @@ export default function MessagesWorkspace({
   const selectedGroup = groupChats.find((chat) => chat.id === selected);
 
   return (
-    <main className="drift-messenger relative -mt-4 flex h-[calc(100dvh-2rem)] min-h-[620px] flex-col overflow-hidden rounded-[28px] border shadow-2xl">
+    <main className="drift-messenger relative -mt-4 flex h-[calc(100dvh-6rem)] min-h-[480px] flex-col overflow-hidden rounded-[28px] border shadow-2xl lg:h-[calc(100dvh-4rem)] lg:min-h-[520px]">
       <img src="/branding/bg-neon-circle.webp" alt="" aria-hidden="true" className="drift-neon-background pointer-events-none absolute bottom-0 right-0 z-0 w-[min(38vw,34rem)] max-w-none" />
       <div className="relative z-[1] grid min-h-0 flex-1 grid-cols-1 lg:grid-cols-[minmax(280px,32%)_minmax(0,1fr)]">
         <aside className={`drift-messenger-list border-b border-white/10 lg:border-b-0 lg:border-r ${!showContacts ? "hidden lg:block" : ""}`}>
@@ -215,14 +215,14 @@ export default function MessagesWorkspace({
           </header>
 
           {selectedStudent ? <div className="relative flex min-h-0 flex-1 flex-col">
-            <div className="dm-message-list min-h-0 flex-1 space-y-3 overflow-y-auto px-4 py-5 sm:px-7">
+            <div className="dm-message-list min-h-0 flex-1 space-y-3 overflow-y-auto overscroll-contain px-4 py-5 sm:px-7">
               {messageLoading && directMessages.length === 0 && <p className="py-10 text-center text-sm text-white/45">Unterhaltung wird geladen …</p>}
               {!messageLoading && directMessages.length === 0 && <div className="flex h-full min-h-52 flex-col items-center justify-center text-center"><ChatDoodle /><p className="mt-2 text-lg font-semibold">Sag Hallo!</p><p className="mt-1 text-sm text-white/45">Das ist der Anfang eurer Unterhaltung.</p></div>}
               {directMessages.map((message) => <div key={message.id} className={`group flex ${message.sender_id === selectedStudent.id ? "justify-start" : "justify-end"}`}><div className="relative"><div className={`dm-bubble max-w-[82%] rounded-xl px-3 py-2 sm:max-w-[64%] ${message.sender_id === selectedStudent.id ? "dm-bubble-in rounded-bl-sm" : "dm-bubble-out rounded-br-sm"}`}><p className="dm-message-body whitespace-pre-wrap break-words text-lg leading-[1.4] sm:text-xl">{message.body}</p><p className="dm-message-time mt-1 text-right text-xs sm:text-sm">{new Date(message.created_at).toLocaleString("de-DE", { hour: "2-digit", minute: "2-digit" })}</p></div><button type="button" onClick={() => { setReportMessage(message); setReportError(""); setReportDone(false); }} className="absolute -right-2 -top-2 grid h-7 w-7 place-items-center rounded-full border border-violet-200 bg-white text-violet-600 opacity-0 shadow-sm transition group-hover:opacity-100 focus:opacity-100" aria-label="Nachricht melden" title="Nachricht melden"><Flag className="h-3.5 w-3.5" /></button></div></div>)}
               <div ref={messageEndRef} />
               {messageError && <p role="alert" className="rounded-xl border border-rose-300/20 bg-rose-300/5 p-3 text-xs text-rose-200">{messageError}</p>}
             </div>
-            <div className="dm-compose-area relative border-t border-white/[.08] p-3 sm:p-4">
+            <div className="dm-compose-area relative shrink-0 border-t border-white/[.08] p-3 pb-[calc(.75rem+env(safe-area-inset-bottom))] sm:p-4">
               {emojiOpen && <div className="dm-picker mb-3 overflow-hidden rounded-2xl border p-2 sm:p-3" role="dialog" aria-label="Emoji auswählen">
                 <div className="mb-2 flex flex-wrap items-center justify-between gap-2 px-1">
                   <span className="text-sm font-semibold">Alle Emojis</span>
@@ -232,9 +232,9 @@ export default function MessagesWorkspace({
                 </div>
                 <EmojiPicker onEmojiClick={(emojiData) => insertEmoji(emojiData.emoji)} emojiStyle={emojiStyle} theme={Theme.AUTO} width="100%" height={440} searchPlaceHolder="Emoji suchen …" previewConfig={{ showPreview: false }} lazyLoadEmojis />
               </div>}
-              <form onSubmit={sendDirectMessage} className="flex items-end gap-2">
+              <form onSubmit={sendDirectMessage} className="flex w-full items-end gap-2">
                 <button type="button" onClick={() => setEmojiOpen((open) => !open)} aria-label="Emoji auswählen" title="Emoji" className="dm-tool-button grid h-11 w-10 shrink-0 place-items-center rounded-xl"><Smile className="h-5 w-5" /></button>
-                <textarea ref={draftRef} value={draft} onChange={(event) => setDraft(event.target.value)} maxLength={4000} rows={1} placeholder="Nachricht schreiben …" className="dm-composer max-h-36 min-h-11 min-w-0 flex-1 resize-y rounded-2xl border px-4 py-3 text-sm outline-none focus:border-violet-400/60" />
+                <textarea ref={draftRef} value={draft} onChange={(event) => setDraft(event.target.value)} maxLength={4000} rows={1} placeholder="Nachricht schreiben …" className="dm-composer block max-h-36 min-h-11 min-w-0 w-full flex-1 resize-y rounded-2xl border px-4 py-3 text-sm outline-none focus:border-violet-400/60" />
                 <button type="submit" disabled={!draft.trim() || messageLoading} className="drift-gradient-button inline-flex h-11 shrink-0 items-center gap-2 rounded-2xl px-4 text-sm font-semibold disabled:cursor-not-allowed disabled:opacity-40"><Send className="h-4 w-4" /><span className="hidden sm:inline">Senden</span></button>
               </form>
             </div>
@@ -250,7 +250,7 @@ export default function MessagesWorkspace({
 
             <button onClick={() => { setShowContacts(true); document.getElementById("contact-search")?.focus(); }} className="relative mt-7 inline-flex items-center gap-2 rounded-2xl border px-5 py-3.5 text-sm font-semibold drift-secondary-button"><UserRoundPlus className="h-4 w-4" /> Kontakt auswählen</button>
           </div>}
-          <footer className="border-t px-5 py-3 text-center text-[10px] drift-muted">DR1FT · Gespräche deiner Klasse</footer>
+          <footer className="shrink-0 border-t px-5 py-3 text-center text-[10px] drift-muted">DR1FT · Gespräche deiner Klasse</footer>
         </section>
       </div>
       {reportMessage && <div className="fixed inset-0 z-50 flex items-center justify-center bg-[#130d24]/55 p-4 backdrop-blur-sm" role="dialog" aria-modal="true" aria-labelledby="report-title">
@@ -312,7 +312,7 @@ export default function MessagesWorkspace({
         :global(html.dark-mode) .dm-tool-button:hover { color:#fff; background:#38294d; }
         :global(html.dark-mode) .drift-secondary-button { color:#f7f4ff; border-color:rgba(255,255,255,.13); background:rgba(255,255,255,.06); }
         :global(html.dark-mode) .drift-muted { color:rgba(255,255,255,.28); border-color:rgba(255,255,255,.06); }
-        @media(max-width:1023px){ .drift-messenger { height:calc(100dvh - 9rem); min-height:560px; } }
+        @media(max-width:1023px){ .drift-messenger { width:100%; } .dm-compose-area { background:rgba(247,245,252,.98); backdrop-filter:blur(14px); } :global(html.dark-mode) .dm-compose-area { background:rgba(16,13,32,.98); } .dm-composer { font-size:16px; } }
       `}</style>
     </main>
   );
