@@ -548,6 +548,28 @@ export async function regenerateLearningImage(contentItemId: string, scenarioId:
   return { mediaUrl: image.url, generationCount: nextGeneration.generationCount };
 }
 
+export async function saveImageEditSettings(contentItemId: string, scenarioId: string, settings: { brightness: number; contrast: number; saturation: number; grayscale: number; scale: number; positionX: number; positionY: number; aspect: string }) {
+  const supabase = supabaseServerClient();
+  const { data: item, error } = await supabase.from("content_items").select("id,extra").eq("id", contentItemId).eq("scenario_id", scenarioId).single();
+  if (error || !item) throw new Error(error?.message || "Content nicht gefunden.");
+  const clamp = (value: unknown, min: number, max: number, fallback: number) => Math.min(max, Math.max(min, Number.isFinite(Number(value)) ? Number(value) : fallback));
+  const imageEdit = {
+    brightness: clamp(settings.brightness, 50, 150, 100),
+    contrast: clamp(settings.contrast, 50, 150, 100),
+    saturation: clamp(settings.saturation, 0, 200, 100),
+    grayscale: clamp(settings.grayscale, 0, 100, 0),
+    scale: clamp(settings.scale, 1, 2, 1),
+    positionX: clamp(settings.positionX, 0, 100, 50),
+    positionY: clamp(settings.positionY, 0, 100, 50),
+    aspect: ["original", "1:1", "4:5", "16:9"].includes(String(settings.aspect)) ? String(settings.aspect) : "original",
+    updatedAt: new Date().toISOString(),
+  };
+  const { error: updateError } = await supabase.from("content_items").update({ extra: { ...(item.extra || {}), imageEdit }, updated_at: new Date().toISOString() }).eq("id", contentItemId).eq("scenario_id", scenarioId);
+  if (updateError) throw new Error(updateError.message);
+  revalidatePath("/scenarios/" + scenarioId);
+  return { ok: true };
+}
+
 
 export type ContentLearningTask = {
   purpose: string;
