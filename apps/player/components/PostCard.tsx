@@ -10,6 +10,7 @@ import { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import Link from "next/link";
 import { Check, ChevronDown, Eye, Flag, Heart, Image as ImageIcon, MessageCircle, MoreHorizontal, Search, Share2, UserRound, X } from "lucide-react";
+import { Send, Sparkles } from "lucide-react";
 import type { FeedItem, CreatorSummary } from "../lib/types";
 import { mapCreatorRow } from "../lib/types";
 import { recordInteraction } from "@dr1ft/engine-core";
