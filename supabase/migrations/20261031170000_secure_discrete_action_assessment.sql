@@ -1,6 +1,6 @@
 -- Trusted assessment for ordinary in-feed actions (report, ignore, inspect, etc.).
--- The learner submits only the action they performed. The server reads the
--- accepted alternatives from editorial content configuration and derives outcome.
+-- Editorial stores one shared rule on learningTask.assessment. The learner submits
+-- only the action already persisted in user_interactions; the server derives outcome.
 
 create or replace function public.record_discrete_action_assessment(
   p_class_instance_id uuid,
@@ -19,9 +19,10 @@ as $$
 declare
   v_user_id uuid := auth.uid();
   v_scenario_id uuid;
-  v_interaction jsonb;
   v_assessment jsonb;
+  v_assessed_actions jsonb;
   v_acceptable_actions jsonb;
+  v_action_aliases text[];
   v_evidence_key text;
   v_outcome text;
   v_event_kind text;
@@ -46,56 +47,108 @@ begin
     raise exception 'Active student membership required' using errcode = '42501';
   end if;
 
-  -- The content must be live and assigned to this class through its scenario.
+  -- Normalize the legacy fact_check action to the Player's inspect_context event.
+  v_action_aliases := case p_action_id
+    when 'inspect_context' then array['inspect_context', 'fact_check']
+    else array[p_action_id]
+  end;
+
+  -- Require that the action was actually persisted by the Player first.
+  if not exists (
+    select 1
+    from public.user_interactions ui
+    where ui.user_id = v_user_id
+      and ui.class_instance_id = p_class_instance_id
+      and ui.content_item_id = p_content_item_id
+      and ui.interaction_type = p_action_id
+  ) then
+    raise exception 'Persisted learner interaction required' using errcode = '42501';
+  end if;
+
+  -- Content must be live, assigned to this class, and explicitly assessed
+  -- in the shared Editorial learningTask configuration.
   select ci.scenario_id,
-         interaction.value,
-         interaction.value -> 'assessment'
-    into v_scenario_id, v_interaction, v_assessment
+         ci.extra #> '{learningTask,assessment}'
+    into v_scenario_id, v_assessment
   from public.content_items ci
-  cross join lateral jsonb_array_elements(
-    case
-      when jsonb_typeof(ci.extra #> '{learningTask,interactions}') = 'array'
-        then ci.extra #> '{learningTask,interactions}'
-      else '[]'::jsonb
-    end
-  ) as interaction(value)
   where ci.id = p_content_item_id
     and ci.status = 'live'
     and ci.scenario_id is not null
-    and interaction.value ->> 'id' = p_action_id
     and exists (
       select 1
       from public.class_instance_scenario_assignments cisa
       where cisa.class_instance_id = p_class_instance_id
         and cisa.scenario_id = ci.scenario_id
+        and cisa.archived_at is null
+    )
+    and exists (
+      select 1
+      from jsonb_array_elements(
+        case
+          when jsonb_typeof(ci.extra #> '{learningTask,interactions}') = 'array'
+            then ci.extra #> '{learningTask,interactions}'
+          else '[]'::jsonb
+        end
+      ) interaction
+      where interaction ->> 'id' = any(v_action_aliases)
     );
 
   if not found then
     raise exception 'Live assigned content interaction not found' using errcode = '22023';
   end if;
 
+  v_assessed_actions := v_assessment -> 'assessedActions';
   v_acceptable_actions := v_assessment -> 'acceptableActions';
-  if jsonb_typeof(v_acceptable_actions) <> 'array'
-     or jsonb_array_length(v_acceptable_actions) = 0 then
-    raise exception 'Interaction has no explicit assessment rule' using errcode = '22023';
+
+  if jsonb_typeof(v_assessed_actions) <> 'array'
+     or jsonb_array_length(v_assessed_actions) = 0
+     or jsonb_typeof(v_acceptable_actions) <> 'array' then
+    raise exception 'No explicit in-feed assessment rule configured' using errcode = '22023';
   end if;
 
   if exists (
     select 1
-    from jsonb_array_elements(v_acceptable_actions) accepted(value)
-    where jsonb_typeof(accepted.value) <> 'string'
-       or length(trim(accepted.value #>> '{}')) = 0
+    from jsonb_array_elements(v_assessed_actions) action(value)
+    where jsonb_typeof(action.value) <> 'string'
+       or length(trim(action.value #>> '{}')) = 0
+  ) or exists (
+    select 1
+    from jsonb_array_elements(v_acceptable_actions) action(value)
+    where jsonb_typeof(action.value) <> 'string'
+       or length(trim(action.value #>> '{}')) = 0
   ) then
-    raise exception 'Invalid acceptableActions configuration' using errcode = '22023';
+    raise exception 'Invalid action assessment configuration' using errcode = '22023';
+  end if;
+
+  -- A selected action must be in the editorial assessment scope.
+  if not exists (
+    select 1
+    from jsonb_array_elements_text(v_assessed_actions) action_id
+    where action_id = any(v_action_aliases)
+  ) then
+    raise exception 'Action is not part of the assessment scope' using errcode = '22023';
+  end if;
+
+  -- Every acceptable action must also be in the assessed action set.
+  if exists (
+    select 1
+    from jsonb_array_elements_text(v_acceptable_actions) accepted_id
+    where not (v_assessed_actions @> jsonb_build_array(accepted_id))
+  ) then
+    raise exception 'Acceptable actions must be assessed actions' using errcode = '22023';
   end if;
 
   v_evidence_key := nullif(trim(v_assessment ->> 'evidenceKey'), '');
   if v_evidence_key is null then
-    v_evidence_key := 'interaction:' || p_action_id;
+    v_evidence_key := 'in_feed_decision';
   end if;
 
   v_outcome := case
-    when v_acceptable_actions @> jsonb_build_array(p_action_id) then 'success'
+    when exists (
+      select 1
+      from jsonb_array_elements_text(v_acceptable_actions) accepted_id
+      where accepted_id = any(v_action_aliases)
+    ) then 'success'
     else 'not_yet'
   end;
   v_event_kind := case
@@ -126,8 +179,10 @@ begin
     1,
     jsonb_build_object(
       'action_id', p_action_id,
+      'action_aliases', to_jsonb(v_action_aliases),
+      'assessed_actions', v_assessed_actions,
       'acceptable_actions', v_acceptable_actions,
-      'assessment_type', 'editorial_discrete_action'
+      'assessment_type', 'editorial_in_feed_action'
     )
   )
   returning id into v_event_id;
@@ -142,4 +197,4 @@ grant execute on function public.record_discrete_action_assessment(uuid, uuid, t
   to authenticated;
 
 comment on function public.record_discrete_action_assessment(uuid, uuid, text) is
-  'Records a server-derived outcome for a configured in-feed action. Multiple acceptableActions satisfy the same evidenceKey requirement; the client cannot submit an outcome.';
+  'Records a server-derived outcome for a persisted in-feed action using the shared Editorial learningTask.assessment rule. Multiple acceptable alternatives satisfy the same evidenceKey requirement; the client cannot submit an outcome.';
