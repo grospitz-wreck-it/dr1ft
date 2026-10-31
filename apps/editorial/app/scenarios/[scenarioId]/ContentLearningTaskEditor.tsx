@@ -2,7 +2,7 @@
 
 import { useMemo, useState, useTransition, type FormEvent } from "react";
 import { updateContentLearningTask } from "../learning-content-actions";
-import { Check, ChevronDown, GraduationCap, Save, Search, Image as ImageIcon, ShieldCheck, UserRound, ArrowLeftRight, Share2, Flag, CircleOff, MessageCircle } from "lucide-react";
+import { Check, ChevronDown, ChevronRight, GraduationCap, Save, Search, Image as ImageIcon, ShieldCheck, UserRound, ArrowLeftRight, Share2, Flag, CircleOff, MessageCircle } from "lucide-react";
 
 type Interaction = { id: string; label: string; instruction?: string; custom?: boolean; discoveryTitle?: string; discoveryMessage?: string; discoveryCompetency?: string };
 type InteractionAssessment = { assessedActions: string[]; acceptableActions: string[]; evidenceKey: string };
@@ -106,15 +106,18 @@ export function ContentLearningTaskEditor({ scenarioId, contentItemId, initialTa
 
   return (
     <section className="mt-4 overflow-hidden rounded-2xl border border-violet-200 bg-white shadow-sm">
-      <button type="button" onClick={() => setOpen(value => !value)} aria-expanded={open} className="flex w-full items-center justify-between gap-3 p-4 text-left transition hover:bg-violet-50/60 sm:p-5">
+      <button type="button" onClick={() => setOpen(value => !value)} aria-expanded={open} className="group flex w-full items-center justify-between gap-4 p-4 text-left transition hover:bg-violet-50/60 sm:p-5">
         <span className="flex min-w-0 items-center gap-3">
-          <span className="grid h-11 w-11 shrink-0 place-items-center rounded-2xl bg-violet-100 text-violet-700"><GraduationCap className="h-5 w-5" /></span>
+          <span className="grid h-11 w-11 shrink-0 place-items-center rounded-2xl bg-gradient-to-br from-violet-500 to-fuchsia-500 text-white shadow-md shadow-violet-200"><GraduationCap className="h-5 w-5" /></span>
           <span className="min-w-0">
             <span className="block text-base font-bold text-slate-950">Lernaufgabe &amp; Interaktionen</span>
-            <span className="mt-0.5 block text-xs text-slate-500">Was können Lernende tun – und welche Reaktionen zeigen den Lernerfolg?</span>
+            <span className="mt-0.5 block text-xs text-slate-500">Aktionen bewerten und Lernreaktionen festlegen</span>
           </span>
         </span>
-        <ChevronDown className={`h-5 w-5 shrink-0 text-slate-500 transition ${open ? "rotate-180" : ""}`} />
+        <span className="inline-flex shrink-0 items-center gap-2 rounded-xl border border-violet-200 bg-white px-3 py-2 text-xs font-bold text-violet-700 shadow-sm transition group-hover:border-violet-300 group-hover:bg-violet-50">
+          {open ? "Schließen" : "Konfigurieren"}
+          {open ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
+        </span>
       </button>
 
       {open && (
