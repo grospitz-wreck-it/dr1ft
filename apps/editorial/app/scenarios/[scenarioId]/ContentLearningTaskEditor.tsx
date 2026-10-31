@@ -35,7 +35,7 @@ const area = "mt-1.5 w-full rounded-xl border border-slate-200 bg-white px-3 py-
 const labelClass = "block text-xs font-semibold text-slate-700";
 
 export function ContentLearningTaskEditor({ scenarioId, contentItemId, initialTask }: { scenarioId: string; contentItemId: string; initialTask?: Partial<Task> | null }) {
-  const [open, setOpen] = useState(Boolean(initialTask && Object.values(initialTask).some(v => Array.isArray(v) ? v.length > 0 : String(v ?? "").trim())));
+  const [open, setOpen] = useState(Boolean(initialTask && Object.entries(initialTask).some(([key, value]) => key !== "assessment" && (Array.isArray(value) ? value.length > 0 : String(value ?? "").trim()))));
   const [task, setTask] = useState<Task>(() => {
     const saved = (initialTask ?? {}) as Partial<Task>;
     return {
