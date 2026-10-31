@@ -5,12 +5,14 @@ import { updateContentLearningTask } from "../learning-content-actions";
 import { Check, Plus, Sparkles, X } from "lucide-react";
 
 type Interaction = { id: string; label: string; instruction?: string; custom?: boolean; discoveryTitle?: string; discoveryMessage?: string; discoveryCompetency?: string };
+type InteractionAssessment = { assessedActions: string[]; acceptableActions: string[]; evidenceKey: string };
 type Task = {
   purpose: string;
   learnerAction: string;
   interactions: Interaction[];
   feedback: string;
   successCriteria: string;
+  assessment: InteractionAssessment;
 };
 
 const DEFAULT_INTERACTIONS: Interaction[] = [
@@ -28,6 +30,7 @@ const AVAILABLE_INTERACTIONS: Interaction[] = [
   { id: "ignore", label: "Ignorieren", instruction: "Entscheide bewusst, ob du dem Beitrag keine weitere Aufmerksamkeit gibst." },
   { id: "share", label: "Teilen", instruction: "Überlege, ob du den Beitrag weiterverbreiten würdest." },
 ];
+const ASSESSABLE_INTERACTIONS = new Set(AVAILABLE_INTERACTIONS.map(item => item.id));
 const area = "mt-1.5 w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm font-normal outline-none focus:border-violet-400 focus:ring-4 focus:ring-violet-100";
 const labelClass = "block text-xs font-semibold text-slate-700";
 
@@ -41,6 +44,11 @@ export function ContentLearningTaskEditor({ scenarioId, contentItemId, initialTa
       interactions: Array.isArray(saved.interactions) ? saved.interactions : DEFAULT_INTERACTIONS,
       feedback: saved.feedback ?? "",
       successCriteria: saved.successCriteria ?? "",
+      assessment: {
+        assessedActions: Array.isArray((saved as any).assessment?.assessedActions) ? (saved as any).assessment.assessedActions : [],
+        acceptableActions: Array.isArray((saved as any).assessment?.acceptableActions) ? (saved as any).assessment.acceptableActions : [],
+        evidenceKey: typeof (saved as any).assessment?.evidenceKey === "string" ? (saved as any).assessment.evidenceKey : "in_feed_decision",
+      },
     };
   });
   const [showPicker, setShowPicker] = useState(false);
@@ -70,6 +78,7 @@ export function ContentLearningTaskEditor({ scenarioId, contentItemId, initialTa
           interactionType: task.interactions[0]?.id === "comment" ? "comment" : "reflect",
           expectedResponse: "",
           evaluationMethod: "criteria",
+          assessment: task.assessment,
         } as any);
         setMessage("Gespeichert");
       } catch (err) {
@@ -79,6 +88,15 @@ export function ContentLearningTaskEditor({ scenarioId, contentItemId, initialTa
   }
 
   const selectedIds = new Set(task.interactions.map(item => item.id));
+  const assessableSelected = task.interactions.filter(item => ASSESSABLE_INTERACTIONS.has(item.id));
+  function updateAssessment(actionId: string, field: "assessedActions" | "acceptableActions", checked: boolean) {
+    const current = task.assessment[field];
+    const next = checked ? [...new Set([...current, actionId])] : current.filter(id => id !== actionId);
+    const assessment = { ...task.assessment, [field]: next };
+    if (field === "assessedActions" && !checked) assessment.acceptableActions = assessment.acceptableActions.filter(id => id !== actionId);
+    if (field === "acceptableActions" && checked && !assessment.assessedActions.includes(actionId)) assessment.assessedActions = [...assessment.assessedActions, actionId];
+    update("assessment", assessment);
+  }
   return <section className="mt-3 overflow-hidden rounded-2xl border border-violet-200 bg-gradient-to-br from-white to-violet-50/60">
     <button type="button" onClick={() => setOpen(value => !value)} aria-expanded={open} className="flex w-full items-center justify-between gap-3 p-4 text-left transition hover:bg-violet-50/70">
       <span className="flex min-w-0 items-center gap-3">
@@ -107,6 +125,24 @@ export function ContentLearningTaskEditor({ scenarioId, contentItemId, initialTa
             </label>
           </div>
         </details>)}
+        {assessableSelected.length > 0 && <details className="mt-3 rounded-xl border border-sky-200 bg-sky-50/50" open={task.assessment.assessedActions.length > 0}>
+          <summary className="cursor-pointer px-3 py-3 text-sm font-semibold text-sky-950">Lernnachweis im Hintergrund konfigurieren <span className="font-normal text-sky-700">· optional</span></summary>
+          <div className="border-t border-sky-100 p-3">
+            <p className="mb-3 text-xs leading-relaxed text-slate-600">Lege fest, welche Feed-Aktionen bewertet werden und welche davon als angemessene Reaktion gelten. Lernende sehen weiterhin nur die normale Social-App-Aktion und das redaktionelle Feedback.</p>
+            <div className="space-y-2">
+              {assessableSelected.map(item => {
+                const assessed = task.assessment.assessedActions.includes(item.id);
+                const acceptable = task.assessment.acceptableActions.includes(item.id);
+                return <div key={item.id} className="grid grid-cols-[minmax(0,1fr)_auto_auto] items-center gap-3 rounded-lg border border-sky-100 bg-white px-3 py-2">
+                  <span className="text-xs font-semibold text-slate-800">{item.label}</span>
+                  <label className="flex items-center gap-1.5 text-[11px] text-slate-600"><input type="checkbox" checked={assessed} onChange={event => updateAssessment(item.id, "assessedActions", event.target.checked)} /> Bewerten</label>
+                  <label className="flex items-center gap-1.5 text-[11px] text-slate-600"><input type="checkbox" checked={acceptable} onChange={event => updateAssessment(item.id, "acceptableActions", event.target.checked)} disabled={!assessed} /> Akzeptabel</label>
+                </div>;
+              })}
+            </div>
+            <p className="mt-2 text-[10px] leading-4 text-slate-500">Nur bewertete Aktionen erzeugen einen Lernnachweis. „Akzeptabel“ ist immer eine Teilmenge der bewerteten Aktionen. Alle akzeptablen Alternativen teilen sich dieselbe Lernanforderung.</p>
+          </div>
+        </details>}
         {showPicker && <div className="mt-3 rounded-2xl border border-violet-200 bg-white p-3 sm:p-4">
           <p className="mb-2 text-xs font-bold uppercase tracking-wide text-slate-500">Aktion hinzufügen</p>
           <div className="grid gap-2 sm:grid-cols-2">
