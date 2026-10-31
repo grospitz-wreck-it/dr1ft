@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
-import { MessageCircle, Search, Users, UserRoundPlus, Send, ChevronLeft, Smile } from "lucide-react";
+import { MessageCircle, Search, Users, UserRoundPlus, Send, ChevronLeft, Smile, Flag, X } from "lucide-react";
 import EmojiPicker, { EmojiStyle, Theme } from "emoji-picker-react";
 
 type Contact = { id: string; display_name: string; handle: string; isDue: boolean; lastMessage?: string | null; lastMessageAt?: string | null; lastMessageFromMe?: boolean };
@@ -43,6 +43,10 @@ export default function MessagesWorkspace({
   const [contactLoadError, setContactLoadError] = useState("");
   const [emojiOpen, setEmojiOpen] = useState(false);
   const [emojiStyle, setEmojiStyle] = useState<EmojiStyle>(EmojiStyle.APPLE);
+  const [reportMessage, setReportMessage] = useState<DirectMessage | null>(null);
+  const [reportLoading, setReportLoading] = useState(false);
+  const [reportError, setReportError] = useState("");
+  const [reportDone, setReportDone] = useState(false);
   const draftRef = useRef<HTMLTextAreaElement | null>(null);
   const messageEndRef = useRef<HTMLDivElement | null>(null);
 
@@ -100,6 +104,26 @@ export default function MessagesWorkspace({
       setMessageError(error instanceof Error ? error.message : "Nachricht konnte nicht gesendet werden.");
     } finally {
       setMessageLoading(false);
+    }
+  }
+
+  async function submitReport() {
+    if (!reportMessage || !selectedStudent || reportLoading) return;
+    setReportLoading(true);
+    setReportError("");
+    try {
+      const response = await fetch("/api/messages/report", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ messageId: reportMessage.id, peerId: selectedStudent.id }),
+      });
+      const payload = await response.json();
+      if (!response.ok) throw new Error(payload.error || "Die Meldung konnte nicht gespeichert werden.");
+      setReportDone(true);
+    } catch (error) {
+      setReportError(error instanceof Error ? error.message : "Die Nachricht konnte nicht gemeldet werden.");
+    } finally {
+      setReportLoading(false);
     }
   }
 
@@ -181,7 +205,7 @@ export default function MessagesWorkspace({
           </div>
         </aside>
 
-        <section className={`drift-messenger-chat relative flex min-h-[68vh] flex-col ${showContacts ? "hidden lg:flex" : "flex"}`}>
+        <section className={`drift-messenger-chat relative flex min-h-0 flex-1 flex-col overflow-hidden ${showContacts ? "hidden lg:flex" : "flex"}`}>
           <header className="flex h-[74px] shrink-0 items-center justify-between border-b border-white/[.07] px-5 sm:px-7">
             <div className="flex min-w-0 items-center gap-3">
               <button onClick={() => setShowContacts(true)} className="grid h-9 w-9 shrink-0 place-items-center rounded-xl text-white/60 hover:bg-white/[.07] lg:hidden" aria-label="Zur Kontaktliste"><ChevronLeft className="h-5 w-5" /></button>
@@ -191,10 +215,10 @@ export default function MessagesWorkspace({
           </header>
 
           {selectedStudent ? <div className="relative flex min-h-0 flex-1 flex-col">
-            <div className="dm-message-list flex-1 space-y-3 overflow-y-auto px-4 py-5 sm:px-7">
+            <div className="dm-message-list min-h-0 flex-1 space-y-3 overflow-y-auto px-4 py-5 sm:px-7">
               {messageLoading && directMessages.length === 0 && <p className="py-10 text-center text-sm text-white/45">Unterhaltung wird geladen …</p>}
               {!messageLoading && directMessages.length === 0 && <div className="flex h-full min-h-52 flex-col items-center justify-center text-center"><ChatDoodle /><p className="mt-2 text-lg font-semibold">Sag Hallo!</p><p className="mt-1 text-sm text-white/45">Das ist der Anfang eurer Unterhaltung.</p></div>}
-              {directMessages.map((message, index) => <div key={message.id} className={`flex ${message.sender_id === selectedStudent.id ? "justify-start" : "justify-end"}`}><div className={`dm-bubble max-w-[82%] rounded-xl px-3 py-2 sm:max-w-[64%] ${message.sender_id === selectedStudent.id ? "dm-bubble-in rounded-bl-sm" : "dm-bubble-out rounded-br-sm"}`}><p className="dm-message-body whitespace-pre-wrap break-words text-lg leading-[1.4] sm:text-xl">{message.body}</p><p className="dm-message-time mt-1 text-right text-xs sm:text-sm">{new Date(message.created_at).toLocaleString("de-DE", { hour: "2-digit", minute: "2-digit" })}</p></div></div>)}
+              {directMessages.map((message) => <div key={message.id} className={`group flex ${message.sender_id === selectedStudent.id ? "justify-start" : "justify-end"}`}><div className="relative"><div className={`dm-bubble max-w-[82%] rounded-xl px-3 py-2 sm:max-w-[64%] ${message.sender_id === selectedStudent.id ? "dm-bubble-in rounded-bl-sm" : "dm-bubble-out rounded-br-sm"}`}><p className="dm-message-body whitespace-pre-wrap break-words text-lg leading-[1.4] sm:text-xl">{message.body}</p><p className="dm-message-time mt-1 text-right text-xs sm:text-sm">{new Date(message.created_at).toLocaleString("de-DE", { hour: "2-digit", minute: "2-digit" })}</p></div><button type="button" onClick={() => { setReportMessage(message); setReportError(""); setReportDone(false); }} className="absolute -right-2 -top-2 grid h-7 w-7 place-items-center rounded-full border border-violet-200 bg-white text-violet-600 opacity-0 shadow-sm transition group-hover:opacity-100 focus:opacity-100" aria-label="Nachricht melden" title="Nachricht melden"><Flag className="h-3.5 w-3.5" /></button></div></div>)}
               <div ref={messageEndRef} />
               {messageError && <p role="alert" className="rounded-xl border border-rose-300/20 bg-rose-300/5 p-3 text-xs text-rose-200">{messageError}</p>}
             </div>
@@ -229,7 +253,15 @@ export default function MessagesWorkspace({
           <footer className="border-t px-5 py-3 text-center text-[10px] drift-muted">DR1FT · Gespräche deiner Klasse</footer>
         </section>
       </div>
+      {reportMessage && <div className="fixed inset-0 z-50 flex items-center justify-center bg-[#130d24]/55 p-4 backdrop-blur-sm" role="dialog" aria-modal="true" aria-labelledby="report-title">
+        <div className="report-modal w-full max-w-lg overflow-hidden rounded-[28px] border shadow-2xl">
+          <div className="flex items-start justify-between gap-4 border-b px-6 py-5"><div><p className="text-[10px] font-bold uppercase tracking-[.2em] text-violet-500">DR1FT · Sicherer Space</p><h2 id="report-title" className="mt-1 text-xl font-bold">Nachricht melden?</h2></div><button type="button" onClick={() => setReportMessage(null)} className="grid h-9 w-9 place-items-center rounded-xl border text-slate-500 hover:bg-violet-50" aria-label="Fenster schließen"><X className="h-4 w-4" /></button></div>
+          <div className="space-y-4 px-6 py-5">{reportDone ? <><div className="rounded-2xl border border-emerald-200 bg-emerald-50 p-4 text-sm leading-6 text-emerald-900">Danke, dass du Bescheid gegeben hast. Deine Lehrkraft kann sich den gemeldeten Gesprächsabschnitt ansehen.</div><button type="button" onClick={() => setReportMessage(null)} className="drift-gradient-button rounded-2xl px-4 py-3 text-sm font-semibold">Fertig</button></> : <><p className="text-sm leading-6 text-slate-600">Möchtest du diesen Textabschnitt wirklich melden? Deine Lehrkraft wird diesen Abschnitt der Nachrichten mit deinen Nachrichten und denen deines Chatpartners erhalten.</p><div className="rounded-2xl border border-violet-100 bg-violet-50/70 p-4"><p className="text-[10px] font-bold uppercase tracking-[.16em] text-violet-500">Gemeldete Nachricht</p><p className="mt-2 whitespace-pre-wrap text-sm font-medium text-slate-800">{reportMessage.body}</p></div>{reportError && <p role="alert" className="rounded-xl border border-rose-200 bg-rose-50 p-3 text-xs text-rose-700">{reportError}</p>}<div className="flex flex-col-reverse gap-2 pt-1 sm:flex-row sm:justify-end"><button type="button" onClick={() => setReportMessage(null)} disabled={reportLoading} className="rounded-2xl border px-4 py-3 text-sm font-semibold text-slate-600 hover:bg-slate-50">Abbrechen</button><button type="button" onClick={submitReport} disabled={reportLoading} className="drift-gradient-button inline-flex items-center justify-center gap-2 rounded-2xl px-4 py-3 text-sm font-semibold disabled:opacity-50"><Flag className="h-4 w-4" />{reportLoading ? "Wird gemeldet …" : "Nachricht melden"}</button></div></>}</div>
+        </div>
+      </div>}
       <style jsx>{`
+        .report-modal { background:#fff; border-color:#e6def5; color:#27213b; }
+        :global(html.dark-mode) .report-modal { background:#1b1329; border-color:#46345f; color:#f6f2ff; }
         .chat-doodle { position:relative; isolation:isolate; margin-inline:auto; }
         .chat-doodle-main { position:absolute; inset:0; width:100%; height:100%; object-fit:contain; filter:drop-shadow(0 8px 20px rgba(128,35,255,.24)); }
         .chat-doodle-smiley { position:absolute; right:0; bottom:0; width:52%; height:66%; object-fit:contain; filter:drop-shadow(0 8px 18px rgba(0,190,255,.24)); }
