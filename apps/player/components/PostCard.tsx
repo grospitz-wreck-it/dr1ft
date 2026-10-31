@@ -61,7 +61,6 @@ export function PostCard({ item, userId, classInstanceId, initiallyLiked, onView
   const action = (extra.action ?? {}) as Record<string, unknown>;
   const mediaContext = (extra.media_context ?? {}) as Record<string, unknown>;
   const interactionChecks = (extra.interaction_checks ?? {}) as Record<string, { enabled?: boolean; feedback?: string }>;
-  const interactionDiscoveries = (extra.interaction_discoveries ?? {}) as Record<string, { title?: string; message?: string; discoveryMessage?: string }>;
   const checkFeedback = (key: string) => typeof interactionChecks[key]?.feedback === "string" ? interactionChecks[key].feedback!.trim() : "";
 
   useEffect(() => {
