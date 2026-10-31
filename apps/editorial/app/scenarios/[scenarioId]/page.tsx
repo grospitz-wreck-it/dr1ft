@@ -12,8 +12,7 @@ import { ContentComposer } from "./ContentComposer";
 import { PostEditForm } from "./PostEditForm";
 import { ContentAttachmentEditor } from "./ContentAttachmentEditor";
 import { ContentLearningTaskEditor } from "./ContentLearningTaskEditor";
-import { regenerateLearningImage, rejectLearningImage } from "../learning-content-actions";
-import { Wand2 } from "lucide-react";
+import { ImageEditPopover } from "./ImageEditPopover";
 
 interface Props {
   params: { scenarioId: string };
@@ -314,20 +313,7 @@ export default async function ScenarioDetailPage({ params, searchParams = {} }: 
                                     {item.media_url && item.media_type === "image" && (
                                       <div className="group/image relative bg-slate-100">
                                         <img src={item.media_url} alt="" className="mx-auto block h-auto w-auto max-h-[560px] max-w-full object-contain" />
-                                        <details className="absolute right-3 top-3">
-                                          <summary className="flex cursor-pointer list-none items-center gap-2 rounded-xl bg-slate-950/90 px-3 py-2 text-xs font-semibold text-white shadow-lg backdrop-blur transition hover:bg-violet-600">
-                                            <Wand2 className="h-4 w-4" />
-                                            <span className="hidden sm:inline">Bild bearbeiten</span>
-                                          </summary>
-                                          <div className="absolute right-0 top-full z-10 mt-2 w-[min(22rem,calc(100vw-3rem))] rounded-2xl border border-violet-100 bg-white p-3 shadow-xl">
-                                            <div className="mb-2 text-xs font-bold text-slate-800">Bild aktualisieren</div>
-                                            <p className="mb-3 text-[11px] leading-4 text-slate-500">Optionales Feedback für eine neue Bildgeneration.</p>
-                                            <form action={regenerateLearningImage.bind(null, item.id, scenarioId)} className="space-y-2">
-                                              <input name="feedback" placeholder="Was soll beim neuen Bild anders sein?" className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-[11px]" />
-                                              <button type="submit" className="w-full rounded-xl bg-violet-600 px-3 py-2 text-[11px] font-semibold text-white transition hover:bg-violet-700">Neu generieren</button>
-                                            </form>
-                                          </div>
-                                        </details>
+                                        <ImageEditPopover contentItemId={item.id} scenarioId={scenarioId} />
                                       </div>
                                     )}
                                     {item.media_url && item.media_type === "video" && videoEmbedUrl(item.media_url) ? (
