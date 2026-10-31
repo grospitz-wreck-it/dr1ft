@@ -80,6 +80,7 @@ begin
       where cisa.class_instance_id = p_class_instance_id
         and cisa.scenario_id = ci.scenario_id
         and cisa.archived_at is null
+        and cisa.is_active = true
     )
     and exists (
       select 1
