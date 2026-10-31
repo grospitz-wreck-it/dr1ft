@@ -12,7 +12,7 @@ import { ContentComposer } from "./ContentComposer";
 import { PostEditForm } from "./PostEditForm";
 import { ContentAttachmentEditor } from "./ContentAttachmentEditor";
 import { ContentLearningTaskEditor } from "./ContentLearningTaskEditor";
-import { regenerateLearningImage, rejectLearningImage } from "../learning-content-actions";
+import { ImageEditPopover } from "./ImageEditPopover";
 
 interface Props {
   params: { scenarioId: string };
@@ -311,8 +311,11 @@ export default async function ScenarioDetailPage({ params, searchParams = {} }: 
                                 {group.items.map((item) => (
                                   <li key={item.id} className="border border-slate-200 rounded-xl overflow-hidden">
                                     {item.media_url && item.media_type === "image" && (
-                                      <div className="bg-slate-100">
-                                        <img src={item.media_url} alt="" className="mx-auto block h-auto w-auto max-h-[560px] max-w-full object-contain" />
+                                      <div className="group/image relative bg-slate-100">
+                                        <div className="relative aspect-video w-full overflow-hidden bg-slate-100">
+                                          <img src={item.media_url} alt="" className="block h-full w-full object-contain" style={{ filter: `brightness(${(item.extra as any)?.imageEdit?.brightness ?? 100}%) contrast(${(item.extra as any)?.imageEdit?.contrast ?? 100}%) saturate(${(item.extra as any)?.imageEdit?.saturation ?? 100}%) grayscale(${(item.extra as any)?.imageEdit?.grayscale ?? 0}%)`, transform: `scale(${(item.extra as any)?.imageEdit?.scale ?? 1})`, transformOrigin: `${(item.extra as any)?.imageEdit?.positionX ?? 50}% ${(item.extra as any)?.imageEdit?.positionY ?? 50}%`, objectPosition: `${(item.extra as any)?.imageEdit?.positionX ?? 50}% ${(item.extra as any)?.imageEdit?.positionY ?? 50}%` }} />
+                                        </div>
+                                        <ImageEditPopover contentItemId={item.id} scenarioId={scenarioId} />
                                       </div>
                                     )}
                                     {item.media_url && item.media_type === "video" && videoEmbedUrl(item.media_url) ? (
@@ -338,59 +341,10 @@ export default async function ScenarioDetailPage({ params, searchParams = {} }: 
                                       <p className="mt-2 whitespace-pre-wrap text-sm text-slate-900">{item.body}</p>
                                       <p className="text-xs text-slate-400 mt-1">{item.type} · {item.age_rating} · Schwierigkeit {item.difficulty}{item.creator_id && creators?.find((creator) => creator.id === item.creator_id) ? " · Figur: " + creators.find((creator) => creator.id === item.creator_id)?.display_name : ""}</p>
             
-                                      {item.media_url && item.media_type === "image" && (
-                                        <div className="mt-3 rounded-xl bg-slate-50 border border-slate-200 p-3">
-                                          <div className="flex items-center justify-between gap-3">
-                                            <div>
-                                              <div className="text-xs font-semibold text-slate-700">Bildredaktion</div>
-                                              <div className="text-[11px] text-slate-500 mt-0.5">
-                                                {item.extra?.imageGeneration?.editorialReview === "rejected"
-                                                  ? "Bild abgelehnt · Neugenerierung möglich"
-                                                  : "Bild wartet auf redaktionelle Prüfung"}
-                                                {item.extra?.imageGeneration?.generationCount
-                                                  ? " · Generation " + item.extra.imageGeneration.generationCount
-                                                  : ""}
-                                              </div>
-                                            </div>
-                                            <div className="text-[10px] text-slate-400">
-                                              {item.extra?.imageGeneration?.provider ?? "AI"}
-                                            </div>
-                                          </div>
-            
-                                          <form action={regenerateLearningImage.bind(null, item.id, scenarioId)} className="mt-3 flex flex-col sm:flex-row gap-2">
-                                            <input
-                                              name="feedback"
-                                              placeholder="Optional: Was soll beim neuen Bild anders sein?"
-                                              className="flex-1 rounded-lg border border-slate-200 bg-white px-2.5 py-2 text-[11px]"
-                                            />
-                                            <button type="submit" className="rounded-lg bg-slate-900 text-white px-3 py-2 text-[11px] font-semibold">
-                                              Bild neu generieren
-                                            </button>
-                                          </form>
-            
-                                          <form action={rejectLearningImage.bind(null, item.id, scenarioId)} className="mt-2">
-                                            <input
-                                              name="editorialFeedback"
-                                              placeholder="Bei Ablehnung Feedback eintragen"
-                                              className="w-full rounded-lg border border-slate-200 bg-white px-2.5 py-2 text-[11px]"
-                                            />
-                                            <p className="text-[10px] text-slate-400 mt-1">
-                                              Die Ablehnung wird gespeichert; anschließend kann das Bild mit neuem Feedback erzeugt werden.
-                                            </p>
-                                          </form>
-                                        </div>
-                                      )}
-            
-                                      <details className="mt-3 rounded-xl border border-slate-200 bg-slate-50/70">
-                                        <summary className="cursor-pointer list-none px-3 py-2.5 text-xs font-semibold text-slate-700">
-                                          Lernwirkung & Verknüpfungen <span className="font-normal text-slate-400">· optional</span>
-                                        </summary>
-                                        <div className="space-y-3 border-t border-slate-200 p-3">
-                                          <p className="text-[11px] leading-4 text-slate-500">Nur öffnen, wenn dieser Inhalt eine konkrete Lernaufgabe, einen Nachweis oder eine besondere Verknüpfung braucht.</p>
-                                          <ContentLearningTaskEditor scenarioId={scenarioId} contentItemId={item.id} initialTask={item.extra?.learningTask ?? null} />
-                                          <ContentAttachmentEditor scenarioId={scenarioId} contentItemId={item.id} />
-                                        </div>
-                                      </details>
+                                      <div className="mt-3 space-y-3">
+                                        <ContentLearningTaskEditor scenarioId={scenarioId} contentItemId={item.id} initialTask={item.extra?.learningTask ?? null} />
+                                        <ContentAttachmentEditor scenarioId={scenarioId} contentItemId={item.id} />
+                                      </div>
                                       <div className="mt-2"><ContentStatusControl contentItemId={item.id} status={item.status} /></div>
                                     </div>
                                   </li>

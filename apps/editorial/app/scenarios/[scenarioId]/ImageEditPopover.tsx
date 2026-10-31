@@ -1,0 +1,48 @@
+"use client";
+import { useEffect, useRef, useState, useTransition } from "react";
+import { Check, RotateCcw, SlidersHorizontal, Sparkles, Wand2 } from "lucide-react";
+import { regenerateLearningImage, saveImageEditSettings } from "../learning-content-actions";
+
+const aspects=["original","1:1","4:5","16:9"];
+const defaults={brightness:100,contrast:100,saturation:100,grayscale:0,scale:1,positionX:50,positionY:50};
+
+export function ImageEditPopover({contentItemId,scenarioId}:{contentItemId:string;scenarioId:string}){
+ const [open,setOpen]=useState(false),[tab,setTab]=useState<"edit"|"ai">("edit"),[pending,startTransition]=useTransition(),[feedback,setFeedback]=useState("");
+ const [s,setS]=useState(defaults);
+ const ref=useRef<HTMLDivElement>(null);
+ const originalStyle=useRef<string | null>(null);
+ const saved=useRef(true);
+ const set=(k:keyof typeof s,v:number|string)=>{saved.current=false;setS(x=>({...x,[k]:v}))};
+
+ // The editor changes the image inside the existing PostCard only. No layout dimensions
+ // are changed, so zoom/crop can never make the card grow.
+ useEffect(()=>{
+   const image=ref.current?.parentElement?.querySelector("img") as HTMLImageElement | null;
+   if(!image)return;
+   if(originalStyle.current===null) originalStyle.current=image.getAttribute("style")||"";
+   image.style.filter=`brightness(${s.brightness}%) contrast(${s.contrast}%) saturate(${s.saturation}%) grayscale(${s.grayscale}%)`;
+   image.style.transform=`scale(${s.scale})`;
+   image.style.transformOrigin=`${s.positionX}% ${s.positionY}%`;
+   image.style.objectPosition=`${s.positionX}% ${s.positionY}%`;
+ },[s]);
+
+ const close=(restore=true)=>{
+   const image=ref.current?.parentElement?.querySelector("img") as HTMLImageElement | null;
+   if(restore&&!saved.current&&image&&originalStyle.current!==null) image.setAttribute("style",originalStyle.current);
+   setOpen(false);
+ };
+ useEffect(()=>{if(!open)return;const outside=(e:MouseEvent|TouchEvent)=>{if(ref.current&&!ref.current.contains(e.target as Node))close(true)};const esc=(e:KeyboardEvent)=>e.key==="Escape"&&close(true);document.addEventListener("mousedown",outside);document.addEventListener("touchstart",outside);document.addEventListener("keydown",esc);return()=>{document.removeEventListener("mousedown",outside);document.removeEventListener("touchstart",outside);document.removeEventListener("keydown",esc)}},[open]);
+ const reset=()=>{saved.current=false;setS(defaults)};
+ const controls=[["brightness","Helligkeit",50,150,1],["contrast","Kontrast",50,150,1],["saturation","Sättigung",0,200,1],["grayscale","Schwarz-Weiß",0,100,1],["scale","Zoom",1,2,.01]] as const;
+ return <div ref={ref} className="absolute right-3 top-3 z-20">
+  <button type="button" onClick={()=>{if(open)close(true);else{saved.current=true;setOpen(true)}}} className="flex items-center gap-2 rounded-xl bg-slate-950/90 px-3 py-2 text-xs font-semibold text-white shadow-lg backdrop-blur hover:bg-violet-600"><Wand2 className="h-4 w-4"/><span className="hidden sm:inline">Bild bearbeiten</span></button>
+  {open&&<div className="absolute right-0 top-full mt-2 w-[min(25rem,calc(100vw-2rem))] overflow-hidden rounded-2xl border border-violet-100 bg-white shadow-2xl">
+   <div className="flex border-b border-slate-100 p-1.5"><button onClick={()=>setTab("edit")} className={"flex-1 rounded-xl px-3 py-2 text-xs font-bold "+(tab==="edit"?"bg-violet-600 text-white shadow-sm":"text-slate-500 hover:bg-slate-50")}><SlidersHorizontal className="mr-1.5 inline h-3.5 w-3.5"/>Bearbeiten</button><button onClick={()=>setTab("ai")} className={"flex-1 rounded-xl px-3 py-2 text-xs font-bold "+(tab==="ai"?"bg-violet-600 text-white shadow-sm":"text-slate-500 hover:bg-slate-50")}><Sparkles className="mr-1.5 inline h-3.5 w-3.5"/>Mit KI ändern</button></div>
+   {tab==="edit"?<div className="space-y-4 p-4"><div className="flex items-center justify-between"><div><div className="text-xs font-bold text-slate-900">Schnell bearbeiten</div><div className="text-[11px] text-slate-500">Die Vorschau im Post aktualisiert sich sofort.</div></div><button type="button" onClick={reset} className="rounded-lg p-2 text-slate-400 hover:bg-slate-100" title="Zurücksetzen"><RotateCcw className="h-4 w-4"/></button></div>
+    <div className="space-y-3">{controls.map(([k,l,min,max,step])=><label key={k} className="block"><div className="mb-1 flex justify-between text-[11px] font-semibold text-slate-600"><span>{l}</span><span className="text-violet-600">{k==="scale"?Math.round(Number(s[k])*100)+"%":s[k]+"%"}</span></div><input type="range" min={min} max={max} step={step} value={s[k] as number} onChange={e=>set(k,Number(e.target.value))} className="w-full accent-violet-600"/></label>)}</div>
+    <div className="grid grid-cols-2 gap-3">{(["positionX","positionY"] as const).map(k=><label key={k}><div className="mb-1 text-[11px] font-semibold text-slate-600">{k==="positionX"?"Horizontal":"Vertikal"}</div><input type="range" min="0" max="100" value={s[k]} onChange={e=>set(k,Number(e.target.value))} className="w-full accent-violet-600"/></label>)}</div>
+    <button type="button" disabled={pending} onClick={()=>startTransition(async()=>{await saveImageEditSettings(contentItemId,scenarioId,s);saved.current=true;setOpen(false)})} className="flex w-full items-center justify-center gap-2 rounded-xl bg-violet-600 px-3 py-2.5 text-xs font-bold text-white disabled:opacity-60"><Check className="h-4 w-4"/>{pending?"Speichern…":"Änderungen speichern"}</button></div>
+   :<div className="space-y-3 p-4"><div><div className="text-xs font-bold text-slate-900">Bild mit KI verändern</div><p className="mt-1 text-[11px] leading-4 text-slate-500">Beschreibe, was sich ändern soll – oder generiere einfach eine neue Variante.</p></div><form action={async fd=>{await regenerateLearningImage(contentItemId,scenarioId,fd);saved.current=true;setOpen(false)}} className="space-y-2"><textarea name="feedback" value={feedback} onChange={e=>setFeedback(e.target.value)} placeholder="Was soll beim neuen Bild anders sein?" rows={3} className="w-full resize-none rounded-xl border border-slate-200 px-3 py-2 text-xs outline-none focus:border-violet-400 focus:ring-4 focus:ring-violet-100"/><button type="submit" className="flex w-full items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-violet-600 to-fuchsia-600 px-3 py-2.5 text-xs font-bold text-white"><Sparkles className="h-4 w-4"/>{feedback.trim()?"Mit KI aktualisieren":"Neue Variante generieren"}</button></form></div>}
+  </div>}
+ </div>
+}

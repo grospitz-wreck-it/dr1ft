@@ -9,13 +9,12 @@
 import { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import Link from "next/link";
-import { Check, ChevronDown, Eye, Flag, Heart, Image as ImageIcon, MessageCircle, MoreHorizontal, Search, Share2, UserRound, X } from "lucide-react";
+import { Check, ChevronDown, Eye, Flag, Heart, Image as ImageIcon, MessageCircle, MoreHorizontal, Search, Send, Share2, Sparkles, UserRound, X } from "lucide-react";
 import type { FeedItem, CreatorSummary } from "../lib/types";
 import { mapCreatorRow } from "../lib/types";
 import { recordInteraction } from "@dr1ft/engine-core";
 import { supabaseBrowserClient } from "../lib/supabaseBrowserClient";
 import { CommentSkeleton } from "./Skeleton";
-import { Send, Sparkles } from "lucide-react";
 
 function initials(name: string): string { return name.split(" ").map((p) => p[0]).slice(0, 2).join("").toUpperCase(); }
 function getString(value: unknown): string | undefined { return typeof value === "string" ? value : undefined; }
@@ -45,7 +44,6 @@ export function PostCard({ item, userId, classInstanceId, initiallyLiked, onView
   const [shareRecipients, setShareRecipients] = useState<Array<{ id: string; displayName: string; username: string }>>([]);
   const [selectedRecipients, setSelectedRecipients] = useState<string[]>([]);
   const [feedback, setFeedback] = useState<string | null>(null);
-  const [learningFeedback, setLearningFeedback] = useState<{ title: string; message: string; action: string } | null>(null);
   const [comparison, setComparison] = useState<{ related: FeedItem | null; loading: boolean; selected?: "contradict" | "support"; assessmentOutcome?: "success" | "not_yet" | "not_assessed"; error?: string } | null>(null);
   const [taskResponse, setTaskResponse] = useState("");
   const [taskResponseSaved, setTaskResponseSaved] = useState(false);
@@ -54,7 +52,8 @@ export function PostCard({ item, userId, classInstanceId, initiallyLiked, onView
   const baseLikeCount = Number((item.extra as any)?.baseEngagement ?? 0);
   const commentCount = Number((item.extra as any)?.classCommentCount ?? (item.extra as any)?.baseCommentCount ?? 0);
   const extra = (item.extra ?? {}) as Record<string, unknown>;
-  const learningTask = (extra.learningTask ?? {}) as { purpose?: string; learnerAction?: string; interactionType?: string; expectedResponse?: string; evaluationMethod?: string; successCriteria?: string; feedback?: string; interactions?: Array<{ id: string; label: string; instruction?: string; custom?: boolean }> };
+  const imageEdit = (extra.imageEdit ?? {}) as any;
+  const learningTask = (extra.learningTask ?? {}) as { purpose?: string; learnerAction?: string; interactionType?: string; expectedResponse?: string; evaluationMethod?: string; successCriteria?: string; feedback?: string; interactions?: Array<{ id: string; label: string; instruction?: string; custom?: boolean; discoveryTitle?: string; discoveryMessage?: string; discoveryCompetency?: string }>; assessment?: { assessedActions?: string[]; acceptableActions?: string[]; evidenceKey?: string } };
   const configuredLearningInteractions = new Set((learningTask.interactions ?? []).map((interaction) => interaction.id));
   useEffect(() => {
     setLiveCommentCount(commentCount);
@@ -62,7 +61,6 @@ export function PostCard({ item, userId, classInstanceId, initiallyLiked, onView
   const action = (extra.action ?? {}) as Record<string, unknown>;
   const mediaContext = (extra.media_context ?? {}) as Record<string, unknown>;
   const interactionChecks = (extra.interaction_checks ?? {}) as Record<string, { enabled?: boolean; feedback?: string }>;
-  const interactionDiscoveries = (extra.interaction_discoveries ?? {}) as Record<string, { title?: string; message?: string; discoveryMessage?: string }>;
   const checkFeedback = (key: string) => typeof interactionChecks[key]?.feedback === "string" ? interactionChecks[key].feedback!.trim() : "";
 
   useEffect(() => {
@@ -157,17 +155,21 @@ export function PostCard({ item, userId, classInstanceId, initiallyLiked, onView
 
   function showFeedback(message: string) { setFeedback(message); window.setTimeout(() => setFeedback(null), 2800); }
 
-  async function track(interactionType: "inspect_source" | "inspect_media" | "inspect_context" | "inspect_profile" | "compare_information" | "share" | "report" | "ignore", metadata: Record<string, unknown> = { ui: "generic_card_actions" }) {
-    await recordInteraction(supabase, {
+  async function track(interactionType: "inspect_source" | "inspect_media" | "inspect_context" | "inspect_profile" | "compare_information" | "share" | "report" | "ignore", metadata: Record<string, unknown> = { ui: "generic_card_actions" }): Promise<{ saved: boolean; outcome?: "success" | "not_yet" }> {
+    const saved = await recordInteraction(supabase, {
       userId,
       contentItemId: item.id,
       interactionType,
       metadata,
       classInstanceId,
     });
+    if (!saved) {
+      showFeedback("Deine Aktion konnte nicht gespeichert werden. Bitte versuche es erneut.");
+      return { saved: false };
+    }
 
-    // Learning feedback is shown only when this interaction was explicitly
-    // configured for the content. It is instructional feedback, not a score.
+    // Editorial-authored reactions are shown only after the server confirms
+    // that the action satisfies the learning rule.
     const aliases: Record<string, string[]> = {
       inspect_context: ["inspect_context", "fact_check"],
       inspect_source: ["inspect_source"],
@@ -178,23 +180,49 @@ export function PostCard({ item, userId, classInstanceId, initiallyLiked, onView
     const configured = (learningTask.interactions ?? []).find((entry) =>
       (aliases[interactionType] ?? [interactionType]).includes(entry.id)
     );
-    const discovery = interactionDiscoveries[interactionType];
-    const message = String(
-      (discovery?.discoveryMessage ?? discovery?.message) ??
-      (configured as any)?.discoveryMessage ??
-      (configured as any)?.message ??
-      ""
-    ).trim();
-    if (configured && message) {
-      setLearningFeedback({
-        title: String(discovery?.title ?? "Gut entdeckt!"),
-        message,
-        action: interactionType,
+    // Only editorially assessed actions create learning evidence. The server
+    // reads the shared rule from learningTask.assessment and derives the outcome.
+    const assessment = learningTask.assessment;
+    const actionAliases: Record<string, string[]> = {
+      inspect_context: ["inspect_context", "fact_check"],
+      inspect_source: ["inspect_source"],
+      inspect_media: ["inspect_media"],
+      inspect_profile: ["inspect_profile"],
+      compare_information: ["compare_information"],
+      report: ["report"],
+      ignore: ["ignore"],
+      share: ["share"],
+    };
+    const assessedActions = Array.isArray(assessment?.assessedActions) ? assessment.assessedActions : [];
+    const isAssessed = (actionAliases[interactionType] ?? [interactionType]).some((id) => assessedActions.includes(id));
+    let outcome: "success" | "not_yet" | undefined;
+    if (configured && isAssessed) {
+      const { data, error } = await supabase.rpc("record_discrete_action_assessment", {
+        p_class_instance_id: classInstanceId,
+        p_content_item_id: item.id,
+        p_action_id: interactionType,
       });
+      // Assessment failures stay invisible to learners: the interaction itself
+      // has already been saved, and assessment status must not reveal mission membership.
+      if (error) console.error("Discrete action assessment failed", error);
+      else {
+        const row = Array.isArray(data) ? data[0] : data;
+        outcome = row?.outcome === "success" || row?.outcome === "not_yet" ? row.outcome : undefined;
+      }
     }
+    if (outcome === "success" && configured?.discoveryMessage?.trim()) showFeedback(configured.discoveryMessage.trim());
+    return { saved: true, outcome };
   }
 
-  function toggleLike() { if (!liked) { setLiked(true); recordInteraction(supabase, { userId, contentItemId: item.id, interactionType: "like", classInstanceId }); } }
+  async function toggleLike() {
+    if (liked) return;
+    setLiked(true);
+    const saved = await recordInteraction(supabase, { userId, contentItemId: item.id, interactionType: "like", classInstanceId });
+    if (!saved) {
+      setLiked(false);
+      showFeedback("Dein Like konnte nicht gespeichert werden. Bitte versuche es erneut.");
+    }
+  }
 
   async function loadComments() {
     const commentSelect = "*, creators(id, display_name, handle, avatar_url)";
@@ -251,7 +279,7 @@ export function PostCard({ item, userId, classInstanceId, initiallyLiked, onView
     if (!response || taskResponseSaving || taskResponseSaved) return;
     setTaskResponseSaving(true);
     try {
-      await recordInteraction(supabase, {
+      const saved = await recordInteraction(supabase, {
         userId,
         contentItemId: item.id,
         interactionType: "learning_task_response",
@@ -263,6 +291,7 @@ export function PostCard({ item, userId, classInstanceId, initiallyLiked, onView
           submittedAt: new Date().toISOString(),
         },
       });
+      if (!saved) throw new Error("Learning task response was not persisted.");
       setTaskResponseSaved(true);
       showFeedback(learningTask.feedback?.trim() || "Danke für deine Antwort. Sie wurde gespeichert und kann in der Auswertung berücksichtigt werden.");
     } catch {
@@ -301,9 +330,8 @@ export function PostCard({ item, userId, classInstanceId, initiallyLiked, onView
   }
 
   async function inspectSource() {
-    await track("inspect_source");
-    const configured = checkFeedback("inspect_source");
-    if (configured) { showFeedback(configured); return; }
+    const result = await track("inspect_source");
+    if (!result.saved || result.outcome === "success") return;
     const observations = getStringArray(action.expected_observation);
     if (item.sourceRefs?.length) showFeedback(`Quelle: ${item.sourceRefs[0].label}`);
     else if (observations.includes("no_named_author")) showFeedback("Hier ist keine konkrete Autorin oder kein konkreter Autor genannt.");
@@ -312,9 +340,8 @@ export function PostCard({ item, userId, classInstanceId, initiallyLiked, onView
   }
 
   async function inspectMedia() {
-    await track("inspect_media");
-    const configured = checkFeedback("inspect_media");
-    if (configured) { showFeedback(configured); return; }
+    const result = await track("inspect_media");
+    if (!result.saved || result.outcome === "success") return;
     if (getString(mediaContext.current_claim)) {
       const detail = [getString(mediaContext.original_date), getString(mediaContext.original_location)].filter(Boolean).join(" · ");
       showFeedback(detail ? `Bildkontext: ${detail}.` : "Das Bild lässt sich hier im Kontext prüfen.");
@@ -322,13 +349,12 @@ export function PostCard({ item, userId, classInstanceId, initiallyLiked, onView
   }
 
   async function inspectContext() {
-    await track("inspect_context");
-    const configured = checkFeedback("inspect_context");
-    if (configured) { showFeedback(configured); return; }
+    const result = await track("inspect_context");
+    if (!result.saved || result.outcome === "success") return;
     showFeedback(getString(mediaContext.current_claim) ? "Der Kontext dieses Beitrags sollte mit weiteren Informationen abgeglichen werden." : "Für diesen Beitrag sind keine konkreten Kontextdaten hinterlegt. Ob die Aussage stimmt, lässt sich mit diesem Check nicht beurteilen.");
   }
 
-  async function inspectProfile() { await track("inspect_profile"); showFeedback(checkFeedback("inspect_profile") || "Für dieses Profil ist keine konkrete Vertrauens- oder Herkunftsbewertung hinterlegt. Prüfe Angaben und frühere Beiträge selbst."); }
+  async function inspectProfile() { const result = await track("inspect_profile"); if (!result.saved || result.outcome === "success") return; showFeedback("Für dieses Profil ist keine konkrete Vertrauens- oder Herkunftsbewertung hinterlegt. Prüfe Angaben und frühere Beiträge selbst."); }
 
   async function compareInformation() {
     await track("compare_information", { ui: "generic_card_actions", phase: "open_comparison" });
@@ -360,8 +386,8 @@ export function PostCard({ item, userId, classInstanceId, initiallyLiked, onView
       p_selected: result,
     });
     if (error) {
+      console.error("Comparison assessment failed", error);
       setComparison((current) => current ? { ...current, assessmentOutcome: undefined } : current);
-      showFeedback("Deine Entscheidung wurde angezeigt, konnte aber nicht als Lernnachweis gespeichert werden.");
       return;
     }
     const outcome = Array.isArray(data) ? data[0]?.outcome : undefined;
@@ -415,28 +441,27 @@ export function PostCard({ item, userId, classInstanceId, initiallyLiked, onView
       setShareSaving(false);
     }
   }
-  async function report() { await track("report"); showFeedback("Deine Meldung wurde aufgenommen."); setMenuOpen(false); }
-  async function ignore() { await track("ignore"); showFeedback("Beitrag wird für dich ausgeblendet."); setMenuOpen(false); }
+  async function report() {
+    const result = await track("report");
+    setMenuOpen(false);
+    if (!result.saved || result.outcome === "success") return;
+    showFeedback("Deine Meldung wurde aufgenommen.");
+  }
+  async function ignore() {
+    const result = await track("ignore");
+    setMenuOpen(false);
+    if (!result.saved || result.outcome === "success") return;
+    showFeedback("Beitrag wird für dich ausgeblendet.");
+  }
 
   return <>
     <article id={`post-${item.id}`} ref={ref} className="relative bg-paper text-ink rounded-card overflow-visible shadow-sm">
       <div className="p-4 pb-0"><AuthorRow creator={item.creator}/><p className="font-mono text-[11px] text-ink/50 mb-2 uppercase tracking-wide">{item.type}</p></div>
-      {item.mediaUrl && item.mediaType === "image" && <div className="post-media-stage relative isolate mx-2 overflow-hidden rounded-[22px] sm:mx-3"><div aria-hidden="true" className="post-media-pattern pointer-events-none absolute inset-0"/><div aria-hidden="true" className="post-media-orb post-media-orb-one pointer-events-none absolute -left-8 top-8 h-24 w-24 rounded-full"/><div aria-hidden="true" className="post-media-orb post-media-orb-two pointer-events-none absolute -bottom-8 right-8 h-28 w-28 rounded-full"/><img src={item.mediaUrl} alt="" className="post-media-image relative z-[1] mx-auto block h-auto max-h-[75vh] w-auto max-w-full object-contain" loading="lazy" onError={(event) => { event.currentTarget.style.display = "none"; }}/></div>}
+      {item.mediaUrl && item.mediaType === "image" && <div className="post-media-stage relative isolate mx-2 overflow-hidden rounded-[22px] sm:mx-3"><div aria-hidden="true" className="post-media-pattern pointer-events-none absolute inset-0"/><div aria-hidden="true" className="post-media-orb post-media-orb-one pointer-events-none absolute -left-8 top-8 h-24 w-24 rounded-full"/><div aria-hidden="true" className="post-media-orb post-media-orb-two pointer-events-none absolute -bottom-8 right-8 h-28 w-28 rounded-full"/><img src={item.mediaUrl} alt="" className="post-media-image relative z-[1] mx-auto block h-auto max-h-[75vh] w-auto max-w-full object-contain" style={{ filter: `brightness(${imageEdit.brightness ?? 100}%) contrast(${imageEdit.contrast ?? 100}%) saturate(${imageEdit.saturation ?? 100}%) grayscale(${imageEdit.grayscale ?? 0}%)`, transform: `scale(${imageEdit.scale ?? 1})`, transformOrigin: `${imageEdit.positionX ?? 50}% ${imageEdit.positionY ?? 50}%`, objectPosition: `${imageEdit.positionX ?? 50}% ${imageEdit.positionY ?? 50}%` }} loading="lazy" onError={(event) => { event.currentTarget.style.display = "none"; }}/></div>}
       {item.mediaUrl && item.mediaType === "video" && <video src={item.mediaUrl} controls className="block w-full aspect-video object-cover bg-black"/>}
       <div className="p-4 pt-3">
         <p className="font-body text-[15px] leading-relaxed">{item.body}</p>
-        {learningFeedback && <section className="mt-3 overflow-hidden rounded-2xl border border-violet-200 bg-gradient-to-br from-violet-50 via-white to-sky-50 shadow-sm" aria-live="polite">
-          <div className="flex items-start gap-3 p-4">
-            <span className="grid h-9 w-9 shrink-0 place-items-center rounded-xl bg-gradient-to-br from-violet-600 to-sky-500 text-white"><Sparkles className="h-4 w-4" /></span>
-            <div className="min-w-0 flex-1">
-              <p className="text-[10px] font-bold uppercase tracking-[0.14em] text-violet-700">DR1FT · Erkenntnis</p>
-              <h3 className="mt-1 text-sm font-bold text-slate-900">{learningFeedback.title}</h3>
-              <p className="mt-1 text-sm leading-relaxed text-slate-700">{learningFeedback.message}</p>
-            </div>
-            <button type="button" onClick={() => setLearningFeedback(null)} aria-label="Rückmeldung schließen" className="rounded-lg p-1 text-violet-700 hover:bg-violet-100"><X className="h-4 w-4" /></button>
-          </div>
-        </section>}
-        {learningTask.learnerAction?.trim() && <section className="mt-4 min-w-0 rounded-2xl border border-violet-200 bg-gradient-to-br from-violet-50 to-fuchsia-50/60 p-4 pb-6 text-left">
+        {!learningTask.interactions?.length && !learningTask.assessment?.assessedActions?.length && learningTask.learnerAction?.trim() && <section className="mt-4 min-w-0 rounded-2xl border border-violet-200 bg-gradient-to-br from-violet-50 to-fuchsia-50/60 p-4 pb-6 text-left">
           <div className="flex items-start gap-2.5">
             <span className="grid h-8 w-8 shrink-0 place-items-center rounded-xl bg-violet-600 text-white"><Sparkles className="h-4 w-4" /></span>
             <div className="min-w-0 flex-1 text-left">
@@ -546,7 +571,7 @@ export function PostCard({ item, userId, classInstanceId, initiallyLiked, onView
             <div className="rounded-xl border border-ink/10 bg-ink/[0.025] p-4"><p className="font-mono text-[10px] uppercase tracking-wider text-ink/40 mb-3">Aussage 2</p><AuthorRow creator={comparison.related.creator}/><p className="text-sm leading-relaxed">{comparison.related.body}</p></div>
           </div>
           <div className="mt-5 border-t border-ink/10 pt-5"><p className="text-sm font-medium mb-3">Wie verhalten sich die beiden Aussagen zueinander?</p><div className="grid grid-cols-1 sm:grid-cols-2 gap-3"><button onClick={() => chooseComparison("contradict")} className={`rounded-xl border px-4 py-3 text-left text-sm transition ${comparison.selected === "contradict" ? "border-ink bg-ink text-paper" : "border-ink/15 hover:bg-ink/5"}`}>Sie widersprechen sich.</button><button onClick={() => chooseComparison("support")} className={`rounded-xl border px-4 py-3 text-left text-sm transition ${comparison.selected === "support" ? "border-ink bg-ink text-paper" : "border-ink/15 hover:bg-ink/5"}`}>Sie stützen dieselbe Aussage.</button></div>
-            {comparison.selected && <div className="mt-4 rounded-xl bg-ink/5 px-4 py-3 text-sm leading-relaxed" role="status">{comparison.assessmentOutcome === "success" ? (checkFeedback("compare_information") || "Richtig eingeordnet. Deine Entscheidung wurde geprüft.") : comparison.assessmentOutcome === "not_yet" ? "Noch nicht richtig eingeordnet. Vergleiche die Aussagen noch einmal und prüfe, ob sie sich widersprechen oder gegenseitig stützen." : comparison.assessmentOutcome === "not_assessed" ? "Das ist eine allgemeine Vergleichshilfe. Für diesen Beitrag ist keine bewertete Lernanforderung eingerichtet." : "Deine Entscheidung wurde ausgewählt. Die Bewertung wird geprüft."}</div>}
+            {comparison.selected && <div className="mt-4 rounded-xl bg-ink/5 px-4 py-3 text-sm leading-relaxed" role="status">"Danke fürs Vergleichen. Schau dir beide Aussagen noch einmal im Zusammenhang an."</div>}
           </div>
         </div>}
       </div>

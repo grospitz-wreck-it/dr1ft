@@ -548,6 +548,27 @@ export async function regenerateLearningImage(contentItemId: string, scenarioId:
   return { mediaUrl: image.url, generationCount: nextGeneration.generationCount };
 }
 
+export async function saveImageEditSettings(contentItemId: string, scenarioId: string, settings: { brightness: number; contrast: number; saturation: number; grayscale: number; scale: number; positionX: number; positionY: number }) {
+  const supabase = supabaseServerClient();
+  const { data: item, error } = await supabase.from("content_items").select("id,extra").eq("id", contentItemId).eq("scenario_id", scenarioId).single();
+  if (error || !item) throw new Error(error?.message || "Content nicht gefunden.");
+  const clamp = (value: unknown, min: number, max: number, fallback: number) => Math.min(max, Math.max(min, Number.isFinite(Number(value)) ? Number(value) : fallback));
+  const imageEdit = {
+    brightness: clamp(settings.brightness, 50, 150, 100),
+    contrast: clamp(settings.contrast, 50, 150, 100),
+    saturation: clamp(settings.saturation, 0, 200, 100),
+    grayscale: clamp(settings.grayscale, 0, 100, 0),
+    scale: clamp(settings.scale, 1, 2, 1),
+    positionX: clamp(settings.positionX, 0, 100, 50),
+    positionY: clamp(settings.positionY, 0, 100, 50),
+    updatedAt: new Date().toISOString(),
+  };
+  const { error: updateError } = await supabase.from("content_items").update({ extra: { ...(item.extra || {}), imageEdit }, updated_at: new Date().toISOString() }).eq("id", contentItemId).eq("scenario_id", scenarioId);
+  if (updateError) throw new Error(updateError.message);
+  revalidatePath("/scenarios/" + scenarioId);
+  return { ok: true };
+}
+
 
 export type ContentLearningTask = {
   purpose: string;
@@ -557,7 +578,8 @@ export type ContentLearningTask = {
   evaluationMethod: "completion" | "criteria" | "choice" | "reflection" | "discussion";
   successCriteria: string;
   feedback: string;
-  interactions?: Array<{ id: string; label: string; instruction?: string; custom?: boolean }>;
+  interactions?: Array<{ id: string; label: string; instruction?: string; custom?: boolean; discoveryTitle?: string; discoveryMessage?: string; discoveryCompetency?: string }>;
+  assessment?: { assessedActions?: string[]; acceptableActions?: string[]; evidenceKey?: string };
 };
 
 const TASK_INTERACTIONS = ["view", "react", "comment", "choose", "classify", "compare", "reflect", "create"] as const;
@@ -582,6 +604,26 @@ export async function updateContentLearningTask(
     throw new Error("Bitte eine gültige Interaktion und Auswertungsmethode auswählen.");
   }
 
+  const normalizedInteractions = Array.isArray(task.interactions)
+    ? task.interactions.slice(0, 20).map((interaction) => ({
+        id: String(interaction.id || "").trim().slice(0, 100),
+        label: String(interaction.label || "").trim().slice(0, 80),
+        instruction: String(interaction.instruction || "").trim().slice(0, 500),
+        custom: interaction.custom === true,
+        discoveryTitle: String(interaction.discoveryTitle || "").trim().slice(0, 120),
+        discoveryMessage: String(interaction.discoveryMessage || "").trim().slice(0, 1200),
+        discoveryCompetency: String(interaction.discoveryCompetency || "").trim().slice(0, 120),
+      })).filter((interaction) => interaction.id && interaction.label)
+    : [];
+  const configuredIds = new Set(normalizedInteractions.map((interaction) => interaction.id));
+  const assessedActions = Array.from(new Set((task.assessment?.assessedActions ?? [])
+    .filter((id): id is string => typeof id === "string")
+    .map((id) => id.trim() === "fact_check" ? "inspect_context" : id.trim())
+    .filter((id) => configuredIds.has(id)))).slice(0, 20);
+  const acceptableActions = Array.from(new Set((task.assessment?.acceptableActions ?? [])
+    .filter((id): id is string => typeof id === "string")
+    .map((id) => id.trim())
+    .filter((id) => assessedActions.includes(id)))).slice(0, 20);
   const normalizedTask: ContentLearningTask = {
     purpose: String(task.purpose || "").trim().slice(0, 1000),
     learnerAction: String(task.learnerAction || "").trim().slice(0, 1500),
@@ -590,17 +632,12 @@ export async function updateContentLearningTask(
     evaluationMethod: task.evaluationMethod,
     successCriteria: String(task.successCriteria || "").trim().slice(0, 1500),
     feedback: String(task.feedback || "").trim().slice(0, 1000),
-    interactions: Array.isArray(task.interactions)
-      ? task.interactions.slice(0, 20).map((interaction) => ({
-          id: String(interaction.id || "").trim().slice(0, 100),
-          label: String(interaction.label || "").trim().slice(0, 80),
-          instruction: String(interaction.instruction || "").trim().slice(0, 500),
-          custom: interaction.custom === true,
-          discoveryTitle: String((interaction as any).discoveryTitle || "").trim().slice(0, 120),
-          discoveryMessage: String((interaction as any).discoveryMessage || "").trim().slice(0, 1200),
-          discoveryCompetency: String((interaction as any).discoveryCompetency || "").trim().slice(0, 120),
-        })).filter((interaction) => interaction.id && interaction.label)
-      : [],
+    interactions: normalizedInteractions,
+    assessment: {
+      assessedActions,
+      acceptableActions,
+      evidenceKey: String(task.assessment?.evidenceKey || "in_feed_decision").trim().slice(0, 120) || "in_feed_decision",
+    },
   };
 
   const previousExtra = item.extra && typeof item.extra === "object" && !Array.isArray(item.extra)

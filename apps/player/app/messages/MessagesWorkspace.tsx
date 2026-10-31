@@ -64,6 +64,31 @@ export default function MessagesWorkspace({
     return () => { active = false; };
   }, []);
 
+  // Keep the conversation list (previews and unread badges) fresh while the page is open.
+  useEffect(() => {
+    let active = true;
+    let inFlight = false;
+    const refreshContacts = async () => {
+      if (inFlight || document.visibilityState === "hidden") return;
+      inFlight = true;
+      try {
+        const response = await fetch("/api/messages/direct", { cache: "no-store" });
+        const payload = await response.json();
+        if (!response.ok) throw new Error(payload.error || "Kontakte konnten nicht aktualisiert werden.");
+        if (active) setStudentContacts(payload.contacts ?? []);
+      } catch (error) {
+        if (active) setContactLoadError(error instanceof Error ? error.message : "Kontakte konnten nicht aktualisiert werden.");
+      } finally {
+        inFlight = false;
+      }
+    };
+    const interval = window.setInterval(() => void refreshContacts(), 15000);
+    return () => {
+      active = false;
+      window.clearInterval(interval);
+    };
+  }, []);
+
   const selectedStudent = studentContacts.find((contact) => contact.id === selected);
   useEffect(() => {
     if (!selectedStudent) { setDirectMessages([]); setMessageError(""); return; }
@@ -83,6 +108,44 @@ export default function MessagesWorkspace({
       .catch((error) => { if (active) setMessageError(error instanceof Error ? error.message : "Unterhaltung konnte nicht geladen werden."); })
       .finally(() => { if (active) setMessageLoading(false); });
     return () => { active = false; };
+  }, [selectedStudent?.id]);
+
+  // Refresh the open thread so incoming messages appear without a manual reload.
+  useEffect(() => {
+    if (!selectedStudent) return;
+    let active = true;
+    let inFlight = false;
+    const refreshThread = async () => {
+      if (inFlight || document.visibilityState === "hidden") return;
+      inFlight = true;
+      try {
+        const response = await fetch("/api/messages/direct?peerId=" + encodeURIComponent(selectedStudent.id), { cache: "no-store" });
+        const payload = await response.json();
+        if (!response.ok) throw new Error(payload.error || "Unterhaltung konnte nicht aktualisiert werden.");
+        if (active) {
+          const incomingMessages = payload.messages ?? [];
+          setDirectMessages((current) => {
+            const merged = new Map(current.map((message) => [message.id, message]));
+            for (const message of incomingMessages) merged.set(message.id, message);
+            return Array.from(merged.values()).sort((a, b) => Date.parse(a.created_at) - Date.parse(b.created_at));
+          });
+          const latestMessage = incomingMessages[incomingMessages.length - 1];
+          setStudentContacts((current) => current.map((contact) => contact.id === selectedStudent.id
+            ? { ...contact, isDue: false, lastMessage: latestMessage?.body ?? contact.lastMessage, lastMessageAt: latestMessage?.created_at ?? contact.lastMessageAt }
+            : contact));
+          window.dispatchEvent(new Event("dr1ft:messages-read"));
+        }
+      } catch (error) {
+        if (active) setMessageError(error instanceof Error ? error.message : "Unterhaltung konnte nicht aktualisiert werden.");
+      } finally {
+        inFlight = false;
+      }
+    };
+    const interval = window.setInterval(() => void refreshThread(), 5000);
+    return () => {
+      active = false;
+      window.clearInterval(interval);
+    };
   }, [selectedStudent?.id]);
 
   async function sendDirectMessage(event: React.FormEvent<HTMLFormElement>) {

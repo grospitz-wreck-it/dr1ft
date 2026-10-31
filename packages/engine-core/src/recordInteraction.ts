@@ -20,7 +20,7 @@ export async function recordInteraction(
     classInstanceId: string;
     metadata?: Record<string, unknown>;
   }
-): Promise<void> {
+): Promise<boolean> {
   const {
     userId,
     contentItemId,
@@ -29,6 +29,23 @@ export async function recordInteraction(
     metadata = {},
   } = params;
 
+  // Persist first: the database trigger evaluates mission progress from this
+  // row. Publishing before the insert could advance local engines even when
+  // the durable interaction (and its mission trigger) failed.
+  const { error } = await supabase.from("user_interactions").insert({
+    user_id: userId,
+    content_item_id: contentItemId,
+    interaction_type: interactionType,
+    class_instance_id: classInstanceId,
+    metadata,
+  });
+
+  if (error) {
+    console.error("[recordInteraction] Fehler beim Speichern:", error);
+    return false;
+  }
+
+  // Local app engines are notified only after the database accepted the row.
   if (interactionType === "view") {
     await eventBus.emit({ type: "PostViewed", userId, contentItemId });
   } else if (interactionType === "comment") {
@@ -40,15 +57,5 @@ export async function recordInteraction(
     });
   }
 
-  const { error } = await supabase.from("user_interactions").insert({
-    user_id: userId,
-    content_item_id: contentItemId,
-    interaction_type: interactionType,
-    class_instance_id: classInstanceId,
-    metadata,
-  });
-
-  if (error) {
-    console.error("[recordInteraction] Fehler beim Speichern:", error);
-  }
+  return true;
 }

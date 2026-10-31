@@ -2,7 +2,8 @@
 // Edge Function: teacher-dashboard
 //
 // Ruft ausschließlich SECURITY DEFINER RPC-Funktionen auf (siehe
-// 0018_teacher_dashboard_functions.sql) statt Views direkt abzufragen —
+// 0018_teacher_dashboard_functions.sql und die Learning-Results-RPC-Migration)
+// statt Views direkt abzufragen —
 // die Berechtigungsprüfung (is_teacher_of_class/is_teacher_of_grade)
 // sitzt jetzt INNERHALB jeder Funktion, nicht nur hier in der Edge
 // Function. Doppelte Absicherung: fällt die Prüfung hier durch einen
@@ -66,7 +67,7 @@ Deno.serve(async (req) => {
     supabase.rpc("get_class_student_competency_progress", { p_class_id: classId }),
     supabase.rpc("get_class_student_competency_evidence", { p_class_id: classId }),
     supabase.rpc("get_class_student_mission_progress", { p_class_id: classId }),
-    supabase.rpc("get_class_student_learning_evidence", { p_class_id: classId }),
+    supabase.rpc("get_class_student_learning_evidence_v1", { p_class_id: classId }),
     supabase.rpc("get_class_mission_bottlenecks", { p_class_id: classId }),
   ]);
 
