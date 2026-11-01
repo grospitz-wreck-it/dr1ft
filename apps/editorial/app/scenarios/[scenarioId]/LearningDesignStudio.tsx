@@ -136,7 +136,7 @@ export function LearningDesignStudio({ scenarioId, latestDesign }: Props) {
             <div className="flex items-center gap-2"><Clock3 className="h-4 w-4 text-violet-600" /><h3 className="text-sm font-bold text-slate-900">3. Rahmen festlegen</h3></div>
             <div className="mt-3 grid gap-3">
               <label className="text-xs font-semibold text-slate-600">Zeit
-                <select value={duration} onChange={(e) => setDuration(Number(e.target.value))} className="mt-1.5 w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm text-slate-800 outline-none focus:border-violet-400">
+                <select value={duration} onChange={(e) => { setDuration(Number(e.target.value)); setFlowOrder(null); }} className="mt-1.5 w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm text-slate-800 outline-none focus:border-violet-400">
                   <option value={10}>10–15 Minuten</option><option value={25}>20–30 Minuten</option><option value={45}>Ca. 45 Minuten</option><option value={60}>60 Minuten oder mehr</option>
                 </select>
               </label>
