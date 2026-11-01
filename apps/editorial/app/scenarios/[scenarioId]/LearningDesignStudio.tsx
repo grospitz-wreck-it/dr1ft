@@ -1,114 +1,94 @@
 "use client";
 
-import { useState, useTransition, type ReactNode } from "react";
-import { ArrowRight, CheckCircle2, Image as ImageIcon, Info, Sparkles } from "lucide-react";
+import { useState, useTransition } from "react";
+import { ArrowRight, Brain, CheckCircle2, Clock3, GripVertical, Image as ImageIcon, Sparkles, Target } from "lucide-react";
+import { ContentModulePicker, type ContentModuleId } from "./ContentModulePicker";
 
-type LearningModel = "backward_design" | "constructive_alignment" | "kolb";
-type BloomLevel = "remember" | "understand" | "apply" | "analyze" | "evaluate" | "create";
+type BloomLevel = "understand" | "apply" | "analyze" | "evaluate" | "create";
 
 type Props = {
   scenarioId: string;
+  contentItems?: { id: string; title?: string | null; body?: string | null; type?: string | null; media_url?: string | null; media_type?: string | null; status?: string | null }[];
   latestDesign?: {
-    id: string;
-    version: number;
-    status: string;
-    title: string;
-    description: string | null;
-    primary_learning_model: string;
-    bloom_target: string;
-    pedagogical_warnings: unknown;
+    id: string; version: number; status: string; title: string;
+    description: string | null; primary_learning_model: string;
+    bloom_target: string; pedagogical_warnings: unknown;
   } | null;
 };
 
-const MODEL_OPTIONS: { value: LearningModel; title: string; short: string; effect: string; result: string; visual: string[] }[] = [
-  {
-    value: "backward_design",
-    title: "Vom Lernziel ausgehen",
-    short: "Ziel → Nachweis → Lernweg",
-    effect: "DR1FT plant rückwärts: erst das gewünschte Können, dann ein sichtbarer Nachweis und daraus passende Lernschritte.",
-    result: "Die Stationen arbeiten auf ein klares Lernziel hin. Die Redaktion kann prüfen, woran sich der Lernerfolg erkennen lässt.",
-    visual: ["Lernziel", "Nachweis", "Feed & Aufgaben"],
-  },
-  {
-    value: "constructive_alignment",
-    title: "Ziel, Aufgabe und Nachweis verbinden",
-    short: "Alles greift ineinander",
-    effect: "Jedes Lernziel wird mit einer passenden Aktivität und einem beobachtbaren Nachweis verknüpft.",
-    result: "Du erhältst Lernschritte, bei denen Aufgabe und erwarteter Lernerfolg zusammenpassen – statt nur thematisch passende Inhalte.",
-    visual: ["Lernziel", "Feed-Aktivität", "Nachweis"],
-  },
-  {
-    value: "kolb",
-    title: "Durch Erfahrung lernen",
-    short: "Erleben → Reflektieren → Ausprobieren",
-    effect: "DR1FT baut den Lernweg um eine Erfahrung herum auf: erleben, darüber nachdenken, ein Prinzip erkennen und es erneut anwenden.",
-    result: "Der Lernplan enthält einen nachvollziehbaren Erfahrungsbogen statt einer reinen Folge von Informationen.",
-    visual: ["Erleben", "Reflektieren", "Erkennen", "Ausprobieren"],
-  },
+const GOALS: { value: BloomLevel; title: string; subtitle: string; icon: string }[] = [
+  { value: "understand", title: "Verstehen", subtitle: "Zusammenhänge erkennen und erklären", icon: "💡" },
+  { value: "apply", title: "Anwenden", subtitle: "Wissen in einer Situation nutzen", icon: "🛠️" },
+  { value: "analyze", title: "Analysieren", subtitle: "Hinweise, Muster und Zusammenhänge erkennen", icon: "🔎" },
+  { value: "evaluate", title: "Bewerten", subtitle: "Optionen abwägen und Urteile begründen", icon: "⚖️" },
+  { value: "create", title: "Entwickeln", subtitle: "Eigene Ideen und Lösungen gestalten", icon: "✨" },
 ];
 
-const BLOOM_OPTIONS: { value: BloomLevel; title: string; prompt: string; effect: string }[] = [
-  { value: "understand", title: "Verstehen", prompt: "Zusammenhänge in eigenen Worten erklären", effect: "Die Lernenden erklären, was passiert und warum." },
-  { value: "apply", title: "Anwenden", prompt: "Wissen in einer konkreten Situation nutzen", effect: "Die Lernenden wenden eine Strategie auf einen konkreten Fall an." },
-  { value: "analyze", title: "Analysieren", prompt: "Hinweise vergleichen und Zusammenhänge erkennen", effect: "Die Lernenden untersuchen Hinweise, Muster oder Interessen." },
-  { value: "evaluate", title: "Bewerten", prompt: "Eine Entscheidung treffen und begründen", effect: "Die Lernenden wägen Optionen ab und begründen ihre Entscheidung." },
-  { value: "create", title: "Eigenes entwickeln", prompt: "Eine eigene Lösung oder Handlung entwickeln", effect: "Die Lernenden entwerfen eine eigene Antwort, Lösung oder Handlungsstrategie." },
-];
+const PATHS: Record<BloomLevel, string[]> = {
+  understand: ["Entdecken", "Zusammenhänge erkennen", "Verstehen"],
+  apply: ["Situation erleben", "Ausprobieren", "Anwenden"],
+  analyze: ["Hinweise entdecken", "Muster erkennen", "Analysieren"],
+  evaluate: ["Perspektiven sammeln", "Optionen abwägen", "Urteil begründen"],
+  create: ["Ideen sammeln", "Lösungen entwickeln", "Gestalten"],
+};
 
-function MiniFlow({ items }: { items: string[] }) {
-  return (
-    <div className="mt-3 flex flex-wrap items-center gap-1" aria-label={"Ablauf: " + items.join(" → ")}>
-      {items.map((item, index) => (
-        <span key={item} className="contents">
-          <span className="flex min-h-8 min-w-0 flex-1 basis-0 items-center justify-center rounded-lg border border-violet-100 bg-white px-1.5 py-1 text-center text-[10px] font-semibold leading-3 text-slate-700">{item}</span>
-          {index < items.length - 1 && <ArrowRight className="h-3 w-3 shrink-0 text-violet-400" aria-hidden="true" />}
-        </span>
-      ))}
-    </div>
-  );
-}
-
-function InfoTip({ children }: { children: ReactNode }) {
-  return (
-    <span className="group relative ml-1 inline-flex align-middle">
-      <Info className="h-3.5 w-3.5 cursor-help text-slate-400" aria-label="Mehr erfahren" />
-      <span className="pointer-events-none absolute left-1/2 top-full z-20 mt-2 hidden w-72 -translate-x-1/2 rounded-xl bg-slate-900 px-3 py-2 text-[11px] font-normal leading-4 text-white shadow-xl group-hover:block group-focus-within:block">
-        {children}
-      </span>
+function GoalCard({ active, option, onClick }: { active: boolean; option: typeof GOALS[number]; onClick: () => void }) {
+  return <button type="button" onClick={onClick}
+    className={"group relative overflow-hidden rounded-2xl border p-3.5 text-left transition-all " +
+      (active ? "border-violet-400 bg-gradient-to-br from-violet-50 via-fuchsia-50 to-sky-50 shadow-md shadow-violet-100 ring-1 ring-violet-200"
+        : "border-slate-200 bg-white hover:-translate-y-0.5 hover:border-violet-200 hover:shadow-sm")}>
+    <span className="mb-2 flex items-center justify-between">
+      <span className="grid h-9 w-9 place-items-center rounded-xl bg-white text-lg shadow-sm">{option.icon}</span>
+      {active && <CheckCircle2 className="h-5 w-5 text-violet-600" />}
     </span>
-  );
+    <span className="block text-sm font-semibold text-slate-900">{option.title}</span>
+    <span className="mt-1 block text-[11px] leading-4 text-slate-500">{option.subtitle}</span>
+  </button>;
 }
 
-export function LearningDesignStudio({ scenarioId, latestDesign }: Props) {
+export function LearningDesignStudio({ scenarioId, latestDesign, contentItems = [] }: Props) {
   const [duration, setDuration] = useState(25);
-  const [stepCount, setStepCount] = useState(7);
-  const [model, setModel] = useState<LearningModel>("backward_design");
-  const [bloom, setBloom] = useState<BloomLevel>("evaluate");
+    const [goal, setGoal] = useState<BloomLevel>((latestDesign?.bloom_target as BloomLevel) || "evaluate");
+  const [contentModules, setContentModules] = useState<ContentModuleId[]>(["feed_post"]);
+  const [ambient, setAmbient] = useState<"focused" | "balanced" | "lively">("balanced");
+  const [showFlowPreview, setShowFlowPreview] = useState(false);
+  const [flowOrder, setFlowOrder] = useState<number[] | null>(null);
+  const [dragIndex, setDragIndex] = useState<number | null>(null);
+  const [manualItems, setManualItems] = useState<{ id: string; label: string; kind: "Lernmoment" | "Ambient" }[]>([]);
+  const [showAddContent, setShowAddContent] = useState(false);
   const [busy, startTransition] = useTransition();
   const [message, setMessage] = useState("");
 
-  const selectedModel = MODEL_OPTIONS.find((option) => option.value === model) ?? MODEL_OPTIONS[0];
-  const selectedBloom = BLOOM_OPTIONS.find((option) => option.value === bloom) ?? BLOOM_OPTIONS[3];
-
-  const previewStations = model === "kolb"
-    ? [
-        { title: "Erleben", detail: "Eine konkrete Situation oder einen Feed-Beitrag entdecken." },
-        { title: "Reflektieren & erkennen", detail: "Beobachtungen ordnen und Muster oder Zusammenhänge erkennen." },
-        { title: "Ausprobieren", detail: selectedBloom.value === "create" ? "Eine eigene Lösung oder Handlungsstrategie entwickeln." : selectedBloom.value === "evaluate" ? "Eine Entscheidung treffen und mit Hinweisen begründen." : "Das Gelernte auf einen neuen Fall übertragen." },
-      ]
-    : model === "constructive_alignment"
-      ? [
-          { title: "Lernziel sichtbar machen", detail: "Klären, woran man gutes Urteilen oder Handeln erkennen kann." },
-          { title: "Im Feed bearbeiten", detail: selectedBloom.value === "analyze" ? "Beiträge und Hinweise vergleichen, um Muster zu erkennen." : selectedBloom.value === "create" ? "Eine eigene Antwort oder Lösung entwerfen." : "Eine passende Aufgabe zum Thema bearbeiten." },
-          { title: "Lernen nachweisen", detail: selectedBloom.value === "evaluate" ? "Eine Entscheidung treffen und nachvollziehbar begründen." : selectedBloom.value === "understand" ? "Den Zusammenhang in eigenen Worten erklären." : "Die eigene Lösung oder Einschätzung mit Hinweisen belegen." },
-        ]
-      : [
-          { title: "Ziel klären", detail: "Festlegen, was Lernende am Ende verstehen oder können sollen." },
-          { title: "Hinweise entdecken", detail: selectedBloom.value === "analyze" ? "Informationen vergleichen und Zusammenhänge untersuchen." : "Einen Feed-Beitrag untersuchen und relevante Hinweise sammeln." },
-          { title: selectedBloom.value === "create" ? "Eigene Lösung entwickeln" : selectedBloom.value === "evaluate" ? "Urteil begründen" : selectedBloom.value === "apply" ? "Wissen anwenden" : "Erkenntnis festhalten", detail: selectedBloom.effect },
-      ];
+  const selectedGoal = GOALS.find((item) => item.value === goal) ?? GOALS[3];
+  const preview = PATHS[goal];
+  const stepCount = duration <= 10 ? 3 : duration <= 25 ? 5 : duration <= 45 ? 7 : 9;
+  const ambientMinutes = ambient === "focused" ? 0 : ambient === "balanced" ? 5 : 12;
+  const totalDuration = duration + ambientMinutes;
+  const ambientCount = ambient === "focused" ? 0 : ambient === "balanced" ? Math.max(1, Math.ceil(stepCount / 3)) : Math.max(2, Math.ceil(stepCount / 2));
+  type FlowItem = { id: string; label: string; kind: "Lernmoment" | "Ambient" };
+  const learningItems: FlowItem[] = Array.from({ length: stepCount }, (_, index): FlowItem => ({ id: `learning-${index}`, label: preview[index % preview.length], kind: "Lernmoment" }));
+  const ambientItems: FlowItem[] = Array.from({ length: ambientCount }, (_, index): FlowItem => ({ id: `ambient-${index}`, label: "Ambient", kind: "Ambient" }));
+  const existingItems: FlowItem[] = contentItems.map((item) => ({ id: `content-${item.id}`, label: item.title?.trim() || item.body?.trim().replace(/\s+/g, " ").slice(0, 42) || "Unbenannter Inhalt", kind: "Lernmoment" }));
+  const baseFlow: FlowItem[] = [...learningItems];
+  ambientItems.forEach((item, index) => baseFlow.splice(Math.min(baseFlow.length, (index + 1) * Math.ceil(stepCount / (ambientCount + 1)) + index), 0, item));
+  existingItems.forEach((item, index) => baseFlow.splice(Math.min(baseFlow.length, index * Math.max(1, Math.floor(stepCount / Math.max(existingItems.length, 1))) + 1), 0, item));
+  baseFlow.push(...manualItems);
+  const flow: FlowItem[] = (flowOrder ?? baseFlow.map((_, index) => index))
+    .map(index => baseFlow[index])
+    .filter((item): item is FlowItem => item !== undefined);
+  const pedagogy: Record<BloomLevel, { model: string; note: string }> = {
+    understand: { model: "Kolb · Erfahren → Beobachten → Einordnen", note: "Der Lernweg schafft zuerst Orientierung und verbindet Beobachtungen mit neuen Zusammenhängen." },
+    apply: { model: "Kolb · Erproben im Kontext", note: "Wissen wird in einer konkreten Situation angewendet und anschließend überprüft." },
+    analyze: { model: "Inquiry · Hinweise → Muster → Schlussfolgerung", note: "Lernende untersuchen Informationen, vergleichen Perspektiven und erkennen Zusammenhänge." },
+    evaluate: { model: "Reflexiv · Perspektiven → Abwägen → Begründen", note: "Unterschiedliche Optionen werden geprüft und ein eigenes Urteil nachvollziehbar begründet." },
+    create: { model: "Design-orientiert · Ideen → Entwurf → Gestaltung", note: "Lernende entwickeln auf Basis der Erkenntnisse eigene Ideen und Lösungen." },
+  };
 
   function createDesign() {
+    if (!contentModules.length) {
+      setMessage("Wähle mindestens ein Content-Modul aus.");
+      return;
+    }
     setMessage("");
     startTransition(async () => {
       try {
@@ -118,230 +98,100 @@ export function LearningDesignStudio({ scenarioId, latestDesign }: Props) {
           body: JSON.stringify({
             durationMinutes: duration,
             learningStepCount: stepCount,
-            primaryLearningModel: model,
-            bloomTarget: bloom,
+            primaryLearningModel: "backward_design",
+            bloomTarget: goal,
+            allowedContentModules: contentModules,
           }),
         });
         const result = await response.json();
         if (!response.ok) throw new Error(result.error || "Generierung fehlgeschlagen.");
-        setMessage(result.stepCount + " Lernschritte wurden als Entwurf erzeugt. Bitte prüfe die pädagogischen Zuordnungen vor der Freigabe.");
+        setMessage(result.stepCount + " Lernschritte wurden als Entwurf erstellt. Die gewählten Content-Module werden als Vorgabe für die weitere Generierung mitgegeben.");
       } catch (error) {
         setMessage(error instanceof Error ? error.message : "Generierung fehlgeschlagen.");
       }
     });
   }
 
-  function createContent() {
-    setMessage("");
-    startTransition(async () => {
-      try {
-        const response = await fetch("/api/scenarios/" + scenarioId + "/learning-content", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ learningDesignId: latestDesign?.id }),
-        });
-        const result = await response.json();
-        if (!response.ok) throw new Error(result.error || "Content-Generierung fehlgeschlagen.");
-        setMessage(result.created + " Content-Elemente wurden als Entwurf erzeugt.");
-      } catch (error) {
-        setMessage(error instanceof Error ? error.message : "Content-Generierung fehlgeschlagen.");
-      }
-    });
-  }
-
   return (
     <section className="overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-[0_8px_30px_rgba(15,23,42,0.04)]">
-      <div className="flex items-start justify-between gap-4 border-b border-slate-100 px-5 py-5 sm:px-7">
+      <div className="border-b border-slate-100 bg-gradient-to-r from-violet-50/70 via-white to-fuchsia-50/60 px-5 py-5 sm:px-7">
         <div className="flex items-start gap-3">
-          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-violet-100 text-violet-700">
-            <Sparkles className="h-5 w-5" />
+          <div className="grid h-12 w-12 shrink-0 place-items-center rounded-2xl bg-gradient-to-br from-violet-500 to-fuchsia-500 text-white shadow-lg shadow-violet-200"><Brain className="h-6 w-6" /></div>
+          <div className="min-w-0">
+            <p className="text-[11px] font-bold uppercase tracking-[0.14em] text-violet-700">Lernweg gestalten</p>
+            <h2 className="mt-1 text-xl font-bold tracking-tight text-slate-950">Was sollen Lernende am Ende können?</h2>
+            <p className="mt-1 max-w-3xl text-sm leading-5 text-slate-500">Du triffst drei einfache Entscheidungen. Die didaktische Struktur entsteht im Hintergrund – nachvollziehbar statt kompliziert.</p>
           </div>
-          <div>
-            <p className="text-xs font-semibold uppercase tracking-[0.12em] text-violet-700">Lernplan gestalten</p>
-            <h2 className="mt-1 text-lg font-semibold tracking-tight text-slate-950">Wie sollen die Lernenden lernen?</h2>
-            <p className="mt-1 max-w-2xl text-sm leading-5 text-slate-500">
-              Diese didaktische Planung ist optional. Für den normalen Workflow kannst du Content-Pieces direkt erstellen; hier kannst du bei Bedarf Lernziele, Aufgaben, Nachweise und einen strukturierten Lernverlauf für komplexe Szenarien planen.
-            </p>
-          </div>
+          {latestDesign && <span className="ml-auto hidden shrink-0 rounded-full bg-white/80 px-3 py-1.5 text-xs font-semibold text-violet-700 shadow-sm sm:block">Entwurf v{latestDesign.version}</span>}
         </div>
-        {latestDesign && (
-          <span className="shrink-0 rounded-full bg-slate-100 px-3 py-1.5 text-xs font-medium text-slate-600">
-            v{latestDesign.version} · {latestDesign.status}
-          </span>
-        )}
       </div>
 
       <div className="space-y-7 p-5 sm:p-7">
         <div>
-          <div className="mb-3 flex items-end justify-between gap-3">
-            <div>
-              <h3 className="text-sm font-semibold text-slate-900">1. Rahmen festlegen</h3>
-              <p className="mt-1 text-xs text-slate-500">Wie lang und umfangreich soll das Lernmodul werden?</p>
-            </div>
-            <span className="hidden text-xs text-slate-400 sm:block">Kann später angepasst werden</span>
-          </div>
-          <div className="grid gap-3 sm:grid-cols-2">
-            <label className="text-sm font-medium text-slate-700">
-              Zeit für das Lernmodul
-              <InfoTip>Die verfügbare Zeit beeinflusst den Umfang und die geschätzte Dauer der einzelnen Lernschritte.</InfoTip>
-              <select value={duration} onChange={(e) => setDuration(Number(e.target.value))} className="mt-2 w-full rounded-xl border border-slate-200 bg-white px-3.5 py-3 text-sm font-normal text-slate-800 outline-none transition focus:border-violet-400 focus:ring-4 focus:ring-violet-100">
-                <option value={10}>10–15 Minuten</option>
-                <option value={25}>20–30 Minuten</option>
-                <option value={45}>Ca. 45 Minuten</option>
-                <option value={60}>60 Minuten oder mehr</option>
-              </select>
-            </label>
-            <label className="text-sm font-medium text-slate-700">
-              Wie detailliert soll der interne Lernverlauf sein?
-              <InfoTip>Diese Zahl steuert nur die optionale interne Lernstruktur. Sie ist keine Vorgabe dafür, wie viele Feed-Beiträge du erstellen musst.</InfoTip>
-              <select value={stepCount} onChange={(e) => setStepCount(Number(e.target.value))} className="mt-2 w-full rounded-xl border border-slate-200 bg-white px-3.5 py-3 text-sm font-normal text-slate-800 outline-none transition focus:border-violet-400 focus:ring-4 focus:ring-violet-100">
-                {[3, 4, 5, 6, 7, 8, 9, 10, 12, 14, 16].map((count) => <option key={count} value={count}>{count} Stationen</option>)}
-              </select>
-            </label>
+          <div className="flex items-center gap-2"><Target className="h-4 w-4 text-violet-600" /><h3 className="text-sm font-bold text-slate-900">1. Lernziel wählen</h3></div>
+          <p className="mt-1 text-xs text-slate-500">Das ist keine Kosmetik: Deine Auswahl steuert den kognitiven Anspruch und wird an die Generierung übergeben.</p>
+          <div className="mt-3 grid gap-2 sm:grid-cols-2 lg:grid-cols-5">
+            {GOALS.map((option) => <GoalCard key={option.value} active={goal === option.value} option={option} onClick={() => { setGoal(option.value); setFlowOrder(null); }} />)}
           </div>
         </div>
 
-        <div>
-          <div className="mb-3">
-            <h3 className="text-sm font-semibold text-slate-900">2. Lernweg auswählen</h3>
-            <p className="mt-1 text-xs text-slate-500">Das verändert, wie DR1FT die Lernschritte aufbaut – nicht das Lernziel selbst.</p>
-          </div>
-          <div className="grid gap-3 lg:grid-cols-3">
-            {MODEL_OPTIONS.map((option) => {
-              const selected = model === option.value;
-              return (
-                <button key={option.value} type="button" onClick={() => setModel(option.value)} aria-pressed={selected} className={"rounded-2xl border p-4 text-left transition focus:outline-none focus:ring-4 focus:ring-violet-100 " + (selected ? "border-violet-400 bg-violet-50/70 ring-1 ring-violet-300" : "border-slate-200 bg-white hover:border-slate-300 hover:bg-slate-50")}>
-                  <span className="flex items-start justify-between gap-3">
-                    <span className="text-sm font-semibold text-slate-900">{option.title}</span>
-                    <span className={"mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full border " + (selected ? "border-violet-600 bg-violet-600 text-white" : "border-slate-300 text-transparent")}>
-                      <CheckCircle2 className="h-3.5 w-3.5" />
-                    </span>
-                  </span>
-                  <span className="mt-2 block text-xs font-medium text-violet-700">{option.short}</span>
-                  <MiniFlow items={option.visual} />
-                  <span className="mt-3 block text-xs leading-5 text-slate-600">{option.effect}</span>
-                </button>
-              );
-            })}
-          </div>
-          <div className="mt-3 rounded-2xl border border-violet-100 bg-violet-50/50 px-4 py-3">
-            <p className="text-[11px] font-semibold uppercase tracking-wide text-violet-700">So wirkt es auf die Feed-Konzeption</p>
-            <MiniFlow items={selectedModel.visual} />
-          </div>
-          <div className="mt-3 flex gap-3 rounded-2xl bg-slate-50 px-4 py-3">
-            <ArrowRight className="mt-0.5 h-4 w-4 shrink-0 text-violet-600" />
-            <p className="text-xs leading-5 text-slate-600"><strong className="text-slate-800">Was das für deinen Lernplan bedeutet: </strong>{selectedModel.result}</p>
-          </div>
-        </div>
+        <ContentModulePicker selected={contentModules} onChange={setContentModules} />
 
-        <div>
-          <div className="mb-3">
-            <h3 className="text-sm font-semibold text-slate-900">3. Denk-Anforderung auswählen</h3>
-            <p className="mt-1 text-xs text-slate-500">Was sollen Lernende mit dem Thema tun können? Das legt den kognitiven Anspruch fest.</p>
-          </div>
-          <div className="mb-3 rounded-2xl border border-slate-200 bg-slate-50/70 p-3">
-            <p className="mb-2 text-[11px] font-semibold uppercase tracking-wide text-slate-500">Bloom: vom einfachen zum komplexen Denken</p>
-            <div className="flex items-end gap-1.5" aria-label="Bloom-Taxonomie: Verstehen, Anwenden, Analysieren, Bewerten, Eigenes entwickeln">
-              {[{ label: "Verstehen", height: "h-7" }, { label: "Anwenden", height: "h-9" }, { label: "Analysieren", height: "h-11" }, { label: "Bewerten", height: "h-12" }, { label: "Entwickeln", height: "h-14" }].map((level) => <div key={level.label} className={"min-w-0 flex-1 rounded-t-lg border border-violet-200 bg-gradient-to-t from-violet-100 to-fuchsia-50 " + level.height} aria-label={level.label} title={level.label} />)}
-            </div>
-            <div className="mt-1 grid grid-cols-5 gap-1 text-center text-[9px] font-medium leading-3 text-slate-600">{["Verstehen", "Anwenden", "Analysieren", "Bewerten", "Entwickeln"].map((label) => <span key={label} className="min-w-0 break-words">{label}</span>)}</div>
-            <p className="mt-2 text-[11px] leading-4 text-slate-500">Je höher die Anforderung, desto mehr soll der Feed zu begründetem Urteilen oder eigenem Gestalten anregen – nicht nur Informationen zeigen.</p>
-          </div>
-          <div className="grid gap-2 sm:grid-cols-2 xl:grid-cols-5">
-            {BLOOM_OPTIONS.map((option, index) => {
-              const selected = bloom === option.value;
-              return (
-                <button key={option.value} type="button" onClick={() => setBloom(option.value)} aria-pressed={selected} className={"rounded-xl border p-3 text-left transition focus:outline-none focus:ring-4 focus:ring-violet-100 " + (selected ? "border-violet-400 bg-violet-50 ring-1 ring-violet-300" : "border-slate-200 hover:border-slate-300 hover:bg-slate-50")}>
-                  <span className="flex items-center gap-2">
-                    <span className={"flex h-6 w-6 items-center justify-center rounded-lg text-xs font-semibold " + (selected ? "bg-violet-600 text-white" : "bg-slate-100 text-slate-500")}>{index + 1}</span>
-                    <span className="text-sm font-semibold text-slate-900">{option.title}</span>
-                  </span>
-                  <span className="mt-2 block text-xs leading-5 text-slate-500">{option.prompt}</span>
-                </button>
-              );
-            })}
-          </div>
-          <div className="mt-3 rounded-2xl border border-slate-200 px-4 py-3">
-            <p className="text-xs font-semibold text-slate-800">Beispiel für die gewählte Anforderung: {selectedBloom.title}</p>
-            <p className="mt-1 text-xs leading-5 text-slate-600">{selectedBloom.effect} DR1FT soll Aufgaben und erwartete Nachweise auf dieses Niveau ausrichten. Die Redaktion prüft, ob das zur Altersgruppe und zum Lernziel passt.</p>
-          </div>
-        </div>
-
-        <div className="rounded-2xl border border-slate-200 bg-slate-50/80 p-4 sm:p-5">
-          <h3 className="text-sm font-semibold text-slate-900">Deine Auswahl im Überblick</h3>
-          <div className="mt-3 grid gap-3 sm:grid-cols-3">
-            <SummaryItem label="Umfang" value={duration === 10 ? "10–15 Minuten" : duration === 25 ? "20–30 Minuten" : duration === 45 ? "Ca. 45 Minuten" : "60+ Minuten"} />
-            <SummaryItem label="Lernweg" value={selectedModel.title} />
-            <SummaryItem label="Denk-Anforderung" value={selectedBloom.title} />
-          </div>
-          <p className="mt-3 text-xs leading-5 text-slate-500">Beim Erzeugen erstellt DR1FT einen neuen Lernplan-Entwurf mit Lernzielen, Lernschritten, Missionen, Content-Plan und pädagogischen Hinweisen. Die Auswahl ist eine Planungsgrundlage, keine automatische Qualitätsfreigabe.</p>
-        </div>
-
-        <div className="rounded-2xl border border-violet-200 bg-gradient-to-br from-violet-50/80 to-white p-4 sm:p-5">
-          <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
-            <div>
-              <p className="text-[11px] font-semibold uppercase tracking-wide text-violet-700">Vorschau · noch kein KI-Ergebnis</p>
-              <h3 className="mt-1 text-sm font-semibold text-slate-900">So könnte dein Lernweg aussehen</h3>
-              <p className="mt-1 max-w-2xl text-xs leading-5 text-slate-600">Ein vereinfachtes Beispiel, das sich an deinen Auswahlfeldern orientiert. Erst mit „Didaktische Struktur erzeugen“ wird ein tatsächlicher Entwurf generiert.</p>
-            </div>
-            <span className="shrink-0 rounded-full border border-violet-200 bg-white px-3 py-1 text-xs font-medium text-violet-700">{stepCount} Stationen geplant</span>
-          </div>
-          <div className="mt-4 grid gap-2 md:grid-cols-3">
-            {previewStations.map((station, index) => (
-              <div key={station.title} className="relative min-w-0 rounded-xl border border-violet-100 bg-white p-3">
-                <div className="flex items-center gap-2">
-                  <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-lg bg-violet-100 text-xs font-semibold text-violet-700">{index + 1}</span>
-                  <p className="text-sm font-semibold text-slate-900">{station.title}</p>
+        <div className="grid gap-4 lg:grid-cols-[0.75fr_1.25fr]">
+          <div className="rounded-2xl border border-slate-200 bg-slate-50/80 p-4">
+            <div className="flex items-center gap-2"><Clock3 className="h-4 w-4 text-violet-600" /><h3 className="text-sm font-bold text-slate-900">3. Rahmen festlegen</h3></div>
+            <div className="mt-3 grid gap-3">
+              <label className="text-xs font-semibold text-slate-600">Zeit
+                <select value={duration} onChange={(e) => { setDuration(Number(e.target.value)); setFlowOrder(null); }} className="mt-1.5 w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm text-slate-800 outline-none focus:border-violet-400">
+                  <option value={10}>10–15 Minuten</option><option value={25}>20–30 Minuten</option><option value={45}>Ca. 45 Minuten</option><option value={60}>60 Minuten oder mehr</option>
+                </select>
+              </label>
+              <div className="rounded-xl border border-violet-100 bg-white px-3 py-2.5">
+                <div className="flex items-center justify-between gap-3">
+                  <span className="text-xs font-semibold text-slate-700">Umfang</span>
+                  <span className="text-xs font-bold text-violet-700">ca. {stepCount} Lernmomente</span>
                 </div>
-                <p className="mt-2 text-xs leading-5 text-slate-600">{station.detail}</p>
+                <p className="mt-1 text-[11px] leading-4 text-slate-500">Die Dauer steuert automatisch, wie viel Raum der Lernweg für Einstieg, Vertiefung und Reflexion erhält.</p>
               </div>
-            ))}
+            </div>
           </div>
-          <p className="mt-3 text-[11px] leading-4 text-slate-500">Die drei Karten zeigen den didaktischen Verlauf beispielhaft – sie stehen nicht für exakt drei Beiträge. Der erzeugte Lernplan kann die {stepCount} Stationen detaillierter aufteilen und weitere Aufgaben oder Content-Elemente vorsehen.</p>
+
+          <div className="relative overflow-hidden rounded-2xl border border-violet-100 bg-gradient-to-br from-violet-50 via-white to-sky-50 p-4">
+            <div className="absolute -right-8 -top-8 text-7xl opacity-[0.08]">🧭</div>
+            <p className="text-[11px] font-bold uppercase tracking-wide text-violet-700">So könnte sich der Lernweg anfühlen</p>
+            <div className="mt-2 flex flex-wrap items-center gap-2">
+              {preview.map((item, index) => <span key={item} className="flex items-center gap-2"><span className="rounded-full border border-violet-100 bg-white px-3 py-2 text-xs font-semibold text-slate-700 shadow-sm">{item}</span>{index < preview.length - 1 && <ArrowRight className="h-4 w-4 text-violet-400" />}</span>)}
+            </div>
+            <div className="mt-5 space-y-2 rounded-xl border border-white/80 bg-white/70 p-3 text-xs leading-5 text-slate-600">
+              <div><strong className="text-slate-800">Pädagogische Einordnung:</strong> {pedagogy[goal].model}</div>
+              <div>{pedagogy[goal].note}</div>
+              <div className="border-t border-violet-50 pt-2 text-slate-500"><strong className="text-slate-700">{duration <= 10 ? "Kompakt" : duration <= 25 ? "Standard" : duration <= 45 ? "Vertiefend" : "Ausführlich"}:</strong> ca. {stepCount} Lernmomente werden passend zur gewählten Zeit geplant.</div>
+            </div>
+          </div>
+        </div>
+
+        <div className="rounded-2xl border border-slate-200 bg-slate-50/70 p-4">
+          <div className="flex items-start justify-between gap-3">
+            <div><h3 className="text-sm font-bold text-slate-900">Wie lebendig soll sich der Lernweg anfühlen?</h3><p className="mt-1 text-xs text-slate-500">Ambient-Content verändert die Feed-Erfahrung und die tatsächliche Entdeckungszeit.</p></div>
+            <button type="button" onClick={() => setShowFlowPreview(!showFlowPreview)} className="rounded-xl border border-violet-200 bg-white px-3 py-2 text-xs font-semibold text-violet-700">Lernweg-Vorschau</button>
+          </div>
+          <div className="mt-4 grid gap-2 sm:grid-cols-3">
+            {([["focused","Fokussiert","Nur der Lernweg"],["balanced","Ausgewogen","+ ca. 5 Min. Feed entdecken"],["lively","Lebendig","+ ca. 10–15 Min. Entdeckungszeit"]] as const).map(([value,title,note]) => <button key={value} type="button" onClick={() => { setAmbient(value); setFlowOrder(null); }} className={`rounded-xl border p-3 text-left ${ambient === value ? "border-violet-400 bg-violet-50" : "border-slate-200 bg-white"}`}><span className="block text-sm font-semibold text-slate-800">{title}</span><span className="mt-1 block text-[11px] text-slate-500">{note}</span></button>)}
+          </div>
+          <div className="mt-4 flex items-center justify-between gap-4 rounded-2xl border border-violet-100 bg-white px-4 py-3">
+            <div className="flex items-center gap-3"><div className="grid h-10 w-10 place-items-center rounded-full border-4 border-violet-100 bg-violet-50"><Clock3 className="h-4 w-4 text-violet-600" /></div><div><strong className="block text-sm text-slate-900">Geschätztes Gesamterlebnis</strong><span className="text-[11px] text-slate-500">Lernzeit plus Feed-Entdeckung und Ambient-Momente</span></div></div>
+            <strong className="text-lg text-violet-700">ca. {totalDuration}–{totalDuration + (duration <= 25 ? 5 : 10)} Min.</strong>
+          </div>
+          {showFlowPreview && <div className="mt-4 overflow-x-auto rounded-2xl border border-violet-100 bg-white p-4"><div className="flex items-start justify-between gap-4"><div><p className="text-[11px] font-bold uppercase tracking-wide text-violet-700">Lernweg-Vorschau</p><p className="mt-1 text-xs text-slate-500">Verschiebe die Karten oder ergänze eigene Inhalte. Die Vorschau folgt deinen Einstellungen.</p></div><button type="button" onClick={() => setShowAddContent(!showAddContent)} className="shrink-0 rounded-xl border border-dashed border-violet-300 bg-violet-50 px-3 py-2 text-xs font-semibold text-violet-700">＋ Inhalte hinzufügen</button></div>{showAddContent && <div className="mt-3 flex flex-wrap gap-2 rounded-xl border border-violet-100 bg-violet-50/60 p-3"><button type="button" onClick={() => { setManualItems([...manualItems, { id: `manual-${Date.now()}`, label: "Eigener Lernmoment", kind: "Lernmoment" }]); setFlowOrder(null); setShowAddContent(false); }} className="rounded-lg bg-white px-3 py-2 text-xs font-semibold text-slate-700 shadow-sm">＋ Lernmoment</button><button type="button" onClick={() => { setManualItems([...manualItems, { id: `manual-${Date.now()}`, label: "Eigener Ambient-Moment", kind: "Ambient" }]); setFlowOrder(null); setShowAddContent(false); }} className="rounded-lg bg-white px-3 py-2 text-xs font-semibold text-slate-700 shadow-sm">＋ Ambient</button></div>}<div className="mt-4 flex min-w-max gap-3">{flow.map((item,index) => { const contentId = item.id.startsWith("content-") ? item.id.slice(8) : null; const source = contentId ? contentItems.find((content) => content.id === contentId) : null; return <div key={item.id} draggable onDragStart={() => setDragIndex(index)} onDragOver={(e) => e.preventDefault()} onDrop={() => { if (dragIndex === null || dragIndex === index) return; const next = [...flow]; const [moved] = next.splice(dragIndex, 1); next.splice(index, 0, moved); const mapped = next.map(item => baseFlow.findIndex(candidate => candidate.id === item.id)); setFlowOrder(mapped); setDragIndex(null); }} className={`relative w-32 cursor-grab rounded-xl border p-2.5 active:cursor-grabbing ${source ? "border-sky-200 bg-sky-50/70" : item.kind === "Ambient" ? "border-slate-200 bg-slate-50" : "border-violet-200 bg-violet-50"}`}><GripVertical className="absolute right-2 top-2 h-3 w-3 text-slate-300" />{source ? <div className="relative aspect-[16/10] overflow-hidden rounded-lg bg-white shadow-sm">{source.media_url && source.media_type === "image" ? <img src={source.media_url} alt="" className="h-full w-full object-cover" /> : <div className="flex h-full items-center justify-center gap-1.5 text-[10px] font-bold uppercase tracking-wide text-sky-600"><ImageIcon className="h-3.5 w-3.5" /> Feed-Inhalt</div>}</div> : <div className="aspect-[4/3] rounded-lg bg-white/70 px-2 py-2 text-[10px] font-bold uppercase tracking-wide text-slate-500">{item.kind}</div>}<p className="mt-2 line-clamp-2 text-xs font-semibold text-slate-700">{item.label}</p><span className="mt-1 block text-[10px] text-slate-400">{source ? "Vorhandener Inhalt · " : ""}{index + 1}</span></div>})}</div></div>}
         </div>
 
         <div className="flex flex-col gap-3 border-t border-slate-100 pt-5 sm:flex-row sm:items-center sm:justify-between">
-          <div className="text-xs leading-5 text-slate-500">
-            <p className="font-semibold text-slate-800">Du behältst die Kontrolle.</p>
-            <p>Der bestehende Entwurf bleibt erhalten; eine neue Generierung legt eine neue Version an.</p>
-          </div>
-          <button type="button" disabled={busy} onClick={createDesign} className="inline-flex shrink-0 items-center justify-center gap-2 rounded-xl bg-violet-600 px-5 py-3 text-sm font-semibold text-white shadow-sm transition hover:bg-violet-700 disabled:cursor-wait disabled:opacity-50">
-            <Sparkles className="h-4 w-4" />
-            {busy ? "Lernplan wird erstellt …" : "Lernplan erstellen"}
-          </button>
+          <p className="max-w-2xl text-xs leading-5 text-slate-500"><strong className="text-slate-700">Einfach bedienen, fachlich fundiert.</strong> Du legst Ziel, verfügbare Bausteine und Umfang fest. Die konkrete pädagogische Planung übernimmt DR1FT.</p>
+          <button type="button" disabled={busy || !contentModules.length} onClick={createDesign} className="inline-flex shrink-0 items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-violet-600 via-purple-600 to-fuchsia-500 px-5 py-3 text-sm font-semibold text-white shadow-md shadow-violet-500/20 transition hover:-translate-y-0.5 disabled:cursor-wait disabled:opacity-50"><Sparkles className="h-4 w-4" />{busy ? "Lernweg wird erstellt …" : "Lernweg erstellen"}</button>
         </div>
 
-        <div className="flex flex-col gap-3 rounded-2xl border border-slate-200 p-4 sm:flex-row sm:items-center sm:justify-between">
-          <div className="flex items-start gap-3">
-            <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-slate-100 text-slate-600"><ImageIcon className="h-4 w-4" /></div>
-            <div>
-              <p className="text-sm font-semibold text-slate-800">Content-Pieces direkt erstellen</p>
-              <p className="mt-1 text-xs leading-5 text-slate-500">{latestDesign ? "Erzeugt Content-Entwürfe aus der gespeicherten didaktischen Struktur. Für einzelne Content-Pieces nutze das Content-Atelier im Feed-Bereich." : "Dieser optionale Generator benötigt eine gespeicherte didaktische Struktur. Du kannst unabhängig davon jederzeit einzelne Content-Pieces erstellen."}</p>
-            </div>
-          </div>
-          <button type="button" disabled={busy || !latestDesign} onClick={createContent} className="inline-flex shrink-0 items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-semibold text-slate-700 transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-40">
-            <ImageIcon className="h-4 w-4" /> Content erzeugen
-          </button>
-        </div>
-
-        {message && <div role="status" className="rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm leading-5 text-slate-700">{message}</div>}
-
-        {latestDesign?.pedagogical_warnings && Array.isArray(latestDesign.pedagogical_warnings) && latestDesign.pedagogical_warnings.length > 0 && (
-          <div className="rounded-2xl border border-amber-200 bg-amber-50 p-4">
-            <div className="text-sm font-semibold text-amber-900">Pädagogische Hinweise zum aktuellen Entwurf</div>
-            <ul className="mt-2 list-disc space-y-1 pl-5 text-sm text-amber-800">
-              {latestDesign.pedagogical_warnings.map((warning, index) => <li key={index}>{String(warning)}</li>)}
-            </ul>
-          </div>
-        )}
+        {message && <div role="status" className="rounded-xl border border-violet-100 bg-violet-50/60 px-4 py-3 text-sm leading-5 text-slate-700">{message}</div>}
       </div>
     </section>
   );
-}
-
-function SummaryItem({ label, value }: { label: string; value: string }) {
-  return <div className="rounded-xl border border-slate-200 bg-white px-3 py-3">
-    <div className="text-[11px] font-medium uppercase tracking-wide text-slate-400">{label}</div>
-    <div className="mt-1 text-sm font-semibold text-slate-800">{value}</div>
-  </div>;
 }

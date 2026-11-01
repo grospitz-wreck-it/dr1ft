@@ -1,15 +1,13 @@
 "use client";
 
 import { useState } from "react";
-import { Sparkles, Image, Laugh, Video, Link2, MessageCircle, Mail, PenLine, Check, LoaderCircle } from "lucide-react";
+import { Sparkles, Image, Link2, MessageCircle, Mail, PenLine, Check, LoaderCircle } from "lucide-react";
 
-type Format = "post" | "photo" | "meme" | "video" | "embed" | "comment" | "dm_message" | "reflection_prompt";
+type Format = "post" | "photo" | "embed" | "comment" | "dm_message" | "reflection_prompt";
 
 const formats: { id: Format; label: string; hint: string; icon: typeof PenLine }[] = [
   { id: "post", label: "Post", hint: "Eine Story für den Feed", icon: PenLine },
   { id: "photo", label: "Foto-Story", hint: "Ein realistisches Bild", icon: Image },
-  { id: "meme", label: "Meme", hint: "Humorvoller Feed-Inhalt", icon: Laugh },
-  { id: "video", label: "Video", hint: "Video-Idee oder Clip", icon: Video },
   { id: "embed", label: "Externer Inhalt", hint: "Video oder Website", icon: Link2 },
   { id: "comment", label: "Kommentar", hint: "Reaktion im Feed", icon: MessageCircle },
   { id: "dm_message", label: "Direktnachricht", hint: "Privater Chat", icon: Mail },
@@ -66,7 +64,7 @@ export function ContentComposer({ scenarioId, creators = [] }: { scenarioId: str
     }
   }
 
-  const visibleFormats = formats.filter(({ id }) => showMore || ["post", "photo", "meme", "video", "embed"].includes(id));
+  const visibleFormats = formats.filter(({ id }) => showMore || ["post", "photo", "embed"].includes(id));
   const active = formats.find((item) => item.id === format)!;
   const ActiveIcon = active.icon;
 
@@ -111,12 +109,11 @@ export function ContentComposer({ scenarioId, creators = [] }: { scenarioId: str
           </select>
           <label className="mt-4 block text-xs font-semibold text-slate-700">Was soll im Inhalt passieren?</label>
           <textarea value={prompt} onChange={(e) => setPrompt(e.target.value)} rows={3} placeholder="Zum Beispiel: Eine Schülerin sieht einen dramatischen Post in ihrer Klassengruppe und ist unsicher, ob er stimmt …" className="mt-2 w-full resize-y rounded-xl border border-slate-200 bg-white px-3.5 py-3 text-sm leading-6 outline-none transition placeholder:text-slate-400 focus:border-violet-400 focus:ring-4 focus:ring-violet-100" />
-          {(format === "embed" || format === "video") && <label className="mt-3 block text-xs font-semibold text-slate-700">{format === "embed" ? "Link zum Inhalt" : "Video-Link (optional)"}<input value={url} onChange={(e) => setUrl(e.target.value)} placeholder="https://" className="mt-1.5 w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm outline-none focus:border-violet-400 focus:ring-4 focus:ring-violet-100" /></label>}
+          {format === "embed" && <label className="mt-3 block text-xs font-semibold text-slate-700">Link zum Inhalt<input value={url} onChange={(e) => setUrl(e.target.value)} placeholder="https://" className="mt-1.5 w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm outline-none focus:border-violet-400 focus:ring-4 focus:ring-violet-100" /></label>}
           <div className="mt-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
             <p className="max-w-sm text-[11px] leading-4 text-slate-500">Der Entwurf wird als Inhalt angelegt und kann anschließend redaktionell geprüft und bearbeitet werden.</p>
             {format === "embed" ? <button type="button" disabled={busy || !url.trim()} onClick={() => create(false)} className="inline-flex items-center justify-center gap-2 rounded-xl bg-slate-900 px-5 py-3 text-xs font-bold text-white transition hover:bg-slate-700 disabled:opacity-50">In Feed übernehmen</button> : <button type="button" disabled={busy} onClick={() => create(true)} className="inline-flex items-center justify-center gap-2 rounded-xl bg-violet-600 px-5 py-3 text-xs font-bold text-white shadow-lg shadow-violet-600/20 transition hover:-translate-y-0.5 hover:bg-violet-700 disabled:opacity-60">{busy ? <LoaderCircle className="h-4 w-4 animate-spin" /> : <Sparkles className="h-4 w-4" />}{busy ? "Entwurf wird erstellt …" : "Entwurf mit KI erstellen"}</button>}
           </div>
-          {format === "video" && <p className="mt-3 text-[10px] text-slate-500">Die KI erstellt zunächst einen Video-Entwurf bzw. eine Vorlage, kein fertiges KI-Video.</p>}
           {message && <p role="status" className="mt-3 rounded-xl bg-white px-3 py-2 text-xs text-slate-600">{message}</p>}
         </div>
       </div>
