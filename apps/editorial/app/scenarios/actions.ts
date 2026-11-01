@@ -183,6 +183,18 @@ export async function updateContentItemBody(contentItemId: string, scenarioId: s
 }
 
 
+/** Aktualisiert die optionale Figur-/NPC-Zuordnung eines Inhalts. */
+export async function updateContentItemCreator(contentItemId: string, scenarioId: string, creatorId: string | null) {
+  const supabase = supabaseServerClient();
+  const { error } = await supabase
+    .from("content_items")
+    .update({ creator_id: creatorId, updated_at: new Date().toISOString() })
+    .eq("id", contentItemId)
+    .eq("scenario_id", scenarioId);
+  if (error) throw new Error(error.message);
+  revalidatePath("/scenarios/" + scenarioId);
+}
+
 /** Entfernt einen Inhalt vollständig aus diesem Szenario. */
 export async function deleteContentItem(contentItemId: string, scenarioId: string) {
   const supabase = supabaseServerClient();
