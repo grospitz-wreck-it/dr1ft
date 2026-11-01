@@ -342,7 +342,7 @@ export default async function ScenarioDetailPage({ params, searchParams = {} }: 
                                       <p className="text-xs text-slate-400 mt-1">{item.type} · {item.age_rating} · Schwierigkeit {item.difficulty}{item.creator_id && creators?.find((creator) => creator.id === item.creator_id) ? " · Figur: " + creators.find((creator) => creator.id === item.creator_id)?.display_name : ""}</p>
             
                                       <div className="mt-3 space-y-3">
-                                        <ContentLearningTaskEditor scenarioId={scenarioId} contentItemId={item.id} initialTask={item.extra?.learningTask ?? null} />
+                                        <ContentLearningTaskEditor scenarioId={scenarioId} contentItemId={item.id} initialTask={item.extra?.learningTask ?? null} competencies={competencies ?? []} />
                                         <ContentAttachmentEditor scenarioId={scenarioId} contentItemId={item.id} />
                                       </div>
                                       <div className="mt-2"><ContentStatusControl contentItemId={item.id} status={item.status} /></div>
