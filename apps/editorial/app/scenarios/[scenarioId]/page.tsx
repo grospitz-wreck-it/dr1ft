@@ -248,45 +248,39 @@ export default async function ScenarioDetailPage({ params, searchParams = {} }: 
                           {grouped.map((group) => (
                             <div key={group.status}>
                               <div className="text-xs font-semibold uppercase tracking-wider text-slate-500 mb-2">{STATUS_LABELS[group.status] ?? group.status} · {group.items.length}</div>
-                              <ul className="space-y-2">
+                              <ul className="space-y-6">
                                 {group.items.map((item) => (
-                                  <li key={item.id} className="border border-slate-200 rounded-xl overflow-hidden">
-                                    {item.media_url && item.media_type === "image" && (
-                                      <div className="group/image relative bg-slate-100">
-                                        <div className="relative aspect-video w-full overflow-hidden bg-slate-100">
-                                          <img src={item.media_url} alt="" className="block h-full w-full object-contain" style={{ filter: `brightness(${(item.extra as any)?.imageEdit?.brightness ?? 100}%) contrast(${(item.extra as any)?.imageEdit?.contrast ?? 100}%) saturate(${(item.extra as any)?.imageEdit?.saturation ?? 100}%) grayscale(${(item.extra as any)?.imageEdit?.grayscale ?? 0}%)`, transform: `scale(${(item.extra as any)?.imageEdit?.scale ?? 1})`, transformOrigin: `${(item.extra as any)?.imageEdit?.positionX ?? 50}% ${(item.extra as any)?.imageEdit?.positionY ?? 50}%`, objectPosition: `${(item.extra as any)?.imageEdit?.positionX ?? 50}% ${(item.extra as any)?.imageEdit?.positionY ?? 50}%` }} />
+                                  <li key={item.id} className="overflow-hidden rounded-2xl border-2 border-slate-200 bg-white shadow-[0_8px_24px_rgba(15,23,42,0.06)] transition hover:border-violet-200">
+                                    <div className="grid lg:grid-cols-[minmax(0,52%)_minmax(320px,48%)]">
+                                      <div className="border-b border-slate-200 bg-slate-50/70 lg:border-b-0 lg:border-r">
+                                        {item.media_url && item.media_type === "image" && (
+                                          <div className="group/image relative bg-slate-100">
+                                            <div className="relative aspect-video w-full overflow-hidden bg-slate-100">
+                                              <img src={item.media_url} alt="" className="block h-full w-full object-contain" style={{ filter: `brightness(${(item.extra as any)?.imageEdit?.brightness ?? 100}%) contrast(${(item.extra as any)?.imageEdit?.contrast ?? 100}%) saturate(${(item.extra as any)?.imageEdit?.saturation ?? 100}%) grayscale(${(item.extra as any)?.imageEdit?.grayscale ?? 0}%)`, transform: `scale(${(item.extra as any)?.imageEdit?.scale ?? 1})`, transformOrigin: `${(item.extra as any)?.imageEdit?.positionX ?? 50}% ${(item.extra as any)?.imageEdit?.positionY ?? 50}%`, objectPosition: `${(item.extra as any)?.imageEdit?.positionX ?? 50}% ${(item.extra as any)?.imageEdit?.positionY ?? 50}%` }} />
+                                            </div>
+                                            <ImageEditPopover contentItemId={item.id} scenarioId={scenarioId} />
+                                          </div>
+                                        )}
+                                        {item.media_url && item.media_type === "video" && videoEmbedUrl(item.media_url) ? (
+                                          <div className="aspect-video bg-slate-100"><iframe src={videoEmbedUrl(item.media_url)!} title="Video" className="h-full w-full" allow="autoplay; encrypted-media; picture-in-picture" allowFullScreen /></div>
+                                        ) : item.media_url && item.media_type === "video" ? (
+                                          <div className="bg-black"><video src={item.media_url} controls playsInline preload="metadata" className="max-h-[420px] w-full" /></div>
+                                        ) : null}
+                                        {item.extra?.embed?.url && <div className="aspect-video bg-slate-100"><iframe src={item.extra.embed.url} title="Eingebettetes Video" className="h-full w-full" allowFullScreen /></div>}
+                                        <div className="p-4 sm:p-5">
+                                          <PostEditForm title={item.title ?? null} body={item.body ?? ""} action={updateContentItemBody.bind(null, item.id, scenarioId)} />
+                                          <p className="mt-2 whitespace-pre-wrap text-sm leading-6 text-slate-900">{item.body}</p>
+                                          <p className="mt-2 text-xs text-slate-400">{item.type} · {item.age_rating} · Schwierigkeit {item.difficulty}{item.creator_id && creators?.find((creator) => creator.id === item.creator_id) ? " · Figur: " + creators.find((creator) => creator.id === item.creator_id)?.display_name : ""}</p>
                                         </div>
-                                        <ImageEditPopover contentItemId={item.id} scenarioId={scenarioId} />
                                       </div>
-                                    )}
-                                    {item.media_url && item.media_type === "video" && videoEmbedUrl(item.media_url) ? (
-                                      <div className="aspect-video bg-slate-100">
-                                        <iframe src={videoEmbedUrl(item.media_url)!} title="Video" className="w-full h-full" allow="autoplay; encrypted-media; picture-in-picture" allowFullScreen />
-                                      </div>
-                                    ) : item.media_url && item.media_type === "video" ? (
-                                      <div className="bg-black">
-                                        <video src={item.media_url} controls playsInline preload="metadata" className="w-full max-h-[420px]" />
-                                      </div>
-                                    ) : null}
-                                    {item.extra?.embed?.url && (
-                                      <div className="aspect-video bg-slate-100">
-                                        <iframe src={item.extra.embed.url} title="Eingebettetes Video" className="w-full h-full" allowFullScreen />
-                                      </div>
-                                    )}
-                                    <div className="p-3">
-                                      <PostEditForm
-                                        title={item.title ?? null}
-                                        body={item.body ?? ""}
-                                        action={updateContentItemBody.bind(null, item.id, scenarioId)}
-                                      />
-                                      <p className="mt-2 whitespace-pre-wrap text-sm text-slate-900">{item.body}</p>
-                                      <p className="text-xs text-slate-400 mt-1">{item.type} · {item.age_rating} · Schwierigkeit {item.difficulty}{item.creator_id && creators?.find((creator) => creator.id === item.creator_id) ? " · Figur: " + creators.find((creator) => creator.id === item.creator_id)?.display_name : ""}</p>
-            
-                                      <div className="mt-3 space-y-3">
-                                        <ContentLearningTaskEditor scenarioId={scenarioId} contentItemId={item.id} initialTask={item.extra?.learningTask ?? null} competencies={competencies ?? []} />
-                                        <ContentAttachmentEditor scenarioId={scenarioId} contentItemId={item.id} />
-                                      </div>
-                                      <div className="mt-2 flex items-center justify-between gap-3"><ContentStatusControl contentItemId={item.id} status={item.status} /><form action={deleteContentItem.bind(null, item.id, scenarioId)}><button type="submit" className="inline-flex items-center gap-1.5 rounded-lg border border-rose-100 bg-rose-50 px-2.5 py-2 text-xs font-semibold text-rose-700 transition hover:bg-rose-100" title="Inhalt entfernen"><Trash2 className="h-3.5 w-3.5" />Entfernen</button></form></div>
+                                      <aside className="flex flex-col bg-white p-4 sm:p-5">
+                                        <div className="mb-4 border-b border-slate-100 pb-3"><span className="text-[11px] font-bold uppercase tracking-[0.14em] text-violet-600">Post konfigurieren</span><p className="mt-1 text-xs text-slate-500">Lerninteraktionen, Medien und Veröffentlichungsstatus.</p></div>
+                                        <div className="space-y-3">
+                                          <ContentLearningTaskEditor scenarioId={scenarioId} contentItemId={item.id} initialTask={item.extra?.learningTask ?? null} competencies={competencies ?? []} />
+                                          <ContentAttachmentEditor scenarioId={scenarioId} contentItemId={item.id} />
+                                        </div>
+                                        <div className="mt-auto flex items-center justify-between gap-3 border-t border-slate-100 pt-4"><ContentStatusControl contentItemId={item.id} status={item.status} /><form action={deleteContentItem.bind(null, item.id, scenarioId)}><button type="submit" className="inline-flex items-center gap-1.5 rounded-lg border border-rose-100 bg-rose-50 px-2.5 py-2 text-xs font-semibold text-rose-700 transition hover:bg-rose-100" title="Inhalt entfernen"><Trash2 className="h-3.5 w-3.5" />Entfernen</button></form></div>
+                                      </aside>
                                     </div>
                                   </li>
                                 ))}
