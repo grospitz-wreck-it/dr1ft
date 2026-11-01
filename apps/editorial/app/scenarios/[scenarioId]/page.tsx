@@ -257,10 +257,6 @@ export default async function ScenarioDetailPage({ params, searchParams = {} }: 
                     </section>
 
                     <section id="workflow-posts" className="scroll-mt-6 relative overflow-hidden rounded-3xl border border-violet-100 bg-gradient-to-br from-white via-white to-violet-50/70 p-4 shadow-sm sm:p-6">
-                      <div className="mb-5 flex flex-col gap-3 rounded-2xl border border-violet-100 bg-white/80 p-4 sm:flex-row sm:items-center sm:justify-between">
-                        <SectionHeader icon={<FileText className="w-4 h-4" />} title="Lernerlebnisse & Content-Pieces" subtitle="Gestalte direkt die Erlebnisse im Feed: Posts, Kommentare, Chats, Entscheidungen und Reflexionsimpulse. Die didaktische Struktur ist optional." />
-                        <span className="inline-flex w-fit shrink-0 items-center gap-2 rounded-full bg-violet-100 px-3 py-1.5 text-[11px] font-semibold text-violet-800">✦ Content-Atelier</span>
-                      </div>
                       <ContentComposer scenarioId={scenarioId} creators={creators ?? []} />
             
                       {grouped.length > 0 ? (
