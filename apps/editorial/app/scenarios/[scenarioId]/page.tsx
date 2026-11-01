@@ -1,7 +1,7 @@
 import type { ReactNode } from "react";
-import { ArrowLeft, BookOpen, CheckCircle2, ChevronDown, Clock3, FileText, Flag, GraduationCap, Info, Layers3, Pencil, Play, Route, School, Sparkles, Users } from "lucide-react";
+import { ArrowLeft, BookOpen, CheckCircle2, ChevronDown, Clock3, FileText, Flag, GraduationCap, Info, Layers3, Pencil, Play, Route, School, Sparkles, Trash2, Users } from "lucide-react";
 import { supabaseServerClient } from "../../../lib/supabaseServerClient";
-import { createContentItem, generateScenarioContent, optimizeScenarioBasics, toggleScenarioActive, updateContentItemBody, updateScenarioBasics, updateScenarioAmbientDensity } from "../actions";
+import { createContentItem, deleteContentItem, generateScenarioContent, optimizeScenarioBasics, toggleScenarioActive, updateContentItemBody, updateScenarioBasics, updateScenarioAmbientDensity } from "../actions";
 import { ContentStatusControl } from "./ContentStatusControl";
 import { ScenarioCoverEditor } from "../ScenarioCoverEditor";
 import { AiGenerationButton } from "../../components/AiGenerationButton";
@@ -231,7 +231,7 @@ export default async function ScenarioDetailPage({ params, searchParams = {} }: 
           </div>
           <div className="space-y-5">
                     <section id="workflow-plan" className="scroll-mt-6">
-                      <LearningDesignStudio scenarioId={scenarioId} latestDesign={latestLearningDesign} />
+                      <LearningDesignStudio scenarioId={scenarioId} latestDesign={latestLearningDesign} contentItems={contentItems ?? []} />
                     </section>
 
                     <section id="workflow-posts" className="scroll-mt-6 relative overflow-hidden rounded-3xl border border-violet-100 bg-gradient-to-br from-white via-white to-violet-50/70 p-4 shadow-sm sm:p-6">
@@ -286,7 +286,7 @@ export default async function ScenarioDetailPage({ params, searchParams = {} }: 
                                         <ContentLearningTaskEditor scenarioId={scenarioId} contentItemId={item.id} initialTask={item.extra?.learningTask ?? null} competencies={competencies ?? []} />
                                         <ContentAttachmentEditor scenarioId={scenarioId} contentItemId={item.id} />
                                       </div>
-                                      <div className="mt-2"><ContentStatusControl contentItemId={item.id} status={item.status} /></div>
+                                      <div className="mt-2 flex items-center justify-between gap-3"><ContentStatusControl contentItemId={item.id} status={item.status} /><form action={deleteContentItem.bind(null, item.id, scenarioId)}><button type="submit" className="inline-flex items-center gap-1.5 rounded-lg border border-rose-100 bg-rose-50 px-2.5 py-2 text-xs font-semibold text-rose-700 transition hover:bg-rose-100" title="Inhalt entfernen"><Trash2 className="h-3.5 w-3.5" />Entfernen</button></form></div>
                                     </div>
                                   </li>
                                 ))}
