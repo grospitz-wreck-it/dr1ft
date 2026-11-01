@@ -580,6 +580,7 @@ export type ContentLearningTask = {
   feedback: string;
   interactions?: Array<{ id: string; label: string; instruction?: string; custom?: boolean; discoveryTitle?: string; discoveryMessage?: string; discoveryCompetency?: string }>;
   assessment?: { assessedActions?: string[]; acceptableActions?: string[]; evidenceKey?: string };
+  competencyIds?: string[];
 };
 
 const TASK_INTERACTIONS = ["view", "react", "comment", "choose", "classify", "compare", "reflect", "create"] as const;
@@ -638,6 +639,7 @@ export async function updateContentLearningTask(
       acceptableActions,
       evidenceKey: String(task.assessment?.evidenceKey || "in_feed_decision").trim().slice(0, 120) || "in_feed_decision",
     },
+    competencyIds: Array.from(new Set((task.competencyIds ?? []).filter((id): id is string => typeof id === "string").map((id) => id.trim()).filter(Boolean))).slice(0, 12),
   };
 
   const previousExtra = item.extra && typeof item.extra === "object" && !Array.isArray(item.extra)
