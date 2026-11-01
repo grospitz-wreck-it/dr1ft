@@ -7,7 +7,7 @@ import { ScenarioCoverEditor } from "../ScenarioCoverEditor";
 import { AiGenerationButton } from "../../components/AiGenerationButton";
 import { LearningDesignStudio } from "./LearningDesignStudio";
 import { ScenarioWizard } from "./ScenarioWizard";
-import { ContentComposer } from "./ContentComposer";
+import { ContentComposerModal } from "./ContentComposerModal";
 import { PostEditForm } from "./PostEditForm";
 import { ContentAttachmentEditor } from "./ContentAttachmentEditor";
 import { ContentLearningTaskEditor } from "./ContentLearningTaskEditor";
@@ -235,7 +235,13 @@ export default async function ScenarioDetailPage({ params, searchParams = {} }: 
                     </section>
 
                     <section id="workflow-posts" className="scroll-mt-6 relative overflow-hidden rounded-3xl border border-violet-100 bg-gradient-to-br from-white via-white to-violet-50/70 p-4 shadow-sm sm:p-6">
-                      <ContentComposer scenarioId={scenarioId} creators={creators ?? []} />
+                      <div className="flex items-center justify-between gap-4 border-b border-violet-100/80 bg-violet-50/50 px-1 pb-4 sm:px-2">
+                        <div className="flex items-center gap-3">
+                          <span className="grid h-10 w-10 place-items-center rounded-xl bg-white text-violet-700 shadow-sm ring-1 ring-violet-100"><Layers3 className="h-5 w-5" /></span>
+                          <h2 className="text-base font-bold text-slate-950">Feed-Preview</h2>
+                        </div>
+                        <ContentComposerModal scenarioId={scenarioId} creators={creators ?? []} />
+                      </div>
             
                       {grouped.length > 0 ? (
                         <div className="mt-5 space-y-5">
