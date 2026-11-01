@@ -44,6 +44,7 @@ export function PostCard({ item, userId, classInstanceId, initiallyLiked, onView
   const [shareRecipients, setShareRecipients] = useState<Array<{ id: string; displayName: string; username: string }>>([]);
   const [selectedRecipients, setSelectedRecipients] = useState<string[]>([]);
   const [feedback, setFeedback] = useState<string | null>(null);
+  const [learningFeedback, setLearningFeedback] = useState<{ title: string; message: string; action: string } | null>(null);
   const [comparison, setComparison] = useState<{ related: FeedItem | null; loading: boolean; selected?: "contradict" | "support"; assessmentOutcome?: "success" | "not_yet" | "not_assessed"; error?: string } | null>(null);
   const [taskResponse, setTaskResponse] = useState("");
   const [taskResponseSaved, setTaskResponseSaved] = useState(false);
@@ -61,6 +62,7 @@ export function PostCard({ item, userId, classInstanceId, initiallyLiked, onView
   const action = (extra.action ?? {}) as Record<string, unknown>;
   const mediaContext = (extra.media_context ?? {}) as Record<string, unknown>;
   const interactionChecks = (extra.interaction_checks ?? {}) as Record<string, { enabled?: boolean; feedback?: string }>;
+  const interactionDiscoveries = (extra.interaction_discoveries ?? {}) as Record<string, { title?: string; message?: string; discoveryMessage?: string }>;
   const checkFeedback = (key: string) => typeof interactionChecks[key]?.feedback === "string" ? interactionChecks[key].feedback!.trim() : "";
 
   useEffect(() => {
@@ -180,6 +182,17 @@ export function PostCard({ item, userId, classInstanceId, initiallyLiked, onView
     const configured = (learningTask.interactions ?? []).find((entry) =>
       (aliases[interactionType] ?? [interactionType]).includes(entry.id)
     );
+    const discovery = interactionDiscoveries[interactionType];
+    const reactionMessage = String(
+      discovery?.discoveryMessage ?? discovery?.message ?? configured?.discoveryMessage ?? (configured as any)?.message ?? ""
+    ).trim();
+    if (configured && reactionMessage) {
+      setLearningFeedback({
+        title: String(discovery?.title ?? "Gut entdeckt!"),
+        message: reactionMessage,
+        action: interactionType,
+      });
+    }
     // Only editorially assessed actions create learning evidence. The server
     // reads the shared rule from learningTask.assessment and derives the outcome.
     const assessment = learningTask.assessment;
@@ -461,6 +474,17 @@ export function PostCard({ item, userId, classInstanceId, initiallyLiked, onView
       {item.mediaUrl && item.mediaType === "video" && <video src={item.mediaUrl} controls className="block w-full aspect-video object-cover bg-black"/>}
       <div className="p-4 pt-3">
         <p className="font-body text-[15px] leading-relaxed">{item.body}</p>
+        {learningFeedback && <section className="learning-reaction-card mt-3 overflow-hidden rounded-2xl border shadow-sm" aria-live="polite">
+          <div className="flex items-start gap-3 p-4">
+            <span className="learning-reaction-icon grid h-9 w-9 shrink-0 place-items-center rounded-xl"><Sparkles className="h-4 w-4" /></span>
+            <div className="min-w-0 flex-1">
+              <p className="learning-reaction-eyebrow text-[10px] font-bold uppercase tracking-[0.14em]">DR1FT · Erkenntnis</p>
+              <h3 className="learning-reaction-title mt-1 text-sm font-bold">{learningFeedback.title}</h3>
+              <p className="learning-reaction-message mt-1 text-sm leading-relaxed">{learningFeedback.message}</p>
+            </div>
+            <button type="button" onClick={() => setLearningFeedback(null)} aria-label="Rückmeldung schließen" className="learning-reaction-close rounded-lg p-1"><X className="h-4 w-4" /></button>
+          </div>
+        </section>}
         {!learningTask.interactions?.length && !learningTask.assessment?.assessedActions?.length && learningTask.learnerAction?.trim() && <section className="mt-4 min-w-0 rounded-2xl border border-violet-200 bg-gradient-to-br from-violet-50 to-fuchsia-50/60 p-4 pb-6 text-left">
           <div className="flex items-start gap-2.5">
             <span className="grid h-8 w-8 shrink-0 place-items-center rounded-xl bg-violet-600 text-white"><Sparkles className="h-4 w-4" /></span>
@@ -476,7 +500,7 @@ export function PostCard({ item, userId, classInstanceId, initiallyLiked, onView
             </div>
           </div>
         </section>}
-        <div data-post-menu className="relative flex items-center gap-2 mt-3 pt-3 border-t border-ink/10">
+        <div data-post-menu className="post-reaction-row relative flex items-center gap-2 mt-3 pt-3 border-t border-ink/10">
           <button onClick={toggleLike} className={`tap-pulse touch-target flex items-center gap-1.5 rounded-xl px-3 text-sm font-body transition-colors hover:bg-ink/5 ${liked ? "text-social-pink" : "text-ink/60"}`} aria-label="Gefällt mir"><Heart className="w-5 h-5" fill={liked ? "currentColor" : "none"} strokeWidth={2}/>{baseLikeCount + (liked ? 1 : 0)}</button>
           <button onClick={toggleComments} className="touch-target flex items-center gap-1.5 rounded-xl px-3 text-sm font-body text-ink/60 transition-colors hover:bg-ink/5" aria-label="Kommentare anzeigen"><MessageCircle className="w-[18px] h-[18px]" strokeWidth={2}/>{comments ? comments.length : liveCommentCount}</button>
           <div className="ml-auto flex items-center gap-1">

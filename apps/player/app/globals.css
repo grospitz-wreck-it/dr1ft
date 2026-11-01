@@ -255,7 +255,7 @@ body.dark-mode {
   border-color: var(--drift-border) !important;
 }
 .dark-mode main article [data-post-menu] > button:not([aria-label="Beitrag teilen"]) {
-  color: #c9bfdc !important;
+  color: #a99fbc !important;
 }
 .dark-mode main article [data-post-menu] > button:not([aria-label="Beitrag teilen"]):hover {
   background: rgba(167,139,250,.14) !important;
@@ -268,7 +268,7 @@ body.dark-mode {
   background: #6d28d9 !important;
 }
 .dark-mode main article [data-post-menu] > button[aria-label="Gefällt mir"] {
-  color: #c9bfdc !important;
+  color: #a99fbc !important;
 }
 .dark-mode main article [data-post-menu] > button[aria-label="Gefällt mir"].text-social-pink {
   color: #fb7185 !important;
@@ -277,6 +277,40 @@ body.dark-mode {
 .dark-mode main article [data-post-menu] > button[aria-label="Kommentare anzeigen"] svg {
   flex-shrink: 0;
 }
+
+/* User facing learning reactions use a quiet surface in both themes. */
+.learning-reaction-card {
+  border-color: #ddd6fe;
+  background: linear-gradient(120deg, #f5f3ff 0%, #ffffff 52%, #f0f9ff 100%);
+}
+.learning-reaction-icon { color: #fff; background: linear-gradient(135deg, #6d28d9, #0284c7); }
+.learning-reaction-eyebrow { color: #6d28d9; }
+.learning-reaction-title { color: #27213d; }
+.learning-reaction-message { color: #51476a; }
+.learning-reaction-close { color: #6d28d9; }
+.learning-reaction-close:hover { background: #ede9fe; }
+.post-reaction-row button[aria-label="Gefällt mir"],
+.post-reaction-row button[aria-label="Kommentare anzeigen"] { color: #746d89; }
+.dark-mode main article .learning-reaction-card {
+  border-color: #433653 !important;
+  background: linear-gradient(120deg, #261e38 0%, #211a32 58%, #1c2435 100%) !important;
+}
+.dark-mode main article .learning-reaction-icon { color: #d8c9ef; background: linear-gradient(135deg, #4a3768, #24425a); }
+.dark-mode main article .learning-reaction-eyebrow { color: #b8a4db; }
+.dark-mode main article .learning-reaction-title { color: #e2daee; }
+.dark-mode main article .learning-reaction-message { color: #c4bad5; }
+.dark-mode main article .learning-reaction-close { color: #c4b5fd; }
+.dark-mode main article .learning-reaction-close:hover { background: rgba(167,139,250,.12); }
+
+.player-mobile-activity { color: #27213d; background: #fff; border-color: #ddd8ec; }
+.player-mobile-activity > div:first-child { border-color: #eeeaf5; }
+.player-mobile-activity-list { max-height: calc(min(68vh, 520px) - 64px); }
+.dark-mode .player-mobile-header { color: #e8e1f1 !important; background: rgba(23,17,38,.97) !important; border-color: #3b3153 !important; }
+.dark-mode .player-mobile-header nav a[aria-current="page"] { background: rgba(124,58,237,.22) !important; color: #d2c4e8 !important; }
+.dark-mode .player-mobile-header nav a:not([aria-current]) { color: #aaa0ba !important; }
+.dark-mode .player-mobile-activity { color: #e2daee; background: #1c172b; border-color: #3b3153; }
+.dark-mode .player-mobile-activity > div:first-child { border-color: #342a47; }
+.dark-mode .player-mobile-activity a:hover { background: rgba(167,139,250,.10); }
 
 /* DR1FT media stage styling restored from a72ce14 */
 /* Dark-mode media backlayer: retain the DR1FT pattern without the bright paper panel. */

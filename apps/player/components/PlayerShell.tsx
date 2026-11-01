@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
-import { Heart, MessageCircle, Share2, Sparkles, Moon, Sun } from "lucide-react";
+import { Activity, Heart, MessageCircle, Share2, Sparkles, Moon, Sun, X } from "lucide-react";
 import { supabaseBrowserClient } from "../lib/supabaseBrowserClient";
 import { avatarUrl } from "../lib/avatar";
 
@@ -52,6 +52,7 @@ export function PlayerShell({ children }: { children: React.ReactNode }) {
   const [open, setOpen] = useState(false);
   const [liveActivity, setLiveActivity] = useState<LiveActivity[]>([]);
   const [activityRealtime, setActivityRealtime] = useState(false);
+  const [activityOpen, setActivityOpen] = useState(false);
   const [darkMode, setDarkMode] = useState(false);
   const [hasUnreadMessages, setHasUnreadMessages] = useState(false);
 
@@ -61,6 +62,13 @@ export function PlayerShell({ children }: { children: React.ReactNode }) {
     setDarkMode(enabled);
     document.documentElement.classList.toggle("dark-mode", enabled);
   }, []);
+
+  useEffect(() => {
+    if (!activityOpen) return;
+    const closeOnEscape = (event: KeyboardEvent) => { if (event.key === "Escape") setActivityOpen(false); };
+    window.addEventListener("keydown", closeOnEscape);
+    return () => window.removeEventListener("keydown", closeOnEscape);
+  }, [activityOpen]);
 
   function toggleTheme() {
     setDarkMode((current) => {
@@ -343,17 +351,25 @@ export function PlayerShell({ children }: { children: React.ReactNode }) {
           <div className="flex min-h-[68px] w-full items-center gap-2 px-3 pt-[env(safe-area-inset-top)]">
             <Link href="/feed" aria-label="DR1FT – Feed" className="flex min-w-0 shrink-0 items-center gap-1.5">
               <img src="/branding/drift-logo-appstore-transparent.webp" alt="" aria-hidden="true" className="h-9 w-9 shrink-0 object-contain" />
-              <span className="font-display text-base font-bold tracking-[-0.05em]">DR1FT</span>
+              <span className="hidden font-display text-base font-bold tracking-[-0.05em] sm:inline">DR1FT</span>
             </Link>
             <nav aria-label="Hauptnavigation" className="ml-auto flex min-w-0 flex-1 items-center justify-end gap-1">
-              {NAV.map((item) => { const active = isActive(pathname, item.href); return <Link key={item.href} href={item.href} aria-current={active ? "page" : undefined} className={`relative flex min-h-11 min-w-0 items-center justify-center gap-1 rounded-xl px-2 text-[11px] font-semibold transition ${active ? "bg-violet-100 text-violet-900 dark:bg-violet-500/25 dark:text-white" : "text-slate-600 hover:bg-slate-100 dark:text-white/75 dark:hover:bg-white/10"}`}><Icon name={item.icon} active={active}/><span>{item.label}</span>{item.label === "Nachrichten" && hasUnreadMessages && <span aria-label="Ungelesene Nachrichten" className="absolute right-1 top-1 h-2 w-2 rounded-full bg-pink-500 shadow-[0_0_8px_rgba(236,72,153,.8)]"/>}</Link>; })}
+              {NAV.map((item) => { const active = isActive(pathname, item.href); return <Link key={item.href} href={item.href} aria-current={active ? "page" : undefined} className={`relative flex min-h-11 min-w-0 items-center justify-center gap-1 rounded-xl px-1.5 text-[11px] font-semibold transition sm:px-2 ${active ? "bg-violet-100 text-violet-900 dark:bg-violet-500/25 dark:text-white" : "text-slate-600 hover:bg-slate-100 dark:text-white/75 dark:hover:bg-white/10"}`}><Icon name={item.icon} active={active}/><span className="hidden sm:inline">{item.label}</span>{item.label === "Nachrichten" && hasUnreadMessages && <span aria-label="Ungelesene Nachrichten" className="absolute right-1 top-1 h-2 w-2 rounded-full bg-pink-500 shadow-[0_0_8px_rgba(236,72,153,.8)]"/>}</Link>; })}
             </nav>
+            <button type="button" onClick={() => setActivityOpen((value) => !value)} aria-label={`Aktivitätsfeed${liveActivity.length ? `, ${liveActivity.length} Aktivitäten` : ""}`} aria-expanded={activityOpen} aria-haspopup="dialog" className={`relative grid h-10 w-10 shrink-0 place-items-center rounded-xl transition ${activityOpen ? "bg-violet-100 text-violet-800 dark:bg-violet-500/20 dark:text-violet-200" : "text-slate-600 hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-white/10"}`}><Activity className="h-5 w-5" />{liveActivity.length > 0 && <span className="absolute right-1 top-1 h-2 w-2 rounded-full bg-cyan-500 ring-2 ring-white dark:bg-cyan-400 dark:ring-[#171126]" />}</button>
             <button type="button" onClick={toggleTheme} aria-label={darkMode ? "Hellmodus aktivieren" : "Dunkelmodus aktivieren"} className="grid h-10 w-10 shrink-0 place-items-center rounded-xl text-violet-700 hover:bg-violet-100 dark:text-violet-200 dark:hover:bg-white/10">{darkMode ? <Sun className="h-5 w-5" /> : <Moon className="h-5 w-5" />}</button>
             <Link href="/profile" aria-label="Mein Profil" className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-gradient-to-br from-fuchsia-400 via-violet-400 to-cyan-300 p-[2px]">
               <img src={avatarUrl(user.avatarSeed, 80)} alt="" className="h-full w-full rounded-[10px] bg-white object-cover" />
             </Link>
           </div>
         </div>
+        {activityOpen && <>
+          <button type="button" className="fixed inset-0 z-[65] bg-slate-950/20 lg:hidden" aria-label="Aktivitätsfeed schließen" onClick={() => setActivityOpen(false)} />
+          <section role="dialog" aria-modal="true" aria-label="Aktivität in deiner Klasse" className="player-mobile-activity fixed inset-x-2 top-[calc(76px+env(safe-area-inset-top))] z-[70] max-h-[min(68vh,520px)] overflow-hidden rounded-2xl border shadow-2xl lg:hidden">
+            <div className="flex items-center justify-between gap-3 border-b px-4 py-3"><div><h2 className="text-sm font-bold">Aktivität in deiner Klasse</h2><p className="mt-0.5 text-[11px] opacity-70">{liveActivity.length ? `${liveActivity.length} aktuelle Aktivitäten` : "Noch keine neuen Aktivitäten"} · {activityRealtime ? "Live" : "Sync"}</p></div><button type="button" onClick={() => setActivityOpen(false)} aria-label="Aktivitätsfeed schließen" className="grid h-9 w-9 shrink-0 place-items-center rounded-xl opacity-70 hover:bg-black/5 dark:hover:bg-white/10"><X className="h-4 w-4" /></button></div>
+            <div className="player-mobile-activity-list overflow-y-auto p-3" aria-live="polite">{liveActivity.length ? <div className="space-y-1">{liveActivity.map((activity) => { const ActivityIcon = activity.kind === "like" ? Heart : activity.kind === "share" ? Share2 : MessageCircle; return <Link key={activity.id} href={`/feed#post-${activity.contentItemId}`} onClick={() => setActivityOpen(false)} className="flex items-start gap-3 rounded-xl px-2 py-2.5 transition-colors hover:bg-violet-50 dark:hover:bg-white/[.06]"><span className="relative mt-0.5 h-9 w-9 shrink-0 rounded-xl bg-gradient-to-br from-social-pink via-social-violet to-social-blue p-[1.5px]"><img src={avatarUrl(activity.avatarSeed, 72)} alt="" className="h-full w-full rounded-[10px] object-cover" /><span className="absolute -bottom-1 -right-1 grid h-4 w-4 place-items-center rounded-full border bg-violet-950 text-cyan-200"><ActivityIcon className="h-2.5 w-2.5" /></span></span><span className="min-w-0 flex-1"><span className="block text-xs leading-4">{activity.text}</span><span className="mt-1 block text-[10px] opacity-60">{formatRelativeTime(activity.createdAt)}</span></span></Link>; })}</div> : <div className="px-4 py-10 text-center"><Sparkles className="mx-auto mb-2 h-5 w-5 opacity-50" /><p className="text-sm font-medium">Gerade ist es ruhig.</p><p className="mt-1 text-xs opacity-60">Neue Aktivitäten erscheinen hier live.</p></div>}</div>
+          </section>
+        </>}
       </>}
       <main className={showShell ? "lg:pl-[286px]" : ""}>
         <div className={showShell ? "min-h-screen px-3 pt-[76px] pb-6 sm:px-4 lg:px-8 lg:pt-8 lg:pb-8" : ""}>{children}</div>
