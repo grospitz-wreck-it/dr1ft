@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState, useTransition, type FormEvent } from "react";
+import { useMemo, useState, useTransition, useEffect, type FormEvent } from "react";
 import { updateContentLearningTask } from "../learning-content-actions";
 import { Check, ChevronDown, ChevronRight, GraduationCap, Save, Search, Image as ImageIcon, ShieldCheck, UserRound, ArrowLeftRight, Share2, Flag, CircleOff, MessageCircle, Brain, Plus, X } from "lucide-react";
 
@@ -30,7 +30,7 @@ const ACTION_ICONS: Record<string, typeof Search> = { inspect_source: Search, in
 const inputClass = "mt-1.5 w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm outline-none transition focus:border-violet-400 focus:ring-4 focus:ring-violet-100";
 
 export function ContentLearningTaskEditor({ scenarioId, contentItemId, initialTask, competencies = [] }: { scenarioId: string; contentItemId: string; initialTask?: Partial<Task> | null; competencies?: Array<{ id: string; title: string }> }) {
-  const [open, setOpen] = useState(Boolean(initialTask && Object.entries(initialTask).some(([key, value]) => key !== "assessment" && (Array.isArray(value) ? value.length > 0 : String(value ?? "").trim()))));
+  const [open, setOpen] = useState(false);
   const [task, setTask] = useState<Task>(() => {
     const saved = (initialTask ?? {}) as Partial<Task>;
     return {
@@ -53,7 +53,7 @@ export function ContentLearningTaskEditor({ scenarioId, contentItemId, initialTa
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
 
-  const assessmentCount = task.assessment.assessedActions.length;
+  useEffect(() => { if (!open) return; const handler = (event: KeyboardEvent) => { if (event.key === "Escape") setOpen(false); }; window.addEventListener("keydown", handler); return () => window.removeEventListener("keydown", handler); }, [open]);\n\n  const assessmentCount = task.assessment.assessedActions.length;
   const acceptableCount = task.assessment.acceptableActions.length;
 
   function update<K extends keyof Task>(key: K, value: Task[K]) {
@@ -108,7 +108,7 @@ export function ContentLearningTaskEditor({ scenarioId, contentItemId, initialTa
 
   return (
     <section className="mt-4 overflow-hidden rounded-2xl border border-violet-200 bg-white shadow-sm">
-      <button type="button" onClick={() => setOpen(value => !value)} aria-expanded={open} className="group flex w-full items-center justify-between gap-4 p-4 text-left transition hover:bg-violet-50/60 sm:p-5">
+      <button type="button" onClick={() => setOpen(true)} aria-expanded={open} aria-haspopup="dialog" className="group flex w-full items-center justify-between gap-4 p-4 text-left transition hover:bg-violet-50/60 sm:p-5">
         <span className="flex min-w-0 items-center gap-3">
           <span className="grid h-11 w-11 shrink-0 place-items-center rounded-2xl bg-gradient-to-br from-violet-500 to-fuchsia-500 text-white shadow-md shadow-violet-200"><GraduationCap className="h-5 w-5" /></span>
           <span className="min-w-0">
@@ -234,7 +234,7 @@ export function ContentLearningTaskEditor({ scenarioId, contentItemId, initialTa
               <Save className="h-4 w-4" /> {pending ? "Speichert …" : "Änderungen speichern"}
             </button>
           </div>
-        </form>
+        </form>\n          </div>\n        </div>
       )}
     </section>
   );
