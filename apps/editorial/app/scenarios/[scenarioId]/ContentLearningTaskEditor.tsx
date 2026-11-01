@@ -53,7 +53,9 @@ export function ContentLearningTaskEditor({ scenarioId, contentItemId, initialTa
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
 
-  useEffect(() => { if (!open) return; const handler = (event: KeyboardEvent) => { if (event.key === "Escape") setOpen(false); }; window.addEventListener("keydown", handler); return () => window.removeEventListener("keydown", handler); }, [open]);\n\n  const assessmentCount = task.assessment.assessedActions.length;
+  useEffect(() => { if (!open) return; const handler = (event: KeyboardEvent) => { if (event.key === "Escape") setOpen(false); }; window.addEventListener("keydown", handler); return () => window.removeEventListener("keydown", handler); }, [open]);
+
+  const assessmentCount = task.assessment.assessedActions.length;
   const acceptableCount = task.assessment.acceptableActions.length;
 
   function update<K extends keyof Task>(key: K, value: Task[K]) {
@@ -234,7 +236,9 @@ export function ContentLearningTaskEditor({ scenarioId, contentItemId, initialTa
               <Save className="h-4 w-4" /> {pending ? "Speichert …" : "Änderungen speichern"}
             </button>
           </div>
-        </form>\n          </div>\n        </div>
+        </form>
+          </div>
+        </div>
       )}
     </section>
   );
