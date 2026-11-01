@@ -47,14 +47,21 @@ function GoalCard({ active, option, onClick }: { active: boolean; option: typeof
 
 export function LearningDesignStudio({ scenarioId, latestDesign }: Props) {
   const [duration, setDuration] = useState(25);
-  const [stepCount, setStepCount] = useState(7);
-  const [goal, setGoal] = useState<BloomLevel>((latestDesign?.bloom_target as BloomLevel) || "evaluate");
+    const [goal, setGoal] = useState<BloomLevel>((latestDesign?.bloom_target as BloomLevel) || "evaluate");
   const [contentModules, setContentModules] = useState<ContentModuleId[]>(["feed_post"]);
   const [busy, startTransition] = useTransition();
   const [message, setMessage] = useState("");
 
   const selectedGoal = GOALS.find((item) => item.value === goal) ?? GOALS[3];
   const preview = PATHS[goal];
+  const stepCount = duration <= 10 ? 3 : duration <= 25 ? 5 : duration <= 45 ? 7 : 9;
+  const pedagogy: Record<BloomLevel, { model: string; note: string }> = {
+    understand: { model: "Kolb · Erfahren → Beobachten → Einordnen", note: "Der Lernweg schafft zuerst Orientierung und verbindet Beobachtungen mit neuen Zusammenhängen." },
+    apply: { model: "Kolb · Erproben im Kontext", note: "Wissen wird in einer konkreten Situation angewendet und anschließend überprüft." },
+    analyze: { model: "Inquiry · Hinweise → Muster → Schlussfolgerung", note: "Lernende untersuchen Informationen, vergleichen Perspektiven und erkennen Zusammenhänge." },
+    evaluate: { model: "Reflexiv · Perspektiven → Abwägen → Begründen", note: "Unterschiedliche Optionen werden geprüft und ein eigenes Urteil nachvollziehbar begründet." },
+    create: { model: "Design-orientiert · Ideen → Entwurf → Gestaltung", note: "Lernende entwickeln auf Basis der Erkenntnisse eigene Ideen und Lösungen." },
+  };
 
   function createDesign() {
     if (!contentModules.length) {
@@ -118,11 +125,13 @@ export function LearningDesignStudio({ scenarioId, latestDesign }: Props) {
                   <option value={10}>10–15 Minuten</option><option value={25}>20–30 Minuten</option><option value={45}>Ca. 45 Minuten</option><option value={60}>60 Minuten oder mehr</option>
                 </select>
               </label>
-              <label className="text-xs font-semibold text-slate-600">Lernweg
-                <select value={stepCount} onChange={(e) => setStepCount(Number(e.target.value))} className="mt-1.5 w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm text-slate-800 outline-none focus:border-violet-400">
-                  {[3,4,5,6,7,8,9,10,12].map((count) => <option key={count} value={count}>{count} Stationen</option>)}
-                </select>
-              </label>
+              <div className="rounded-xl border border-violet-100 bg-white px-3 py-2.5">
+                <div className="flex items-center justify-between gap-3">
+                  <span className="text-xs font-semibold text-slate-700">Umfang</span>
+                  <span className="text-xs font-bold text-violet-700">ca. {stepCount} Lernmomente</span>
+                </div>
+                <p className="mt-1 text-[11px] leading-4 text-slate-500">Die Dauer steuert automatisch, wie viel Raum der Lernweg für Einstieg, Vertiefung und Reflexion erhält.</p>
+              </div>
             </div>
           </div>
 
@@ -132,7 +141,11 @@ export function LearningDesignStudio({ scenarioId, latestDesign }: Props) {
             <div className="mt-2 flex flex-wrap items-center gap-2">
               {preview.map((item, index) => <span key={item} className="flex items-center gap-2"><span className="rounded-full border border-violet-100 bg-white px-3 py-2 text-xs font-semibold text-slate-700 shadow-sm">{item}</span>{index < preview.length - 1 && <ArrowRight className="h-4 w-4 text-violet-400" />}</span>)}
             </div>
-            <div className="mt-5 rounded-xl border border-white/80 bg-white/70 p-3 text-xs leading-5 text-slate-600"><strong className="text-slate-800">{selectedGoal.title}:</strong> DR1FT nutzt diesen Anspruch als Leitlinie für Lernziele, Lernweg und die spätere KI-Generierung.</div>
+            <div className="mt-5 space-y-2 rounded-xl border border-white/80 bg-white/70 p-3 text-xs leading-5 text-slate-600">
+              <div><strong className="text-slate-800">Pädagogische Einordnung:</strong> {pedagogy[goal].model}</div>
+              <div>{pedagogy[goal].note}</div>
+              <div className="border-t border-violet-50 pt-2 text-slate-500"><strong className="text-slate-700">{duration <= 10 ? "Kompakt" : duration <= 25 ? "Standard" : duration <= 45 ? "Vertiefend" : "Ausführlich"}:</strong> ca. {stepCount} Lernmomente werden passend zur gewählten Zeit geplant.</div>
+            </div>
           </div>
         </div>
 
