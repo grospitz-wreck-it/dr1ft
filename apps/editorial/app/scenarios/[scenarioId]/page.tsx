@@ -7,7 +7,6 @@ import { ScenarioCoverEditor } from "../ScenarioCoverEditor";
 import { AiGenerationButton } from "../../components/AiGenerationButton";
 import { LearningDesignStudio } from "./LearningDesignStudio";
 import { ScenarioWizard } from "./ScenarioWizard";
-import { LearningStepEditor } from "./LearningStepEditor";
 import { ContentComposer } from "./ContentComposer";
 import { PostEditForm } from "./PostEditForm";
 import { ContentAttachmentEditor } from "./ContentAttachmentEditor";
@@ -253,47 +252,9 @@ export default async function ScenarioDetailPage({ params, searchParams = {} }: 
 
           </div>
           <div className="space-y-5">
-                    <section className="grid md:grid-cols-4 gap-3">
-                      <SummaryCard icon={<Route className="w-4 h-4" />} label="Didaktische Struktur" value={learningSteps?.length ? `${learningSteps.length} intern` : "Optional"} />
-                      <SummaryCard icon={<Flag className="w-4 h-4" />} label="Missionen" value={`${missions?.length ?? 0}`} />
-                      <SummaryCard icon={<FileText className="w-4 h-4" />} label="Inhalte" value={`${contentItems?.length ?? 0}`} />
-                      <SummaryCard icon={<Users className="w-4 h-4" />} label="Status" value={scenario.is_active ? "Aktiv" : "Entwurf"} />
+                    <section id="workflow-plan" className="scroll-mt-6">
+                      <LearningDesignStudio scenarioId={scenarioId} latestDesign={latestLearningDesign} />
                     </section>
-            
-                            <details id="workflow-plan" className="scroll-mt-6 rounded-2xl border border-slate-200 bg-white">
-                      <summary className="cursor-pointer list-none p-5">
-                        <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-                          <div>
-                            <div className="text-[11px] font-semibold uppercase tracking-wide text-violet-700">Optional · für komplexe Szenarien</div>
-                            <h2 className="mt-1 text-base font-semibold text-slate-900">Didaktische Struktur und Lernziele</h2>
-                            <p className="mt-1 max-w-2xl text-sm leading-5 text-slate-500">Du kannst Content-Pieces direkt erstellen. Diese zusätzliche Struktur ist nur nötig, wenn du Lernschritte, Missionen und Evidenz gezielt planen oder bestehende Lernpläne weiterbearbeiten möchtest.</p>
-                          </div>
-                          <span className="shrink-0 rounded-xl border border-slate-200 px-3 py-2 text-xs font-semibold text-slate-600">{latestLearningDesign ? `Lernplan v${latestLearningDesign.version}` : "Noch nicht angelegt"}</span>
-                        </div>
-                      </summary>
-                      <div className="space-y-5 border-t border-slate-100 p-4 sm:p-5">
-                        <LearningDesignStudio scenarioId={scenarioId} latestDesign={latestLearningDesign} />
-                        {latestLearningDesign && (
-                          <LearningStepEditor
-                            scenarioId={scenarioId}
-                            designId={latestLearningDesign.id}
-                            steps={learningSteps ?? []}
-                            mappings={frameworkMappings ?? []}
-                            competencyLabels={learningCompetencyLabels}
-                            objectiveLabels={learningObjectiveLabels}
-                            availableObjectives={learningObjectives ?? []}
-                            availableCompetencies={competencies ?? []}
-                            availableMissions={missions ?? []}
-                            objectiveMappings={learningStepObjectiveMappings ?? []}
-                            competencyMappings={learningStepCompetencyMappings ?? []}
-                            missionMappings={learningStepMissionMappings ?? []}
-                            evidenceIndicators={learningEvidenceIndicators ?? []}
-                            contentMappings={learningStepContentMappings ?? []}
-                            contentItems={contentItems ?? []}
-                          />
-                        )}
-                      </div>
-                    </details>
 
                     <section id="workflow-posts" className="scroll-mt-6 relative overflow-hidden rounded-3xl border border-violet-100 bg-gradient-to-br from-white via-white to-violet-50/70 p-4 shadow-sm sm:p-6">
                       <div className="mb-5 flex flex-col gap-3 rounded-2xl border border-violet-100 bg-white/80 p-4 sm:flex-row sm:items-center sm:justify-between">
@@ -491,15 +452,6 @@ function DetailKpi({ icon, tint, label, value, hint }: { icon: ReactNode; tint: 
 function QuickInfo({ icon, label, value, tint }: { icon: ReactNode; label: string; value: string; tint: "violet" | "emerald" | "amber" | "blue" | "slate" }) {
   const tones = { violet: "bg-violet-100 text-violet-700", emerald: "bg-emerald-100 text-emerald-700", amber: "bg-amber-100 text-amber-700", blue: "bg-sky-100 text-sky-700", slate: "bg-slate-100 text-slate-600" };
   return <div className="flex items-center gap-3 py-2.5"><span className={"grid h-8 w-8 shrink-0 place-items-center rounded-lg " + tones[tint]}>{icon}</span><span className="min-w-0 flex-1 text-xs text-slate-500">{label}</span><span className="max-w-[58%] text-right text-xs font-semibold text-slate-800">{value}</span></div>;
-}
-
-function SummaryCard({ icon, label, value }: { icon: ReactNode; label: string; value: string }) {
-  return (
-    <div className="bg-white border border-slate-200 rounded-xl p-4">
-      <div className="flex items-center gap-2 text-xs text-slate-400">{icon}{label}</div>
-      <div className="text-lg font-semibold text-slate-900 mt-1">{value}</div>
-    </div>
-  );
 }
 
 function SectionHeader({ icon, title, subtitle }: { icon: ReactNode; title: string; subtitle: string }) {
