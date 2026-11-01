@@ -49,12 +49,16 @@ export function LearningDesignStudio({ scenarioId, latestDesign }: Props) {
   const [duration, setDuration] = useState(25);
     const [goal, setGoal] = useState<BloomLevel>((latestDesign?.bloom_target as BloomLevel) || "evaluate");
   const [contentModules, setContentModules] = useState<ContentModuleId[]>(["feed_post"]);
+  const [ambient, setAmbient] = useState<"focused" | "balanced" | "lively">("balanced");
+  const [showFlowPreview, setShowFlowPreview] = useState(false);
   const [busy, startTransition] = useTransition();
   const [message, setMessage] = useState("");
 
   const selectedGoal = GOALS.find((item) => item.value === goal) ?? GOALS[3];
   const preview = PATHS[goal];
   const stepCount = duration <= 10 ? 3 : duration <= 25 ? 5 : duration <= 45 ? 7 : 9;
+  const ambientMinutes = ambient === "focused" ? 0 : ambient === "balanced" ? 5 : 12;
+  const totalDuration = duration + ambientMinutes;
   const pedagogy: Record<BloomLevel, { model: string; note: string }> = {
     understand: { model: "Kolb · Erfahren → Beobachten → Einordnen", note: "Der Lernweg schafft zuerst Orientierung und verbindet Beobachtungen mit neuen Zusammenhängen." },
     apply: { model: "Kolb · Erproben im Kontext", note: "Wissen wird in einer konkreten Situation angewendet und anschließend überprüft." },
@@ -147,6 +151,18 @@ export function LearningDesignStudio({ scenarioId, latestDesign }: Props) {
               <div className="border-t border-violet-50 pt-2 text-slate-500"><strong className="text-slate-700">{duration <= 10 ? "Kompakt" : duration <= 25 ? "Standard" : duration <= 45 ? "Vertiefend" : "Ausführlich"}:</strong> ca. {stepCount} Lernmomente werden passend zur gewählten Zeit geplant.</div>
             </div>
           </div>
+        </div>
+
+        <div className="rounded-2xl border border-slate-200 bg-slate-50/70 p-4">
+          <div className="flex items-start justify-between gap-3">
+            <div><h3 className="text-sm font-bold text-slate-900">Wie lebendig soll sich der Lernweg anfühlen?</h3><p className="mt-1 text-xs text-slate-500">Ambient-Content verändert die Feed-Erfahrung und die tatsächliche Entdeckungszeit.</p></div>
+            <button type="button" onClick={() => setShowFlowPreview(!showFlowPreview)} className="rounded-xl border border-violet-200 bg-white px-3 py-2 text-xs font-semibold text-violet-700">Lernweg-Vorschau</button>
+          </div>
+          <div className="mt-4 grid gap-2 sm:grid-cols-3">
+            {([["focused","Fokussiert","Nur der Lernweg"],["balanced","Ausgewogen","+ ca. 5 Min. Feed entdecken"],["lively","Lebendig","+ ca. 10–15 Min. Entdeckungszeit"]] as const).map(([value,title,note]) => <button key={value} type="button" onClick={() => setAmbient(value)} className={`rounded-xl border p-3 text-left ${ambient === value ? "border-violet-400 bg-violet-50" : "border-slate-200 bg-white"}`}><span className="block text-sm font-semibold text-slate-800">{title}</span><span className="mt-1 block text-[11px] text-slate-500">{note}</span></button>)}
+          </div>
+          <div className="mt-4 rounded-xl border border-violet-100 bg-white px-4 py-3 text-xs text-slate-600"><strong className="text-slate-800">Geschätztes Gesamterlebnis:</strong> ca. {totalDuration}–{totalDuration + (duration <= 25 ? 5 : 10)} Minuten <span className="text-slate-400">· Lernzeit plus Feed-Entdeckung und Ambient-Momente</span></div>
+          {showFlowPreview && <div className="mt-4 overflow-x-auto rounded-2xl border border-violet-100 bg-white p-4"><p className="text-[11px] font-bold uppercase tracking-wide text-violet-700">Abstrakte Lernweg-Vorschau</p><p className="mt-1 text-xs text-slate-500">Die Reihenfolge wird später per Drag & Drop anpassbar.</p><div className="mt-4 flex min-w-max gap-3">{preview.flatMap((item,index) => [{label:item,kind:"Lernmoment"}, ...(ambient !== "focused" && index < preview.length - 1 ? [{label:"Ambient",kind:"Ambient"}] : [])]).map((item,index) => <div key={index} className={`w-28 rounded-xl border p-3 ${item.kind === "Ambient" ? "border-slate-200 bg-slate-50" : "border-violet-200 bg-violet-50"}`}><div className="aspect-[4/3] rounded-lg bg-white/70 px-2 py-2 text-[10px] font-bold uppercase tracking-wide text-slate-500">{item.kind}</div><p className="mt-2 text-xs font-semibold text-slate-700">{item.label}</p><span className="mt-1 block text-[10px] text-slate-400">{index + 1}</span></div>)}</div></div>}
         </div>
 
         <div className="flex flex-col gap-3 border-t border-slate-100 pt-5 sm:flex-row sm:items-center sm:justify-between">
