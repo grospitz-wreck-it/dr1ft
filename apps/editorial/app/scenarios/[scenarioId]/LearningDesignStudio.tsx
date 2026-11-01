@@ -64,9 +64,10 @@ export function LearningDesignStudio({ scenarioId, latestDesign }: Props) {
   const ambientMinutes = ambient === "focused" ? 0 : ambient === "balanced" ? 5 : 12;
   const totalDuration = duration + ambientMinutes;
   const ambientCount = ambient === "focused" ? 0 : ambient === "balanced" ? Math.max(1, Math.ceil(stepCount / 3)) : Math.max(2, Math.ceil(stepCount / 2));
-  const learningItems = Array.from({ length: stepCount }, (_, index) => ({ id: `learning-${index}`, label: preview[index % preview.length], kind: "Lernmoment" as const }));
-  const ambientItems = Array.from({ length: ambientCount }, (_, index) => ({ id: `ambient-${index}`, label: "Ambient", kind: "Ambient" as const }));
-  const baseFlow = [...learningItems];
+  type FlowItem = { id: string; label: string; kind: "Lernmoment" | "Ambient" };
+  const learningItems: FlowItem[] = Array.from({ length: stepCount }, (_, index): FlowItem => ({ id: `learning-${index}`, label: preview[index % preview.length], kind: "Lernmoment" }));
+  const ambientItems: FlowItem[] = Array.from({ length: ambientCount }, (_, index): FlowItem => ({ id: `ambient-${index}`, label: "Ambient", kind: "Ambient" }));
+  const baseFlow: FlowItem[] = [...learningItems];
   ambientItems.forEach((item, index) => baseFlow.splice(Math.min(baseFlow.length, (index + 1) * Math.ceil(stepCount / (ambientCount + 1)) + index), 0, item));
   baseFlow.push(...manualItems);
   const flow = (flowOrder ?? baseFlow.map((_, index) => index)).map(index => baseFlow[index]).filter(Boolean);
