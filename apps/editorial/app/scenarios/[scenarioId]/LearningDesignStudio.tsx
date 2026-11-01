@@ -53,6 +53,8 @@ export function LearningDesignStudio({ scenarioId, latestDesign }: Props) {
   const [showFlowPreview, setShowFlowPreview] = useState(false);
   const [flowOrder, setFlowOrder] = useState<number[] | null>(null);
   const [dragIndex, setDragIndex] = useState<number | null>(null);
+  const [manualItems, setManualItems] = useState<{ id: string; label: string; kind: "Lernmoment" | "Ambient" }[]>([]);
+  const [showAddContent, setShowAddContent] = useState(false);
   const [busy, startTransition] = useTransition();
   const [message, setMessage] = useState("");
 
@@ -61,7 +63,12 @@ export function LearningDesignStudio({ scenarioId, latestDesign }: Props) {
   const stepCount = duration <= 10 ? 3 : duration <= 25 ? 5 : duration <= 45 ? 7 : 9;
   const ambientMinutes = ambient === "focused" ? 0 : ambient === "balanced" ? 5 : 12;
   const totalDuration = duration + ambientMinutes;
-  const baseFlow = preview.flatMap((item,index) => [{label:item,kind:"Lernmoment"}, ...(ambient !== "focused" && index < preview.length - 1 ? [{label:"Ambient",kind:"Ambient"}] : [])]);
+  const ambientCount = ambient === "focused" ? 0 : ambient === "balanced" ? Math.max(1, Math.ceil(stepCount / 3)) : Math.max(2, Math.ceil(stepCount / 2));
+  const learningItems = Array.from({ length: stepCount }, (_, index) => ({ id: `learning-${index}`, label: preview[index % preview.length], kind: "Lernmoment" as const }));
+  const ambientItems = Array.from({ length: ambientCount }, (_, index) => ({ id: `ambient-${index}`, label: "Ambient", kind: "Ambient" as const }));
+  const baseFlow = [...learningItems];
+  ambientItems.forEach((item, index) => baseFlow.splice(Math.min(baseFlow.length, (index + 1) * Math.ceil(stepCount / (ambientCount + 1)) + index), 0, item));
+  baseFlow.push(...manualItems);
   const flow = (flowOrder ?? baseFlow.map((_, index) => index)).map(index => baseFlow[index]).filter(Boolean);
   const pedagogy: Record<BloomLevel, { model: string; note: string }> = {
     understand: { model: "Kolb · Erfahren → Beobachten → Einordnen", note: "Der Lernweg schafft zuerst Orientierung und verbindet Beobachtungen mit neuen Zusammenhängen." },
@@ -118,7 +125,7 @@ export function LearningDesignStudio({ scenarioId, latestDesign }: Props) {
           <div className="flex items-center gap-2"><Target className="h-4 w-4 text-violet-600" /><h3 className="text-sm font-bold text-slate-900">1. Lernziel wählen</h3></div>
           <p className="mt-1 text-xs text-slate-500">Das ist keine Kosmetik: Deine Auswahl steuert den kognitiven Anspruch und wird an die Generierung übergeben.</p>
           <div className="mt-3 grid gap-2 sm:grid-cols-2 lg:grid-cols-5">
-            {GOALS.map((option) => <GoalCard key={option.value} active={goal === option.value} option={option} onClick={() => setGoal(option.value)} />)}
+            {GOALS.map((option) => <GoalCard key={option.value} active={goal === option.value} option={option} onClick={() => { setGoal(option.value); setFlowOrder(null); }} />)}
           </div>
         </div>
 
@@ -163,13 +170,13 @@ export function LearningDesignStudio({ scenarioId, latestDesign }: Props) {
             <button type="button" onClick={() => setShowFlowPreview(!showFlowPreview)} className="rounded-xl border border-violet-200 bg-white px-3 py-2 text-xs font-semibold text-violet-700">Lernweg-Vorschau</button>
           </div>
           <div className="mt-4 grid gap-2 sm:grid-cols-3">
-            {([["focused","Fokussiert","Nur der Lernweg"],["balanced","Ausgewogen","+ ca. 5 Min. Feed entdecken"],["lively","Lebendig","+ ca. 10–15 Min. Entdeckungszeit"]] as const).map(([value,title,note]) => <button key={value} type="button" onClick={() => setAmbient(value)} className={`rounded-xl border p-3 text-left ${ambient === value ? "border-violet-400 bg-violet-50" : "border-slate-200 bg-white"}`}><span className="block text-sm font-semibold text-slate-800">{title}</span><span className="mt-1 block text-[11px] text-slate-500">{note}</span></button>)}
+            {([["focused","Fokussiert","Nur der Lernweg"],["balanced","Ausgewogen","+ ca. 5 Min. Feed entdecken"],["lively","Lebendig","+ ca. 10–15 Min. Entdeckungszeit"]] as const).map(([value,title,note]) => <button key={value} type="button" onClick={() => { setAmbient(value); setFlowOrder(null); }} className={`rounded-xl border p-3 text-left ${ambient === value ? "border-violet-400 bg-violet-50" : "border-slate-200 bg-white"}`}><span className="block text-sm font-semibold text-slate-800">{title}</span><span className="mt-1 block text-[11px] text-slate-500">{note}</span></button>)}
           </div>
           <div className="mt-4 flex items-center justify-between gap-4 rounded-2xl border border-violet-100 bg-white px-4 py-3">
             <div className="flex items-center gap-3"><div className="grid h-10 w-10 place-items-center rounded-full border-4 border-violet-100 bg-violet-50"><Clock3 className="h-4 w-4 text-violet-600" /></div><div><strong className="block text-sm text-slate-900">Geschätztes Gesamterlebnis</strong><span className="text-[11px] text-slate-500">Lernzeit plus Feed-Entdeckung und Ambient-Momente</span></div></div>
             <strong className="text-lg text-violet-700">ca. {totalDuration}–{totalDuration + (duration <= 25 ? 5 : 10)} Min.</strong>
           </div>
-          {showFlowPreview && <div className="mt-4 overflow-x-auto rounded-2xl border border-violet-100 bg-white p-4"><p className="text-[11px] font-bold uppercase tracking-wide text-violet-700">Lernweg-Vorschau</p><p className="mt-1 text-xs text-slate-500">Verschiebe die Karten, um den Rhythmus des Lernwegs anzupassen.</p><div className="mt-4 flex min-w-max gap-3">{flow.map((item,index) => <div key={`${item.kind}-${item.label}-${index}`} draggable onDragStart={() => setDragIndex(index)} onDragOver={(e) => e.preventDefault()} onDrop={() => { if (dragIndex === null || dragIndex === index) return; const next = [...flow]; const [moved] = next.splice(dragIndex, 1); next.splice(index, 0, moved); const mapped = next.map(item => baseFlow.findIndex(candidate => candidate === item)); setFlowOrder(mapped); setDragIndex(null); }} className={`relative w-28 cursor-grab rounded-xl border p-3 active:cursor-grabbing ${item.kind === "Ambient" ? "border-slate-200 bg-slate-50" : "border-violet-200 bg-violet-50"}`}><GripVertical className="absolute right-2 top-2 h-3 w-3 text-slate-300" /><div className="aspect-[4/3] rounded-lg bg-white/70 px-2 py-2 text-[10px] font-bold uppercase tracking-wide text-slate-500">{item.kind}</div><p className="mt-2 text-xs font-semibold text-slate-700">{item.label}</p><span className="mt-1 block text-[10px] text-slate-400">{index + 1}</span></div>)}</div></div>}
+          {showFlowPreview && <div className="mt-4 overflow-x-auto rounded-2xl border border-violet-100 bg-white p-4"><div className="flex items-start justify-between gap-4"><div><p className="text-[11px] font-bold uppercase tracking-wide text-violet-700">Lernweg-Vorschau</p><p className="mt-1 text-xs text-slate-500">Verschiebe die Karten oder ergänze eigene Inhalte. Die Vorschau folgt deinen Einstellungen.</p></div><button type="button" onClick={() => setShowAddContent(!showAddContent)} className="shrink-0 rounded-xl border border-dashed border-violet-300 bg-violet-50 px-3 py-2 text-xs font-semibold text-violet-700">＋ Inhalte hinzufügen</button></div>{showAddContent && <div className="mt-3 flex flex-wrap gap-2 rounded-xl border border-violet-100 bg-violet-50/60 p-3"><button type="button" onClick={() => { setManualItems([...manualItems, { id: `manual-${Date.now()}`, label: "Eigener Lernmoment", kind: "Lernmoment" }]); setFlowOrder(null); setShowAddContent(false); }} className="rounded-lg bg-white px-3 py-2 text-xs font-semibold text-slate-700 shadow-sm">＋ Lernmoment</button><button type="button" onClick={() => { setManualItems([...manualItems, { id: `manual-${Date.now()}`, label: "Eigener Ambient-Moment", kind: "Ambient" }]); setFlowOrder(null); setShowAddContent(false); }} className="rounded-lg bg-white px-3 py-2 text-xs font-semibold text-slate-700 shadow-sm">＋ Ambient</button></div>}<div className="mt-4 flex min-w-max gap-3">{flow.map((item,index) => <div key={item.id} draggable onDragStart={() => setDragIndex(index)} onDragOver={(e) => e.preventDefault()} onDrop={() => { if (dragIndex === null || dragIndex === index) return; const next = [...flow]; const [moved] = next.splice(dragIndex, 1); next.splice(index, 0, moved); const mapped = next.map(item => baseFlow.findIndex(candidate => candidate.id === item.id)); setFlowOrder(mapped); setDragIndex(null); }} className={`relative w-28 cursor-grab rounded-xl border p-3 active:cursor-grabbing ${item.kind === "Ambient" ? "border-slate-200 bg-slate-50" : "border-violet-200 bg-violet-50"}`}><GripVertical className="absolute right-2 top-2 h-3 w-3 text-slate-300" /><div className="aspect-[4/3] rounded-lg bg-white/70 px-2 py-2 text-[10px] font-bold uppercase tracking-wide text-slate-500">{item.kind}</div><p className="mt-2 text-xs font-semibold text-slate-700">{item.label}</p><span className="mt-1 block text-[10px] text-slate-400">{index + 1}</span></div>)}</div></div>}
         </div>
 
         <div className="flex flex-col gap-3 border-t border-slate-100 pt-5 sm:flex-row sm:items-center sm:justify-between">
