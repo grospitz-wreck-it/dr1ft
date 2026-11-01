@@ -182,6 +182,15 @@ export async function updateContentItemBody(contentItemId: string, scenarioId: s
   revalidatePath("/scenarios/" + scenarioId);
 }
 
+
+/** Entfernt einen Inhalt vollständig aus diesem Szenario. */
+export async function deleteContentItem(contentItemId: string, scenarioId: string) {
+  const supabase = supabaseServerClient();
+  const { error } = await supabase.from("content_items").delete().eq("id", contentItemId).eq("scenario_id", scenarioId);
+  if (error) throw new Error(error.message);
+  revalidatePath("/scenarios/" + scenarioId);
+}
+
 export async function updateContentItemStatus(
   contentItemId: string,
   currentStatus: string,
