@@ -360,40 +360,7 @@ export default async function ScenarioDetailPage({ params, searchParams = {} }: 
                       )}
                     </section>
             
-                    <details id="workflow-plan" className="scroll-mt-6 rounded-2xl border border-slate-200 bg-white">
-                      <summary className="cursor-pointer list-none p-5">
-                        <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-                          <div>
-                            <div className="text-[11px] font-semibold uppercase tracking-wide text-violet-700">Optional · für komplexe Szenarien</div>
-                            <h2 className="mt-1 text-base font-semibold text-slate-900">Didaktische Struktur und Lernziele</h2>
-                            <p className="mt-1 max-w-2xl text-sm leading-5 text-slate-500">Du kannst Content-Pieces direkt erstellen. Diese zusätzliche Struktur ist nur nötig, wenn du Lernschritte, Missionen und Evidenz gezielt planen oder bestehende Lernpläne weiterbearbeiten möchtest.</p>
-                          </div>
-                          <span className="shrink-0 rounded-xl border border-slate-200 px-3 py-2 text-xs font-semibold text-slate-600">{latestLearningDesign ? `Lernplan v${latestLearningDesign.version}` : "Noch nicht angelegt"}</span>
-                        </div>
-                      </summary>
-                      <div className="space-y-5 border-t border-slate-100 p-4 sm:p-5">
-                        <LearningDesignStudio scenarioId={scenarioId} latestDesign={latestLearningDesign} />
-                        {latestLearningDesign && (
-                          <LearningStepEditor
-                            scenarioId={scenarioId}
-                            designId={latestLearningDesign.id}
-                            steps={learningSteps ?? []}
-                            mappings={frameworkMappings ?? []}
-                            competencyLabels={learningCompetencyLabels}
-                            objectiveLabels={learningObjectiveLabels}
-                            availableObjectives={learningObjectives ?? []}
-                            availableCompetencies={competencies ?? []}
-                            availableMissions={missions ?? []}
-                            objectiveMappings={learningStepObjectiveMappings ?? []}
-                            competencyMappings={learningStepCompetencyMappings ?? []}
-                            missionMappings={learningStepMissionMappings ?? []}
-                            evidenceIndicators={learningEvidenceIndicators ?? []}
-                            contentMappings={learningStepContentMappings ?? []}
-                            contentItems={contentItems ?? []}
-                          />
-                        )}
-                      </div>
-                    </details>
+                    
 
                     <details className="bg-white border border-slate-200 rounded-2xl shadow-sm">
                       <summary className="cursor-pointer px-6 py-4 text-sm font-semibold text-slate-700">Erweiterte manuelle Anlage (optional)</summary>
