@@ -12,6 +12,7 @@ import { PostEditForm } from "./PostEditForm";
 import { ContentAttachmentEditor } from "./ContentAttachmentEditor";
 import { ContentLearningTaskEditor } from "./ContentLearningTaskEditor";
 import { ImageEditPopover } from "./ImageEditPopover";
+import { ContentNpcAssignmentEditor } from "./ContentNpcAssignmentEditor";
 
 interface Props {
   params: { scenarioId: string };
@@ -277,6 +278,7 @@ export default async function ScenarioDetailPage({ params, searchParams = {} }: 
                                         <div className="mb-4 border-b border-slate-100 pb-3"><span className="text-[11px] font-bold uppercase tracking-[0.14em] text-violet-600">Post konfigurieren</span><p className="mt-1 text-xs text-slate-500">Lerninteraktionen, Medien und Veröffentlichungsstatus.</p></div>
                                         <div className="space-y-3">
                                           <ContentLearningTaskEditor scenarioId={scenarioId} contentItemId={item.id} initialTask={item.extra?.learningTask ?? null} competencies={competencies ?? []} />
+                                          <ContentNpcAssignmentEditor scenarioId={scenarioId} contentItemId={item.id} initialCreatorId={item.creator_id ?? null} creators={creators ?? []} />
                                           <ContentAttachmentEditor scenarioId={scenarioId} contentItemId={item.id} />
                                         </div>
                                         <div className="mt-auto flex items-center justify-between gap-3 border-t border-slate-100 pt-4"><ContentStatusControl contentItemId={item.id} status={item.status} /><form action={deleteContentItem.bind(null, item.id, scenarioId)}><button type="submit" className="inline-flex items-center gap-1.5 rounded-lg border border-rose-100 bg-rose-50 px-2.5 py-2 text-xs font-semibold text-rose-700 transition hover:bg-rose-100" title="Inhalt entfernen"><Trash2 className="h-3.5 w-3.5" />Entfernen</button></form></div>
