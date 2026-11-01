@@ -1,7 +1,7 @@
 import type { ReactNode } from "react";
 import { ArrowLeft, BookOpen, CheckCircle2, ChevronDown, Clock3, FileText, Flag, GraduationCap, Info, Layers3, Pencil, Play, Route, School, Sparkles, Trash2, Users } from "lucide-react";
 import { supabaseServerClient } from "../../../lib/supabaseServerClient";
-import { createContentItem, deleteContentItem, generateScenarioContent, optimizeScenarioBasics, toggleScenarioActive, updateContentItemBody, updateScenarioBasics, updateScenarioAmbientDensity } from "../actions";
+import { deleteContentItem, generateScenarioContent, optimizeScenarioBasics, toggleScenarioActive, updateContentItemBody, updateScenarioBasics, updateScenarioAmbientDensity } from "../actions";
 import { ContentStatusControl } from "./ContentStatusControl";
 import { ScenarioCoverEditor } from "../ScenarioCoverEditor";
 import { AiGenerationButton } from "../../components/AiGenerationButton";
@@ -303,48 +303,7 @@ export default async function ScenarioDetailPage({ params, searchParams = {} }: 
             
                     
 
-                    <details className="bg-white border border-slate-200 rounded-2xl shadow-sm">
-                      <summary className="cursor-pointer px-6 py-4 text-sm font-semibold text-slate-700">Erweiterte manuelle Anlage (optional)</summary>
-                      <form action={createContentItem.bind(null, scenarioId)} encType="multipart/form-data" className="px-6 pb-6 pt-2 space-y-3">
-                        <select name="type" className="border border-slate-200 rounded-xl px-3 py-2 w-full text-sm">
-                          <option value="post">Post</option>
-                          <option value="comment">Kommentar</option>
-                          <option value="dm_message">DM-Nachricht</option>
-                          <option value="reflection_prompt">Reflexions-Prompt</option>
-                        </select>
-                        <textarea name="body" placeholder="Inhalt" required className="border border-slate-200 rounded-xl px-3 py-3 w-full text-sm" />
-                        <div>
-                          <label className="text-xs text-slate-500 block mb-1">Bild/Video (optional)</label>
-                          <input name="media" type="file" accept="image/*,video/*" className="border border-slate-200 rounded-xl px-3 py-2 w-full text-sm" />
-                        </div>
-                        <select name="creatorId" className="border border-slate-200 rounded-xl px-3 py-2 w-full text-sm">
-                          <option value="">Kein Creator</option>
-                          {creators?.map((creator) => <option key={creator.id} value={creator.id}>{creator.display_name} {creator.creator_role ? `(${creator.creator_role})` : ""}</option>)}
-                        </select>
-                        <select name="parentContentId" className="border border-slate-200 rounded-xl px-3 py-2 w-full text-sm">
-                          <option value="">Kein Bezug</option>
-                          {possibleParents?.map((parent) => <option key={parent.id} value={parent.id}>Kommentar zu: {parent.body.slice(0, 60)}…</option>)}
-                        </select>
-                        <div className="flex gap-3">
-                          <input name="baseEngagement" type="number" min={0} placeholder="Basis-Likes" className="border border-slate-200 rounded-xl px-3 py-2 text-sm flex-1" />
-                          <input name="baseCommentCount" type="number" min={0} placeholder="Basis-Kommentare" className="border border-slate-200 rounded-xl px-3 py-2 text-sm flex-1" />
-                        </div>
-                        <input name="manipulationTechniques" placeholder="Manipulationstechniken, kommagetrennt" className="border border-slate-200 rounded-xl px-3 py-2 w-full text-sm" />
-                        <div>
-                          <p className="mb-2 text-xs text-slate-500">Ziel-Kompetenzen</p>
-                          <div className="grid md:grid-cols-2 gap-1">
-                            {competencies?.map((competency) => (
-                              <label key={competency.id} className="flex items-center gap-2 text-xs text-slate-600"><input type="checkbox" name="targetCompetencies" value={competency.id} />{competency.title}</label>
-                            ))}
-                          </div>
-                        </div>
-                        <div className="flex gap-3">
-                          <select name="difficulty" className="border border-slate-200 rounded-xl px-3 py-2 text-sm"><option value="1">Schwierigkeit 1</option><option value="2">Schwierigkeit 2</option><option value="3">Schwierigkeit 3</option><option value="4">Schwierigkeit 4</option><option value="5">Schwierigkeit 5</option></select>
-                          <select name="ageRating" className="border border-slate-200 rounded-xl px-3 py-2 text-sm"><option value="all_ages">Alle Altersgruppen</option><option value="12_plus">12+</option><option value="16_plus">16+</option></select>
-                        </div>
-                        <button type="submit" className="bg-accent hover:bg-accent-hover text-white text-sm px-4 py-2 rounded-xl">Als Entwurf anlegen</button>
-                      </form>
-                    </details>
+
             
             
           </div>
