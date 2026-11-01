@@ -70,7 +70,9 @@ export function LearningDesignStudio({ scenarioId, latestDesign }: Props) {
   const baseFlow: FlowItem[] = [...learningItems];
   ambientItems.forEach((item, index) => baseFlow.splice(Math.min(baseFlow.length, (index + 1) * Math.ceil(stepCount / (ambientCount + 1)) + index), 0, item));
   baseFlow.push(...manualItems);
-  const flow = (flowOrder ?? baseFlow.map((_, index) => index)).map(index => baseFlow[index]).filter(Boolean);
+  const flow: FlowItem[] = (flowOrder ?? baseFlow.map((_, index) => index))
+    .map(index => baseFlow[index])
+    .filter((item): item is FlowItem => item !== undefined);
   const pedagogy: Record<BloomLevel, { model: string; note: string }> = {
     understand: { model: "Kolb · Erfahren → Beobachten → Einordnen", note: "Der Lernweg schafft zuerst Orientierung und verbindet Beobachtungen mit neuen Zusammenhängen." },
     apply: { model: "Kolb · Erproben im Kontext", note: "Wissen wird in einer konkreten Situation angewendet und anschließend überprüft." },
