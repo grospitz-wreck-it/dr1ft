@@ -125,7 +125,13 @@ export function ContentLearningTaskEditor({ scenarioId, contentItemId, initialTa
       </button>
 
       {open && (
-        <form onSubmit={submit} className="space-y-5 border-t border-slate-100 p-4 sm:p-5">
+        <div className="fixed inset-0 z-50 flex items-end justify-center bg-slate-950/35 p-3 backdrop-blur-[2px] sm:items-center sm:p-6" role="dialog" aria-modal="true" aria-label="Lernaufgabe und Interaktionen" onMouseDown={() => setOpen(false)}>
+          <div className="max-h-[92vh] w-full max-w-4xl overflow-y-auto rounded-3xl border border-violet-100 bg-white shadow-2xl" onMouseDown={(event) => event.stopPropagation()}>
+            <div className="sticky top-0 z-10 flex items-center justify-between gap-4 border-b border-slate-100 bg-white/95 px-5 py-4 backdrop-blur sm:px-6">
+              <div><h2 className="text-lg font-bold text-slate-950">Lernaufgabe &amp; Interaktionen</h2><p className="mt-0.5 text-xs text-slate-500">Lernnachweise und passende Reaktionen festlegen.</p></div>
+              <button type="button" onClick={() => setOpen(false)} className="rounded-xl p-2 text-slate-400 transition hover:bg-slate-100 hover:text-slate-700" aria-label="Schließen"><X className="h-5 w-5" /></button>
+            </div>
+            <form onSubmit={submit} className="space-y-5 p-4 sm:p-5">
           <div className="space-y-3">
             <div className="flex flex-wrap items-center justify-between gap-3">
               <p className="max-w-2xl text-xs leading-relaxed text-slate-500">Alle Aktionen sind im Player immer sichtbar. Hier legst du fest, welche davon als Lernnachweis zählen und wann Lernende eine Rückmeldung erhalten.</p>
