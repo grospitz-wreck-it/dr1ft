@@ -121,19 +121,26 @@ function youtubeEmbedUrl(value: string) {
   const source = iframe || trimmed;
   try {
     const url = new URL(source);
-    if (url.hostname.includes("youtube.com")) {
-      const id = url.searchParams.get("v");
-      return id ? "https://www.youtube.com/embed/" + id : source;
+    if (url.hostname === "youtu.be") {
+      const id = url.pathname.split("/").filter(Boolean)[0];
+      return id ? "https://www.youtube.com/embed/" + id : null;
     }
-    if (url.hostname === "youtu.be") return "https://www.youtube.com/embed/" + url.pathname.slice(1);
-    if (url.hostname.includes("vimeo.com")) return "https://player.vimeo.com/video/" + url.pathname.split("/").filter(Boolean).pop();
-    return source;
+    if (url.hostname === "youtube.com" || url.hostname.endsWith(".youtube.com") || url.hostname === "youtube-nocookie.com" || url.hostname.endsWith(".youtube-nocookie.com")) {
+      const parts = url.pathname.split("/").filter(Boolean);
+      const id = parts[0] === "embed" || parts[0] === "shorts" ? parts[1] : url.searchParams.get("v");
+      return id ? "https://www.youtube.com/embed/" + id + (url.searchParams.has("si") ? "?si=" + encodeURIComponent(url.searchParams.get("si")!) : "") : null;
+    }
+    if (url.hostname === "vimeo.com" || url.hostname.endsWith(".vimeo.com")) {
+      const id = url.pathname.split("/").filter(Boolean).pop();
+      return id && /^\d+$/.test(id) ? "https://player.vimeo.com/video/" + id : null;
+    }
+    return null;
   } catch {
     return null;
   }
 }
 
-export async function updateExistingContentMedia(scenarioId: string, contentItemId: string, input: { format?: string; prompt?: string; url?: string; ai?: boolean; creatorId?: string | null }) {
+export async function updateExistingContentMedia(scenarioId: string, contentItemId: string, input: { format?: string; prompt?: string; url?: string; ai?: boolean; creatorId?: string | null; remove?: boolean }) {
   const supabase = supabaseServerClient();
   const { data: item } = await supabase.from("content_items").select("id,body,media_url,media_type,extra").eq("id", contentItemId).eq("scenario_id", scenarioId).single();
   if (!item) throw new Error("Inhalt nicht gefunden.");
@@ -144,11 +151,33 @@ export async function updateExistingContentMedia(scenarioId: string, contentItem
   const prompt = String(input.prompt || "").trim();
   const extra = { ...((item.extra || {}) as Record<string, unknown>) };
 
+  if (input.remove) {
+    delete extra.embed;
+    delete extra.videoUrl;
+    delete extra.videoConcept;
+    delete extra.imageGeneration;
+    delete extra.imageEdit;
+    const { error } = await supabase.from("content_items").update({ media_url: null, media_type: null, extra, updated_at: new Date().toISOString() }).eq("id", contentItemId).eq("scenario_id", scenarioId);
+    if (error) throw new Error(error.message);
+    revalidatePath("/scenarios/" + scenarioId);
+    return { ok: true };
+  }
+
   if (format === "embed") {
     const embedUrl = youtubeEmbedUrl(url);
     if (!embedUrl) throw new Error("Bitte eine gültige URL oder einen iframe-Embed-Code angeben.");
     extra.embed = { url: embedUrl, source: url };
-    const { error } = await supabase.from("content_items").update({ extra, updated_at: new Date().toISOString() }).eq("id", contentItemId).eq("scenario_id", scenarioId);
+    delete extra.videoUrl;
+    const { error } = await supabase.from("content_items").update({ media_url: null, media_type: null, extra, updated_at: new Date().toISOString() }).eq("id", contentItemId).eq("scenario_id", scenarioId);
+    if (error) throw new Error(error.message);
+    revalidatePath("/scenarios/" + scenarioId);
+    return { ok: true };
+  }
+
+  if (format === "photo" && url && input.ai === false) {
+    delete extra.embed;
+    delete extra.videoUrl;
+    const { error } = await supabase.from("content_items").update({ media_url: url, media_type: "image", extra, updated_at: new Date().toISOString() }).eq("id", contentItemId).eq("scenario_id", scenarioId);
     if (error) throw new Error(error.message);
     revalidatePath("/scenarios/" + scenarioId);
     return { ok: true };
