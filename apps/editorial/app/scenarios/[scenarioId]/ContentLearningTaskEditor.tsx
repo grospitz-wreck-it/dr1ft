@@ -6,9 +6,14 @@ import { Check, ChevronDown, ChevronRight, GraduationCap, Save, Search, Image as
 
 type Interaction = { id: string; label: string; instruction?: string; custom?: boolean; discoveryTitle?: string; discoveryMessage?: string; discoveryCompetency?: string };
 type InteractionAssessment = { assessedActions: string[]; acceptableActions: string[]; evidenceKey: string };
+type ResponseMode = "reflection" | "single_choice" | "multiple_choice" | "decision";
+type ResponseOption = { id: string; label: string; consequence: string };
 type Task = {
   purpose: string;
   learnerAction: string;
+  responseMode: ResponseMode;
+  responsePrompt: string;
+  responseOptions: ResponseOption[];
   interactions: Interaction[];
   feedback: string;
   successCriteria: string;
@@ -36,6 +41,9 @@ export function ContentLearningTaskEditor({ scenarioId, contentItemId, initialTa
     return {
       purpose: saved.purpose ?? "",
       learnerAction: saved.learnerAction ?? "",
+      responseMode: (["reflection", "single_choice", "multiple_choice", "decision"].includes((saved as any).responseMode) ? (saved as any).responseMode : "reflection") as ResponseMode,
+      responsePrompt: typeof (saved as any).responsePrompt === "string" ? (saved as any).responsePrompt : (saved.learnerAction ?? ""),
+      responseOptions: Array.isArray((saved as any).responseOptions) ? (saved as any).responseOptions.filter((option: any) => option && typeof option.id === "string").map((option: any) => ({ id: option.id, label: String(option.label ?? ""), consequence: String(option.consequence ?? "") })) : [],
       interactions: DEFAULT_INTERACTIONS.map(base => { const prior = (saved.interactions ?? []).find(entry => entry.id === base.id || (base.id === "inspect_context" && entry.id === "fact_check")); return { ...base, discoveryMessage: prior?.discoveryMessage ?? "" }; }),
       feedback: saved.feedback ?? "",
       successCriteria: saved.successCriteria ?? "",
@@ -62,6 +70,18 @@ export function ContentLearningTaskEditor({ scenarioId, contentItemId, initialTa
     setTask(current => ({ ...current, [key]: value }));
     setMessage("");
     setError("");
+  }
+
+  function updateResponseOption(index: number, patch: Partial<ResponseOption>) {
+    update("responseOptions", task.responseOptions.map((option, current) => current === index ? { ...option, ...patch } : option));
+  }
+
+  function addResponseOption() {
+    update("responseOptions", [...task.responseOptions, { id: crypto.randomUUID(), label: "", consequence: "" }]);
+  }
+
+  function removeResponseOption(index: number) {
+    update("responseOptions", task.responseOptions.filter((_, current) => current !== index));
   }
 
   function setAssessed(actionId: string, checked: boolean) {
@@ -132,6 +152,57 @@ export function ContentLearningTaskEditor({ scenarioId, contentItemId, initialTa
               <button type="button" onClick={() => setOpen(false)} className="rounded-xl p-2 text-slate-400 transition hover:bg-slate-100 hover:text-slate-700" aria-label="Schließen"><X className="h-5 w-5" /></button>
             </div>
             <form onSubmit={submit} className="space-y-5 p-4 sm:p-5">
+          <section className="rounded-2xl border border-violet-200 bg-violet-50/40 p-3 sm:p-4">
+            <div className="flex flex-wrap items-start justify-between gap-3">
+              <div>
+                <h3 className="text-sm font-bold text-slate-900">Lernkarte im Feed</h3>
+                <p className="mt-0.5 text-[11px] text-slate-500">Lege fest, wie Lernende auf diesen Beitrag reagieren.</p>
+              </div>
+              <span className="rounded-full bg-white px-2.5 py-1 text-[10px] font-semibold text-violet-700">Pflichtfelder je Kartentyp</span>
+            </div>
+            <div className="mt-3 grid grid-cols-2 gap-2 sm:grid-cols-4">
+              {([
+                ["reflection", "Reflexion"],
+                ["single_choice", "Single Choice"],
+                ["multiple_choice", "Multiple Choice"],
+                ["decision", "Entscheidung"],
+              ] as const).map(([value, label]) => (
+                <button key={value} type="button" onClick={() => update("responseMode", value)} className={`rounded-xl border px-3 py-2 text-xs font-semibold transition ${task.responseMode === value ? "border-violet-400 bg-violet-100 text-violet-800" : "border-slate-200 bg-white text-slate-600 hover:border-violet-200"}`}>{label}</button>
+              ))}
+            </div>
+            <label className="mt-3 block text-xs font-semibold text-slate-700">
+              {task.responseMode === "reflection" ? "Reflexionsfrage" : task.responseMode === "decision" ? "Entscheidungssituation" : "Frage"}
+              <textarea value={task.responsePrompt} onChange={event => update("responsePrompt", event.target.value)} rows={2} maxLength={1200} placeholder={task.responseMode === "reflection" ? "Was geht dir durch den Kopf, wenn du den Beitrag siehst?" : "Was würdest du in dieser Situation tun?"} className={inputClass} />
+            </label>
+            {task.responseMode !== "reflection" && (
+              <div className="mt-3 space-y-2">
+                <div className="flex items-center justify-between gap-2">
+                  <span className="text-xs font-semibold text-slate-700">Antwortmöglichkeiten <span className="font-normal text-slate-400">· mindestens 2</span></span>
+                  <button type="button" onClick={addResponseOption} className="inline-flex items-center gap-1 rounded-lg border border-violet-200 bg-white px-2.5 py-1.5 text-[11px] font-semibold text-violet-700"><Plus className="h-3 w-3" /> Option</button>
+                </div>
+                {task.responseOptions.map((option, index) => (
+                  <div key={option.id} className="rounded-xl border border-slate-200 bg-white p-3">
+                    <div className="flex items-center gap-2">
+                      <input value={option.label} onChange={event => updateResponseOption(index, { label: event.target.value })} maxLength={180} placeholder={`Option ${index + 1}`} className="min-w-0 flex-1 rounded-lg border border-slate-200 px-3 py-2 text-sm" />
+                      <button type="button" onClick={() => removeResponseOption(index)} aria-label="Option entfernen" className="rounded-lg p-2 text-slate-400 hover:bg-slate-100 hover:text-red-600"><X className="h-4 w-4" /></button>
+                    </div>
+                    {(task.responseMode === "decision" || task.responseMode === "single_choice" || task.responseMode === "multiple_choice") && (
+                      <label className="mt-2 block text-[11px] font-medium text-slate-500">
+                        {task.responseMode === "decision" ? "Was passiert danach?" : "Welche Rückmeldung oder Folge wird sichtbar?"}
+                        <textarea value={option.consequence} onChange={event => updateResponseOption(index, { consequence: event.target.value })} rows={2} maxLength={600} placeholder="Beschreibe die Folge dieser Wahl – ohne richtig/falsch-Bewertung." className="mt-1 w-full rounded-lg border border-slate-200 px-3 py-2 text-xs" />
+                      </label>
+                    )}
+                  </div>
+                ))}
+                {task.responseOptions.length < 2 && <p className="text-[11px] text-amber-700">Ergänze mindestens zwei Antwortmöglichkeiten.</p>}
+              </div>
+            )}
+            <label className="mt-3 block text-xs font-semibold text-slate-700">
+              Rückmeldung nach dem Absenden
+              <textarea value={task.feedback} onChange={event => update("feedback", event.target.value)} rows={2} maxLength={1000} placeholder="Eine kurze, hilfreiche Rückmeldung – keine Note und kein Urteil." className={inputClass} />
+            </label>
+          </section>
+
           <div className="space-y-3">
             <div className="flex flex-wrap items-center justify-between gap-3">
               <p className="max-w-2xl text-xs leading-relaxed text-slate-500">Alle Aktionen sind im Player immer sichtbar. Hier legst du fest, welche davon als Lernnachweis zählen und wann Lernende eine Rückmeldung erhalten.</p>
