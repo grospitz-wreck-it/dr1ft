@@ -65,6 +65,7 @@ export function ContentLearningTaskEditor({ scenarioId, contentItemId, initialTa
 
   const assessmentCount = task.assessment.assessedActions.length;
   const acceptableCount = task.assessment.acceptableActions.length;
+  const responseCardComplete = Boolean(task.responsePrompt.trim()) && (task.responseMode === "reflection" || (task.responseOptions.length >= 2 && task.responseOptions.every(option => option.label.trim()) && (task.responseMode !== "decision" || task.responseOptions.every(option => option.consequence.trim()))));
 
   function update<K extends keyof Task>(key: K, value: Task[K]) {
     setTask(current => ({ ...current, [key]: value }));
@@ -146,7 +147,7 @@ export function ContentLearningTaskEditor({ scenarioId, contentItemId, initialTa
 
       {open && (
         <div className="fixed inset-0 z-50 flex items-end justify-center bg-slate-950/35 p-3 backdrop-blur-[2px] sm:items-center sm:p-6" role="dialog" aria-modal="true" aria-label="Lernaufgabe und Interaktionen" onMouseDown={() => setOpen(false)}>
-          <div className="max-h-[92vh] w-full max-w-4xl overflow-y-auto rounded-3xl border border-violet-100 bg-white shadow-2xl" onMouseDown={(event) => event.stopPropagation()}>
+          <div className="max-h-[92vh] w-full max-w-3xl overflow-y-auto rounded-3xl border border-violet-100 bg-white shadow-2xl" onMouseDown={(event) => event.stopPropagation()}>
             <div className="sticky top-0 z-10 flex items-center justify-between gap-4 border-b border-slate-100 bg-white/95 px-5 py-4 backdrop-blur sm:px-6">
               <div><h2 className="text-lg font-bold text-slate-950">Lernaufgabe &amp; Interaktionen</h2><p className="mt-0.5 text-xs text-slate-500">Lernnachweise und passende Reaktionen festlegen.</p></div>
               <button type="button" onClick={() => setOpen(false)} className="rounded-xl p-2 text-slate-400 transition hover:bg-slate-100 hover:text-slate-700" aria-label="Schließen"><X className="h-5 w-5" /></button>
@@ -158,7 +159,7 @@ export function ContentLearningTaskEditor({ scenarioId, contentItemId, initialTa
                 <h3 className="text-sm font-bold text-slate-900">Lernkarte im Feed</h3>
                 <p className="mt-0.5 text-[11px] text-slate-500">Lege fest, wie Lernende auf diesen Beitrag reagieren.</p>
               </div>
-              <span className="rounded-full bg-white px-2.5 py-1 text-[10px] font-semibold text-violet-700">Pflichtfelder je Kartentyp</span>
+              <span className={`rounded-full px-2.5 py-1 text-[10px] font-semibold ${responseCardComplete ? "bg-emerald-100 text-emerald-700" : "bg-amber-100 text-amber-800"}`}>{responseCardComplete ? "Karte vollständig" : "Karte noch unvollständig"}</span>
             </div>
             <div className="mt-3 grid grid-cols-2 gap-2 sm:grid-cols-4">
               {([
