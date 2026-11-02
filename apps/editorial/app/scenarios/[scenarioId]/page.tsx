@@ -144,6 +144,12 @@ export default async function ScenarioDetailPage({ params, searchParams = {} }: 
     items: (contentItems ?? []).filter((item) => item.status === status),
   })).filter((group) => group.items.length > 0);
 
+  const hasBasics = Boolean(scenario.title?.trim());
+  const hasLearningPlan = Boolean(latestLearningDesign && (learningSteps?.length ?? 0) > 0);
+  const hasFeedPost = (contentItems ?? []).some((item) => item.type === "post");
+  const hasMission = (missions ?? []).length > 0;
+  const isReadyForReview = hasBasics && hasLearningPlan && hasFeedPost && hasMission;
+
   return (
     <div className="min-h-screen bg-slate-50 px-6 py-6">
       <div className="max-w-6xl mx-auto space-y-6">
@@ -153,10 +159,10 @@ export default async function ScenarioDetailPage({ params, searchParams = {} }: 
 
         <ScenarioWizard
           steps={[
-            { title: "Thema & Ziel", description: "Grundlage des Szenarios", complete: true },
-            { title: "Lernplan", description: "Lernziel und Lernschritte", complete: Boolean(latestLearningDesign && (learningSteps?.length ?? 0) > 0) },
-            { title: "Posts erstellen", description: "Beiträge für den Feed", complete: (contentItems ?? []).some((item) => item.type === "post") && (missions ?? []).length > 0 },
-            { title: "Prüfen & freigeben", description: "Abschluss und Aktivierung", complete: Boolean(scenario.is_active) },
+            { title: "Grundlage", description: "Thema und Ziel", complete: hasBasics },
+            { title: "Lernplan", description: "Lernziel und Lernschritte", complete: hasLearningPlan },
+            { title: "Feed", description: "Erlebnisse und Beiträge", complete: hasFeedPost },
+            { title: "Prüfen", description: "Vollständigkeit", complete: isReadyForReview },
           ]}
         >
           <div className="space-y-5">
@@ -325,10 +331,10 @@ export default async function ScenarioDetailPage({ params, searchParams = {} }: 
                       </div>
                       <div className="mt-4 grid gap-2 sm:grid-cols-2 lg:grid-cols-4">
                         {[
-                          { label: "Thema angelegt", ok: true },
-                          { label: "Lernplan vorhanden", ok: Boolean(latestLearningDesign && (learningSteps?.length ?? 0) > 0) },
-                          { label: "Mindestens ein Post", ok: (contentItems ?? []).some((item) => item.type === "post") },
-                          { label: "Mindestens eine Mission", ok: (missions ?? []).length > 0 },
+                          { label: "Grundlage vorhanden", ok: hasBasics },
+                          { label: "Lernplan vorhanden", ok: hasLearningPlan },
+                          { label: "Feed-Beitrag vorhanden", ok: hasFeedPost },
+                          { label: "Mission vorhanden", ok: hasMission },
                         ].map((check) => (
                           <div key={check.label} className={`flex items-center gap-2 rounded-xl border px-3 py-2.5 text-xs ${check.ok ? "border-emerald-200 bg-emerald-50 text-emerald-800" : "border-amber-200 bg-amber-50 text-amber-800"}`}>
                             <span className="font-bold">{check.ok ? "✓" : "!"}</span>
@@ -336,8 +342,8 @@ export default async function ScenarioDetailPage({ params, searchParams = {} }: 
                           </div>
                         ))}
                       </div>
-                      {!scenario.is_active && (
-                        <p className="mt-3 text-xs text-slate-500">Das Szenario bleibt ein Entwurf, bis du es aktivierst. Fehlende Punkte lassen sich über die Schritte oben ergänzen.</p>
+                      {!isReadyForReview && (
+                        <p className="mt-3 text-xs text-slate-500">Ergänze die offenen Punkte in den Bereichen oben. Die Aktivierung bleibt eine separate redaktionelle Entscheidung.</p>
                       )}
                     </section>
           </div>
