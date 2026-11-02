@@ -240,7 +240,7 @@ export default async function ScenarioDetailPage({ params, searchParams = {} }: 
           </div>
           <div className="space-y-5">
                     <section id="workflow-plan" className="scroll-mt-6">
-                      <LearningDesignStudio scenarioId={scenarioId} latestDesign={latestLearningDesign} contentItems={contentItems ?? []} />
+                      <LearningDesignStudio scenarioId={scenarioId} latestDesign={latestLearningDesign} contentItems={contentItems ?? []} learningCards={Array.isArray((scenario as any).learning_cards) ? (scenario as any).learning_cards : []} />
                     </section>
 
                     <section id="workflow-cards" className="scroll-mt-6"><LearningCardsEditor scenarioId={scenarioId} cards={Array.isArray((scenario as any).learning_cards) ? (scenario as any).learning_cards : []} /></section>
