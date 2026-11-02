@@ -77,45 +77,44 @@ export function PostCard({ item, userId, classInstanceId, initiallyLiked, onView
 
     async function restoreLearningTaskResponse() {
       try {
-      const { data, error } = await supabase
-        .from("user_interactions")
-        .select("metadata")
-        .eq("user_id", userId)
-        .eq("content_item_id", item.id)
-        .eq("class_instance_id", classInstanceId)
-        .eq("interaction_type", "learning_task_response")
-        .order("created_at", { ascending: false })
-        .limit(1)
-        .maybeSingle();
+        const { data, error } = await supabase
+          .from("user_interactions")
+          .select("metadata")
+          .eq("user_id", userId)
+          .eq("content_item_id", item.id)
+          .eq("class_instance_id", classInstanceId)
+          .eq("interaction_type", "learning_task_response")
+          .order("created_at", { ascending: false })
+          .limit(1)
+          .maybeSingle();
 
-      if (!active) return;
-      if (error) {
-        console.error("[PostCard] Lernkarten-Antwort konnte nicht geladen werden:", error);
-        return;
-      }
+        if (!active) return;
+        if (error) {
+          console.error("[PostCard] Lernkarten-Antwort konnte nicht geladen werden:", error);
+          return;
+        }
 
-      const metadata = data?.metadata;
-      if (!metadata || typeof metadata !== "object" || Array.isArray(metadata)) return;
+        const metadata = data?.metadata;
+        if (!metadata || typeof metadata !== "object" || Array.isArray(metadata)) return;
 
-      const savedResponse = typeof (metadata as Record<string, unknown>).response === "string"
-        ? String((metadata as Record<string, unknown>).response)
-        : "";
-      const savedOptionIds = getStringArray((metadata as Record<string, unknown>).selectedOptionIds);
-      const validOptionIds = new Set((learningTask.responseOptions ?? []).map((option) => option.id));
-      const restoredOptionIds = savedOptionIds.filter((id) => validOptionIds.has(id));
+        const savedResponse = typeof (metadata as Record<string, unknown>).response === "string"
+          ? String((metadata as Record<string, unknown>).response)
+          : "";
+        const savedOptionIds = getStringArray((metadata as Record<string, unknown>).selectedOptionIds);
+        const validOptionIds = new Set((learningTask.responseOptions ?? []).map((option) => option.id));
+        const restoredOptionIds = savedOptionIds.filter((id) => validOptionIds.has(id));
 
-      if (!savedResponse && restoredOptionIds.length === 0) return;
+        if (!savedResponse && restoredOptionIds.length === 0) return;
 
-      if ((learningTask.responseMode ?? "reflection") === "reflection") {
-        setTaskResponse(savedResponse);
-      } else {
-        setSelectedTaskOptions(restoredOptionIds);
-      }
-      setTaskResponseSaved(true);
+        if ((learningTask.responseMode ?? "reflection") === "reflection") {
+          setTaskResponse(savedResponse);
+        } else {
+          setSelectedTaskOptions(restoredOptionIds);
+        }
+        setTaskResponseSaved(true);
       } finally {
         if (active) setTaskResponseLoading(false);
       }
-    }
 
     void restoreLearningTaskResponse();
     return () => { active = false; };
