@@ -181,8 +181,8 @@ export default async function StudentReportPage({
     return `${hex} ${start}% ${socialChartOffset}%`;
   }).join(", ");
 
-  return <main className="min-h-screen bg-[radial-gradient(ellipse_at_12%_0%,#f1eaff_0%,transparent_30%),radial-gradient(ellipse_at_92%_20%,#e6f7ff_0%,transparent_25%),linear-gradient(135deg,#f7f7fc_0%,#f0f1fb_52%,#fbf5ff_100%)] px-3 py-4 text-slate-900 sm:px-5 sm:py-5 md:px-8 print:bg-white print:px-0 print:py-0">
-    <div className="mx-auto max-w-[1380px] space-y-4">
+  return <main className="student-report-page min-h-screen bg-[radial-gradient(ellipse_at_12%_0%,#f1eaff_0%,transparent_30%),radial-gradient(ellipse_at_92%_20%,#e6f7ff_0%,transparent_25%),linear-gradient(135deg,#f7f7fc_0%,#f0f1fb_52%,#fbf5ff_100%)] px-3 py-4 text-slate-900 sm:px-5 sm:py-5 md:px-8 print:bg-white print:px-0 print:py-0">
+    <div className="student-report-print-root mx-auto max-w-[1380px] space-y-4">
       <header className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between print:hidden">
         <div className="min-w-0">
           <div className="mb-2 flex flex-wrap items-center gap-2 text-xs text-slate-400"><a href={`/classes/${classId}`} className="hover:text-violet-700">Klassen</a><span>›</span><span>{classInfo?.name || "Klasse"}</span><span>›</span><span>Schüler:innen</span><span>›</span><span className="font-medium text-slate-700">{studentName}</span></div>
@@ -190,17 +190,19 @@ export default async function StudentReportPage({
           <h1 className="mt-1 text-3xl font-black tracking-[-.045em] text-slate-950 sm:text-4xl">Lernreport <span className="text-violet-600">— {studentName}</span></h1>
           <p className="mt-1 text-sm text-slate-500">{classInfo?.name || "Klasse"} · Jahrgang {classInfo?.grade_level ?? "—"} · Schuljahr {classInfo?.school_year || "—"}</p>
         </div>
-        <div className="flex flex-wrap items-center gap-2">
-          <nav aria-label="Reportbereiche" className="flex rounded-full border border-violet-200 bg-white p-1 text-xs font-bold shadow-sm">
-            <a href="#gesamtfortschritt" className="rounded-full px-3 py-2 text-slate-600 transition hover:bg-violet-50">Gesamtfortschritt</a>
-            <a href="#drift-reports" className="rounded-full bg-violet-600 px-4 py-2 text-white shadow-sm">DR1FT-Report</a>
+        <div className="flex flex-wrap items-center gap-1.5 rounded-2xl border border-violet-100 bg-white/85 p-1.5 shadow-sm sm:gap-2">
+          <nav aria-label="Reportbereiche" className="flex rounded-xl bg-violet-50/80 p-0.5 text-[10px] font-bold sm:text-[11px]">
+            <a href="#gesamtfortschritt" className="rounded-lg px-2.5 py-2 text-slate-500 transition hover:bg-white hover:text-violet-700">Überblick</a>
+            <a href="#drift-reports" className="rounded-lg bg-violet-600 px-2.5 py-2 text-white shadow-sm">Szenario</a>
           </nav>
           <ScenarioReportFilter action={`/classes/${classId}/reports/${studentId}`} selectedScenario={selectedReport?.id ?? ""} reports={reports.map(({ id, title }) => ({ id, title }))} />
+          <span className="hidden h-6 w-px bg-slate-200 sm:block" />
           <PrintReportButton />
-          <a href={`/classes/${classId}`} className="rounded-xl bg-slate-950 px-4 py-2.5 text-xs font-bold text-white transition hover:bg-slate-800">Klassenübersicht ↗</a>
+          <a href={`/classes/${classId}`} aria-label="Zur Klassenübersicht" title="Zur Klassenübersicht" className="rounded-lg bg-slate-950 px-2.5 py-2 text-[10px] font-bold text-white transition hover:bg-slate-800 sm:text-[11px]">Klasse ↗</a>
         </div>
       </header>
 
+      <div className="student-report-print-content space-y-4">
       <section className="relative isolate overflow-hidden rounded-[30px] bg-[#171d35] text-white shadow-[0_18px_50px_rgba(82,45,150,.22)] ring-1 ring-white/80 print:rounded-none print:shadow-none">
         {selectedReport && scenarioMeta.get(selectedReport.id)?.cover_image_url && <img src={scenarioMeta.get(selectedReport.id)?.cover_image_url ?? ""} alt="" className="absolute inset-0 -z-20 h-full w-full object-cover opacity-35" />}
         <div className="absolute inset-0 -z-10 bg-[radial-gradient(ellipse_at_45%_46%,rgba(217,70,239,.48),transparent_37%),radial-gradient(ellipse_at_75%_5%,rgba(99,102,241,.32),transparent_31%),linear-gradient(100deg,rgba(34,24,65,.88)_0%,rgba(28,28,62,.84)_46%,rgba(15,39,62,.90)_100%)]" />
@@ -258,7 +260,7 @@ export default async function StudentReportPage({
 
             <section aria-labelledby="answered-tasks-heading" className="border-t border-slate-100 pt-6">
               <div className="mb-4 flex items-center gap-3"><span className="grid h-11 w-11 shrink-0 place-items-center rounded-2xl bg-violet-100 text-violet-700"><BookOpenCheck className="h-6 w-6" /></span><div><h3 id="answered-tasks-heading" className="text-xl font-black tracking-tight sm:text-2xl">Deine bearbeiteten Aufgaben</h3><p className="mt-0.5 text-xs text-slate-500">Deine Antwort und die dazu hinterlegten Lernhinweise.</p></div></div>
-              {selectedAnswers.length ? <div className="grid gap-3 lg:grid-cols-2">{selectedAnswers.map((answer) => {
+              {selectedAnswers.length ? <div className={`grid gap-3 ${selectedAnswers.length === 1 ? "grid-cols-1" : "lg:grid-cols-2"}`}>{selectedAnswers.map((answer) => {
                 const Icon = objectiveIcon(answer.objective_title || answer.card_title);
                 return <article key={answer.response_id} className="rounded-[22px] border border-slate-200 bg-white p-4 shadow-[0_5px_18px_rgba(34,30,80,.035)] sm:p-5">
                   <div className="flex items-start justify-between gap-3"><div className="flex min-w-0 items-start gap-3"><span className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-violet-100 text-violet-700"><Icon className="h-5 w-5" /></span><div className="min-w-0"><h4 className="font-black leading-5 text-slate-900">{answer.card_title}</h4>{answer.objective_title && <p className="mt-1 text-[9px] font-black uppercase tracking-[.17em] text-violet-600">{answer.objective_title}</p>}</div></div><span className={`shrink-0 rounded-full px-2.5 py-1.5 text-[10px] font-bold ${outcomeTone(answer.outcome)}`}>{outcomeLabel(answer.outcome)}</span></div>
@@ -283,8 +285,9 @@ export default async function StudentReportPage({
         </div>
         {journeyError && <p className="m-5 rounded-xl border border-amber-200 bg-amber-50 p-4 text-xs text-amber-900 sm:m-7">Der Report konnte nicht geladen werden. Bitte die zugehörige Supabase-Migration prüfen. Technischer Hinweis: {journeyError}</p>}
       </section>
+      </div>
 
-      <section aria-labelledby="social-pulse-heading" className="overflow-hidden rounded-[26px] border border-violet-100 bg-white shadow-[0_12px_38px_rgba(56,65,120,.07)]">
+      <section aria-labelledby="social-pulse-heading" className="overflow-hidden rounded-[26px] border border-violet-100 bg-white shadow-[0_12px_38px_rgba(56,65,120,.07)] print:hidden">
         <div className="flex flex-wrap items-center justify-between gap-3 bg-[linear-gradient(105deg,#f5efff,#f1faff_62%,#fff8e7)] px-5 py-4 sm:px-6">
           <div className="flex items-center gap-3"><span className="grid h-10 w-10 place-items-center rounded-2xl bg-white text-xl shadow-sm">💬</span><div><p className="text-[9px] font-black uppercase tracking-[.2em] text-violet-600">Dein DR1FT-Moment</p><h2 id="social-pulse-heading" className="text-lg font-black text-slate-950 sm:text-xl">So warst du im Feed dabei</h2></div></div>
           <span className="rounded-full border border-white bg-white/80 px-3 py-1.5 text-[10px] font-semibold text-slate-500">Letzte 6 Wochen</span>
@@ -314,7 +317,7 @@ export default async function StudentReportPage({
         </div>}
       </section>
 
-      <section id="gesamtfortschritt" className="scroll-mt-5 rounded-[26px] border border-slate-200 bg-white p-5 shadow-sm sm:p-7">
+      <section id="gesamtfortschritt" className="scroll-mt-5 rounded-[26px] border border-slate-200 bg-white p-5 shadow-sm sm:p-7 print:hidden">
         <div className="flex items-center gap-3"><span className="grid h-10 w-10 place-items-center rounded-xl bg-indigo-50 text-indigo-700"><BookOpenCheck className="h-5 w-5" /></span><div><p className="text-[9px] font-black uppercase tracking-[.2em] text-indigo-600">Überblick</p><h2 className="text-xl font-black text-slate-900 sm:text-2xl">Deine Antworten über alle DR1FTs</h2></div></div>
         <div className="mt-5 grid gap-3 sm:grid-cols-2 xl:grid-cols-4"><div className="rounded-xl bg-slate-50 p-4"><p className="text-2xl font-black text-slate-900">{reports.length}</p><p className="mt-1 text-xs font-medium text-slate-600">Szenarien bearbeitet</p></div><div className="rounded-xl bg-emerald-50 p-4"><p className="text-2xl font-black text-emerald-800">{allSuccess}</p><p className="mt-1 text-xs font-medium text-emerald-800">Antworten vollständig</p></div><div className="rounded-xl bg-amber-50 p-4"><p className="text-2xl font-black text-amber-800">{allPartial}</p><p className="mt-1 text-xs font-medium text-amber-800">Antworten teilweise richtig</p></div><div className="rounded-xl bg-rose-50 p-4"><p className="text-2xl font-black text-rose-800">{allNeedsWork}</p><p className="mt-1 text-xs font-medium text-rose-800">Antworten noch nicht erreicht</p></div></div>
         <div className="mt-5 border-t border-slate-100 pt-4"><h3 className="text-sm font-black text-slate-900">Lernziele mit mehreren Nachweisen</h3>{overallGroups.some((group) => group.answers.length >= 2) ? <div className="mt-3 space-y-3">{overallGroups.filter((group) => group.answers.length >= 2).map((group) => <div key={group.key} className="grid gap-2 sm:grid-cols-[1fr_auto] sm:items-center"><div><p className="text-sm font-semibold text-slate-800">{group.title}</p><p className="text-xs text-slate-500">{group.answers.length} Antworten · {group.good} vollständig · {group.needsWork} mit Übungsbedarf</p></div><div className="h-2 overflow-hidden rounded-full bg-slate-100 sm:w-40"><div className="h-full rounded-full bg-emerald-500" style={{ width: `${group.rate}%` }} /></div></div>)}</div> : <p className="mt-2 text-xs leading-5 text-slate-500">Für einen belastbaren Lernverlauf fehlen noch wiederholte Antworten zu denselben Lernzielen. Deshalb zeigen wir keine Kompetenzkurve.</p>}</div>
