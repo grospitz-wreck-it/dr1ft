@@ -195,7 +195,7 @@ export function ClassLearningInsights({
               <div className="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-[10px] font-semibold">
                 <span className="text-emerald-700">{successPct}% Ziel erreicht</span>
                 <span className="text-amber-700">{partialPct}% teilweise</span>
-                <span className="text-rose-600">{notYetPct}% noch offen</span>
+                <span className="text-rose-600">{notYetPct}% weiterer Übungsbedarf</span>
               </div>
               <div className="mt-4 grid gap-2 sm:grid-cols-2">
                 <div className="rounded-xl border border-emerald-100 bg-white p-3">
@@ -214,7 +214,7 @@ export function ClassLearningInsights({
           <p className="mt-2 text-sm font-semibold text-slate-700">Noch keine auswertbaren Lernkarten-Antworten</p>
           <p className="mt-1 text-xs text-slate-500">Sobald Lernkarten in einem Szenario beantwortet wurden, erscheint hier eine anonyme Rückmeldung zu den Lernzielen.</p>
         </div>}
-        <p className="mt-3 text-[10px] leading-4 text-slate-400">Gezählt wird je Person die zuletzt gespeicherte Antwort pro Lernkarte. Die Auswertung ist ein Hinweis zur Weiterentwicklung der Lernaufgaben – keine individuelle Leistungsbewertung und kein automatischer Kompetenznachweis.</p>
+        <p className="mt-3 text-[10px] leading-4 text-slate-400">Gezählt wird je Person die zuletzt gespeicherte Antwort pro Lernkarte. Ergebnisse erscheinen erst ab drei Teilnehmenden pro Lernkarte. Die Auswertung ist ein Hinweis zur Weiterentwicklung der Lernaufgaben – keine individuelle Leistungsbewertung und kein automatischer Kompetenznachweis.</p>
       </section>
 
       <section className="border-t border-slate-100">
