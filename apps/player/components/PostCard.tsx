@@ -55,7 +55,7 @@ export function PostCard({ item, userId, classInstanceId, initiallyLiked, onView
   const commentCount = Number((item.extra as any)?.classCommentCount ?? (item.extra as any)?.baseCommentCount ?? 0);
   const extra = (item.extra ?? {}) as Record<string, unknown>;
   const imageEdit = (extra.imageEdit ?? {}) as any;
-  const learningTask = (extra.learningTask ?? {}) as { purpose?: string; learnerAction?: string; responseMode?: "reflection" | "single_choice" | "multiple_choice" | "decision"; responsePrompt?: string; responseOptions?: Array<{ id: string; label: string; consequence?: string }>; interactionType?: string; expectedResponse?: string; evaluationMethod?: string; successCriteria?: string; feedback?: string; interactions?: Array<{ id: string; label: string; instruction?: string; custom?: boolean; discoveryTitle?: string; discoveryMessage?: string; discoveryCompetency?: string }>; assessment?: { assessedActions?: string[]; acceptableActions?: string[]; evidenceKey?: string } };
+  const learningTask = (extra.learningTask ?? {}) as { purpose?: string; learnerAction?: string; responseMode?: "reflection" | "single_choice" | "multiple_choice" | "decision"; responsePrompt?: string; responseOptions?: Array<{ id: string; label: string; consequence?: string }>; competencyIds?: string[]; interactionType?: string; expectedResponse?: string; evaluationMethod?: string; successCriteria?: string; feedback?: string; interactions?: Array<{ id: string; label: string; instruction?: string; custom?: boolean; discoveryTitle?: string; discoveryMessage?: string; discoveryCompetency?: string }>; assessment?: { assessedActions?: string[]; acceptableActions?: string[]; evidenceKey?: string } };
   const configuredLearningInteractions = new Set((learningTask.interactions ?? []).map((interaction) => interaction.id));
   useEffect(() => {
     setLiveCommentCount(commentCount);
@@ -359,6 +359,8 @@ export function PostCard({ item, userId, classInstanceId, initiallyLiked, onView
         metadata: {
           responseSchemaVersion: 1,
           responseMode,
+          evidenceKey: learningTask.assessment?.evidenceKey ?? "in_feed_decision",
+          competencyIds: learningTask.competencyIds ?? [],
           selectedOptionIds: selectedOptions.map((option) => option.id),
           selectedOptions: selectedOptions.map((option) => ({ label: option.label, consequence: option.consequence ?? "" })),
           interactionType: learningTask.interactionType ?? "reflect",
