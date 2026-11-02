@@ -147,6 +147,7 @@ export default async function ClassDetailPage({
   const competencyRows = dashboard.studentCompetencyProgress ?? [];
   const missionRows = dashboard.studentMissionProgress ?? [];
   const learningEvidenceRows = dashboard.studentLearningEvidence ?? [];
+  const scenarioLearningCardInsights = dashboard.scenarioLearningCardInsights ?? [];
   const learningEvidenceTotals = learningEvidenceRows.reduce((totals: { responses: number; assessed: number; successful: number; notYet: number }, row: any) => ({ responses: totals.responses + Number(row.challenge_responses_submitted ?? 0), assessed: totals.assessed + Number(row.assessed_requirements ?? 0), successful: totals.successful + Number(row.successful_requirements ?? 0), notYet: totals.notYet + Number(row.not_yet_requirements ?? 0) }), { responses: 0, assessed: 0, successful: 0, notYet: 0 });
 
   const studentRows = new Map<string, { name: string; competencies: Record<string, number>; completed: number; total: number }>();
@@ -333,6 +334,7 @@ export default async function ClassDetailPage({
           studentRows={Object.fromEntries(studentRows.entries())}
           competencyTitles={allCompetencyTitles}
           evidence={learningEvidenceTotals}
+          scenarioLearningCards={scenarioLearningCardInsights}
           competencies={competencyOverview.map((row: any) => ({
             competency_id: String(row.competency_id),
             competency_title: String(row.competency_title ?? "Kompetenz"),
