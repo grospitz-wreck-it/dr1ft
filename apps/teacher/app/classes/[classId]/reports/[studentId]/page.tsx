@@ -1,8 +1,8 @@
 import { supabaseServerClient } from "../../../../../lib/supabaseServerClient";
 import { PrintReportButton } from "./PrintReportButton";
 import {
-  ArrowUpRight, BadgeCheck, BookOpenCheck, Brain, Check, CheckCircle2, ChevronDown,
-  CircleHelp, Clock3, Image as ImageIcon, MessageCircle, Scale, Shield, Sparkles,
+  ArrowUpRight, BookOpenCheck, Brain, Check, CheckCircle2, ChevronDown,
+  CircleHelp, Clock3, MessageCircle, Scale, Shield, Sparkles,
   Target, ThumbsUp, Users, XCircle, Zap
 } from "lucide-react";
 
