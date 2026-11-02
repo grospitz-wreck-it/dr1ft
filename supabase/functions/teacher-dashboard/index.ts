@@ -60,7 +60,7 @@ Deno.serve(async (req) => {
   }
 
   // ---------- Klassen-Modus ----------
-  const [competency, mission, activity, studentCompetency, studentEvidence, studentMissions, learningEvidence, bottlenecks] = await Promise.all([
+  const [competency, mission, activity, studentCompetency, studentEvidence, studentMissions, learningEvidence, bottlenecks, scenarioLearningCards] = await Promise.all([
     supabase.rpc("get_class_competency_overview", { p_class_id: classId }),
     supabase.rpc("get_class_mission_overview", { p_class_id: classId }),
     supabase.rpc("get_class_activity_overview", { p_class_id: classId }),
@@ -69,11 +69,13 @@ Deno.serve(async (req) => {
     supabase.rpc("get_class_student_mission_progress", { p_class_id: classId }),
     supabase.rpc("get_class_student_learning_evidence_v1", { p_class_id: classId }),
     supabase.rpc("get_class_mission_bottlenecks", { p_class_id: classId }),
+    supabase.rpc("get_class_scenario_learning_card_insights_v1", { p_class_id: classId }),
   ]);
 
   if (competency.error) return fail(competency.error.message);
   if (studentEvidence.error) return fail(studentEvidence.error.message);
   if (learningEvidence.error) return fail(learningEvidence.error.message);
+  if (scenarioLearningCards.error) return fail(scenarioLearningCards.error.message);
 
   return new Response(
     JSON.stringify({
@@ -88,6 +90,7 @@ Deno.serve(async (req) => {
       })),
       studentMissionProgress: studentMissions.data ?? [],
       studentLearningEvidence: learningEvidence.data ?? [],
+      scenarioLearningCardInsights: scenarioLearningCards.data ?? [],
       missionBottlenecks: bottlenecks.data ?? [],
     }),
     { headers: { "Content-Type": "application/json" } }
