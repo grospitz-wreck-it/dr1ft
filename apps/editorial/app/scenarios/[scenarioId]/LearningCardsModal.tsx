@@ -6,7 +6,7 @@ import { Plus, Trash2, X, Target, CheckCircle2, Layers3, Sparkles } from "lucide
 
 type Option = { id: string; label: string; outcome: "success" | "partial" | "not_yet" };
 type Card = { id: string; type: string; title: string; prompt: string; position: string; options: Option[]; required?: boolean; objectiveId?: string; objective?: string };
-type Competency = { id: string; title: string };
+type LearningObjective = { id: string; title: string };
 const outcomes = [{value:"success",label:"Ziel erreicht"},{value:"partial",label:"Teilweise erreicht"},{value:"not_yet",label:"Noch nicht erreicht"}];
 const starterOptions = (): Option[] => [
  {id:crypto.randomUUID(),label:"Ich prüfe die Quelle und gleiche die Angaben ab.",outcome:"success"},
@@ -14,12 +14,12 @@ const starterOptions = (): Option[] => [
  {id:crypto.randomUUID(),label:"Ich teile den Beitrag ungeprüft.",outcome:"not_yet"},
 ];
 
-export function LearningCardsModal({scenarioId,cards,learningObjectives=[]}:{scenarioId:string;cards:Card[];learningObjectives?:Competency[]}) {
+export function LearningCardsModal({scenarioId,cards,learningObjectives=[]}:{scenarioId:string;cards:Card[];learningObjectives?:LearningObjective[]}) {
  const [open,setOpen]=useState(false);
  const [options,setOptions]=useState<Option[]>(starterOptions);
  const [busy,startTransition]=useTransition();
  const [error,setError]=useState("");
- const availableCompetencies = learningObjectives;
+ const availableObjectives = learningObjectives;
  async function submit(formData:FormData) {
   formData.set("options",JSON.stringify(options));
   startTransition(async()=>{try { await createScenarioLearningCard(scenarioId,formData); setError(""); setOptions(starterOptions()); } catch(e){setError(e instanceof Error?e.message:"Die Karte konnte nicht gespeichert werden.");}});
@@ -46,14 +46,14 @@ export function LearningCardsModal({scenarioId,cards,learningObjectives=[]}:{sce
        <label className="text-xs font-semibold text-slate-600">Art der Karte<select name="type" className="mt-1.5 w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5 text-sm"><option value="decision">Entscheidung</option><option value="knowledge_check">Wissenscheck</option><option value="reflection">Reflexion</option><option value="mission_completion">Missionsabschluss</option></select></label>
        <label className="text-xs font-semibold text-slate-600">Wo soll sie erscheinen?<select name="position" className="mt-1.5 w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5 text-sm"><option value="feed_end">Am Ende des Feeds</option><option value="before_feed">Vor dem Feed</option></select></label>
       </div>
-      <label className="block text-xs font-semibold text-slate-600">Lernziel<select name="objectiveId" required disabled={!availableCompetencies.length} className="mt-1.5 w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5 text-sm disabled:opacity-60"><option value="">{availableCompetencies.length?"Vorhandenes Lernziel auswählen":"Lege zuerst ein Lernziel im Lernplan fest"}</option>{availableCompetencies.map(c=><option key={c.id} value={c.id}>{c.title}</option>)}</select></label>
+      <label className="block text-xs font-semibold text-slate-600">Konkretes Lernziel<select name="objectiveId" required disabled={!availableObjectives.length} className="mt-1.5 w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5 text-sm disabled:opacity-60"><option value="">{availableObjectives.length?"Vorhandenes Lernziel auswählen":"Lege zuerst konkrete Lernziele im Lernplan fest"}</option>{availableObjectives.map(c=><option key={c.id} value={c.id}>{c.title}</option>)}</select></label>
       <label className="block text-xs font-semibold text-slate-600">Titel<input name="title" required maxLength={100} className="mt-1.5 w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5 text-sm" placeholder="z. B. Prüfe die Hinweise"/></label>
       <label className="block text-xs font-semibold text-slate-600">Aufgabe<textarea name="prompt" required rows={3} maxLength={500} className="mt-1.5 w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5 text-sm" placeholder="Beschreibe die Situation oder Entscheidung …"/></label>
       <div className="space-y-2"><div className="flex items-center justify-between"><span className="text-xs font-semibold text-slate-700">Antwortmöglichkeiten</span><button type="button" onClick={()=>setOptions(current=>[...current,{id:crypto.randomUUID(),label:"",outcome:"not_yet"}])} className="text-xs font-semibold text-violet-700 hover:text-violet-900">+ Antwort ergänzen</button></div>
        {options.map((option,index)=><div key={option.id} className="grid grid-cols-[minmax(0,1fr)_150px_28px] items-center gap-2"><input aria-label={"Antwort "+(index+1)} value={option.label} onChange={e=>setOptions(current=>current.map(o=>o.id===option.id?{...o,label:e.target.value}:o))} placeholder={"Antwortmöglichkeit "+(index+1)} className="min-w-0 rounded-lg border border-slate-200 bg-slate-50 px-2.5 py-2 text-xs"/><select aria-label="Lernzielerreichung" value={option.outcome} onChange={e=>setOptions(current=>current.map(o=>o.id===option.id?{...o,outcome:e.target.value as Option["outcome"]}:o))} className="rounded-lg border border-slate-200 bg-slate-50 px-2 py-2 text-[11px]">{outcomes.map(o=><option key={o.value} value={o.value}>{o.label}</option>)}</select><button type="button" onClick={()=>setOptions(current=>current.filter(o=>o.id!==option.id))} className="text-slate-400 hover:text-rose-600" aria-label="Antwort entfernen"><X className="h-4 w-4"/></button></div>)}
       </div>
       <label className="flex items-center gap-2 text-xs text-slate-600"><input type="checkbox" name="required" defaultChecked className="rounded border-slate-300 text-violet-600"/>Muss bearbeitet werden</label>
-      <button disabled={busy||options.length<2||!availableCompetencies.length} className="inline-flex w-full items-center justify-center gap-2 rounded-xl bg-violet-600 px-4 py-3 text-sm font-semibold text-white shadow-sm transition hover:bg-violet-700 disabled:opacity-50"><CheckCircle2 className="h-4 w-4"/>{busy?"Speichert …":"Lernkarte hinzufügen"}</button>
+      <button disabled={busy||options.length<2||!availableObjectives.length} className="inline-flex w-full items-center justify-center gap-2 rounded-xl bg-violet-600 px-4 py-3 text-sm font-semibold text-white shadow-sm transition hover:bg-violet-700 disabled:opacity-50"><CheckCircle2 className="h-4 w-4"/>{busy?"Speichert …":"Lernkarte hinzufügen"}</button>
       {error&&<p className="text-xs text-rose-600">{error}</p>}
      </form>
     </div>
