@@ -37,6 +37,7 @@ type ScenarioReport = { id: string; title: string; answers: ScenarioAnswer[] };
 type ScenarioMeta = { id: string; title: string; cover_image_url: string | null; learning_cards: any[] | null };
 type EvidenceGroup = { key: string; title: string; answers: ScenarioAnswer[]; good: number; needsWork: number; rate: number };
 type SocialWeek = { week_start: string; likes_sent: number; comments_sent: number; shares_sent: number; direct_messages_sent: number };
+type ActivityTimeRecord = { activity_type: "feed" | "other" | "learning_cards"; scenario_id: string | null; duration_seconds: number };
 const SOCIAL_SERIES = [
   { key: "likes_sent", label: "Likes", color: "bg-fuchsia-500", hex: "#d946ef", icon: "♥" },
   { key: "comments_sent", label: "Kommentare", color: "bg-violet-500", hex: "#8b5cf6", icon: "▤" },
@@ -117,6 +118,70 @@ function ProgressRing({ value }: { value: number }) {
   </div>;
 }
 
+function formatDuration(seconds: number) {
+  const minutes = Math.round(seconds / 60);
+  if (minutes < 1) return seconds > 0 ? "unter 1 Min." : "0 Min.";
+  const hours = Math.floor(minutes / 60);
+  const remainder = minutes % 60;
+  if (hours) return remainder ? `${hours} Std. ${remainder} Min.` : `${hours} Std.`;
+  return `${minutes} Min.`;
+}
+
+function ActiveTimeOverview({
+  seconds,
+  scenarioSeconds,
+  hasScenario,
+  unavailable,
+}: {
+  seconds: { feed: number; other: number; learning_cards: number };
+  scenarioSeconds: number;
+  hasScenario: boolean;
+  unavailable: boolean;
+}) {
+  const total = seconds.feed + seconds.other + seconds.learning_cards;
+  const categories = [
+    { key: "feed", label: "Feed", value: seconds.feed, color: "#22d3ee", text: "text-cyan-200" },
+    { key: "other", label: "Abseits des Feeds", value: seconds.other, color: "#e879f9", text: "text-fuchsia-200" },
+    { key: "learning_cards", label: "Lernkarten", value: seconds.learning_cards, color: "#fbbf24", text: "text-amber-200" },
+  ];
+  const rings = [
+    { radius: 52, stroke: 8, value: seconds.feed, color: "#22d3ee" },
+    { radius: 40, stroke: 7, value: seconds.other, color: "#e879f9" },
+    { radius: 29, stroke: 6, value: seconds.learning_cards, color: "#fbbf24" },
+  ];
+
+  if (unavailable) return <div className="rounded-2xl border border-white/10 bg-white/[.06] p-4"><p className="text-sm font-bold text-white">Zeitübersicht</p><p className="mt-1 text-xs leading-5 text-white/60">Die aktive Zeitmessung wird nach dem Datenbank-Update verfügbar.</p></div>;
+
+  return <section aria-label="Aktive Zeit in DR1FT" className="rounded-2xl border border-white/10 bg-white/[.06] p-3.5 sm:p-4">
+    <div className="flex items-center gap-3 sm:gap-4">
+      <div className="relative h-[132px] w-[132px] shrink-0" role="img" aria-label={`Aktive Zeit insgesamt ${formatDuration(total)}: ${categories.map((category) => `${category.label} ${Math.round(total ? category.value / total * 100 : 0)} Prozent`).join(", ")}`}>
+        <svg viewBox="0 0 120 120" className="absolute inset-0 h-full w-full -rotate-90">
+          {rings.map((ring) => {
+            const circumference = 2 * Math.PI * ring.radius;
+            const share = total ? Math.min(1, ring.value / total) : 0;
+            return <g key={ring.radius}><circle cx="60" cy="60" r={ring.radius} fill="none" stroke="rgba(255,255,255,.12)" strokeWidth={ring.stroke} /><circle cx="60" cy="60" r={ring.radius} fill="none" stroke={ring.color} strokeWidth={ring.stroke} strokeLinecap="round" strokeDasharray={circumference} strokeDashoffset={circumference * (1 - share)} /></g>;
+          })}
+        </svg>
+        <div className="absolute inset-0 flex flex-col items-center justify-center text-center"><strong className="text-[11px] font-black leading-4 text-white">{formatDuration(total)}</strong><span className="mt-0.5 text-[7px] font-bold uppercase tracking-[.12em] text-white/50">Aktiv gesamt</span></div>
+      </div>
+      <div className="min-w-0 flex-1">
+        <div className="mb-2 flex items-center justify-between gap-2"><h3 className="text-sm font-black text-white">Zeit in DR1FT</h3><span className="text-[9px] text-white/40">Anteil gesamt</span></div>
+        <ul className="space-y-2">
+          {categories.map((category) => {
+            const share = total ? Math.round(category.value / total * 100) : 0;
+            return <li key={category.key} className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-x-2 gap-y-1 text-[10px]">
+              <span className="inline-flex min-w-0 items-center gap-1.5 font-semibold text-white/75"><i className="h-2 w-2 shrink-0 rounded-full" style={{ backgroundColor: category.color }} />{category.label}</span>
+              <strong className={`${category.text} tabular-nums`}>{share}%</strong>
+              <span className="col-span-2 -mt-0.5 pl-3.5 text-[9px] text-white/45">{formatDuration(category.value)}</span>
+            </li>;
+          })}
+        </ul>
+      </div>
+    </div>
+    <p className="mt-2 border-t border-white/10 pt-2 text-[9px] leading-4 text-white/40">{total ? "Seit Einführung gemessen. Zählt bei sichtbarem Tab und Eingabe in den letzten 90 Sek.; pausiert danach." : "Noch keine aktiven Minuten erfasst. Die Messung beginnt mit der Nutzung nach dem Update."}{hasScenario && scenarioSeconds > 0 ? ` Eindeutig zugeordnet zu dieser DR1FT: ${formatDuration(scenarioSeconds)}.` : ""}</p>
+  </section>;
+}
+
 export default async function StudentReportPage({
   params,
   searchParams = {},
@@ -126,15 +191,17 @@ export default async function StudentReportPage({
 }) {
   const supabase = supabaseServerClient();
   const { classId, studentId } = params;
-  const [{ data: classInfo }, { data: profile }, reportResult, socialResult] = await Promise.all([
+  const [{ data: classInfo }, { data: profile }, reportResult, socialResult, activityTimeResult] = await Promise.all([
     supabase.from("class_instances").select("name, school_year, grade_level").eq("id", classId).maybeSingle(),
     supabase.from("user_profiles").select("display_name, username, avatar_seed").eq("id", studentId).maybeSingle(),
     supabase.rpc("get_teacher_student_scenario_report_v1", { p_class_id: classId, p_student_id: studentId }),
     supabase.rpc("get_teacher_student_social_pulse_v1", { p_class_id: classId, p_student_id: studentId }),
+    supabase.rpc("get_teacher_student_activity_time_v1", { p_class_id: classId, p_student_id: studentId }),
   ]);
 
   const answers = (reportResult.data ?? []) as ScenarioAnswer[];
   const socialWeeks = (socialResult.data ?? []) as SocialWeek[];
+  const activityTimeRecords = (activityTimeResult.data ?? []) as ActivityTimeRecord[];
   const scenarioIds = Array.from(new Set(answers.map((answer) => answer.scenario_id)));
   let scenarioRows: ScenarioMeta[] = [];
   if (scenarioIds.length) {
@@ -180,6 +247,13 @@ export default async function StudentReportPage({
     socialChartOffset += socialTotal ? socialTotals[key] / socialTotal * 100 : 0;
     return `${hex} ${start}% ${socialChartOffset}%`;
   }).join(", ");
+  const activitySeconds = { feed: 0, other: 0, learning_cards: 0 };
+  let selectedScenarioSeconds = 0;
+  activityTimeRecords.forEach((record) => {
+    const duration = Number(record.duration_seconds ?? 0);
+    activitySeconds[record.activity_type] += duration;
+    if (selectedReport && record.scenario_id === selectedReport.id) selectedScenarioSeconds += duration;
+  });
 
   return <main className="student-report-page min-h-screen bg-[radial-gradient(ellipse_at_12%_0%,#f1eaff_0%,transparent_30%),radial-gradient(ellipse_at_92%_20%,#e6f7ff_0%,transparent_25%),linear-gradient(135deg,#f7f7fc_0%,#f0f1fb_52%,#fbf5ff_100%)] px-3 py-4 text-slate-900 sm:px-5 sm:py-5 md:px-8 print:bg-white print:px-0 print:py-0">
     <div className="student-report-print-root mx-auto max-w-[1380px] space-y-4">
@@ -232,7 +306,10 @@ export default async function StudentReportPage({
       <section id="drift-reports" className="scroll-mt-5 overflow-hidden rounded-[28px] border border-violet-100 bg-white shadow-[0_12px_38px_rgba(56,65,120,.08)] print:shadow-none">
         <div className="bg-[linear-gradient(110deg,#252044_0%,#202742_68%,#26234e_100%)] px-5 py-4 text-white sm:px-6 lg:px-7">
           <p className="text-[9px] font-black uppercase tracking-[.25em] text-violet-300">DR1FT / Szenario-Report</p>
-          <div className="mt-2 flex flex-col gap-4 md:flex-row md:items-end md:justify-between"><div><h2 className="text-2xl font-black leading-tight sm:text-3xl">{scenarioTitle}</h2><p className="mt-2 text-xs text-white/55">{selectedAnswers.length} ausgewertete Aufgaben{selectedAnswers[0] ? ` · zuletzt bearbeitet ${dateLabel(selectedAnswers[0].occurred_at)}` : ""}</p></div><div className="inline-flex w-fit items-center gap-3 rounded-2xl border border-white/10 bg-white/[.07] px-4 py-3"><span className="grid h-10 w-10 place-items-center rounded-xl bg-violet-400/15 text-violet-200"><Target className="h-5 w-5" /></span><span><strong className="block text-sm">{learningFocus.length ? `${learningFocus.length} Lernziel${learningFocus.length > 1 ? "e" : ""} zum Üben` : selectedAnswers.length ? "Alle Lernziele erreicht" : "Noch keine Auswertung"}</strong><span className="mt-0.5 block text-[10px] text-white/55">{learningFocus.length ? "Hier kannst du weiterarbeiten" : "basierend auf gespeicherten Antworten"}</span></span></div></div>
+          <div className="mt-2 grid gap-4 xl:grid-cols-[minmax(0,1fr)_minmax(350px,.72fr)] xl:items-center">
+            <div className="min-w-0"><h2 className="text-2xl font-black leading-tight sm:text-3xl">{scenarioTitle}</h2><p className="mt-2 text-xs text-white/55">{selectedAnswers.length} ausgewertete Aufgaben{selectedAnswers[0] ? ` · zuletzt bearbeitet ${dateLabel(selectedAnswers[0].occurred_at)}` : ""}</p><span className="mt-3 inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/[.06] px-3 py-1.5 text-[10px] font-semibold text-white/70"><Target className="h-3.5 w-3.5 text-violet-200" />{learningFocus.length ? `${learningFocus.length} Lernziel${learningFocus.length > 1 ? "e" : ""} zum Üben` : selectedAnswers.length ? "Alle Lernziele erreicht" : "Noch keine Auswertung"}</span></div>
+            <ActiveTimeOverview seconds={activitySeconds} scenarioSeconds={selectedScenarioSeconds} hasScenario={Boolean(selectedReport)} unavailable={Boolean(activityTimeResult.error)} />
+          </div>
           <div className="mt-4 grid grid-cols-3 gap-2 sm:gap-3"><div className="rounded-xl border border-emerald-300/20 bg-emerald-300/10 px-3 py-2"><p className="text-xl font-black text-emerald-300">{successCount}</p><p className="text-[9px] font-semibold text-white/65">Vollständig</p></div><div className="rounded-xl border border-amber-300/20 bg-amber-300/10 px-3 py-2"><p className="text-xl font-black text-amber-200">{partialCount}</p><p className="text-[9px] font-semibold text-white/65">Teilweise</p></div><div className="rounded-xl border border-rose-300/20 bg-rose-400/10 px-3 py-2"><p className="text-xl font-black text-rose-200">{notYetCount}</p><p className="text-[9px] font-semibold text-white/65">Noch nicht erreicht</p></div></div>
         </div>
 

@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { Activity, Heart, MessageCircle, Share2, Sparkles, Moon, Sun, X } from "lucide-react";
 import { supabaseBrowserClient } from "../lib/supabaseBrowserClient";
 import { avatarUrl } from "../lib/avatar";
@@ -47,8 +47,10 @@ type LiveActivity = {
 
 export function PlayerShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
-  const supabase = supabaseBrowserClient();
-  const [user, setUser] = useState<{ displayName: string; username: string; avatarSeed: string } | null>(null);
+  const supabase = useMemo(() => supabaseBrowserClient(), []);
+  const [user, setUser] = useState<{ id: string; displayName: string; username: string; avatarSeed: string } | null>(null);
+  const activeScenarioIdRef = useRef<string | null>(null);
+  const previousUserIdRef = useRef<string | null>(null);
   const [open, setOpen] = useState(false);
   const [liveActivity, setLiveActivity] = useState<LiveActivity[]>([]);
   const [activityRealtime, setActivityRealtime] = useState(false);
@@ -90,6 +92,7 @@ export function PlayerShell({ children }: { children: React.ReactNode }) {
         .maybeSingle();
       if (!mounted) return;
       setUser({
+        id: authUser.id,
         displayName: profile?.display_name || authUser.email?.split("@")[0] || "DR1FT",
         username: profile?.username || "drifter",
         avatarSeed: profile?.avatar_seed || authUser.id,
@@ -115,6 +118,170 @@ export function PlayerShell({ children }: { children: React.ReactNode }) {
       subscription.unsubscribe();
     };
   }, [supabase]);
+
+  useEffect(() => {
+    if (previousUserIdRef.current && previousUserIdRef.current !== (user?.id ?? null)) activeScenarioIdRef.current = null;
+    previousUserIdRef.current = user?.id ?? null;
+  }, [user?.id]);
+
+  useEffect(() => {
+    if (!user?.id) return;
+    let cancelled = false;
+    let classInstanceId: string | null = null;
+    let recordingDisabled = false;
+    let sending = false;
+    let lastTickAt = performance.now();
+    let lastActivityAt = lastTickAt;
+    let lastTickVisible = document.visibilityState === "visible";
+    const idleTimeoutMs = 90_000;
+    const learningCards = new Map<string, string>();
+    const pendingMs = new Map<string, { activityType: "feed" | "other" | "learning_cards"; scenarioId: string | null; milliseconds: number }>();
+    const queuedEvents: Array<{ eventId: string; activityType: "feed" | "other" | "learning_cards"; scenarioId: string | null; durationSeconds: number }> = [];
+
+    function createEventId() {
+      const bytes = window.crypto.getRandomValues(new Uint8Array(16));
+      bytes[6] = (bytes[6] & 0x0f) | 0x40;
+      bytes[8] = (bytes[8] & 0x3f) | 0x80;
+      const hex = Array.from(bytes, (value) => value.toString(16).padStart(2, "0")).join("");
+      return `${hex.slice(0, 8)}-${hex.slice(8, 12)}-${hex.slice(12, 16)}-${hex.slice(16, 20)}-${hex.slice(20)}`;
+    }
+
+    function currentContext() {
+      if (learningCards.size) {
+        const scenarioIds = new Set(learningCards.values());
+        return { activityType: "learning_cards" as const, scenarioId: scenarioIds.size === 1 ? Array.from(scenarioIds)[0] : null };
+      }
+      return {
+        activityType: pathname.startsWith("/feed") ? "feed" as const : "other" as const,
+        scenarioId: activeScenarioIdRef.current,
+      };
+    }
+
+    function accrue(now: number, visible = document.visibilityState === "visible") {
+      if (visible && lastTickVisible) {
+        const activeUntil = Math.min(now, lastActivityAt + idleTimeoutMs);
+        const milliseconds = Math.max(0, activeUntil - lastTickAt);
+        if (milliseconds > 0) {
+          const context = currentContext();
+          const key = `${context.activityType}:${context.scenarioId ?? "general"}`;
+          const current = pendingMs.get(key) ?? { ...context, milliseconds: 0 };
+          current.milliseconds += milliseconds;
+          pendingMs.set(key, current);
+        }
+      }
+      lastTickAt = now;
+      lastTickVisible = visible;
+    }
+
+    function queueCompletedIntervals() {
+      for (const [key, pending] of pendingMs) {
+        const wholeSeconds = Math.min(60, Math.floor(pending.milliseconds / 1000));
+        if (wholeSeconds < 1) continue;
+        const eventId = createEventId();
+        queuedEvents.push({ eventId, activityType: pending.activityType, scenarioId: pending.scenarioId, durationSeconds: wholeSeconds });
+        pending.milliseconds -= wholeSeconds * 1000;
+        if (pending.milliseconds <= 0) pendingMs.delete(key);
+      }
+    }
+
+    async function persistQueuedEvents() {
+      if (!classInstanceId || recordingDisabled || sending || cancelled) return;
+      queueCompletedIntervals();
+      if (!queuedEvents.length) return;
+      sending = true;
+      const events = queuedEvents.slice();
+      for (const event of events) {
+        let error: { code?: string } | null = null;
+        try {
+          ({ error } = await supabase.rpc("record_student_activity_time_v1", {
+            p_event_id: event.eventId,
+            p_class_id: classInstanceId,
+            p_activity_type: event.activityType,
+            p_duration_seconds: event.durationSeconds,
+            p_scenario_id: event.scenarioId,
+          }));
+        } catch {
+          break;
+        }
+        if (error) {
+          if (error.code === "PGRST202" || error.code === "42883") {
+            recordingDisabled = true;
+            queuedEvents.length = 0;
+          }
+          break;
+        }
+        const index = queuedEvents.findIndex((queued) => queued.eventId === event.eventId);
+        if (index >= 0) queuedEvents.splice(index, 1);
+      }
+      sending = false;
+    }
+
+    function handleInput() {
+      const now = performance.now();
+      if (document.visibilityState !== "visible") return;
+      accrue(now, true);
+      lastActivityAt = now;
+    }
+
+    function handleVisibilityChange() {
+      const now = performance.now();
+      if (document.visibilityState === "hidden") {
+        accrue(now, true);
+        void persistQueuedEvents();
+      } else {
+        lastTickAt = now;
+        lastActivityAt = now;
+        lastTickVisible = true;
+      }
+    }
+
+    function handleLearningCardVisibility(event: Event) {
+      const detail = (event as CustomEvent<{ cardId?: string; scenarioId?: string; visible?: boolean }>).detail;
+      if (!detail?.cardId) return;
+      accrue(performance.now());
+      if (detail.visible && detail.scenarioId) learningCards.set(detail.cardId, detail.scenarioId);
+      else learningCards.delete(detail.cardId);
+      void persistQueuedEvents();
+    }
+
+    function handleScenarioStarted(event: Event) {
+      const detail = (event as CustomEvent<{ scenarioId?: string | null; scenarioIds?: string[] }>).detail;
+      accrue(performance.now());
+      const ids = detail?.scenarioIds ?? [];
+      activeScenarioIdRef.current = ids.length === 1 ? ids[0] : detail?.scenarioId ?? null;
+      void persistQueuedEvents();
+    }
+
+    void (async () => {
+      const { data, error } = await supabase.rpc("get_current_class_instance_id");
+      if (cancelled || error || !data) return;
+      classInstanceId = data as string;
+      lastTickAt = performance.now();
+      lastActivityAt = lastTickAt;
+      lastTickVisible = document.visibilityState === "visible";
+    })();
+
+    const activityEvents = ["pointerdown", "pointermove", "keydown", "scroll", "touchstart"] as const;
+    activityEvents.forEach((type) => window.addEventListener(type, handleInput, { passive: true }));
+    document.addEventListener("visibilitychange", handleVisibilityChange);
+    window.addEventListener("dr1ft:learning-card-visibility", handleLearningCardVisibility);
+    window.addEventListener("dr1ft:scenario-started", handleScenarioStarted);
+    const interval = window.setInterval(() => {
+      accrue(performance.now());
+      void persistQueuedEvents();
+    }, 15_000);
+
+    return () => {
+      accrue(performance.now());
+      void persistQueuedEvents();
+      cancelled = true;
+      window.clearInterval(interval);
+      activityEvents.forEach((type) => window.removeEventListener(type, handleInput));
+      document.removeEventListener("visibilitychange", handleVisibilityChange);
+      window.removeEventListener("dr1ft:learning-card-visibility", handleLearningCardVisibility);
+      window.removeEventListener("dr1ft:scenario-started", handleScenarioStarted);
+    };
+  }, [supabase, pathname, user?.id]);
 
   useEffect(() => {
     let mounted = true;
