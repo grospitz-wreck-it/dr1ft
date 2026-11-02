@@ -46,7 +46,6 @@ export function PostCard({ item, userId, classInstanceId, initiallyLiked, onView
   const [feedback, setFeedback] = useState<string | null>(null);
   const [learningFeedback, setLearningFeedback] = useState<{ title: string; message: string; action: string } | null>(null);
   const [comparison, setComparison] = useState<{ related: FeedItem | null; loading: boolean; selected?: "contradict" | "support"; assessmentOutcome?: "success" | "not_yet" | "not_assessed"; error?: string } | null>(null);
-  const [taskResponse, setTaskResponse] = useState("");
   const [selectedTaskOptions, setSelectedTaskOptions] = useState<string[]>([]);
   const [taskResponseSaved, setTaskResponseSaved] = useState(false);
   const [taskResponseLoading, setTaskResponseLoading] = useState(false);
@@ -68,7 +67,6 @@ export function PostCard({ item, userId, classInstanceId, initiallyLiked, onView
   useEffect(() => {
     let active = true;
 
-    setTaskResponse("");
     setSelectedTaskOptions([]);
     setTaskResponseSaved(false);
     setTaskResponseLoading(Boolean(learningTask.responsePrompt?.trim()));
@@ -97,20 +95,15 @@ export function PostCard({ item, userId, classInstanceId, initiallyLiked, onView
         const metadata = data?.metadata;
         if (!metadata || typeof metadata !== "object" || Array.isArray(metadata)) return;
 
-        const savedResponse = typeof (metadata as Record<string, unknown>).response === "string"
-          ? String((metadata as Record<string, unknown>).response)
-          : "";
         const savedOptionIds = getStringArray((metadata as Record<string, unknown>).selectedOptionIds);
         const validOptionIds = new Set((learningTask.responseOptions ?? []).map((option) => option.id));
         const restoredOptionIds = savedOptionIds.filter((id) => validOptionIds.has(id));
 
-        if (!savedResponse && restoredOptionIds.length === 0) return;
+        // Only structured option IDs count as a restorable answer. Legacy
+        // free-text responses are intentionally not treated as diagnostic evidence.
+        if (restoredOptionIds.length === 0) return;
 
-        if ((learningTask.responseMode ?? "reflection") === "reflection") {
-          setTaskResponse(savedResponse);
-        } else {
-          setSelectedTaskOptions(restoredOptionIds);
-        }
+        setSelectedTaskOptions(restoredOptionIds);
         setTaskResponseSaved(true);
       } catch (restoreError) {
         console.error("[PostCard] Lernkarten-Antwort konnte nicht wiederhergestellt werden:", restoreError);
@@ -353,10 +346,10 @@ export function PostCard({ item, userId, classInstanceId, initiallyLiked, onView
   async function submitLearningTaskResponse() {
     const responseMode = learningTask.responseMode ?? "reflection";
     const selectedOptions = (learningTask.responseOptions ?? []).filter((option) => selectedTaskOptions.includes(option.id));
-    const response = responseMode === "reflection" ? taskResponse.trim() : selectedOptions.map((option) => option.label).join(" · ");
+    const response = selectedOptions.map((option) => option.label).join(" · ");
     if (!response || taskResponseSaving || taskResponseSaved) return;
-    if (responseMode === "single_choice" && selectedOptions.length !== 1) return;
-    if (responseMode === "multiple_choice" && selectedOptions.length < 1) return;
+    if ((responseMode === "single_choice" || responseMode === "decision") && selectedOptions.length !== 1) return;
+    if ((responseMode === "reflection" || responseMode === "multiple_choice") && selectedOptions.length < 1) return;
     setTaskResponseSaving(true);
     try {
       const saved = await recordInteraction(supabase, {
@@ -562,21 +555,20 @@ export function PostCard({ item, userId, classInstanceId, initiallyLiked, onView
               <p className="text-left text-[10px] font-bold uppercase tracking-[0.16em] text-violet-700">Deine Aufgabe</p>
               {learningTask.purpose?.trim() && <p className="mt-1 whitespace-pre-wrap break-words [overflow-wrap:anywhere] text-left text-xs leading-relaxed text-violet-900/75">{learningTask.purpose}</p>}
               <p className="mt-2 whitespace-pre-wrap break-words [overflow-wrap:anywhere] text-left text-sm font-semibold leading-relaxed text-slate-900">{learningTask.responsePrompt || learningTask.learnerAction}</p>
-              {taskResponseLoading ? <p role="status" className="mt-3 text-xs text-slate-500">Deine Antwort wird geladen …</p> : !taskResponseSaved ? <>
-                {(learningTask.responseMode ?? "reflection") === "reflection" ? <>
-                  <label htmlFor={`learning-task-response-${item.id}`} className="mt-3 block text-xs font-semibold text-slate-700">Deine Überlegung</label>
-                  <textarea id={`learning-task-response-${item.id}`} value={taskResponse} onChange={event => setTaskResponse(event.target.value)} rows={3} maxLength={3000} placeholder="Schreibe deine Überlegung auf …" className="mt-1.5 w-full rounded-xl border border-violet-200 bg-white px-3 py-2.5 text-sm text-slate-900 outline-none focus:border-violet-400 focus:ring-4 focus:ring-violet-100" />
-                </> : <div className="mt-3 space-y-2">
+              {taskResponseLoading ? <p role="status" className="mt-3 text-xs text-slate-500">Deine Auswahl wird geladen …</p> : !taskResponseSaved ? <>
+                <div className="mt-3 space-y-2">
                   {(learningTask.responseOptions ?? []).map(option => {
                     const selected = selectedTaskOptions.includes(option.id);
-                    return <button key={option.id} type="button" onClick={() => setSelectedTaskOptions(current => (learningTask.responseMode === "single_choice" || learningTask.responseMode === "decision" ? (selected ? [] : [option.id]) : (selected ? current.filter(id => id !== option.id) : [...current, option.id])))} className={`flex w-full items-start gap-3 rounded-xl border px-3 py-3 text-left text-sm transition ${selected ? "border-violet-400 bg-violet-100 text-violet-950" : "border-violet-100 bg-white text-slate-800 hover:border-violet-300"}`}>
-                      <span className={`mt-0.5 grid h-4 w-4 shrink-0 place-items-center border ${learningTask.responseMode === "multiple_choice" ? "rounded" : "rounded-full"} ${selected ? "border-violet-600 bg-violet-600 text-white" : "border-slate-300 bg-white"}`}>{selected && <Check className="h-3 w-3" />}</span>
+                    const multiSelect = learningTask.responseMode === "multiple_choice" || learningTask.responseMode === "reflection";
+                    return <button key={option.id} type="button" onClick={() => setSelectedTaskOptions(current => (multiSelect ? (selected ? current.filter(id => id !== option.id) : [...current, option.id]) : (selected ? [] : [option.id])))} className={`flex w-full items-start gap-3 rounded-xl border px-3 py-3 text-left text-sm transition ${selected ? "border-violet-400 bg-violet-100 text-violet-950" : "border-violet-100 bg-white text-slate-800 hover:border-violet-300"}`}>
+                      <span className={`mt-0.5 grid h-4 w-4 shrink-0 place-items-center border ${multiSelect ? "rounded" : "rounded-full"} ${selected ? "border-violet-600 bg-violet-600 text-white" : "border-slate-300 bg-white"}`}>{selected && <Check className="h-3 w-3" />}</span>
                       <span className="font-semibold">{option.label}</span>
                     </button>;
                   })}
-                  <p className="text-[10px] text-slate-500">{learningTask.responseMode === "multiple_choice" ? "Wähle alle Möglichkeiten, die zu deiner Einschätzung passen." : "Wähle eine Möglichkeit."}</p>
-                </div>}
-                <button type="button" disabled={taskResponseSaving || ((learningTask.responseMode ?? "reflection") === "reflection" ? !taskResponse.trim() : selectedTaskOptions.length === 0)} onClick={() => void submitLearningTaskResponse()} className="mt-2 inline-flex items-center gap-2 rounded-xl bg-violet-600 px-4 py-2.5 text-xs font-bold text-white transition hover:bg-violet-700 disabled:cursor-not-allowed disabled:opacity-50">{taskResponseSaving ? "Wird gespeichert …" : "Antwort abgeben"}<Send className="h-3.5 w-3.5" /></button>
+                  {(learningTask.responseOptions ?? []).length === 0 && <p className="rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-800">Diese Lernkarte benötigt noch strukturierte Antwortmöglichkeiten. Freitext ist nicht vorgesehen.</p>}
+                  {(learningTask.responseOptions ?? []).length > 0 && <p className="text-[10px] text-slate-500">{learningTask.responseMode === "reflection" ? "Wähle alle Aspekte aus, die deine Einschätzung beeinflusst haben." : learningTask.responseMode === "multiple_choice" ? "Wähle alle Möglichkeiten, die zu deiner Einschätzung passen." : "Wähle eine Möglichkeit."}</p>}
+                </div>
+                <button type="button" disabled={taskResponseSaving || selectedTaskOptions.length === 0 || (learningTask.responseOptions ?? []).length < 2} onClick={() => void submitLearningTaskResponse()} className="mt-2 inline-flex items-center gap-2 rounded-xl bg-violet-600 px-4 py-2.5 text-xs font-bold text-white transition hover:bg-violet-700 disabled:cursor-not-allowed disabled:opacity-50">{taskResponseSaving ? "Wird gespeichert …" : "Antwort abgeben"}<Send className="h-3.5 w-3.5" /></button>
               </> : <>
                 <p role="status" className="mt-3 rounded-xl bg-emerald-100 px-3 py-2 text-xs font-semibold text-emerald-800">Antwort abgegeben</p>
                 {(learningTask.responseOptions ?? []).filter(option => selectedTaskOptions.includes(option.id) && option.consequence?.trim()).map(option => <div key={option.id} className="mt-2 rounded-xl border border-violet-100 bg-white/80 p-3"><p className="text-[10px] font-bold uppercase tracking-wide text-violet-700">Was daraus folgt</p><p className="mt-1 whitespace-pre-wrap text-xs leading-relaxed text-slate-700">{option.consequence}</p></div>)}
