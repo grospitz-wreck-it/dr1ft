@@ -49,6 +49,7 @@ export function PostCard({ item, userId, classInstanceId, initiallyLiked, onView
   const [taskResponse, setTaskResponse] = useState("");
   const [selectedTaskOptions, setSelectedTaskOptions] = useState<string[]>([]);
   const [taskResponseSaved, setTaskResponseSaved] = useState(false);
+  const [taskResponseLoading, setTaskResponseLoading] = useState(false);
   const [taskResponseSaving, setTaskResponseSaving] = useState(false);
 
   const baseLikeCount = Number((item.extra as any)?.baseEngagement ?? 0);
@@ -70,10 +71,12 @@ export function PostCard({ item, userId, classInstanceId, initiallyLiked, onView
     setTaskResponse("");
     setSelectedTaskOptions([]);
     setTaskResponseSaved(false);
+    setTaskResponseLoading(Boolean(learningTask.responsePrompt?.trim()));
 
     if (!learningTask.responsePrompt?.trim()) return () => { active = false; };
 
     async function restoreLearningTaskResponse() {
+      try {
       const { data, error } = await supabase
         .from("user_interactions")
         .select("metadata")
@@ -109,6 +112,9 @@ export function PostCard({ item, userId, classInstanceId, initiallyLiked, onView
         setSelectedTaskOptions(restoredOptionIds);
       }
       setTaskResponseSaved(true);
+      } finally {
+        if (active) setTaskResponseLoading(false);
+      }
     }
 
     void restoreLearningTaskResponse();
@@ -554,7 +560,7 @@ export function PostCard({ item, userId, classInstanceId, initiallyLiked, onView
               <p className="text-left text-[10px] font-bold uppercase tracking-[0.16em] text-violet-700">Deine Aufgabe</p>
               {learningTask.purpose?.trim() && <p className="mt-1 whitespace-pre-wrap break-words [overflow-wrap:anywhere] text-left text-xs leading-relaxed text-violet-900/75">{learningTask.purpose}</p>}
               <p className="mt-2 whitespace-pre-wrap break-words [overflow-wrap:anywhere] text-left text-sm font-semibold leading-relaxed text-slate-900">{learningTask.responsePrompt || learningTask.learnerAction}</p>
-              {!taskResponseSaved ? <>
+              {taskResponseLoading ? <p role="status" className="mt-3 text-xs text-slate-500">Deine Antwort wird geladen …</p> : !taskResponseSaved ? <>
                 {(learningTask.responseMode ?? "reflection") === "reflection" ? <>
                   <label htmlFor={`learning-task-response-${item.id}`} className="mt-3 block text-xs font-semibold text-slate-700">Deine Überlegung</label>
                   <textarea id={`learning-task-response-${item.id}`} value={taskResponse} onChange={event => setTaskResponse(event.target.value)} rows={3} maxLength={3000} placeholder="Schreibe deine Überlegung auf …" className="mt-1.5 w-full rounded-xl border border-violet-200 bg-white px-3 py-2.5 text-sm text-slate-900 outline-none focus:border-violet-400 focus:ring-4 focus:ring-violet-100" />
