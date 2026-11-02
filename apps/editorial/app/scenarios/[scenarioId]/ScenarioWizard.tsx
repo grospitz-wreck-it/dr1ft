@@ -12,6 +12,7 @@ type Step = {
 const SECTION_IDS = [
   "workflow-basics",
   "workflow-plan",
+  "workflow-cards",
   "workflow-posts",
   "workflow-review",
 ];
