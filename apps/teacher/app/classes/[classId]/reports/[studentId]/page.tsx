@@ -37,6 +37,12 @@ type ScenarioReport = { id: string; title: string; answers: ScenarioAnswer[] };
 type ScenarioMeta = { id: string; title: string; cover_image_url: string | null; learning_cards: any[] | null };
 type EvidenceGroup = { key: string; title: string; answers: ScenarioAnswer[]; good: number; needsWork: number; rate: number };
 
+// The assessment pipeline stores partial answers as 0.5 evidence; reflect that
+// authored scoring here instead of treating every non-success answer as zero.
+function outcomeScore(outcome: ScenarioAnswer["outcome"]) {
+  return outcome === "success" ? 1 : outcome === "partial" ? 0.5 : 0;
+}
+
 function avatarUrl(seed: string | null | undefined, size = 160) {
   const styles = ["voxel-art", "adventurer", "adventurer-neutral", "avataaars", "bottts", "fun-emoji", "lorelei", "micah", "miniavs", "personas", "pixel-art-neutral", "thumbs"];
   const value = seed || "dr1ft";
@@ -85,19 +91,22 @@ function groupEvidence(answers: ScenarioAnswer[]): EvidenceGroup[] {
   });
   return Array.from(groups, ([key, group]) => {
     const good = group.answers.filter((answer) => answer.outcome === "success").length;
-    return { key, ...group, good, needsWork: group.answers.length - good, rate: percent(good, group.answers.length) };
+    const rate = group.answers.length
+      ? Math.round(group.answers.reduce((sum, answer) => sum + outcomeScore(answer.outcome), 0) / group.answers.length * 100)
+      : 0;
+    return { key, ...group, good, needsWork: group.answers.length - good, rate };
   }).sort((a, b) => b.needsWork - a.needsWork || b.answers.length - a.answers.length);
 }
 
 function ProgressRing({ value }: { value: number }) {
   const radius = 43;
   const circumference = 2 * Math.PI * radius;
-  return <div className="relative grid h-32 w-32 shrink-0 place-items-center" role="img" aria-label={`${value}% der ausgewerteten Antworten vollständig` }>
+  return <div className="relative grid h-28 w-28 shrink-0 place-items-center sm:h-32 sm:w-32" role="img" aria-label={`${value}% Zielerreichung aus den gespeicherten Antworten`}>
     <svg viewBox="0 0 100 100" className="absolute inset-0 h-full w-full -rotate-90">
       <circle cx="50" cy="50" r={radius} fill="none" stroke="rgba(255,255,255,.13)" strokeWidth="8" />
       <circle cx="50" cy="50" r={radius} fill="none" stroke="#20d69a" strokeWidth="8" strokeLinecap="round" strokeDasharray={circumference} strokeDashoffset={circumference * (1 - value / 100)} />
     </svg>
-    <div className="text-center text-white"><span className="block text-3xl font-black leading-none">{value}%</span><span className="mt-1 block text-[9px] font-bold uppercase tracking-[.12em] text-white/60">Ziel erreicht</span></div>
+    <div className="text-center text-white"><span className="block text-3xl font-black leading-none">{value}%</span><span className="mt-1 block text-[9px] font-bold uppercase tracking-[.12em] text-white/60">Zielerreichung</span></div>
   </div>;
 }
 
@@ -145,19 +154,18 @@ export default async function StudentReportPage({
   const successCount = selectedAnswers.filter((answer) => answer.outcome === "success").length;
   const partialCount = selectedAnswers.filter((answer) => answer.outcome === "partial").length;
   const notYetCount = selectedAnswers.filter((answer) => answer.outcome === "not_yet").length;
-  const successRate = percent(successCount, selectedAnswers.length);
   const evidencedStrengths = objectiveGroups.filter((group) => group.answers.length >= 2 && group.needsWork === 0);
   const learningFocus = objectiveGroups.filter((group) => group.needsWork > 0).slice(0, 3);
   const latestFocusAnswer = learningFocus[0]?.answers.find((answer) => answer.outcome !== "success");
   const journeyError = reportResult.error?.message ?? null;
   const scenarioTitle = selectedReport?.title || "Dein Lernweg beginnt hier";
 
-  return <main className="min-h-screen bg-[linear-gradient(135deg,#f6f7fc_0%,#f0f1fb_52%,#f8f4fc_100%)] px-3 py-4 text-slate-900 sm:px-5 sm:py-6 md:px-8 print:bg-white print:px-0 print:py-0">
-    <div className="mx-auto max-w-[1440px] space-y-5">
+  return <main className="min-h-screen bg-[radial-gradient(ellipse_at_12%_0%,#f1eaff_0%,transparent_30%),radial-gradient(ellipse_at_92%_20%,#e6f7ff_0%,transparent_25%),linear-gradient(135deg,#f7f7fc_0%,#f0f1fb_52%,#fbf5ff_100%)] px-3 py-4 text-slate-900 sm:px-5 sm:py-5 md:px-8 print:bg-white print:px-0 print:py-0">
+    <div className="mx-auto max-w-[1380px] space-y-4">
       <header className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between print:hidden">
         <div className="min-w-0">
           <div className="mb-2 flex flex-wrap items-center gap-2 text-xs text-slate-400"><a href={`/classes/${classId}`} className="hover:text-violet-700">Klassen</a><span>›</span><span>{classInfo?.name || "Klasse"}</span><span>›</span><span>Schüler:innen</span><span>›</span><span className="font-medium text-slate-700">{studentName}</span></div>
-          <p className="text-[10px] font-black uppercase tracking-[.28em] text-violet-600">DR1FT / Learning Intelligence</p>
+          <p className="text-[10px] font-black uppercase tracking-[.28em] text-violet-600">✦ DR1FT / Learning Intelligence</p>
           <h1 className="mt-1 text-3xl font-black tracking-[-.045em] text-slate-950 sm:text-4xl">Lernreport <span className="text-violet-600">— {studentName}</span></h1>
           <p className="mt-1 text-sm text-slate-500">{classInfo?.name || "Klasse"} · Jahrgang {classInfo?.grade_level ?? "—"} · Schuljahr {classInfo?.school_year || "—"}</p>
         </div>
@@ -172,12 +180,14 @@ export default async function StudentReportPage({
         </div>
       </header>
 
-      <section className="relative isolate overflow-hidden rounded-[28px] bg-[#171d35] text-white shadow-[0_18px_50px_rgba(35,29,78,.20)] print:rounded-none print:shadow-none">
+      <section className="relative isolate overflow-hidden rounded-[30px] bg-[#171d35] text-white shadow-[0_18px_50px_rgba(82,45,150,.22)] ring-1 ring-white/80 print:rounded-none print:shadow-none">
         {selectedReport && scenarioMeta.get(selectedReport.id)?.cover_image_url && <img src={scenarioMeta.get(selectedReport.id)?.cover_image_url ?? ""} alt="" className="absolute inset-0 -z-20 h-full w-full object-cover opacity-35" />}
-        <div className="absolute inset-0 -z-10 bg-[radial-gradient(ellipse_at_47%_45%,rgba(168,85,247,.42),transparent_34%),linear-gradient(100deg,#211d45_0%,rgba(27,27,58,.96)_44%,rgba(19,37,59,.92)_100%)]" />
+        <div className="absolute inset-0 -z-10 bg-[radial-gradient(ellipse_at_45%_46%,rgba(217,70,239,.48),transparent_37%),radial-gradient(ellipse_at_75%_5%,rgba(99,102,241,.32),transparent_31%),linear-gradient(100deg,rgba(34,24,65,.88)_0%,rgba(28,28,62,.84)_46%,rgba(15,39,62,.90)_100%)]" />
+        <div aria-hidden="true" className="pointer-events-none absolute left-[46%] top-5 -z-0 hidden h-12 w-12 rotate-[-9deg] place-items-center rounded-2xl border border-white/20 bg-fuchsia-400/20 text-2xl shadow-[0_0_35px_rgba(232,121,249,.35)] lg:grid">💬</div>
+        <div aria-hidden="true" className="pointer-events-none absolute left-[51%] top-[4.5rem] -z-0 hidden rotate-[8deg] rounded-xl border border-white/20 bg-violet-300/20 px-3 py-2 text-lg shadow-lg lg:block">✦</div>
         <div className="absolute -right-16 -top-44 -z-10 h-[34rem] w-[34rem] rounded-full border border-white/10" />
         <div className="absolute right-20 -top-28 -z-10 h-[27rem] w-[27rem] rounded-full border border-white/10" />
-        <div className="grid gap-5 p-5 sm:p-7 lg:grid-cols-[minmax(250px,.9fr)_minmax(300px,1.2fr)_auto_minmax(190px,.75fr)] lg:items-center lg:gap-7 lg:p-8">
+        <div className="relative z-10 grid gap-4 p-4 sm:p-5 lg:grid-cols-[minmax(230px,.88fr)_minmax(280px,1.2fr)_auto_minmax(170px,.7fr)] lg:items-center lg:gap-5 lg:p-6">
           <div className="flex min-w-0 items-center gap-4">
             <img src={avatarUrl(profile?.avatar_seed || studentId)} alt="" className="h-[76px] w-[76px] shrink-0 rounded-[22px] border-4 border-white/25 bg-violet-200 object-cover shadow-lg sm:h-[88px] sm:w-[88px]" />
             <div className="min-w-0"><p className="text-[9px] font-black uppercase tracking-[.23em] text-violet-300">Dein Lernprofil</p><h2 className="mt-1 truncate text-2xl font-black sm:text-3xl">{studentName}</h2><p className="mt-1 text-xs text-white/60">@{profile?.username || "—"} · {classInfo?.name || "Klasse"}</p><span className="mt-2 inline-flex items-center gap-1.5 rounded-full border border-emerald-200/20 bg-emerald-300/10 px-2.5 py-1 text-[10px] font-semibold text-emerald-200"><CheckCircle2 className="h-3 w-3" />{answers.length ? "Antworten ausgewertet" : "Noch keine Antworten"}</span></div>
@@ -187,39 +197,39 @@ export default async function StudentReportPage({
             <h2 className="mt-2 max-w-xl text-2xl font-black leading-tight sm:text-[27px]">{scenarioTitle}</h2>
             <p className="mt-2 max-w-lg text-xs leading-5 text-white/60">{selectedReport ? "Deine Antworten, Lernziele und nächste Übungsschritte in dieser DR1FT." : "Sobald du Aufgaben bearbeitest, erscheint hier dein persönlicher Szenario-Report."}</p>
           </div>
-          <div className="flex justify-center"><ProgressRing value={successRate} /></div>
+          <div className="flex justify-center"><div className="rounded-full bg-fuchsia-400/10 p-1 shadow-[0_0_36px_rgba(217,70,239,.18)]"><ProgressRing value={Math.round(selectedAnswers.reduce((sum, answer) => sum + outcomeScore(answer.outcome), 0) / Math.max(1, selectedAnswers.length) * 100)} /></div></div>
           <div className="grid grid-cols-2 gap-3 lg:grid-cols-1 lg:gap-4 lg:border-l lg:border-white/10 lg:pl-6">
             <div className="rounded-2xl border border-white/10 bg-white/[.06] p-3"><p className="text-[9px] font-bold uppercase tracking-[.14em] text-white/45">Ausgewertete Aufgaben</p><p className="mt-1 text-2xl font-black">{selectedAnswers.length}</p><p className="text-[10px] text-white/55">zuletzt {selectedAnswers[0] ? dateLabel(selectedAnswers[0].occurred_at) : "noch keine Antwort"}</p></div>
             <div className="rounded-2xl border border-white/10 bg-white/[.06] p-3"><p className="text-[9px] font-bold uppercase tracking-[.14em] text-white/45">Noch zu üben</p><p className="mt-1 text-2xl font-black text-amber-200">{partialCount + notYetCount}</p><p className="text-[10px] text-white/55">teilweise oder noch nicht erreicht</p></div>
           </div>
         </div>
-        <div className="border-t border-white/10 px-5 py-4 sm:px-7 lg:px-8"><div className="mb-2 flex items-center justify-between gap-2 text-[11px]"><span className="font-bold text-white/80">Deine Antwortverteilung</span><span className="text-white/45">{selectedAnswers.length} Antworten</span></div><div className="flex h-2.5 overflow-hidden rounded-full bg-white/10"><span className="bg-emerald-400" style={{ width: `${percent(successCount, selectedAnswers.length)}%` }} /><span className="bg-amber-300" style={{ width: `${percent(partialCount, selectedAnswers.length)}%` }} /><span className="bg-rose-400" style={{ width: `${percent(notYetCount, selectedAnswers.length)}%` }} /></div><div className="mt-2 flex flex-wrap gap-x-5 gap-y-1 text-[10px] text-white/60"><span><i className="mr-1.5 inline-block h-2 w-2 rounded-full bg-emerald-400" />{successCount} vollständig</span><span><i className="mr-1.5 inline-block h-2 w-2 rounded-full bg-amber-300" />{partialCount} teilweise</span><span><i className="mr-1.5 inline-block h-2 w-2 rounded-full bg-rose-400" />{notYetCount} noch nicht erreicht</span></div></div>
+        <div className="border-t border-white/10 bg-white/[.025] px-4 py-3 sm:px-6"><div className="mb-2 flex items-center justify-between gap-2 text-[10px]"><span className="font-bold text-white/80">Deine Antwortverteilung</span><span className="text-white/45">{selectedAnswers.length} Antworten</span></div><div className="flex h-2 overflow-hidden rounded-full bg-white/10"><span className="bg-emerald-400" style={{ width: `${percent(successCount, selectedAnswers.length)}%` }} /><span className="bg-amber-300" style={{ width: `${percent(partialCount, selectedAnswers.length)}%` }} /><span className="bg-rose-400" style={{ width: `${percent(notYetCount, selectedAnswers.length)}%` }} /></div><div className="mt-1.5 flex flex-wrap gap-x-5 gap-y-1 text-[9px] text-white/60"><span><i className="mr-1.5 inline-block h-2 w-2 rounded-full bg-emerald-400" />{successCount} vollständig</span><span><i className="mr-1.5 inline-block h-2 w-2 rounded-full bg-amber-300" />{partialCount} teilweise</span><span><i className="mr-1.5 inline-block h-2 w-2 rounded-full bg-rose-400" />{notYetCount} noch nicht erreicht</span></div></div>
       </section>
 
       <section id="drift-reports" className="scroll-mt-5 overflow-hidden rounded-[28px] border border-violet-100 bg-white shadow-[0_12px_38px_rgba(56,65,120,.08)] print:shadow-none">
-        <div className="bg-[#20243d] px-5 py-5 text-white sm:px-7 lg:px-8">
+        <div className="bg-[linear-gradient(110deg,#252044_0%,#202742_68%,#26234e_100%)] px-5 py-4 text-white sm:px-6 lg:px-7">
           <p className="text-[9px] font-black uppercase tracking-[.25em] text-violet-300">DR1FT / Szenario-Report</p>
           <div className="mt-2 flex flex-col gap-4 md:flex-row md:items-end md:justify-between"><div><h2 className="text-2xl font-black leading-tight sm:text-3xl">{scenarioTitle}</h2><p className="mt-2 text-xs text-white/55">{selectedAnswers.length} ausgewertete Aufgaben{selectedAnswers[0] ? ` · zuletzt bearbeitet ${dateLabel(selectedAnswers[0].occurred_at)}` : ""}</p></div><div className="inline-flex w-fit items-center gap-3 rounded-2xl border border-white/10 bg-white/[.07] px-4 py-3"><span className="grid h-10 w-10 place-items-center rounded-xl bg-violet-400/15 text-violet-200"><Target className="h-5 w-5" /></span><span><strong className="block text-sm">{learningFocus.length ? `${learningFocus.length} Lernziel${learningFocus.length > 1 ? "e" : ""} zum Üben` : selectedAnswers.length ? "Alle Lernziele erreicht" : "Noch keine Auswertung"}</strong><span className="mt-0.5 block text-[10px] text-white/55">{learningFocus.length ? "Hier kannst du weiterarbeiten" : "basierend auf gespeicherten Antworten"}</span></span></div></div>
-          <div className="mt-5 grid grid-cols-3 gap-2 sm:gap-3"><div className="rounded-xl border border-emerald-300/15 bg-emerald-400/10 p-3"><p className="text-2xl font-black text-emerald-300">{successCount}</p><p className="text-[10px] font-semibold text-white/65">Vollständig</p></div><div className="rounded-xl border border-amber-300/15 bg-amber-300/10 p-3"><p className="text-2xl font-black text-amber-200">{partialCount}</p><p className="text-[10px] font-semibold text-white/65">Teilweise</p></div><div className="rounded-xl border border-rose-300/15 bg-rose-400/10 p-3"><p className="text-2xl font-black text-rose-200">{notYetCount}</p><p className="text-[10px] font-semibold text-white/65">Noch nicht erreicht</p></div></div>
+          <div className="mt-4 grid grid-cols-3 gap-2 sm:gap-3"><div className="rounded-xl border border-emerald-300/20 bg-emerald-300/10 px-3 py-2"><p className="text-xl font-black text-emerald-300">{successCount}</p><p className="text-[9px] font-semibold text-white/65">Vollständig</p></div><div className="rounded-xl border border-amber-300/20 bg-amber-300/10 px-3 py-2"><p className="text-xl font-black text-amber-200">{partialCount}</p><p className="text-[9px] font-semibold text-white/65">Teilweise</p></div><div className="rounded-xl border border-rose-300/20 bg-rose-400/10 px-3 py-2"><p className="text-xl font-black text-rose-200">{notYetCount}</p><p className="text-[9px] font-semibold text-white/65">Noch nicht erreicht</p></div></div>
         </div>
 
         <div className="grid gap-0 xl:grid-cols-[minmax(0,1.32fr)_minmax(310px,.78fr)]">
-          <div className="space-y-7 p-5 sm:p-7 lg:p-8">
+          <div className="space-y-5 p-4 sm:p-5 lg:p-6">
             <section aria-labelledby="learning-goals-heading">
               <div className="mb-4 flex items-center gap-3"><span className="grid h-11 w-11 shrink-0 place-items-center rounded-2xl bg-violet-100 text-violet-700"><Target className="h-6 w-6" /></span><div><h3 id="learning-goals-heading" className="text-xl font-black tracking-tight sm:text-2xl">Deine Lernziele in dieser DR1FT</h3><p className="mt-0.5 text-xs text-slate-500">Was du schon sicher kannst – und woran du weiterarbeiten kannst.</p></div></div>
               {objectiveGroups.length ? <div className="space-y-2.5">{objectiveGroups.map((group) => {
                 const Icon = objectiveIcon(group.title);
                 return <details key={group.key} className="group overflow-hidden rounded-2xl border border-slate-200 bg-white open:border-violet-200 open:shadow-[0_8px_24px_rgba(82,62,150,.08)]">
-                  <summary className="flex cursor-pointer list-none flex-wrap items-center gap-3 p-3.5 sm:p-4 [&::-webkit-details-marker]:hidden">
-                    <span className={`grid h-10 w-10 shrink-0 place-items-center rounded-xl ${group.needsWork ? "bg-amber-100 text-amber-700" : "bg-emerald-100 text-emerald-700"}`}>{group.needsWork ? <CircleHelp className="h-5 w-5" /> : <CheckCircle2 className="h-5 w-5" />}</span>
-                    <span className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-violet-100 text-violet-700"><Icon className="h-5 w-5" /></span>
+                  <summary className="flex cursor-pointer list-none flex-wrap items-center gap-2.5 p-3 sm:p-3.5 [&::-webkit-details-marker]:hidden">
+                    <span className={`grid h-9 w-9 shrink-0 place-items-center rounded-xl shadow-sm ${group.needsWork ? "bg-gradient-to-br from-amber-100 to-orange-100 text-amber-700" : "bg-gradient-to-br from-emerald-100 to-teal-100 text-emerald-700"}`}>{group.needsWork ? <CircleHelp className="h-5 w-5" /> : <CheckCircle2 className="h-5 w-5" />}</span>
+                    <span className="grid h-9 w-9 shrink-0 place-items-center rounded-xl bg-gradient-to-br from-violet-100 to-fuchsia-100 text-violet-700 shadow-sm"><Icon className="h-5 w-5" /></span>
                     <span className="min-w-[130px] flex-1"><strong className="block text-sm text-slate-900">{group.title}</strong><small className="text-[10px] text-slate-400">{group.answers.length} zugehörige Aufgabe{group.answers.length === 1 ? "" : "n"}</small></span>
-                    <span className="w-[110px] shrink-0"><span className="block text-right text-sm font-black text-slate-800">{group.needsWork ? `${group.rate}%` : "100%"}</span><span className="mt-1 block h-2 overflow-hidden rounded-full bg-slate-100"><span className={`block h-full rounded-full ${group.needsWork ? "bg-amber-400" : "bg-emerald-500"}`} style={{ width: `${group.rate}%` }} /></span><span className="mt-1 block text-right text-[10px] text-slate-500">{group.good} / {group.answers.length} vollständig</span></span>
+                    <span className="w-[110px] shrink-0"><span className="block text-right text-sm font-black text-slate-800">{group.rate}%</span><span className="mt-1 block h-2 overflow-hidden rounded-full bg-slate-100"><span className={`block h-full rounded-full ${group.needsWork ? "bg-gradient-to-r from-amber-400 to-yellow-300" : "bg-gradient-to-r from-emerald-500 to-teal-400"}`} style={{ width: `${group.rate}%` }} /></span><span className="mt-1 block text-right text-[10px] text-slate-500">{group.good} / {group.answers.length} vollständig</span></span>
                     <ChevronDown className="h-4 w-4 shrink-0 text-slate-400 transition group-open:rotate-180" />
                   </summary>
                   <div className="grid gap-4 border-t border-amber-100 bg-gradient-to-r from-amber-50/80 to-orange-50/70 p-4 sm:grid-cols-2 sm:p-5">
-                    <div><p className="flex items-center gap-2 text-xs font-black text-amber-900"><XCircle className="h-4 w-4" />Hier hast du Punkte liegen lassen</p><ul className="mt-2 space-y-2 text-xs leading-5 text-amber-950">{group.answers.filter((answer) => answer.outcome !== "success").map((answer) => <li key={answer.response_id} className="flex gap-2"><span className="text-amber-600">•</span><span>{answer.selected_option_feedback || `Deine Antwort „${answer.selected_option_label}“ wurde teilweise gewertet.`}</span></li>)}{!group.needsWork && <li>Für dieses Lernziel sind alle gespeicherten Antworten vollständig.</li>}</ul></div>
-                    <div className="border-t border-amber-200 pt-3 sm:border-l sm:border-t-0 sm:pl-4 sm:pt-0"><p className="flex items-center gap-2 text-xs font-black text-emerald-800"><Check className="h-4 w-4" />So erreichst du die volle Punktzahl</p><ul className="mt-2 space-y-2 text-xs leading-5 text-emerald-950">{group.answers.filter((answer) => answer.outcome !== "success").map((answer) => <li key={answer.response_id} className="flex gap-2"><Check className="mt-0.5 h-3.5 w-3.5 shrink-0 text-emerald-600" /><span>{answer.recommended_option_label || "Für diese Aufgabe ist noch keine vollständige Musterantwort hinterlegt."}</span></li>)}{!group.needsWork && <li>Alle dokumentierten Antworten erfüllen dieses Lernziel.</li>}</ul></div>
+                    <div><p className="flex items-center gap-2 text-xs font-black text-amber-900"><XCircle className="h-4 w-4" />Hier lohnt sich noch Übung</p><ul className="mt-2 space-y-2 text-xs leading-5 text-amber-950">{group.answers.filter((answer) => answer.outcome !== "success").map((answer) => <li key={answer.response_id} className="flex gap-2"><span className="text-amber-600">•</span><span>{answer.selected_option_feedback || `Deine Antwort „${answer.selected_option_label}“ wurde teilweise gewertet.`}</span></li>)}{!group.needsWork && <li>Für dieses Lernziel sind alle gespeicherten Antworten vollständig.</li>}</ul></div>
+                    <div className="border-t border-amber-200 pt-3 sm:border-l sm:border-t-0 sm:pl-4 sm:pt-0"><p className="flex items-center gap-2 text-xs font-black text-emerald-800"><Check className="h-4 w-4" />So kommst du weiter</p><ul className="mt-2 space-y-2 text-xs leading-5 text-emerald-950">{group.answers.filter((answer) => answer.outcome !== "success").map((answer) => <li key={answer.response_id} className="flex gap-2"><Check className="mt-0.5 h-3.5 w-3.5 shrink-0 text-emerald-600" /><span>{answer.recommended_option_label || "Für diese Aufgabe ist noch keine vollständige Musterantwort hinterlegt."}</span></li>)}{!group.needsWork && <li>Alle dokumentierten Antworten erfüllen dieses Lernziel.</li>}</ul></div>
                   </div>
                 </details>;
               })}</div> : <div className="rounded-2xl border border-dashed border-slate-200 bg-slate-50/70 px-5 py-8 text-center"><p className="text-sm font-semibold text-slate-700">Noch keine ausgewerteten Lernziele</p><p className="mt-1 text-xs text-slate-500">Sobald Antworten gespeichert sind, erscheinen sie hier.</p></div>}
@@ -240,7 +250,7 @@ export default async function StudentReportPage({
             </section>
           </div>
 
-          <aside className="space-y-4 border-t border-slate-100 bg-[#fafaff] p-5 sm:p-7 xl:border-l xl:border-t-0 xl:p-6">
+          <aside className="space-y-3 border-t border-violet-100 bg-[linear-gradient(165deg,#fbfaff,#f7f7ff)] p-4 sm:p-5 xl:border-l xl:border-t-0 xl:p-5">
             <section className="rounded-2xl border border-indigo-100 bg-[#f6f8ff] p-4 sm:p-5"><div className="flex items-center gap-3"><Sparkles className="h-5 w-5 shrink-0 text-indigo-600" /><h3 className="text-base font-black text-slate-900">Kurzfazit</h3></div><p className="mt-3 text-sm leading-6 text-slate-700">{selectedAnswers.length ? `${studentName} hat in dieser DR1FT ${selectedAnswers.length} Aufgabe${selectedAnswers.length === 1 ? "" : "n"} beantwortet. ${successCount} Antwort${successCount === 1 ? "" : "en"} war${successCount === 1 ? "" : "en"} vollständig, ${partialCount + notYetCount} ${partialCount + notYetCount === 1 ? "braucht" : "brauchen"} noch Übung.` : "Für diese DR1FT liegen noch keine ausgewerteten Antworten vor."}</p><p className="mt-2 text-[11px] leading-5 text-slate-500">Das Fazit fasst gespeicherte Antworten zusammen. Es ersetzt keine pädagogische Beurteilung.</p></section>
 
             <section className="rounded-2xl border border-emerald-200 bg-white p-4 sm:p-5"><div className="flex items-center gap-3"><ThumbsUp className="h-5 w-5 shrink-0 text-emerald-700" /><h3 className="text-base font-black text-slate-900">Deine Stärken</h3></div>{evidencedStrengths.length ? <ul className="mt-3 space-y-2.5 text-sm leading-5 text-slate-700">{evidencedStrengths.map((group) => <li key={group.key} className="flex gap-2"><Check className="mt-0.5 h-4 w-4 shrink-0 text-emerald-600" /><span><strong>{group.title}</strong><span className="block text-xs text-slate-500">{group.answers.length} Antworten – alle vollständig</span></span></li>)}</ul> : <p className="mt-3 text-xs leading-5 text-slate-500">Noch keine mehrfach bestätigte Stärke. Dafür braucht es mindestens zwei vollständig bewertete Antworten zum selben Lernziel.</p>}</section>
