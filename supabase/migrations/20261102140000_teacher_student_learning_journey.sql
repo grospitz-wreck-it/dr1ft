@@ -148,7 +148,7 @@ begin
       m.description,
       s.title,
       'success'::text,
-      coalesce(ump.completed_at, ump.updated_at, ump.created_at),
+      coalesce(ump.completed_at, ump.started_at),
       jsonb_build_object('mission_id', m.id)
     from public.user_mission_progress ump
     join public.missions m on m.id = ump.mission_id
