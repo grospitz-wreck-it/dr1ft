@@ -11,15 +11,17 @@ type StudentRow = { name: string; competencies: Record<string, number>; complete
 type Evidence = { responses: number; assessed: number; successful: number; notYet: number };
 type Competency = { competency_id: string; competency_title: string; avg_level: number; student_count: number };
 type Bottleneck = { mission_id: string; mission_title: string; completion_rate: number; completed_count: number; student_count: number };
+type ScenarioLearningCard = { scenario_id: string; scenario_title: string; card_id: string; card_title: string; card_prompt: string; objective_title: string; response_count: number; participant_count: number; success_count: number; partial_count: number; not_yet_count: number };
 
 export function ClassLearningInsights({
-  students, studentRows, competencyTitles, evidence, competencies, bottlenecks,
+  students, studentRows, competencyTitles, evidence, scenarioLearningCards, competencies, bottlenecks,
   average, completed, total, classId
 }: {
   students: Student[];
   studentRows: Record<string, StudentRow>;
   competencyTitles: string[];
   evidence: Evidence;
+  scenarioLearningCards: ScenarioLearningCard[];
   competencies: Competency[];
   bottlenecks: Bottleneck[];
   average: number | null;
@@ -143,6 +145,77 @@ export function ClassLearningInsights({
           </div>
         </section>
       </div>
+
+      <section className="border-t border-slate-100 bg-white px-5 py-6 sm:px-7">
+        <div className="mb-5 flex flex-wrap items-start justify-between gap-3">
+          <div className="flex items-start gap-3">
+            <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-emerald-100 text-emerald-700"><Target className="h-5 w-5" /></span>
+            <div>
+              <h3 className="text-sm font-bold text-slate-950">Szenario-Lernaufgaben</h3>
+              <p className="mt-1 max-w-2xl text-xs leading-5 text-slate-500">Anonyme Rückmeldung dazu, welche Lernziele bereits gut erreicht werden und wo eine Aufgabe noch klarer unterstützen könnte.</p>
+            </div>
+          </div>
+          <span className="rounded-full border border-emerald-100 bg-emerald-50 px-3 py-1.5 text-[11px] font-semibold text-emerald-700">Klassenblick · anonymisiert</span>
+        </div>
+        {scenarioLearningCards.length ? <div className="grid gap-3 xl:grid-cols-2">
+          {scenarioLearningCards.map((card) => {
+            const count = Number(card.response_count ?? 0);
+            const success = Number(card.success_count ?? 0);
+            const partial = Number(card.partial_count ?? 0);
+            const notYet = Number(card.not_yet_count ?? 0);
+            const pct = (value: number) => count > 0 ? Math.round(value / count * 100) : 0;
+            const successPct = pct(success);
+            const partialPct = pct(partial);
+            const notYetPct = pct(notYet);
+            const focus = notYetPct >= 35 || partialPct >= 50;
+            const positive = successPct >= 70;
+            const summary = positive
+              ? "Das Lernziel wird von vielen bereits sicher erreicht. Die Aufgabe scheint an dieser Stelle gut zu unterstützen."
+              : focus
+                ? "Die Antworten zeigen: Hier lohnt sich eine zusätzliche Erklärung oder ein konkretes Beispiel, das den nächsten Schritt verständlicher macht."
+                : "Ein Teil der Antworten zeigt bereits ein gutes Verständnis. Eine kurze Vertiefung könnte noch mehr Sicherheit schaffen.";
+            const suggestion = positive
+              ? "Erfolg bestätigen und das gelungene Element möglichst beibehalten."
+              : focus
+                ? "Prüfen, ob Aufgabenstellung, Hilfestellung oder Antwortoptionen den entscheidenden Schritt ausreichend deutlich machen."
+                : "Mit einem kurzen Hinweis oder Beispiel den Übergang vom teilweisen zum sicheren Verständnis unterstützen.";
+            return <article key={card.scenario_id + ":" + card.card_id} className="rounded-2xl border border-slate-200/80 bg-slate-50/70 p-4">
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <p className="text-[10px] font-bold uppercase tracking-[.13em] text-violet-600">{card.scenario_title}</p>
+                <span className="text-[10px] font-medium text-slate-400">{count} Antworten</span>
+              </div>
+              <h4 className="mt-2 text-sm font-bold text-slate-900">{card.card_title}</h4>
+              {card.card_prompt && <p className="mt-1 line-clamp-2 text-xs leading-5 text-slate-500">{card.card_prompt}</p>}
+              <p className="mt-2 text-[10px] font-semibold text-slate-400">LERNZIEL · {card.objective_title}</p>
+              <div className="mt-4 flex h-2.5 overflow-hidden rounded-full bg-slate-200">
+                {successPct > 0 && <div className="bg-emerald-500" style={{ width: successPct + "%" }} />}
+                {partialPct > 0 && <div className="bg-amber-400" style={{ width: partialPct + "%" }} />}
+                {notYetPct > 0 && <div className="bg-rose-300" style={{ width: notYetPct + "%" }} />}
+              </div>
+              <div className="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-[10px] font-semibold">
+                <span className="text-emerald-700">{successPct}% Ziel erreicht</span>
+                <span className="text-amber-700">{partialPct}% teilweise</span>
+                <span className="text-rose-600">{notYetPct}% noch offen</span>
+              </div>
+              <div className="mt-4 grid gap-2 sm:grid-cols-2">
+                <div className="rounded-xl border border-emerald-100 bg-white p-3">
+                  <p className="flex items-center gap-1.5 text-[10px] font-bold text-emerald-700"><CheckCircle2 className="h-3.5 w-3.5" /> EINORDNUNG</p>
+                  <p className="mt-1.5 text-xs leading-5 text-slate-600">{summary}</p>
+                </div>
+                <div className="rounded-xl border border-violet-100 bg-white p-3">
+                  <p className="flex items-center gap-1.5 text-[10px] font-bold text-violet-700"><Target className="h-3.5 w-3.5" /> MÖGLICHER NÄCHSTER SCHRITT</p>
+                  <p className="mt-1.5 text-xs leading-5 text-slate-600">{suggestion}</p>
+                </div>
+              </div>
+            </article>;
+          })}
+        </div> : <div className="rounded-2xl border border-dashed border-slate-200 bg-slate-50/60 px-5 py-8 text-center">
+          <Target className="mx-auto h-6 w-6 text-slate-300" />
+          <p className="mt-2 text-sm font-semibold text-slate-700">Noch keine auswertbaren Lernkarten-Antworten</p>
+          <p className="mt-1 text-xs text-slate-500">Sobald Lernkarten in einem Szenario beantwortet wurden, erscheint hier eine anonyme Rückmeldung zu den Lernzielen.</p>
+        </div>}
+        <p className="mt-3 text-[10px] leading-4 text-slate-400">Gezählt wird je Person die zuletzt gespeicherte Antwort pro Lernkarte. Die Auswertung ist ein Hinweis zur Weiterentwicklung der Lernaufgaben – keine individuelle Leistungsbewertung und kein automatischer Kompetenznachweis.</p>
+      </section>
 
       <section className="border-t border-slate-100">
         <div className="flex flex-wrap items-end justify-between gap-4 px-5 py-5 sm:px-7">
