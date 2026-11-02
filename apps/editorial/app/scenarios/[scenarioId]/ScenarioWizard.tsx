@@ -24,7 +24,6 @@ export function ScenarioWizard({
   children: ReactNode;
 }) {
   const [current, setCurrent] = useState(0);
-  const active = steps[current];
   const completed = steps.filter((step) => step.complete).length;
 
   function goToStep(index: number) {
