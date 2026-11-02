@@ -1,6 +1,6 @@
 "use client";
 import { useEffect, useRef, useState } from "react";
-import { ArrowDown, CheckCircle2, Sparkles } from "lucide-react";
+import { ArrowDown, ArrowRight, CheckCircle2, Sparkles } from "lucide-react";
 import { recordInteraction, startRealtimeEventBridge, eventBus } from "@dr1ft/engine-core";
 import type { FeedItem } from "../../lib/types";
 import { supabaseBrowserClient } from "../../lib/supabaseBrowserClient";
