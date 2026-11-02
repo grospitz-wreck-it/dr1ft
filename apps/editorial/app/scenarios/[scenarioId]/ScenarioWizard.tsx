@@ -94,7 +94,6 @@ export function ScenarioWizard({
         >
           <ArrowLeft className="h-3.5 w-3.5" /> Zurück
         </button>
-        <span className="min-w-0 truncate text-xs text-slate-400">{active?.title}</span>
         {current < steps.length - 1 ? (
           <button
             type="button"
@@ -103,9 +102,7 @@ export function ScenarioWizard({
           >
             Weiter <ArrowRight className="h-3.5 w-3.5" />
           </button>
-        ) : (
-          <span className="px-3 py-2 text-xs font-semibold text-emerald-700">Letzter Bereich</span>
-        )}
+        ) : null}
       </footer>
     </div>
   );
