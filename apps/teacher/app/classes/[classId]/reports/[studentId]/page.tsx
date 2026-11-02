@@ -140,9 +140,9 @@ function ActiveTimeOverview({
 }) {
   const total = seconds.feed + seconds.other + seconds.learning_cards;
   const categories = [
-    { key: "feed", label: "Feed", value: seconds.feed, color: "#22d3ee", text: "text-cyan-200" },
-    { key: "other", label: "Abseits des Feeds", value: seconds.other, color: "#e879f9", text: "text-fuchsia-200" },
-    { key: "learning_cards", label: "Lernkarten", value: seconds.learning_cards, color: "#fbbf24", text: "text-amber-200" },
+    { key: "feed", label: "Feed", value: seconds.feed, color: "#22d3ee", text: "text-cyan-700" },
+    { key: "other", label: "Abseits des Feeds", value: seconds.other, color: "#e879f9", text: "text-fuchsia-700" },
+    { key: "learning_cards", label: "Lernkarten", value: seconds.learning_cards, color: "#fbbf24", text: "text-amber-700" },
   ];
   const rings = [
     { radius: 52, stroke: 8, value: seconds.feed, color: "#22d3ee" },
@@ -150,35 +150,35 @@ function ActiveTimeOverview({
     { radius: 29, stroke: 6, value: seconds.learning_cards, color: "#fbbf24" },
   ];
 
-  if (unavailable) return <div className="rounded-2xl border border-white/10 bg-white/[.06] p-4"><p className="text-sm font-bold text-white">Zeitübersicht</p><p className="mt-1 text-xs leading-5 text-white/60">Die aktive Zeitmessung wird nach dem Datenbank-Update verfügbar.</p></div>;
+  if (unavailable) return <p className="py-2 text-xs text-slate-500">Zeitübersicht nach dem Datenbank-Update verfügbar.</p>;
 
-  return <section aria-label="Aktive Zeit in DR1FT" className="rounded-2xl border border-white/10 bg-white/[.06] p-3.5 sm:p-4">
-    <div className="flex items-center gap-3 sm:gap-4">
-      <div className="relative h-[132px] w-[132px] shrink-0" role="img" aria-label={`Aktive Zeit insgesamt ${formatDuration(total)}: ${categories.map((category) => `${category.label} ${Math.round(total ? category.value / total * 100 : 0)} Prozent`).join(", ")}`}>
+  return <section aria-label="Aktive Zeit in DR1FT" className="min-w-0">
+    <div className="flex items-center gap-3">
+      <div className="relative h-[100px] w-[100px] shrink-0" role="img" aria-label={`Aktive Zeit insgesamt ${formatDuration(total)}: ${categories.map((category) => `${category.label} ${Math.round(total ? category.value / total * 100 : 0)} Prozent`).join(", ")}`}>
         <svg viewBox="0 0 120 120" className="absolute inset-0 h-full w-full -rotate-90">
           {rings.map((ring) => {
             const circumference = 2 * Math.PI * ring.radius;
             const share = total ? Math.min(1, ring.value / total) : 0;
-            return <g key={ring.radius}><circle cx="60" cy="60" r={ring.radius} fill="none" stroke="rgba(255,255,255,.12)" strokeWidth={ring.stroke} /><circle cx="60" cy="60" r={ring.radius} fill="none" stroke={ring.color} strokeWidth={ring.stroke} strokeLinecap="round" strokeDasharray={circumference} strokeDashoffset={circumference * (1 - share)} /></g>;
+            return <g key={ring.radius}><circle cx="60" cy="60" r={ring.radius} fill="none" stroke="rgba(71,85,105,.14)" strokeWidth={ring.stroke} /><circle cx="60" cy="60" r={ring.radius} fill="none" stroke={ring.color} strokeWidth={ring.stroke} strokeLinecap="round" strokeDasharray={circumference} strokeDashoffset={circumference * (1 - share)} /></g>;
           })}
         </svg>
-        <div className="absolute inset-0 flex flex-col items-center justify-center text-center"><strong className="text-[11px] font-black leading-4 text-white">{formatDuration(total)}</strong><span className="mt-0.5 text-[7px] font-bold uppercase tracking-[.12em] text-white/50">Aktiv gesamt</span></div>
+        <div className="absolute inset-0 flex flex-col items-center justify-center text-center"><strong className="text-[10px] font-black leading-4 text-slate-800">{formatDuration(total)}</strong><span className="mt-0.5 text-[6px] font-bold uppercase tracking-[.12em] text-slate-500">Aktiv gesamt</span></div>
       </div>
       <div className="min-w-0 flex-1">
-        <div className="mb-2 flex items-center justify-between gap-2"><h3 className="text-sm font-black text-white">Zeit in DR1FT</h3><span className="text-[9px] text-white/40">Anteil gesamt</span></div>
-        <ul className="space-y-2">
+        <div className="mb-1.5 flex items-center justify-between gap-2"><h3 className="text-sm font-black text-slate-800">Zeit in DR1FT</h3><span className="text-[9px] text-slate-500">Anteil</span></div>
+        <ul className="space-y-1.5">
           {categories.map((category) => {
             const share = total ? Math.round(category.value / total * 100) : 0;
-            return <li key={category.key} className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-x-2 gap-y-1 text-[10px]">
-              <span className="inline-flex min-w-0 items-center gap-1.5 font-semibold text-white/75"><i className="h-2 w-2 shrink-0 rounded-full" style={{ backgroundColor: category.color }} />{category.label}</span>
+            return <li key={category.key} className="grid grid-cols-[minmax(0,1fr)_auto_auto] items-center gap-2 text-[10px]">
+              <span className="inline-flex min-w-0 items-center gap-1.5 font-semibold text-slate-600"><i className="h-2 w-2 shrink-0 rounded-full" style={{ backgroundColor: category.color }} />{category.label}</span>
+              <span className="text-slate-500 tabular-nums">{formatDuration(category.value)}</span>
               <strong className={`${category.text} tabular-nums`}>{share}%</strong>
-              <span className="col-span-2 -mt-0.5 pl-3.5 text-[9px] text-white/45">{formatDuration(category.value)}</span>
             </li>;
           })}
         </ul>
       </div>
     </div>
-    <p className="mt-2 border-t border-white/10 pt-2 text-[9px] leading-4 text-white/40">{total ? "Seit Einführung gemessen. Zählt bei sichtbarem Tab und Eingabe in den letzten 90 Sek.; pausiert danach." : "Noch keine aktiven Minuten erfasst. Die Messung beginnt mit der Nutzung nach dem Update."}{hasScenario && scenarioSeconds > 0 ? ` Eindeutig zugeordnet zu dieser DR1FT: ${formatDuration(scenarioSeconds)}.` : ""}</p>
+    {hasScenario && scenarioSeconds > 0 && <p className="mt-1 text-[9px] text-slate-500">Davon diesem Szenario zugeordnet: {formatDuration(scenarioSeconds)}</p>}
   </section>;
 }
 
@@ -304,13 +304,19 @@ export default async function StudentReportPage({
       </section>
 
       <section id="drift-reports" className="scroll-mt-5 overflow-hidden rounded-[28px] border border-violet-100 bg-white shadow-[0_12px_38px_rgba(56,65,120,.08)] print:shadow-none">
-        <div className="bg-[linear-gradient(110deg,#252044_0%,#202742_68%,#26234e_100%)] px-5 py-4 text-white sm:px-6 lg:px-7">
-          <p className="text-[9px] font-black uppercase tracking-[.25em] text-violet-300">DR1FT / Szenario-Report</p>
-          <div className="mt-2 grid gap-4 xl:grid-cols-[minmax(0,1fr)_minmax(350px,.72fr)] xl:items-center">
-            <div className="min-w-0"><h2 className="text-2xl font-black leading-tight sm:text-3xl">{scenarioTitle}</h2><p className="mt-2 text-xs text-white/55">{selectedAnswers.length} ausgewertete Aufgaben{selectedAnswers[0] ? ` · zuletzt bearbeitet ${dateLabel(selectedAnswers[0].occurred_at)}` : ""}</p><span className="mt-3 inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/[.06] px-3 py-1.5 text-[10px] font-semibold text-white/70"><Target className="h-3.5 w-3.5 text-violet-200" />{learningFocus.length ? `${learningFocus.length} Lernziel${learningFocus.length > 1 ? "e" : ""} zum Üben` : selectedAnswers.length ? "Alle Lernziele erreicht" : "Noch keine Auswertung"}</span></div>
+        <div className="bg-[linear-gradient(110deg,#f1edff_0%,#eef4ff_58%,#f7f0ff_100%)] px-5 py-3 text-slate-900 sm:px-6 lg:px-7">
+          <p className="text-[9px] font-black uppercase tracking-[.25em] text-violet-700">DR1FT / Szenario-Report</p>
+          <div className="mt-2 grid gap-3 lg:grid-cols-[minmax(0,1fr)_minmax(320px,.82fr)] lg:items-center">
+            <div className="min-w-0">
+              <p className="mb-2 text-[10px] text-slate-500">{selectedAnswers.length} ausgewertete Aufgaben{selectedAnswers[0] ? ` · zuletzt bearbeitet ${dateLabel(selectedAnswers[0].occurred_at)}` : ""}</p>
+              <div className="grid grid-cols-3 gap-1.5 sm:gap-2">
+                <div className="rounded-xl border border-emerald-200 bg-emerald-50 px-2.5 py-1.5"><p className="text-lg font-black leading-5 text-emerald-700">{successCount}</p><p className="text-[9px] font-semibold text-emerald-800/75">Vollständig</p></div>
+                <div className="rounded-xl border border-amber-200 bg-amber-50 px-2.5 py-1.5"><p className="text-lg font-black leading-5 text-amber-700">{partialCount}</p><p className="text-[9px] font-semibold text-amber-800/75">Teilweise</p></div>
+                <div className="rounded-xl border border-rose-200 bg-rose-50 px-2.5 py-1.5"><p className="text-lg font-black leading-5 text-rose-700">{notYetCount}</p><p className="text-[9px] font-semibold text-rose-800/75">Noch nicht erreicht</p></div>
+              </div>
+            </div>
             <ActiveTimeOverview seconds={activitySeconds} scenarioSeconds={selectedScenarioSeconds} hasScenario={Boolean(selectedReport)} unavailable={Boolean(activityTimeResult.error)} />
           </div>
-          <div className="mt-4 grid grid-cols-3 gap-2 sm:gap-3"><div className="rounded-xl border border-emerald-300/20 bg-emerald-300/10 px-3 py-2"><p className="text-xl font-black text-emerald-300">{successCount}</p><p className="text-[9px] font-semibold text-white/65">Vollständig</p></div><div className="rounded-xl border border-amber-300/20 bg-amber-300/10 px-3 py-2"><p className="text-xl font-black text-amber-200">{partialCount}</p><p className="text-[9px] font-semibold text-white/65">Teilweise</p></div><div className="rounded-xl border border-rose-300/20 bg-rose-400/10 px-3 py-2"><p className="text-xl font-black text-rose-200">{notYetCount}</p><p className="text-[9px] font-semibold text-white/65">Noch nicht erreicht</p></div></div>
         </div>
 
         <div className="grid gap-0 xl:grid-cols-[minmax(0,1.32fr)_minmax(310px,.78fr)]">
