@@ -65,7 +65,7 @@ export function ContentLearningTaskEditor({ scenarioId, contentItemId, initialTa
 
   const assessmentCount = task.assessment.assessedActions.length;
   const acceptableCount = task.assessment.acceptableActions.length;
-  const responseCardComplete = Boolean(task.responsePrompt.trim()) && (task.responseMode === "reflection" || (task.responseOptions.length >= 2 && task.responseOptions.every(option => option.label.trim()) && (task.responseMode !== "decision" || task.responseOptions.every(option => option.consequence.trim()))));
+  const responseCardComplete = Boolean(task.responsePrompt.trim()) && task.responseOptions.length >= 2 && task.responseOptions.every(option => option.label.trim()) && (task.responseMode !== "decision" || task.responseOptions.every(option => option.consequence.trim()));
 
   function update<K extends keyof Task>(key: K, value: Task[K]) {
     setTask(current => ({ ...current, [key]: value }));
@@ -163,7 +163,7 @@ export function ContentLearningTaskEditor({ scenarioId, contentItemId, initialTa
             </div>
             <div className="mt-3 grid grid-cols-2 gap-2 sm:grid-cols-4">
               {([
-                ["reflection", "Reflexion"],
+                ["reflection", "Reflexion · Auswahl"],
                 ["single_choice", "Single Choice"],
                 ["multiple_choice", "Multiple Choice"],
                 ["decision", "Entscheidung"],
@@ -173,9 +173,9 @@ export function ContentLearningTaskEditor({ scenarioId, contentItemId, initialTa
             </div>
             <label className="mt-3 block text-xs font-semibold text-slate-700">
               {task.responseMode === "reflection" ? "Reflexionsfrage" : task.responseMode === "decision" ? "Entscheidungssituation" : "Frage"}
-              <textarea value={task.responsePrompt} onChange={event => update("responsePrompt", event.target.value)} rows={2} maxLength={1200} placeholder={task.responseMode === "reflection" ? "Was geht dir durch den Kopf, wenn du den Beitrag siehst?" : "Was würdest du in dieser Situation tun?"} className={inputClass} />
+              <textarea value={task.responsePrompt} onChange={event => update("responsePrompt", event.target.value)} rows={2} maxLength={1200} placeholder={task.responseMode === "reflection" ? "Welche Aspekte haben deine Einschätzung beeinflusst?" : task.responseMode === "decision" ? "Was würdest du in dieser Situation tun?" : "Welche Aussage trifft zu?"} className={inputClass} />
             </label>
-            {task.responseMode !== "reflection" && (
+            {(
               <div className="mt-3 space-y-2">
                 <div className="flex items-center justify-between gap-2">
                   <span className="text-xs font-semibold text-slate-700">Antwortmöglichkeiten <span className="font-normal text-slate-400">· mindestens 2</span></span>
@@ -187,9 +187,9 @@ export function ContentLearningTaskEditor({ scenarioId, contentItemId, initialTa
                       <input value={option.label} onChange={event => updateResponseOption(index, { label: event.target.value })} maxLength={180} placeholder={`Option ${index + 1}`} className="min-w-0 flex-1 rounded-lg border border-slate-200 px-3 py-2 text-sm" />
                       <button type="button" onClick={() => removeResponseOption(index)} aria-label="Option entfernen" className="rounded-lg p-2 text-slate-400 hover:bg-slate-100 hover:text-red-600"><X className="h-4 w-4" /></button>
                     </div>
-                    {(task.responseMode === "decision" || task.responseMode === "single_choice" || task.responseMode === "multiple_choice") && (
+                    {task.responseMode === "decision" && (
                       <label className="mt-2 block text-[11px] font-medium text-slate-500">
-                        {task.responseMode === "decision" ? "Was passiert danach?" : "Welche Rückmeldung oder Folge wird sichtbar?"}
+                        Was passiert nach dieser Entscheidung?
                         <textarea value={option.consequence} onChange={event => updateResponseOption(index, { consequence: event.target.value })} rows={2} maxLength={600} placeholder="Beschreibe die Folge dieser Wahl – ohne richtig/falsch-Bewertung." className="mt-1 w-full rounded-lg border border-slate-200 px-3 py-2 text-xs" />
                       </label>
                     )}
