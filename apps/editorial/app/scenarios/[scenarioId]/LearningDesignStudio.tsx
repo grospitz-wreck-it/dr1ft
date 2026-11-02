@@ -147,8 +147,8 @@ export function LearningDesignStudio({ scenarioId, latestDesign, contentItems = 
 
       <div className="space-y-7 p-5 sm:p-7">
         <div>
-          <div className="flex items-center gap-2"><Target className="h-4 w-4 text-violet-600" /><h3 className="text-sm font-bold text-slate-900">1. Lernziel wählen</h3></div>
-          <p className="mt-1 text-xs text-slate-500">Das ist keine Kosmetik: Deine Auswahl steuert den kognitiven Anspruch und wird an die Generierung übergeben.</p>
+          <div className="flex items-center gap-2"><Target className="h-4 w-4 text-violet-600" /><h3 className="text-sm font-bold text-slate-900">1. Kognitives Anspruchsniveau wählen</h3></div>
+          <p className="mt-1 text-xs text-slate-500">Diese Auswahl legt fest, auf welchem Denk-Niveau gelernt wird. Sie ist kein eigenes Lernziel, sondern prägt die konkreten Lernziele des Szenarios.</p>
           <div className="mt-3 grid gap-2 sm:grid-cols-2 lg:grid-cols-5">
             {GOALS.map((option) => <GoalCard key={option.value} active={goal === option.value} option={option} onClick={() => { setGoal(option.value); setFlowOrder(null); }} />)}
           </div>
