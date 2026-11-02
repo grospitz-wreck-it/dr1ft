@@ -25,6 +25,7 @@ export function FeedClient({ initialItems, userId, classInstanceId, likedContent
   const [scenarioStateLoaded, setScenarioStateLoaded] = useState(false);
   const scenarioStateKey = `dr1ft:scenario-state:${userId}:${classInstanceId}:${[...scenarioIds].sort().join(",") || scenarioIntro?.id || "none"}`;
   const multipleScenarios = scenarioIds.length > 1;
+  const scenarioIdsKey = scenarioIds.join(",");
 
   useEffect(() => {
     try {
@@ -49,6 +50,13 @@ export function FeedClient({ initialItems, userId, classInstanceId, likedContent
     if (!scenarioStateLoaded) return;
     window.sessionStorage.setItem(scenarioStateKey, JSON.stringify({ started: scenarioStarted, finished: scenarioFinished }));
   }, [scenarioStateKey, scenarioStateLoaded, scenarioStarted, scenarioFinished]);
+  useEffect(() => {
+    if (!scenarioStateLoaded || !scenarioStarted || scenarioFinished) return;
+    const timer = window.setTimeout(() => window.dispatchEvent(new CustomEvent("dr1ft:scenario-started", {
+      detail: { scenarioId: scenarioIntro?.id ?? null, scenarioIds: scenarioIdsKey ? scenarioIdsKey.split(",") : [] },
+    })), 0);
+    return () => window.clearTimeout(timer);
+  }, [scenarioStateLoaded, scenarioStarted, scenarioFinished, scenarioIntro?.id, scenarioIdsKey]);
   const seenRef = useRef<Set<string>>(new Set());
   const [visibleCount, setVisibleCount] = useState(10);
   const loadMoreRef = useRef<HTMLDivElement | null>(null);
@@ -148,7 +156,6 @@ export function FeedClient({ initialItems, userId, classInstanceId, likedContent
   function handleScenarioStart() {
     if (scenarioStarted) return;
     setScenarioStarted(true);
-    window.dispatchEvent(new CustomEvent("dr1ft:scenario-started", { detail: { scenarioId: scenarioIntro?.id ?? null, scenarioIds, userId, classInstanceId, startedAt: new Date().toISOString() } }));
   }
   return <main className="min-h-screen text-[#27213d]"><div className="max-w-4xl mx-auto"><div className="min-w-0 space-y-5"><section className="relative overflow-hidden rounded-[26px] border border-violet-100 bg-white/90 p-6 shadow-sm md:p-7">
   {multipleScenarios ? (

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useEffect, useRef, useState, useTransition } from "react";
 import { ArrowRight, CheckCircle2, Circle, Heart, Layers3, RotateCcw, Search, Smartphone, Sparkles } from "lucide-react";
 import { submitScenarioLearningCard } from "../app/feed/learning-card-actions";
 
@@ -18,12 +18,26 @@ const OUTCOME_COPY: Record<Outcome, { title: string; message: string }> = {
 };
 
 export function LearningCardFeedItem({ card, classInstanceId }: { card: PlayerLearningCard; classInstanceId: string }) {
+  const cardRef = useRef<HTMLElement | null>(null);
   const [selected, setSelected] = useState<string | null>(null);
   const [outcome, setOutcome] = useState<Outcome | null>(null);
   const [error, setError] = useState("");
   const [busy, startTransition] = useTransition();
   const result = outcome ? OUTCOME_COPY[outcome] : null;
   const typeLabel = card.type === "knowledge_check" ? "Wissenscheck" : card.type === "reflection" ? "Reflexion" : card.type === "mission_completion" ? "Mission" : "Entscheidung";
+  useEffect(() => {
+    const element = cardRef.current;
+    if (!element) return;
+    const publishVisibility = (visible: boolean) => window.dispatchEvent(new CustomEvent("dr1ft:learning-card-visibility", {
+      detail: { cardId: card.id, scenarioId: card.scenarioId, visible },
+    }));
+    const observer = new IntersectionObserver(([entry]) => publishVisibility(entry.isIntersecting && entry.intersectionRatio >= 0.55), { threshold: [0, 0.55] });
+    observer.observe(element);
+    return () => {
+      observer.disconnect();
+      publishVisibility(false);
+    };
+  }, [card.id, card.scenarioId]);
   function submit() {
     if (!selected || busy) return;
     setError("");
@@ -36,7 +50,7 @@ export function LearningCardFeedItem({ card, classInstanceId }: { card: PlayerLe
     });
   }
   return (
-    <article className="learning-card-feed relative isolate overflow-hidden rounded-[28px] border shadow-[0_18px_48px_rgba(91,55,150,.13)]">
+    <article ref={cardRef} className="learning-card-feed relative isolate overflow-hidden rounded-[28px] border shadow-[0_18px_48px_rgba(91,55,150,.13)]">
       <div className="learning-card-art relative overflow-hidden px-5 pb-5 pt-4 sm:px-6 sm:pt-5">
         <div aria-hidden="true" className="pointer-events-none absolute -right-8 -top-12 h-44 w-44 rounded-full bg-fuchsia-300/30 blur-2xl"/>
         <div aria-hidden="true" className="pointer-events-none absolute -bottom-16 left-8 h-40 w-56 rounded-full bg-sky-300/30 blur-2xl"/>
