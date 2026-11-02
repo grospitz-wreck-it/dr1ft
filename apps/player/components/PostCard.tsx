@@ -115,6 +115,7 @@ export function PostCard({ item, userId, classInstanceId, initiallyLiked, onView
       } finally {
         if (active) setTaskResponseLoading(false);
       }
+    }
 
     void restoreLearningTaskResponse();
     return () => { active = false; };
