@@ -150,12 +150,6 @@ export function FeedClient({ initialItems, userId, classInstanceId, likedContent
     setScenarioStarted(true);
     window.dispatchEvent(new CustomEvent("dr1ft:scenario-started", { detail: { scenarioId: scenarioIntro?.id ?? null, scenarioIds, userId, classInstanceId, startedAt: new Date().toISOString() } }));
   }
-  function handleScenarioFinish() {
-    const incomplete = Math.max(0, scenarioMissionCount - completedScenarioMissionCount);
-    if (incomplete > 0 && !window.confirm(`Du hast noch ${incomplete} von ${scenarioMissionCount} Aufgaben/Missionen nicht abgeschlossen. Möchtest du den Lernlauf wirklich beenden?`)) return;
-    setScenarioFinished(true);
-    window.dispatchEvent(new CustomEvent("dr1ft:scenario-completed", { detail: { scenarioId: scenarioIntro?.id ?? null, scenarioIds, userId, classInstanceId, completedAt: new Date().toISOString(), completedMissionCount: completedScenarioMissionCount, totalMissionCount: scenarioMissionCount } }));
-  }
   return <main className="min-h-screen text-[#27213d]"><div className="max-w-4xl mx-auto"><div className="min-w-0 space-y-5"><section className="relative overflow-hidden rounded-[26px] border border-violet-100 bg-white/90 p-6 shadow-sm md:p-7">
   {multipleScenarios ? (
     <>
