@@ -175,8 +175,7 @@ export function ContentLearningTaskEditor({ scenarioId, contentItemId, initialTa
               {task.responseMode === "reflection" ? "Reflexionsfrage" : task.responseMode === "decision" ? "Entscheidungssituation" : "Frage"}
               <textarea value={task.responsePrompt} onChange={event => update("responsePrompt", event.target.value)} rows={2} maxLength={1200} placeholder={task.responseMode === "reflection" ? "Welche Aspekte haben deine Einschätzung beeinflusst?" : task.responseMode === "decision" ? "Was würdest du in dieser Situation tun?" : "Welche Aussage trifft zu?"} className={inputClass} />
             </label>
-            {(
-              <div className="mt-3 space-y-2">
+            <div className="mt-3 space-y-2">
                 <div className="flex items-center justify-between gap-2">
                   <span className="text-xs font-semibold text-slate-700">Antwortmöglichkeiten <span className="font-normal text-slate-400">· mindestens 2</span></span>
                   <button type="button" onClick={addResponseOption} className="inline-flex items-center gap-1 rounded-lg border border-violet-200 bg-white px-2.5 py-1.5 text-[11px] font-semibold text-violet-700"><Plus className="h-3 w-3" /> Option</button>
@@ -197,7 +196,6 @@ export function ContentLearningTaskEditor({ scenarioId, contentItemId, initialTa
                 ))}
                 {task.responseOptions.length < 2 && <p className="text-[11px] text-amber-700">Ergänze mindestens zwei Antwortmöglichkeiten.</p>}
               </div>
-            )}
             <label className="mt-3 block text-xs font-semibold text-slate-700">
               Rückmeldung nach dem Absenden
               <textarea value={task.feedback} onChange={event => update("feedback", event.target.value)} rows={2} maxLength={1000} placeholder="Eine kurze, hilfreiche Rückmeldung – keine Note und kein Urteil." className={inputClass} />
