@@ -59,7 +59,7 @@ export default async function StudentReportPage({params}:{params:{classId:string
   const reports=Array.from(grouped.values()).sort((a,b)=>new Date(b.answers[0].occurred_at).getTime()-new Date(a.answers[0].occurred_at).getTime());
   const success=answers.filter(x=>x.outcome==="success").length,partial=answers.filter(x=>x.outcome==="partial").length,missed=answers.filter(x=>x.outcome==="not_yet").length,total=answers.length;
   const studentName=profile?.display_name||"Schüler:in",assignedCount=new Set((assignments??[]).map((a:{scenario_id:string|null})=>a.scenario_id).filter(Boolean)).size;
-  const openCount=partial+missed;
+  const openCount=partial+missed;\n  const requiredCardCount=(scenarioRows??[]).reduce((sum:any,s:any)=>sum+(Array.isArray(s.learning_cards)?s.learning_cards.filter((c:any)=>c.type!=="reflection"&&c.required!==false).length:0),0)||total;\n  const completionRate=percent(total,Math.max(total,requiredCardCount));
 
   return (
   <main className="min-h-screen overflow-hidden bg-[#f2f3ff] text-[#111329] print:bg-white">
@@ -81,7 +81,7 @@ export default async function StudentReportPage({params}:{params:{classId:string
             <div className="relative flex h-full min-h-[190px] flex-col justify-center p-6 md:p-7"><p className="text-[9px] font-black uppercase tracking-[.25em] text-violet-300">DR1FT / Szenario</p><h3 className="mt-2 max-w-sm text-2xl font-black leading-tight md:text-[27px]">{reports[0]?.title||"Dein Lernweg beginnt hier"}</h3><p className="mt-2 max-w-sm text-xs leading-5 text-white/55">{reports[0]? "Deine Entscheidungen, Lernziele und nächsten Schritte in dieser DR1FT.":"Sobald du eine DR1FT bearbeitet hast, erscheint hier dein persönlicher Szenario-Report."}</p></div>
           </div>
           <div className="flex items-center justify-around gap-4 p-6 md:p-8">
-            <ProgressRing value={total?percent(success,total):0} label="vollständig"/>
+            <ProgressRing value={total?completionRate:0} label="bearbeitet"/>
             <div className="min-w-0 flex-1 space-y-5"><div className="flex items-start gap-3"><span className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-violet-400/15 text-violet-200"><Clock3 className="h-5 w-5"/></span><div><p className="text-[10px] font-semibold text-white/45">Bearbeitungszeit</p><p className="text-sm font-bold text-white/80">Noch nicht verlässlich erfasst</p></div></div><div className="flex items-start gap-3"><span className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-fuchsia-400/15 text-fuchsia-200"><Users className="h-5 w-5"/></span><div><p className="text-[10px] font-semibold text-white/45">Vergleich zur Klasse</p><p className="text-sm font-bold text-white/80">Noch keine Vergleichsdaten</p></div></div></div>
           </div>
         </div>
