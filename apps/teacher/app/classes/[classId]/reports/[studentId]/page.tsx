@@ -95,6 +95,7 @@ export default async function StudentReportPage({params}:{params:{classId:string
           </div>
         </div>
         <div className="border-t border-white/10 px-6 py-4 md:px-8"><div className="mb-2 flex items-center justify-between text-[11px]"><span className="font-bold text-white/75">Deine Antwortverteilung</span><span className="text-white/45">{total} Antworten</span></div><div className="flex h-3 overflow-hidden rounded-full bg-white/10"><div className="bg-emerald-400" style={{width:`${percent(success,total)}%`}}/><div className="bg-amber-300" style={{width:`${percent(partial,total)}%`}}/><div className="bg-rose-400" style={{width:`${percent(missed,total)}%`}}/></div><div className="mt-2 flex flex-wrap gap-x-5 gap-y-1 text-[10px] text-white/55"><span><i className="mr-1.5 inline-block h-2 w-2 rounded-full bg-emerald-400"/> {success} vollständig</span><span><i className="mr-1.5 inline-block h-2 w-2 rounded-full bg-amber-300"/> {partial} teilweise</span><span><i className="mr-1.5 inline-block h-2 w-2 rounded-full bg-rose-400"/> {missed} noch nicht erreicht</span></div>
+        </div>
       </section>
 
       <section id="drift-reports" className="scroll-mt-5 space-y-5">
