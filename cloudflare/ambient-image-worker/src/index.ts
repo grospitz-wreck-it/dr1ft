@@ -73,9 +73,10 @@ export default {
     if (!rawPrompt) return json({ error: "prompt is required" }, 400);
 
     // Keep the non-negotiable no-text instruction at the END of the prompt.
-    // FLUX may otherwise ignore it or have it truncated when a long user prompt
-    // is sliced to the model input limit. Editorial text is context only and
-    // must never override these image-content constraints.
+    // The editor override is placed at the beginning by the caller so it is
+    // preserved before the safety tail. Keep enough room for the full 1200-char
+    // editor prompt plus style/color direction; the former 1100-char cap cut
+    // off the editor's instructions because they were appended at the end.
     const noTextRules = [
       "ABSOLUTE REQUIREMENT: the image contains NO TEXT of any kind.",
       "No letters, words, numbers, typography, captions, subtitles, watermarks, logos, labels, signage, posters, book pages, documents, UI, phone-screen text, or writing-like marks.",
@@ -84,7 +85,7 @@ export default {
       "Communicate the scene only through people, objects, gestures, environment, composition, and lighting. Generate only the image, with no graphic-design or poster layout.",
       "Natural, age-appropriate social-media photography. No logos, celebrities, political messaging, or advertising.",
     ].join(" ");
-    const promptContext = rawPrompt.slice(0, 1100);
+    const promptContext = rawPrompt.slice(0, 3000);
     const prompt = `${promptContext}\n\n${noTextRules}`;
     const dimensions: Record<string, [number, number]> = {
     "1:1": [1024, 1024],
