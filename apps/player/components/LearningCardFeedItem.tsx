@@ -30,7 +30,7 @@ export function LearningCardFeedItem({ card, classInstanceId }: { card: PlayerLe
     startTransition(async () => {
       try {
         const saved = await submitScenarioLearningCard({ classInstanceId, scenarioId: card.scenarioId, cardId: card.id, optionId: selected });
-        if (!saved.ok) { setError(saved.error); return; }
+        if ("error" in saved) { setError(saved.error); return; }
         setOutcome(saved.outcome);
       } catch (e) { setError(e instanceof Error ? e.message : "Die Antwort konnte nicht gespeichert werden."); }
     });
