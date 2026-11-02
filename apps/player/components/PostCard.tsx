@@ -346,8 +346,7 @@ export function PostCard({ item, userId, classInstanceId, initiallyLiked, onView
   async function submitLearningTaskResponse() {
     const responseMode = learningTask.responseMode ?? "reflection";
     const selectedOptions = (learningTask.responseOptions ?? []).filter((option) => selectedTaskOptions.includes(option.id));
-    const response = selectedOptions.map((option) => option.label).join(" · ");
-    if (!response || taskResponseSaving || taskResponseSaved) return;
+    if (selectedOptions.length === 0 || taskResponseSaving || taskResponseSaved) return;
     if ((responseMode === "single_choice" || responseMode === "decision") && selectedOptions.length !== 1) return;
     if ((responseMode === "reflection" || responseMode === "multiple_choice") && selectedOptions.length < 1) return;
     setTaskResponseSaving(true);
@@ -358,7 +357,7 @@ export function PostCard({ item, userId, classInstanceId, initiallyLiked, onView
         interactionType: "learning_task_response",
         classInstanceId,
         metadata: {
-          response,
+          responseSchemaVersion: 1,
           responseMode,
           selectedOptionIds: selectedOptions.map((option) => option.id),
           selectedOptions: selectedOptions.map((option) => ({ label: option.label, consequence: option.consequence ?? "" })),
