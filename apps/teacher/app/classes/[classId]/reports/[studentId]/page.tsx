@@ -59,7 +59,9 @@ export default async function StudentReportPage({params}:{params:{classId:string
   const reports=Array.from(grouped.values()).sort((a,b)=>new Date(b.answers[0].occurred_at).getTime()-new Date(a.answers[0].occurred_at).getTime());
   const success=answers.filter(x=>x.outcome==="success").length,partial=answers.filter(x=>x.outcome==="partial").length,missed=answers.filter(x=>x.outcome==="not_yet").length,total=answers.length;
   const studentName=profile?.display_name||"Schüler:in",assignedCount=new Set((assignments??[]).map((a:{scenario_id:string|null})=>a.scenario_id).filter(Boolean)).size;
-  const openCount=partial+missed;\n  const requiredCardCount=(scenarioRows??[]).reduce((sum:any,s:any)=>sum+(Array.isArray(s.learning_cards)?s.learning_cards.filter((c:any)=>c.type!=="reflection"&&c.required!==false).length:0),0)||total;\n  const completionRate=percent(total,Math.max(total,requiredCardCount));
+  const openCount=partial+missed;
+  const requiredCardCount=(scenarioRows??[]).reduce((sum:any,s:any)=>sum+(Array.isArray(s.learning_cards)?s.learning_cards.filter((c:any)=>c.type!=="reflection"&&c.required!==false).length:0),0)||total;
+  const completionRate=percent(total,Math.max(total,requiredCardCount));
 
   return (
   <main className="min-h-screen overflow-hidden bg-[#f2f3ff] text-[#111329] print:bg-white">
