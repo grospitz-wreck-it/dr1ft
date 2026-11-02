@@ -78,6 +78,7 @@ begin
    and lr.card_id = c.card_id
   group by c.scenario_id, c.scenario_title, c.card_id,
            c.card_title, c.card_prompt, c.objective_title
+  having count(lr.user_id) >= 3
   order by c.scenario_title, c.card_title;
 end;
 $function$;
@@ -88,4 +89,4 @@ grant execute on function public.get_class_scenario_learning_card_insights_v1(uu
   to authenticated;
 
 comment on function public.get_class_scenario_learning_card_insights_v1(uuid) is
-  'Returns anonymized class-level learning-card outcome distributions. Counts only each learner latest answer per card and never returns learner identifiers.';
+  'Returns anonymized class-level learning-card outcome distributions only for groups of at least three learners. Counts only each learner latest answer per card and never returns learner identifiers.';
