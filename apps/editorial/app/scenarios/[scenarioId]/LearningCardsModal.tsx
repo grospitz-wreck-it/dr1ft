@@ -20,7 +20,7 @@ export function LearningCardsModal({scenarioId,cards,competencies=[],missions=[]
  const [busy,startTransition]=useTransition();
  const [error,setError]=useState("");
  const assignedIds = new Set<string>(missions.flatMap(m=>Array.isArray(m?.target_competencies)?m.target_competencies:[]).filter((id:unknown):id is string=>typeof id==="string"));
- const availableCompetencies = competencies.filter(c=>assignedIds.size===0 || assignedIds.has(c.id));
+ const availableCompetencies = competencies.filter(c=>assignedIds.has(c.id));
  async function submit(formData:FormData) {
   formData.set("options",JSON.stringify(options));
   startTransition(async()=>{try { await createScenarioLearningCard(scenarioId,formData); setError(""); setOptions(starterOptions()); } catch(e){setError(e instanceof Error?e.message:"Die Karte konnte nicht gespeichert werden.");}});
