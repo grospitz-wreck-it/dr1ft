@@ -14,7 +14,7 @@ const MODULES: { id: ContentModuleId; title: string; short: string; description:
   { id: "direct_message", title: "Direktnachrichten", short: "Nachrichten", description: "Persönliche Situationen und individuelle Perspektiven über private Nachrichten vermitteln.", Icon: Mail, tone: "bg-emerald-100 text-emerald-700" },
 ];
 
-export function ContentModulePicker({ selected, onChange, scenarioId, cards = [], competencies = [], missions = [] }: { selected: ContentModuleId[]; onChange: (modules: ContentModuleId[]) => void; scenarioId: string; cards?: any[]; competencies?: { id: string; title: string }[]; missions?: any[] }) {
+export function ContentModulePicker({ selected, onChange, scenarioId, cards = [], learningObjectives = [] }: { selected: ContentModuleId[]; onChange: (modules: ContentModuleId[]) => void; scenarioId: string; cards?: any[]; learningObjectives?: { id: string; title: string }[] }) {
   const [open, setOpen] = useState(false);
   const [info, setInfo] = useState<ContentModuleId | null>(null);
   const selectedModules = MODULES.filter((module) => selected.includes(module.id));
@@ -45,7 +45,7 @@ export function ContentModulePicker({ selected, onChange, scenarioId, cards = []
         <button type="button" onClick={() => setOpen(true)} className="inline-flex items-center gap-2 rounded-full border border-dashed border-sky-300 bg-gradient-to-r from-sky-50 to-fuchsia-50 px-4 py-2 text-sm font-bold text-sky-700 shadow-sm transition hover:-translate-y-0.5 hover:shadow-md">
           <Plus className="h-4 w-4" /> Content-Module
         </button>
-        <LearningCardsModal scenarioId={scenarioId} cards={cards} competencies={competencies} missions={missions} />
+        <LearningCardsModal scenarioId={scenarioId} cards={cards} learningObjectives={learningObjectives} />
       </div>
 
       {open && (
