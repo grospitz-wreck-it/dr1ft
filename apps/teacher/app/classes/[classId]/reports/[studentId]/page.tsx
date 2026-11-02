@@ -36,6 +36,13 @@ type ScenarioAnswer = {
 type ScenarioReport = { id: string; title: string; answers: ScenarioAnswer[] };
 type ScenarioMeta = { id: string; title: string; cover_image_url: string | null; learning_cards: any[] | null };
 type EvidenceGroup = { key: string; title: string; answers: ScenarioAnswer[]; good: number; needsWork: number; rate: number };
+type SocialWeek = { week_start: string; likes_sent: number; comments_sent: number; shares_sent: number; direct_messages_sent: number };
+const SOCIAL_SERIES = [
+  { key: "likes_sent", label: "Likes", color: "bg-fuchsia-500", hex: "#d946ef", icon: "♥" },
+  { key: "comments_sent", label: "Kommentare", color: "bg-violet-500", hex: "#8b5cf6", icon: "▤" },
+  { key: "shares_sent", label: "Geteilt", color: "bg-cyan-500", hex: "#06b6d4", icon: "↗" },
+  { key: "direct_messages_sent", label: "Nachrichten", color: "bg-amber-400", hex: "#fbbf24", icon: "✉" },
+] as const;
 
 // The assessment pipeline stores partial answers as 0.5 evidence; reflect that
 // authored scoring here instead of treating every non-success answer as zero.
@@ -119,13 +126,15 @@ export default async function StudentReportPage({
 }) {
   const supabase = supabaseServerClient();
   const { classId, studentId } = params;
-  const [{ data: classInfo }, { data: profile }, reportResult] = await Promise.all([
+  const [{ data: classInfo }, { data: profile }, reportResult, socialResult] = await Promise.all([
     supabase.from("class_instances").select("name, school_year, grade_level").eq("id", classId).maybeSingle(),
     supabase.from("user_profiles").select("display_name, username, avatar_seed").eq("id", studentId).maybeSingle(),
     supabase.rpc("get_teacher_student_scenario_report_v1", { p_class_id: classId, p_student_id: studentId }),
+    supabase.rpc("get_teacher_student_social_pulse_v1", { p_class_id: classId, p_student_id: studentId }),
   ]);
 
   const answers = (reportResult.data ?? []) as ScenarioAnswer[];
+  const socialWeeks = (socialResult.data ?? []) as SocialWeek[];
   const scenarioIds = Array.from(new Set(answers.map((answer) => answer.scenario_id)));
   let scenarioRows: ScenarioMeta[] = [];
   if (scenarioIds.length) {
@@ -159,6 +168,18 @@ export default async function StudentReportPage({
   const latestFocusAnswer = learningFocus[0]?.answers.find((answer) => answer.outcome !== "success");
   const journeyError = reportResult.error?.message ?? null;
   const scenarioTitle = selectedReport?.title || "Dein Lernweg beginnt hier";
+  const socialTotals = socialWeeks.reduce((totals, week) => {
+    SOCIAL_SERIES.forEach(({ key }) => { totals[key] += Number(week[key] ?? 0); });
+    return totals;
+  }, { likes_sent: 0, comments_sent: 0, shares_sent: 0, direct_messages_sent: 0 });
+  const socialTotal = SOCIAL_SERIES.reduce((sum, { key }) => sum + socialTotals[key], 0);
+  const socialWeekMax = Math.max(1, ...socialWeeks.map((week) => SOCIAL_SERIES.reduce((sum, { key }) => sum + Number(week[key] ?? 0), 0)));
+  let socialChartOffset = 0;
+  const socialDonutStops = SOCIAL_SERIES.map(({ key, hex }) => {
+    const start = socialChartOffset;
+    socialChartOffset += socialTotal ? socialTotals[key] / socialTotal * 100 : 0;
+    return `${hex} ${start}% ${socialChartOffset}%`;
+  }).join(", ");
 
   return <main className="min-h-screen bg-[radial-gradient(ellipse_at_12%_0%,#f1eaff_0%,transparent_30%),radial-gradient(ellipse_at_92%_20%,#e6f7ff_0%,transparent_25%),linear-gradient(135deg,#f7f7fc_0%,#f0f1fb_52%,#fbf5ff_100%)] px-3 py-4 text-slate-900 sm:px-5 sm:py-5 md:px-8 print:bg-white print:px-0 print:py-0">
     <div className="mx-auto max-w-[1380px] space-y-4">
@@ -261,6 +282,36 @@ export default async function StudentReportPage({
           </aside>
         </div>
         {journeyError && <p className="m-5 rounded-xl border border-amber-200 bg-amber-50 p-4 text-xs text-amber-900 sm:m-7">Der Report konnte nicht geladen werden. Bitte die zugehörige Supabase-Migration prüfen. Technischer Hinweis: {journeyError}</p>}
+      </section>
+
+      <section aria-labelledby="social-pulse-heading" className="overflow-hidden rounded-[26px] border border-violet-100 bg-white shadow-[0_12px_38px_rgba(56,65,120,.07)]">
+        <div className="flex flex-wrap items-center justify-between gap-3 bg-[linear-gradient(105deg,#f5efff,#f1faff_62%,#fff8e7)] px-5 py-4 sm:px-6">
+          <div className="flex items-center gap-3"><span className="grid h-10 w-10 place-items-center rounded-2xl bg-white text-xl shadow-sm">💬</span><div><p className="text-[9px] font-black uppercase tracking-[.2em] text-violet-600">Dein DR1FT-Moment</p><h2 id="social-pulse-heading" className="text-lg font-black text-slate-950 sm:text-xl">So warst du im Feed dabei</h2></div></div>
+          <span className="rounded-full border border-white bg-white/80 px-3 py-1.5 text-[10px] font-semibold text-slate-500">Letzte 6 Wochen</span>
+        </div>
+        {socialResult.error ? <p className="p-5 text-sm text-slate-500">Die Feed-Aktivität ist gerade nicht verfügbar.</p> : <div className="p-4 sm:p-5">
+          <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
+            {SOCIAL_SERIES.map((item) => <div key={item.key} className="flex items-center gap-2.5 rounded-2xl border border-slate-100 bg-slate-50/80 p-3"><span className={`grid h-8 w-8 shrink-0 place-items-center rounded-xl ${item.color} text-sm font-black text-white shadow-sm`}>{item.icon}</span><span><strong className="block text-lg font-black leading-5 text-slate-900">{socialTotals[item.key]}</strong><span className="text-[10px] font-medium text-slate-500">{item.label}</span></span></div>)}
+          </div>
+          <div className="mt-4 grid gap-4 lg:grid-cols-[minmax(0,1.35fr)_minmax(230px,.65fr)]">
+            <div className="rounded-2xl border border-slate-100 bg-white p-3.5 sm:p-4">
+              <div className="mb-2 flex items-center justify-between"><h3 className="text-xs font-black text-slate-800">Deine Aktivitäten pro Woche</h3><span className="text-[9px] text-slate-400">Anzahl</span></div>
+              <div className="flex h-[92px] items-end gap-2 border-b border-slate-100 pb-1 sm:gap-3" role="img" aria-label="Gestapelte Balken: Likes, Kommentare, geteilte Beiträge und gesendete Nachrichten je Woche">
+                {socialWeeks.map((week) => {
+                  const weekTotal = SOCIAL_SERIES.reduce((sum, { key }) => sum + Number(week[key] ?? 0), 0);
+                  const weekLabel = new Date(`${week.week_start}T12:00:00`).toLocaleDateString("de-DE", { day: "2-digit", month: "2-digit" });
+                  return <div key={week.week_start} className="flex h-full min-w-0 flex-1 flex-col items-center justify-end gap-1"><div className="flex w-full max-w-8 flex-col-reverse overflow-hidden rounded-t-md" style={{ height: weekTotal ? `${Math.max(7, weekTotal / socialWeekMax * 66)}px` : "3px" }} title={`${weekLabel}: ${weekTotal} Aktionen`}>{SOCIAL_SERIES.map(({ key, color }) => Number(week[key] ?? 0) > 0 && <span key={key} className={`${color} min-h-[2px] shrink-0`} style={{ height: `${Number(week[key]) / weekTotal * 100}%` }} />)}</div><span className="text-[9px] tabular-nums text-slate-400">{weekLabel}</span></div>;
+                })}
+              </div>
+              <div className="mt-2 flex flex-wrap gap-x-3 gap-y-1">{SOCIAL_SERIES.map((item) => <span key={item.key} className="inline-flex items-center gap-1 text-[9px] text-slate-500"><i className={`h-2 w-2 rounded-full ${item.color}`} />{item.label}</span>)}</div>
+            </div>
+            <div className="flex items-center gap-3 rounded-2xl border border-slate-100 bg-[#fbfaff] p-3.5 sm:p-4">
+              <div className="relative grid h-[104px] w-[104px] shrink-0 place-items-center rounded-full" style={{ background: socialTotal ? `conic-gradient(${socialDonutStops})` : "conic-gradient(#e9e7f1 0% 100%)" }} role="img" aria-label={`Verteilung von ${socialTotal} gespeicherten Feed-Aktionen und Nachrichten`}><div className="grid h-[72px] w-[72px] place-items-center rounded-full bg-white text-center shadow-inner"><span><strong className="block text-xl font-black leading-5 text-slate-900">{socialTotal}</strong><small className="text-[8px] font-bold uppercase tracking-wide text-slate-400">Aktionen</small></span></div></div>
+              <div className="min-w-0 flex-1"><h3 className="mb-2 text-xs font-black text-slate-800">Dein Interaktionsmix</h3><ul className="space-y-1.5">{SOCIAL_SERIES.map((item) => <li key={item.key} className="flex items-center justify-between gap-2 text-[10px]"><span className="inline-flex min-w-0 items-center gap-1.5 text-slate-500"><i className={`h-2 w-2 shrink-0 rounded-full ${item.color}`} />{item.label}</span><strong className="text-slate-800">{socialTotals[item.key]}</strong></li>)}</ul></div>
+            </div>
+          </div>
+          <p className="mt-3 text-[9px] leading-4 text-slate-400">Feed-Aktivität ist keine Lernbewertung. Bei Direktnachrichten wird nur die Anzahl gezählt – keine Inhalte.</p>
+        </div>}
       </section>
 
       <section id="gesamtfortschritt" className="scroll-mt-5 rounded-[26px] border border-slate-200 bg-white p-5 shadow-sm sm:p-7">
