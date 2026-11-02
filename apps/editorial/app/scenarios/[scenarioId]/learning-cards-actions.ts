@@ -26,7 +26,7 @@ export async function createScenarioLearningCard(scenarioId: string, formData: F
   if (!CARD_TYPES.includes(type as any)) throw new Error("Ungültiger Kartentyp.");
   if (!CARD_POSITIONS.includes(position as any)) throw new Error("Ungültige Kartenposition.");
   if (!title || !prompt) throw new Error("Bitte Titel und Frage/Aufgabe ausfüllen.");
-  if (options.length < 2) throw new Error("Bitte mindestens zwei Antwortmöglichkeiten angeben.");
+  if (!competency || !evidenceKey) throw new Error("Bitte Lernziel/Kompetenz und Nachweis-Schlüssel angeben.");\n  if (!Array.isArray(options) || options.length < 2 || options.some((option) => !option.id || !option.label?.trim() || !["success","partial","not_yet"].includes(option.outcome))) throw new Error("Bitte mindestens zwei gültige, bewertete Antwortoptionen angeben.");
 
   const { data: scenario, error: readError } = await supabase.from("scenarios").select("learning_cards").eq("id", scenarioId).single();
   if (readError) throw new Error(readError.message);
