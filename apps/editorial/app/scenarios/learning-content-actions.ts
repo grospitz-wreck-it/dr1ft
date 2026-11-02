@@ -602,9 +602,6 @@ export async function saveImageEditSettings(contentItemId: string, scenarioId: s
 export type ContentLearningTask = {
   purpose: string;
   learnerAction: string;
-  responseMode?: "reflection" | "single_choice" | "multiple_choice" | "decision";
-  responsePrompt?: string;
-  responseOptions?: Array<{ id: string; label: string; consequence: string }>;
   interactionType: "view" | "react" | "comment" | "choose" | "classify" | "compare" | "reflect" | "create";
   expectedResponse: string;
   evaluationMethod: "completion" | "criteria" | "choice" | "reflection" | "discussion";
@@ -657,28 +654,9 @@ export async function updateContentLearningTask(
     .filter((id): id is string => typeof id === "string")
     .map((id) => id.trim())
     .filter((id) => assessedActions.includes(id)))).slice(0, 20);
-  const responseMode = ["reflection", "single_choice", "multiple_choice", "decision"].includes(String(task.responseMode))
-    ? task.responseMode!
-    : "reflection";
-  const responsePrompt = String(task.responsePrompt || task.learnerAction || "").trim().slice(0, 1200);
-  const responseOptions = Array.isArray(task.responseOptions)
-    ? task.responseOptions.slice(0, 8).map((option) => ({
-        id: String(option.id || "").trim().slice(0, 100),
-        label: String(option.label || "").trim().slice(0, 180),
-        consequence: String(option.consequence || "").trim().slice(0, 600),
-      })).filter((option) => option.id && option.label)
-    : [];
-  const hasResponseCard = Boolean(responsePrompt || responseOptions.length || (task.responseMode && task.responseMode !== "reflection"));
-  if (hasResponseCard && !responsePrompt) throw new Error("Bitte formuliere eine Frage oder Entscheidungssituation.");
-  if (hasResponseCard && responseOptions.length < 2) throw new Error("Bitte lege mindestens zwei strukturierte Antwortmöglichkeiten an. Freitextantworten sind in DR1FT nicht vorgesehen.");
-  if (hasResponseCard && responseMode === "decision" && responseOptions.some((option) => !option.consequence)) throw new Error("Bitte beschreibe für jede Entscheidung die mögliche Folge.");
-
   const normalizedTask: ContentLearningTask = {
     purpose: String(task.purpose || "").trim().slice(0, 1000),
     learnerAction: String(task.learnerAction || "").trim().slice(0, 1500),
-    responseMode,
-    responsePrompt,
-    responseOptions,
     interactionType: task.interactionType,
     expectedResponse: String(task.expectedResponse || "").trim().slice(0, 1500),
     evaluationMethod: task.evaluationMethod,
