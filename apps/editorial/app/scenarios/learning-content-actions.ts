@@ -543,7 +543,10 @@ export async function regenerateLearningImage(contentItemId: string, scenarioId:
   const prompt = String(generation.fullPrompt || generation.prompt || "").trim();
   if (!prompt) throw new Error("Kein reproduzierbarer Bildprompt vorhanden.");
 
-  const revisedPrompt = feedback?.trim() ? prompt + " Editorial feedback: " + feedback.trim() : prompt;
+  // A filled editorial prompt is a FULL OVERRIDE, not feedback appended to the
+  // previous visual brief. This lets editors replace the subject, composition,
+  // style and visual direction without the old prompt leaking into FLUX/Gemini.
+  const revisedPrompt = feedback.trim() || prompt;
   const image = await generateImage(revisedPrompt, String(generation.aspectRatio || "4:5"), scenarioId);
 
   const nextGeneration = {
