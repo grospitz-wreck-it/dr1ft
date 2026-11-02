@@ -5,7 +5,7 @@ import { createScenarioLearningCard, deleteScenarioLearningCard } from "./learni
 import { Plus, Trash2, X, Target, CheckCircle2, Layers3, Sparkles } from "lucide-react";
 
 type Option = { id: string; label: string; outcome: "success" | "partial" | "not_yet" };
-type Card = { id: string; type: string; title: string; prompt: string; position: string; options: Option[]; required?: boolean; competencyId?: string; competency?: string };
+type Card = { id: string; type: string; title: string; prompt: string; position: string; options: Option[]; required?: boolean; objectiveId?: string; objective?: string };
 type Competency = { id: string; title: string };
 const outcomes = [{value:"success",label:"Ziel erreicht"},{value:"partial",label:"Teilweise erreicht"},{value:"not_yet",label:"Noch nicht erreicht"}];
 const starterOptions = (): Option[] => [
@@ -14,13 +14,12 @@ const starterOptions = (): Option[] => [
  {id:crypto.randomUUID(),label:"Ich teile den Beitrag ungeprüft.",outcome:"not_yet"},
 ];
 
-export function LearningCardsModal({scenarioId,cards,competencies=[],missions=[]}:{scenarioId:string;cards:Card[];competencies?:Competency[];missions?:any[]}) {
+export function LearningCardsModal({scenarioId,cards,learningObjectives=[]}:{scenarioId:string;cards:Card[];learningObjectives?:Competency[]}) {
  const [open,setOpen]=useState(false);
  const [options,setOptions]=useState<Option[]>(starterOptions);
  const [busy,startTransition]=useTransition();
  const [error,setError]=useState("");
- const assignedIds = new Set<string>(missions.flatMap(m=>Array.isArray(m?.target_competencies)?m.target_competencies:[]).filter((id:unknown):id is string=>typeof id==="string"));
- const availableCompetencies = competencies.filter(c=>assignedIds.has(c.id));
+ const availableCompetencies = learningObjectives;
  async function submit(formData:FormData) {
   formData.set("options",JSON.stringify(options));
   startTransition(async()=>{try { await createScenarioLearningCard(scenarioId,formData); setError(""); setOptions(starterOptions()); } catch(e){setError(e instanceof Error?e.message:"Die Karte konnte nicht gespeichert werden.");}});
@@ -38,7 +37,7 @@ export function LearningCardsModal({scenarioId,cards,competencies=[],missions=[]
       <div className="flex items-center justify-between"><h4 className="text-sm font-bold text-slate-900">Deine Karten</h4><span className="text-xs text-slate-400">{cards.length} angelegt</span></div>
       {cards.length===0&&<div className="rounded-2xl border border-dashed border-violet-200 bg-white px-5 py-9 text-center"><Sparkles className="mx-auto h-6 w-6 text-violet-300"/><p className="mt-2 text-sm font-semibold text-slate-700">Noch keine Lernkarten</p><p className="mt-1 text-xs text-slate-500">Lege rechts deine erste Karte an.</p></div>}
       {cards.map(card=><article key={card.id} className="rounded-2xl border border-slate-200/80 bg-white p-4 shadow-[0_2px_10px_rgba(15,23,42,0.03)]">
-       <div className="flex items-start justify-between gap-3"><div className="min-w-0"><div className="flex flex-wrap items-center gap-2"><span className="rounded-full bg-violet-50 px-2.5 py-1 text-[10px] font-bold text-violet-700">{card.position==="before_feed"?"Vor dem Feed":"Am Feed-Ende"}</span><span className="text-[10px] text-slate-400">{card.type==="decision"?"Entscheidung":card.type==="knowledge_check"?"Wissenscheck":card.type==="reflection"?"Reflexion":"Missionsabschluss"}</span></div><h5 className="mt-2 text-sm font-bold text-slate-900">{card.title}</h5><p className="mt-1 text-xs leading-5 text-slate-600">{card.prompt}</p><p className="mt-2 text-[11px] font-medium text-slate-500">Lernziel: {card.competency??competencies.find(c=>c.id===card.competencyId)?.title??"—"}</p></div><form action={deleteScenarioLearningCard.bind(null,scenarioId,card.id)}><button aria-label="Karte löschen" className="rounded-xl p-2 text-slate-400 transition hover:bg-rose-50 hover:text-rose-600"><Trash2 className="h-4 w-4"/></button></form></div>
+       <div className="flex items-start justify-between gap-3"><div className="min-w-0"><div className="flex flex-wrap items-center gap-2"><span className="rounded-full bg-violet-50 px-2.5 py-1 text-[10px] font-bold text-violet-700">{card.position==="before_feed"?"Vor dem Feed":"Am Feed-Ende"}</span><span className="text-[10px] text-slate-400">{card.type==="decision"?"Entscheidung":card.type==="knowledge_check"?"Wissenscheck":card.type==="reflection"?"Reflexion":"Missionsabschluss"}</span></div><h5 className="mt-2 text-sm font-bold text-slate-900">{card.title}</h5><p className="mt-1 text-xs leading-5 text-slate-600">{card.prompt}</p><p className="mt-2 text-[11px] font-medium text-slate-500">Lernziel: {card.objective??learningObjectives.find(c=>c.id===card.objectiveId)?.title??"—"}</p></div><form action={deleteScenarioLearningCard.bind(null,scenarioId,card.id)}><button aria-label="Karte löschen" className="rounded-xl p-2 text-slate-400 transition hover:bg-rose-50 hover:text-rose-600"><Trash2 className="h-4 w-4"/></button></form></div>
       </article>)}
      </section>
      <form action={submit} className="space-y-4 rounded-2xl border border-violet-100 bg-white p-5 shadow-[0_3px_18px_rgba(124,58,237,0.06)]">
@@ -47,7 +46,7 @@ export function LearningCardsModal({scenarioId,cards,competencies=[],missions=[]
        <label className="text-xs font-semibold text-slate-600">Art der Karte<select name="type" className="mt-1.5 w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5 text-sm"><option value="decision">Entscheidung</option><option value="knowledge_check">Wissenscheck</option><option value="reflection">Reflexion</option><option value="mission_completion">Missionsabschluss</option></select></label>
        <label className="text-xs font-semibold text-slate-600">Wo soll sie erscheinen?<select name="position" className="mt-1.5 w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5 text-sm"><option value="feed_end">Am Ende des Feeds</option><option value="before_feed">Vor dem Feed</option></select></label>
       </div>
-      <label className="block text-xs font-semibold text-slate-600">Lernziel<select name="competencyId" required disabled={!availableCompetencies.length} className="mt-1.5 w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5 text-sm disabled:opacity-60"><option value="">{availableCompetencies.length?"Vorhandenes Lernziel auswählen":"Lege zuerst Zielkompetenzen für dieses Szenario fest"}</option>{availableCompetencies.map(c=><option key={c.id} value={c.id}>{c.title}</option>)}</select></label>
+      <label className="block text-xs font-semibold text-slate-600">Lernziel<select name="objectiveId" required disabled={!availableCompetencies.length} className="mt-1.5 w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5 text-sm disabled:opacity-60"><option value="">{availableCompetencies.length?"Vorhandenes Lernziel auswählen":"Lege zuerst ein Lernziel im Lernplan fest"}</option>{availableCompetencies.map(c=><option key={c.id} value={c.id}>{c.title}</option>)}</select></label>
       <label className="block text-xs font-semibold text-slate-600">Titel<input name="title" required maxLength={100} className="mt-1.5 w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5 text-sm" placeholder="z. B. Prüfe die Hinweise"/></label>
       <label className="block text-xs font-semibold text-slate-600">Aufgabe<textarea name="prompt" required rows={3} maxLength={500} className="mt-1.5 w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5 text-sm" placeholder="Beschreibe die Situation oder Entscheidung …"/></label>
       <div className="space-y-2"><div className="flex items-center justify-between"><span className="text-xs font-semibold text-slate-700">Antwortmöglichkeiten</span><button type="button" onClick={()=>setOptions(current=>[...current,{id:crypto.randomUUID(),label:"",outcome:"not_yet"}])} className="text-xs font-semibold text-violet-700 hover:text-violet-900">+ Antwort ergänzen</button></div>
