@@ -68,7 +68,14 @@ export function LearningDesignStudio({ scenarioId, latestDesign, contentItems = 
   const [message, setMessage] = useState("");
 
   const selectedGoal = GOALS.find((item) => item.value === goal) ?? GOALS[3];
-  const preview = PATHS[goal];
+  const selectedPattern = PATTERNS.find((item) => item.value === learningPattern) ?? PATTERNS[0];
+  const patternOpenings: Record<string, string> = {
+    experience_first: "Feed-Situation erleben",
+    decision_first: "Erste Entscheidung treffen",
+    challenge_first: "Herausforderung annehmen",
+    explore_discover: "Offene Hinweise erkunden",
+  };
+  const preview = [patternOpenings[learningPattern], ...PATHS[goal]];
   const stepCount = duration <= 10 ? 3 : duration <= 25 ? 5 : duration <= 45 ? 7 : 9;
   const ambientMinutes = ambient === "focused" ? 0 : ambient === "balanced" ? 5 : 12;
   const totalDuration = duration + ambientMinutes;
@@ -191,13 +198,15 @@ export function LearningDesignStudio({ scenarioId, latestDesign, contentItems = 
 
           <div className="relative overflow-hidden rounded-2xl border border-violet-100 bg-gradient-to-br from-violet-50 via-white to-sky-50 p-4">
             <div className="absolute -right-8 -top-8 text-7xl opacity-[0.08]">🧭</div>
-            <p className="text-[11px] font-bold uppercase tracking-wide text-violet-700">Kognitiver Schwerpunkt</p>
+            <p className="text-[11px] font-bold uppercase tracking-wide text-violet-700">So greifen Einstieg und Lernziel ineinander</p>
             <div className="mt-2 flex flex-wrap items-center gap-2">
-              {preview.map((item, index) => <span key={item} className="flex items-center gap-2"><span className="rounded-full border border-violet-100 bg-white px-3 py-2 text-xs font-semibold text-slate-700 shadow-sm">{item}</span>{index < preview.length - 1 && <ArrowRight className="h-4 w-4 text-violet-400" />}</span>)}
+              {preview.map((item, index) => <span key={item} className="flex items-center gap-2"><span className={"rounded-full border px-3 py-2 text-xs font-semibold shadow-sm " + (index === 0 ? "border-fuchsia-200 bg-fuchsia-50 text-fuchsia-800" : "border-violet-100 bg-white text-slate-700")}>{item}</span>{index < preview.length - 1 && <ArrowRight className="h-4 w-4 text-violet-400" />}</span>)}
             </div>
-            <div className="mt-5 space-y-2 rounded-xl border border-white/80 bg-white/70 p-3 text-xs leading-5 text-slate-600">
-              <div><strong className="text-slate-800">Pädagogische Einordnung:</strong> {pedagogy[goal].model}</div>
-              <div>{pedagogy[goal].note}</div>
+            <div className="mt-4 rounded-xl border border-white/80 bg-white/70 p-3 text-xs leading-5 text-slate-600">
+              <div><strong className="text-slate-800">Dein Einstieg:</strong> {selectedPattern.title} – {selectedPattern.note}</div>
+              <div className="mt-1"><strong className="text-slate-800">Dein kognitives Ziel:</strong> {selectedGoal.title} – {selectedGoal.subtitle}</div>
+              <div className="mt-2 border-t border-violet-50 pt-2"><strong className="text-slate-800">Pädagogische Einordnung:</strong> {pedagogy[goal].model}</div>
+              <div className="mt-1">{pedagogy[goal].note}</div>
               <div className="border-t border-violet-50 pt-2 text-slate-500"><strong className="text-slate-700">{duration <= 10 ? "Kompakt" : duration <= 25 ? "Standard" : duration <= 45 ? "Vertiefend" : "Ausführlich"}:</strong> ca. {stepCount} Lernmomente werden passend zur gewählten Zeit geplant.</div>
             </div>
           </div>
