@@ -7,7 +7,8 @@ import { ContentModulePicker, type ContentModuleId } from "./ContentModulePicker
 type BloomLevel = "understand" | "apply" | "analyze" | "evaluate" | "create";
 
 type Props = {
-  scenarioId: string;\n  learningCards?: any[];
+  scenarioId: string;
+  learningCards?: any[];
   contentItems?: { id: string; title?: string | null; body?: string | null; type?: string | null; media_url?: string | null; media_type?: string | null; status?: string | null }[];
   latestDesign?: {
     id: string; version: number; status: string; title: string;
