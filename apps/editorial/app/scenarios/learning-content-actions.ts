@@ -670,7 +670,7 @@ export async function updateContentLearningTask(
     : [];
   const hasResponseCard = Boolean(responsePrompt || responseOptions.length || (task.responseMode && task.responseMode !== "reflection"));
   if (hasResponseCard && !responsePrompt) throw new Error("Bitte formuliere eine Frage oder Entscheidungssituation.");
-  if (hasResponseCard && responseMode !== "reflection" && responseOptions.length < 2) throw new Error("Bitte lege mindestens zwei Antwortmöglichkeiten an.");
+  if (hasResponseCard && responseOptions.length < 2) throw new Error("Bitte lege mindestens zwei strukturierte Antwortmöglichkeiten an. Freitextantworten sind in DR1FT nicht vorgesehen.");
   if (hasResponseCard && responseMode === "decision" && responseOptions.some((option) => !option.consequence)) throw new Error("Bitte beschreibe für jede Entscheidung die mögliche Folge.");
 
   const normalizedTask: ContentLearningTask = {
