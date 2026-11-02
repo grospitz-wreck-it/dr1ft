@@ -42,6 +42,7 @@ export default async function FeedPage() {
         prompt: card.prompt,
         position: card.position === "before_feed" ? "before_feed" as const : "feed_end" as const,
         objective: typeof card.objective === "string" ? card.objective : "",
+        objectiveId: typeof card.objectiveId === "string" ? card.objectiveId : "",
         required: card.required === true,
         options: card.options.filter((option: any) => option && typeof option.id === "string" && typeof option.label === "string" && ["success", "partial", "not_yet"].includes(option.outcome)),
       }))
