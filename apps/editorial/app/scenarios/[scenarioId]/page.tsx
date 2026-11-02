@@ -6,7 +6,6 @@ import { ContentStatusControl } from "./ContentStatusControl";
 import { ScenarioCoverEditor } from "../ScenarioCoverEditor";
 import { AiGenerationButton } from "../../components/AiGenerationButton";
 import { LearningDesignStudio } from "./LearningDesignStudio";
-import { LearningCardsEditor } from "./LearningCardsEditor";
 import { ScenarioWizard } from "./ScenarioWizard";
 import { ContentComposerModal } from "./ContentComposerModal";
 import { PostEditForm } from "./PostEditForm";
@@ -162,7 +161,6 @@ export default async function ScenarioDetailPage({ params, searchParams = {} }: 
           steps={[
             { title: "Grundlage", description: "Thema und Ziel", complete: hasBasics },
             { title: "Lernplan", description: "Lernziel und Lernschritte", complete: hasLearningPlan },
-            { title: "Lernkarten", description: "Eigenständige Karten", complete: Array.isArray((scenario as any).learning_cards) && (scenario as any).learning_cards.length > 0 },
             { title: "Feed", description: "Erlebnisse und Beiträge", complete: hasFeedPost },
             { title: "Prüfen", description: "Vollständigkeit", complete: isReadyForReview },
           ]}
@@ -243,9 +241,7 @@ export default async function ScenarioDetailPage({ params, searchParams = {} }: 
                       <LearningDesignStudio scenarioId={scenarioId} latestDesign={latestLearningDesign} contentItems={contentItems ?? []} learningCards={Array.isArray((scenario as any).learning_cards) ? (scenario as any).learning_cards : []} />
                     </section>
 
-                    <section id="workflow-cards" className="scroll-mt-6"><LearningCardsEditor scenarioId={scenarioId} cards={Array.isArray((scenario as any).learning_cards) ? (scenario as any).learning_cards : []} /></section>
-
-                    <section id="workflow-posts" className="scroll-mt-6 relative overflow-hidden rounded-3xl border border-violet-100 bg-gradient-to-br from-white via-white to-violet-50/70 p-4 shadow-sm sm:p-6">
+                                        <section id="workflow-posts" className="scroll-mt-6 relative overflow-hidden rounded-3xl border border-violet-100 bg-gradient-to-br from-white via-white to-violet-50/70 p-4 shadow-sm sm:p-6">
                       <div className="flex items-center justify-between gap-4 border-b border-violet-100/80 bg-violet-50/50 px-1 pb-4 sm:px-2">
                         <div className="flex items-center gap-3">
                           <span className="grid h-10 w-10 place-items-center rounded-xl bg-white text-violet-700 shadow-sm ring-1 ring-violet-100"><Layers3 className="h-5 w-5" /></span>
