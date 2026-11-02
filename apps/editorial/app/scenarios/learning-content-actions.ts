@@ -668,9 +668,10 @@ export async function updateContentLearningTask(
         consequence: String(option.consequence || "").trim().slice(0, 600),
       })).filter((option) => option.id && option.label)
     : [];
-  if (!responsePrompt) throw new Error("Bitte formuliere eine Frage oder Entscheidungssituation.");
-  if (responseMode !== "reflection" && responseOptions.length < 2) throw new Error("Bitte lege mindestens zwei Antwortmöglichkeiten an.");
-  if (responseMode === "decision" && responseOptions.some((option) => !option.consequence)) throw new Error("Bitte beschreibe für jede Entscheidung die mögliche Folge.");
+  const hasResponseCard = Boolean(responsePrompt || responseOptions.length || (task.responseMode && task.responseMode !== "reflection"));
+  if (hasResponseCard && !responsePrompt) throw new Error("Bitte formuliere eine Frage oder Entscheidungssituation.");
+  if (hasResponseCard && responseMode !== "reflection" && responseOptions.length < 2) throw new Error("Bitte lege mindestens zwei Antwortmöglichkeiten an.");
+  if (hasResponseCard && responseMode === "decision" && responseOptions.some((option) => !option.consequence)) throw new Error("Bitte beschreibe für jede Entscheidung die mögliche Folge.");
 
   const normalizedTask: ContentLearningTask = {
     purpose: String(task.purpose || "").trim().slice(0, 1000),
