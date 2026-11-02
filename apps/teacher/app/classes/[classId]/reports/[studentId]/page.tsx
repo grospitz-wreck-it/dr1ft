@@ -61,7 +61,7 @@ export default async function StudentReportPage({params}:{params:{classId:string
   const studentName=profile?.display_name||"Schüler:in",assignedCount=new Set((assignments??[]).map((a:{scenario_id:string|null})=>a.scenario_id).filter(Boolean)).size;
   const openCount=partial+missed;
 
-  return <main className="min-h-screen overflow-hidden bg-[#f2f3ff] text-[#111329] print:bg-white">
+  return (\n  <main className="min-h-screen overflow-hidden bg-[#f2f3ff] text-[#111329] print:bg-white">
     <div className="pointer-events-none fixed inset-0 print:hidden" aria-hidden="true"><div className="absolute -left-32 top-20 h-96 w-96 rounded-full bg-violet-300/25 blur-3xl"/><div className="absolute right-0 top-0 h-[34rem] w-[34rem] rounded-full bg-cyan-200/25 blur-3xl"/></div>
     <div className="relative mx-auto max-w-[1480px] space-y-6 px-5 py-6 md:px-8 lg:px-10">
       <header className="flex flex-wrap items-center justify-between gap-4 print:hidden">
