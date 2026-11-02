@@ -19,7 +19,7 @@ export function LearningCardsModal({scenarioId,cards}:{scenarioId:string;cards:C
  const [error,setError]=useState("");
  async function submit(formData:FormData) {
   formData.set("options",JSON.stringify(options));
-  startTransition(async()=>{try { await createScenarioLearningCard(scenarioId,formData); setError(""); setOptions([]); } catch(e){setError(e instanceof Error?e.message:"Speichern fehlgeschlagen.");}});
+  startTransition(async()=>{try { await createScenarioLearningCard(scenarioId,formData); setError(""); setOptions([{id:crypto.randomUUID(),label:"Ich prüfe die Quelle und vergleiche Hinweise.",outcome:"success"},{id:crypto.randomUUID(),label:"Ich frage eine weitere Person.",outcome:"partial"},{id:crypto.randomUUID(),label:"Ich teile den Beitrag sofort.",outcome:"not_yet"}]); } catch(e){setError(e instanceof Error?e.message:"Speichern fehlgeschlagen.");}});
  }
  return <>
   <button type="button" onClick={()=>setOpen(true)} className="inline-flex items-center gap-2 rounded-full border border-violet-200 bg-white px-3 py-2 text-sm font-semibold text-violet-700 shadow-sm hover:bg-violet-50"><Target className="h-4 w-4"/> Lernkarten {cards.length>0&&<span className="rounded-full bg-violet-100 px-2 py-0.5 text-[10px]">{cards.length}</span>}</button>
