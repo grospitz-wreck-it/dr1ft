@@ -2,8 +2,9 @@
 
 import { useState } from "react";
 import { Check, FileText, HelpCircle, Mail, MessageCircle, Puzzle, Plus, Video, X } from "lucide-react";
+import { LearningCardsModal } from "./LearningCardsModal";
 
-export type ContentModuleId = "feed_post" | "group_chat" | "interactive_task" | "video" | "direct_message";
+export type ContentModuleId = "feed_post" | "group_chat" | "interactive_task" | "video" | "direct_message" | "learning_cards";
 
 const MODULES: { id: ContentModuleId; title: string; short: string; description: string; Icon: typeof FileText; tone: string }[] = [
   { id: "feed_post", title: "Feed-Posts", short: "Social Feed", description: "Beiträge im simulierten Feed erleben, einordnen und darauf reagieren.", Icon: FileText, tone: "bg-violet-100 text-violet-700" },
@@ -13,7 +14,7 @@ const MODULES: { id: ContentModuleId; title: string; short: string; description:
   { id: "direct_message", title: "Direktnachrichten", short: "Nachrichten", description: "Persönliche Situationen und individuelle Perspektiven über private Nachrichten vermitteln.", Icon: Mail, tone: "bg-emerald-100 text-emerald-700" },
 ];
 
-export function ContentModulePicker({ selected, onChange }: { selected: ContentModuleId[]; onChange: (modules: ContentModuleId[]) => void }) {
+export function ContentModulePicker({ selected, onChange, scenarioId, cards = [] }: { selected: ContentModuleId[]; onChange: (modules: ContentModuleId[]) => void; scenarioId: string; cards?: any[] }) {
   const [open, setOpen] = useState(false);
   const [info, setInfo] = useState<ContentModuleId | null>(null);
   const selectedModules = MODULES.filter((module) => selected.includes(module.id));
