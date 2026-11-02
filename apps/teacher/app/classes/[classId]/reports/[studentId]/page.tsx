@@ -52,15 +52,22 @@ export default async function StudentReportPage({params}:{params:{classId:string
   ]);
   const error=reportResult.error?.message??null,answers=(reportResult.data??[]) as ScenarioAnswer[];
   const ids=Array.from(new Set(answers.map(a=>a.scenario_id)));
-  const {data:scenarioRows}=ids.length?await supabase.from("scenarios").select("id,title,cover_image_url,learning_cards").in("id",ids):{data:[] as ScenarioMeta[]};
-  const scenarioMeta=new Map<string,ScenarioMeta>((scenarioRows??[]).map((s:any)=>[s.id,s as ScenarioMeta]));
+  let scenarioRows: ScenarioMeta[] = [];
+  if (ids.length) {
+    const scenarioResult = await supabase.from("scenarios").select("id,title,cover_image_url,learning_cards").in("id", ids);
+    scenarioRows = (scenarioResult.data ?? []) as ScenarioMeta[];
+  }
+  const scenarioMeta = new Map<string, ScenarioMeta>(scenarioRows.map((scenario) => [scenario.id, scenario]));
   const grouped=new Map<string,ScenarioReport>();
   for(const a of answers){const item=grouped.get(a.scenario_id)??{id:a.scenario_id,title:a.scenario_title,answers:[]};item.answers.push(a);grouped.set(a.scenario_id,item);}
   const reports=Array.from(grouped.values()).sort((a,b)=>new Date(b.answers[0].occurred_at).getTime()-new Date(a.answers[0].occurred_at).getTime());
   const success=answers.filter(x=>x.outcome==="success").length,partial=answers.filter(x=>x.outcome==="partial").length,missed=answers.filter(x=>x.outcome==="not_yet").length,total=answers.length;
   const studentName=profile?.display_name||"Schüler:in",assignedCount=new Set((assignments??[]).map((a:{scenario_id:string|null})=>a.scenario_id).filter(Boolean)).size;
   const openCount=partial+missed;
-  const requiredCardCount=(scenarioRows??[]).reduce((sum:any,s:any)=>sum+(Array.isArray(s.learning_cards)?s.learning_cards.filter((c:any)=>c.type!=="reflection"&&c.required!==false).length:0),0)||total;
+  const requiredCardCount = scenarioRows.reduce((sum, scenario) => {
+    const required = (scenario.learning_cards ?? []).filter((card: any) => card.type !== "reflection" && card.required !== false).length;
+    return sum + required;
+  }, 0) || total;
   const completionRate=percent(total,Math.max(total,requiredCardCount));
 
   return (
