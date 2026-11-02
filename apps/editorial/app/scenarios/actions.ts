@@ -1043,19 +1043,28 @@ export async function generateScenarioCover(
   };
   const selectedStyle = styleDirections[visualStyle] ? visualStyle : "editorial";
   const color = /^#[0-9a-fA-F]{6}$/.test(primaryColor) ? primaryColor : "#7657E8";
-  const prompt = [
-    "Create ONLY a text-free illustration: generate artwork with absolutely no text or text-like elements, and do not add any title, lettering, caption, typography, logo, label, watermark, interface, or written layer.",
-    "Create a premium, visually distinctive 16:9 illustration for a contemporary German school media-literacy learning scenario.",
-    "SCENARIO TITLE (context only; never render it): " + scenario.title,
-    "SCENARIO BRIEFING: " + String(scenario.description ?? "").slice(0, 2200),
-    "TARGET AGE GROUP: " + String(scenario.age_band ?? scenario.age_rating ?? "12+"),
-    "VISUAL STORYTELLING: Depict one specific, immediately understandable scene that communicates the central conflict or learning theme. Prefer 1–3 age-appropriate characters in a relevant environment, with visible interaction, expressive body language and a clear emotional moment. Use one focal subject, cinematic composition and layered depth; avoid generic stock imagery and unrelated symbol collages.",
-    "ILLUSTRATION STYLE: " + styleDirections[selectedStyle],
-    "PRIMARY COLOR: " + color + ". Make this the dominant accent color in the illustration, supported by harmonious secondary colors. Do not turn the color into a graphic overlay or text element.",
-    "TEXT-FREE IMAGE RULE: No letters, numbers, words, typography, logos, labels, captions, signs, watermarks, UI, speech bubbles, pseudo-writing or text-like marks anywhere. Do not show readable screens, papers, books, posters, signs or branded clothing. If a phone or screen is relevant, show abstract shapes only.",
-    "COMPOSITION: Wide landscape 16:9, edge-to-edge artwork, no frame, no title card, no border, no real-person likeness.",
-    feedback ? "ADDITIONAL ART DIRECTION FROM THE EDITOR (must remain text-free): " + feedback : "",
-  ].filter(Boolean).join("\n\n");
+  const prompt = feedback
+    ? [
+        "EDITOR OVERRIDE — THIS IS THE COMPLETE AND AUTHORITATIVE VISUAL PROMPT.",
+        "Follow the editor's description below as the sole source for the image subject, scene, characters, action, setting, camera perspective and composition.",
+        "Do NOT use, infer, preserve or blend in the scenario title, scenario description, learning objective or any previous image description. They are intentionally overridden.",
+        "EDITOR'S COMPLETE IMAGE PROMPT: " + feedback,
+        "ILLUSTRATION STYLE: " + styleDirections[selectedStyle],
+        "PRIMARY COLOR: " + color + ". Use this as the dominant accent color, harmonized with the image. Do not render it as a graphic overlay.",
+        "Create premium, visually distinctive, age-appropriate 16:9 artwork. No real-person likeness.",
+        "ABSOLUTE TEXT-FREE RULE: no letters, numbers, words, typography, logos, labels, captions, signs, watermarks, UI, speech bubbles, pseudo-writing or text-like marks. Screens and papers must be blank or abstract.",
+      ].join("\n\n")
+    : [
+        "Create ONLY a text-free illustration for a contemporary German school media-literacy learning scenario.",
+        "SCENARIO TITLE (context only; never render it): " + scenario.title,
+        "SCENARIO BRIEFING: " + String(scenario.description ?? "").slice(0, 2200),
+        "TARGET AGE GROUP: " + String(scenario.age_band ?? scenario.age_rating ?? "12+"),
+        "VISUAL STORYTELLING: Depict one specific, immediately understandable scene communicating the central learning theme. Prefer 1–3 age-appropriate characters, visible interaction, expressive body language and a clear emotional moment. Use one focal subject, cinematic composition and layered depth; avoid generic stock imagery and unrelated symbol collages.",
+        "ILLUSTRATION STYLE: " + styleDirections[selectedStyle],
+        "PRIMARY COLOR: " + color + ". Make this the dominant accent color, supported by harmonious secondary colors.",
+        "COMPOSITION: Wide landscape 16:9, edge-to-edge artwork, no frame, no title card, no border, no real-person likeness.",
+        "ABSOLUTE TEXT-FREE RULE: no letters, numbers, words, typography, logos, labels, captions, signs, watermarks, UI, speech bubbles, pseudo-writing or text-like marks. Screens and papers must be blank or abstract.",
+      ].join("\n\n");
 
   // Clear the previous cover for every age variant before starting a fresh
   // generation. This makes the new attempt visibly independent of the old artwork.
