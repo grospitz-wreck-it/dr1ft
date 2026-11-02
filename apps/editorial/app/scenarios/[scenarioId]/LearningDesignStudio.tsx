@@ -75,7 +75,7 @@ export function LearningDesignStudio({ scenarioId, latestDesign, contentItems = 
     challenge_first: "Herausforderung annehmen",
     explore_discover: "Offene Hinweise erkunden",
   };
-  const preview = [patternOpenings[learningPattern], ...PATHS[goal]];
+  const preview = [patternOpenings[learningPattern], ...PATHS[goal].slice(1)];
   const stepCount = duration <= 10 ? 3 : duration <= 25 ? 5 : duration <= 45 ? 7 : 9;
   const ambientMinutes = ambient === "focused" ? 0 : ambient === "balanced" ? 5 : 12;
   const totalDuration = duration + ambientMinutes;
