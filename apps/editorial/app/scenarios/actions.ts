@@ -1053,7 +1053,7 @@ export async function generateScenarioCover(
         "PRIMARY COLOR: " + color + ". Use this as the dominant accent color, harmonized with the image. Do not render it as a graphic overlay.",
         "Create premium, visually distinctive, age-appropriate 16:9 artwork. No real-person likeness.",
         "ABSOLUTE TEXT-FREE RULE: no letters, numbers, words, typography, logos, labels, captions, signs, watermarks, UI, speech bubbles, pseudo-writing or text-like marks. Screens and papers must be blank or abstract.",
-      ].join("\\n\\n")
+      ].join("\n\n")
     : [
         "Create ONLY a text-free illustration for a contemporary German school media-literacy learning scenario.",
         "SCENARIO TITLE (context only; never render it): " + scenario.title,
@@ -1064,7 +1064,7 @@ export async function generateScenarioCover(
         "PRIMARY COLOR: " + color + ". Make this the dominant accent color, supported by harmonious secondary colors.",
         "COMPOSITION: Wide landscape 16:9, edge-to-edge artwork, no frame, no title card, no border, no real-person likeness.",
         "ABSOLUTE TEXT-FREE RULE: no letters, numbers, words, typography, logos, labels, captions, signs, watermarks, UI, speech bubbles, pseudo-writing or text-like marks. Screens and papers must be blank or abstract.",
-      ].join("\\n\\n");
+      ].join("\n\n");
 
   // Clear the previous cover for every age variant before starting a fresh
   // generation. This makes the new attempt visibly independent of the old artwork.
