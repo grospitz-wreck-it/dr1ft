@@ -47,6 +47,7 @@ export function PostCard({ item, userId, classInstanceId, initiallyLiked, onView
   const [learningFeedback, setLearningFeedback] = useState<{ title: string; message: string; action: string } | null>(null);
   const [comparison, setComparison] = useState<{ related: FeedItem | null; loading: boolean; selected?: "contradict" | "support"; assessmentOutcome?: "success" | "not_yet" | "not_assessed"; error?: string } | null>(null);
   const [taskResponse, setTaskResponse] = useState("");
+  const [selectedTaskOptions, setSelectedTaskOptions] = useState<string[]>([]);
   const [taskResponseSaved, setTaskResponseSaved] = useState(false);
   const [taskResponseSaving, setTaskResponseSaving] = useState(false);
 
@@ -54,7 +55,7 @@ export function PostCard({ item, userId, classInstanceId, initiallyLiked, onView
   const commentCount = Number((item.extra as any)?.classCommentCount ?? (item.extra as any)?.baseCommentCount ?? 0);
   const extra = (item.extra ?? {}) as Record<string, unknown>;
   const imageEdit = (extra.imageEdit ?? {}) as any;
-  const learningTask = (extra.learningTask ?? {}) as { purpose?: string; learnerAction?: string; interactionType?: string; expectedResponse?: string; evaluationMethod?: string; successCriteria?: string; feedback?: string; interactions?: Array<{ id: string; label: string; instruction?: string; custom?: boolean; discoveryTitle?: string; discoveryMessage?: string; discoveryCompetency?: string }>; assessment?: { assessedActions?: string[]; acceptableActions?: string[]; evidenceKey?: string } };
+  const learningTask = (extra.learningTask ?? {}) as { purpose?: string; learnerAction?: string; responseMode?: "reflection" | "single_choice" | "multiple_choice" | "decision"; responsePrompt?: string; responseOptions?: Array<{ id: string; label: string; consequence?: string }>; interactionType?: string; expectedResponse?: string; evaluationMethod?: string; successCriteria?: string; feedback?: string; interactions?: Array<{ id: string; label: string; instruction?: string; custom?: boolean; discoveryTitle?: string; discoveryMessage?: string; discoveryCompetency?: string }>; assessment?: { assessedActions?: string[]; acceptableActions?: string[]; evidenceKey?: string } };
   const configuredLearningInteractions = new Set((learningTask.interactions ?? []).map((interaction) => interaction.id));
   useEffect(() => {
     setLiveCommentCount(commentCount);
@@ -288,8 +289,12 @@ export function PostCard({ item, userId, classInstanceId, initiallyLiked, onView
   }
 
   async function submitLearningTaskResponse() {
-    const response = taskResponse.trim();
+    const responseMode = learningTask.responseMode ?? "reflection";
+    const selectedOptions = (learningTask.responseOptions ?? []).filter((option) => selectedTaskOptions.includes(option.id));
+    const response = responseMode === "reflection" ? taskResponse.trim() : selectedOptions.map((option) => option.label).join(" · ");
     if (!response || taskResponseSaving || taskResponseSaved) return;
+    if (responseMode === "single_choice" && selectedOptions.length !== 1) return;
+    if (responseMode === "multiple_choice" && selectedOptions.length < 1) return;
     setTaskResponseSaving(true);
     try {
       const saved = await recordInteraction(supabase, {
@@ -299,6 +304,9 @@ export function PostCard({ item, userId, classInstanceId, initiallyLiked, onView
         classInstanceId,
         metadata: {
           response,
+          responseMode,
+          selectedOptionIds: selectedOptions.map((option) => option.id),
+          selectedOptions: selectedOptions.map((option) => ({ label: option.label, consequence: option.consequence ?? "" })),
           interactionType: learningTask.interactionType ?? "reflect",
           evaluationMethod: learningTask.evaluationMethod ?? "criteria",
           submittedAt: new Date().toISOString(),
@@ -485,18 +493,32 @@ export function PostCard({ item, userId, classInstanceId, initiallyLiked, onView
             <button type="button" onClick={() => setLearningFeedback(null)} aria-label="Rückmeldung schließen" className="learning-reaction-close rounded-lg p-1"><X className="h-4 w-4" /></button>
           </div>
         </section>}
-        {!learningTask.interactions?.length && !learningTask.assessment?.assessedActions?.length && learningTask.learnerAction?.trim() && <section className="mt-4 min-w-0 rounded-2xl border border-violet-200 bg-gradient-to-br from-violet-50 to-fuchsia-50/60 p-4 pb-6 text-left">
+        {(learningTask.responsePrompt?.trim() || (!learningTask.interactions?.length && !learningTask.assessment?.assessedActions?.length && learningTask.learnerAction?.trim())) && <section className="mt-4 min-w-0 rounded-2xl border border-violet-200 bg-gradient-to-br from-violet-50 to-fuchsia-50/60 p-4 pb-6 text-left">
           <div className="flex items-start gap-2.5">
             <span className="grid h-8 w-8 shrink-0 place-items-center rounded-xl bg-violet-600 text-white"><Sparkles className="h-4 w-4" /></span>
             <div className="min-w-0 flex-1 text-left">
               <p className="text-left text-[10px] font-bold uppercase tracking-[0.16em] text-violet-700">Deine Aufgabe</p>
               {learningTask.purpose?.trim() && <p className="mt-1 whitespace-pre-wrap break-words [overflow-wrap:anywhere] text-left text-xs leading-relaxed text-violet-900/75">{learningTask.purpose}</p>}
-              <p className="mt-2 whitespace-pre-wrap break-words [overflow-wrap:anywhere] text-left text-sm font-semibold leading-relaxed text-slate-900">{learningTask.learnerAction}</p>
+              <p className="mt-2 whitespace-pre-wrap break-words [overflow-wrap:anywhere] text-left text-sm font-semibold leading-relaxed text-slate-900">{learningTask.responsePrompt || learningTask.learnerAction}</p>
               {!taskResponseSaved ? <>
-                <label htmlFor={`learning-task-response-${item.id}`} className="mt-3 block text-xs font-semibold text-slate-700">Deine Antwort</label>
-                <textarea id={`learning-task-response-${item.id}`} value={taskResponse} onChange={event => setTaskResponse(event.target.value)} rows={3} maxLength={3000} placeholder="Schreibe deine Überlegung auf …" className="mt-1.5 w-full rounded-xl border border-violet-200 bg-white px-3 py-2.5 text-sm text-slate-900 outline-none focus:border-violet-400 focus:ring-4 focus:ring-violet-100" />
-                <button type="button" disabled={!taskResponse.trim() || taskResponseSaving} onClick={() => void submitLearningTaskResponse()} className="mt-2 inline-flex items-center gap-2 rounded-xl bg-violet-600 px-4 py-2.5 text-xs font-bold text-white transition hover:bg-violet-700 disabled:cursor-not-allowed disabled:opacity-50">{taskResponseSaving ? "Wird gespeichert …" : "Antwort abgeben"}<Send className="h-3.5 w-3.5" /></button>
-              </> : <p role="status" className="mt-3 rounded-xl bg-emerald-100 px-3 py-2 text-xs font-semibold text-emerald-800">Antwort abgegeben</p>}
+                {(learningTask.responseMode ?? "reflection") === "reflection" ? <>
+                  <label htmlFor={`learning-task-response-${item.id}`} className="mt-3 block text-xs font-semibold text-slate-700">Deine Überlegung</label>
+                  <textarea id={`learning-task-response-${item.id}`} value={taskResponse} onChange={event => setTaskResponse(event.target.value)} rows={3} maxLength={3000} placeholder="Schreibe deine Überlegung auf …" className="mt-1.5 w-full rounded-xl border border-violet-200 bg-white px-3 py-2.5 text-sm text-slate-900 outline-none focus:border-violet-400 focus:ring-4 focus:ring-violet-100" />
+                </> : <div className="mt-3 space-y-2">
+                  {(learningTask.responseOptions ?? []).map(option => {
+                    const selected = selectedTaskOptions.includes(option.id);
+                    return <button key={option.id} type="button" onClick={() => setSelectedTaskOptions(current => (learningTask.responseMode === "single_choice" || learningTask.responseMode === "decision" ? (selected ? [] : [option.id]) : (selected ? current.filter(id => id !== option.id) : [...current, option.id])))} className={`flex w-full items-start gap-3 rounded-xl border px-3 py-3 text-left text-sm transition ${selected ? "border-violet-400 bg-violet-100 text-violet-950" : "border-violet-100 bg-white text-slate-800 hover:border-violet-300"}`}>
+                      <span className={`mt-0.5 grid h-4 w-4 shrink-0 place-items-center border ${learningTask.responseMode === "multiple_choice" ? "rounded" : "rounded-full"} ${selected ? "border-violet-600 bg-violet-600 text-white" : "border-slate-300 bg-white"}`}>{selected && <Check className="h-3 w-3" />}</span>
+                      <span className="font-semibold">{option.label}</span>
+                    </button>;
+                  })}
+                  <p className="text-[10px] text-slate-500">{learningTask.responseMode === "multiple_choice" ? "Wähle alle Möglichkeiten, die zu deiner Einschätzung passen." : "Wähle eine Möglichkeit."}</p>
+                </div>}
+                <button type="button" disabled={taskResponseSaving || ((learningTask.responseMode ?? "reflection") === "reflection" ? !taskResponse.trim() : selectedTaskOptions.length === 0)} onClick={() => void submitLearningTaskResponse()} className="mt-2 inline-flex items-center gap-2 rounded-xl bg-violet-600 px-4 py-2.5 text-xs font-bold text-white transition hover:bg-violet-700 disabled:cursor-not-allowed disabled:opacity-50">{taskResponseSaving ? "Wird gespeichert …" : "Antwort abgeben"}<Send className="h-3.5 w-3.5" /></button>
+              </> : <>
+                <p role="status" className="mt-3 rounded-xl bg-emerald-100 px-3 py-2 text-xs font-semibold text-emerald-800">Antwort abgegeben</p>
+                {(learningTask.responseOptions ?? []).filter(option => selectedTaskOptions.includes(option.id) && option.consequence?.trim()).map(option => <div key={option.id} className="mt-2 rounded-xl border border-violet-100 bg-white/80 p-3"><p className="text-[10px] font-bold uppercase tracking-wide text-violet-700">Was daraus folgt</p><p className="mt-1 whitespace-pre-wrap text-xs leading-relaxed text-slate-700">{option.consequence}</p></div>)}
+              </>}
             </div>
           </div>
         </section>}
