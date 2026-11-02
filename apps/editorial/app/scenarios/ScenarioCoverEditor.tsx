@@ -114,9 +114,9 @@ export function ScenarioCoverEditor({
                 </span>
               </label>
               <label className="block sm:col-span-2">
-                <span className="mb-1 block text-[11px] font-semibold text-slate-500">Bild konkretisieren (optional)</span>
-                <textarea value={visualFeedback} onChange={(event) => setVisualFeedback(event.target.value)} maxLength={1200} rows={2} placeholder="z. B. zwei Jugendliche im Vordergrund, Konflikt in einem Klassenchat visuell zeigen …" className="w-full resize-y rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs leading-5 outline-none transition placeholder:text-slate-400 focus:border-violet-300 focus:ring-2 focus:ring-violet-100" />
-                <span className="mt-1 block text-right text-[10px] text-slate-400">{visualFeedback.length}/1200 Zeichen · wird direkt an FLUX übergeben</span>
+                <span className="mb-1 block text-[11px] font-semibold text-slate-500">Eigener Bildprompt (Override)</span>
+                <textarea value={visualFeedback} onChange={(event) => setVisualFeedback(event.target.value)} maxLength={1200} rows={2} placeholder="Beschreibe das gewünschte Motiv vollständig: Personen, Handlung, Umgebung, Perspektive und Bildkomposition …" className="w-full resize-y rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs leading-5 outline-none transition placeholder:text-slate-400 focus:border-violet-300 focus:ring-2 focus:ring-violet-100" />
+                <span className="mt-1 block text-[10px] leading-4 text-slate-500">Wenn ausgefüllt, ersetzt dieser Prompt die Szenario-Bildbeschreibung vollständig. Nur Illustrationsstil, Primärfarbe und technische Bildregeln bleiben zusätzlich aktiv. {visualFeedback.length}/1200</span>
               </label>
             </div>
           </details>
