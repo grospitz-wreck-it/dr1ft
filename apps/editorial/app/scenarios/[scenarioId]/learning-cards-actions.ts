@@ -6,14 +6,17 @@ import { supabaseServerClient } from "../../../lib/supabaseServerClient";
 const CARD_TYPES = ["decision", "reflection", "knowledge_check", "mission_completion"] as const;
 const CARD_POSITIONS = ["before_feed", "feed_end"] as const;
 
+type AssessedOption = { id: string; label: string; outcome: "success" | "partial" | "not_yet" };
 type LearningCard = {
   id: string;
   type: typeof CARD_TYPES[number];
   title: string;
   prompt: string;
   position: typeof CARD_POSITIONS[number];
-  options: string[];
+  options: AssessedOption[];
   required: boolean;
+  competency: string;
+  evidenceKey: string;
 };
 
 export async function createScenarioLearningCard(scenarioId: string, formData: FormData) {
@@ -22,11 +25,22 @@ export async function createScenarioLearningCard(scenarioId: string, formData: F
   const position = String(formData.get("position") ?? "feed_end");
   const title = String(formData.get("title") ?? "").trim();
   const prompt = String(formData.get("prompt") ?? "").trim();
-  const options = String(formData.get("options") ?? "").split("\n").map((value) => value.trim()).filter(Boolean).slice(0, 8);
+  const competency = String(formData.get("competency") ?? "").trim();
+  const evidenceKey = String(formData.get("evidenceKey") ?? "").trim();
+  let options: AssessedOption[];
+  try {
+    options = JSON.parse(String(formData.get("options") ?? "[]"));
+  } catch {
+    throw new Error("Die Antwortoptionen konnten nicht gelesen werden.");
+  }
+
   if (!CARD_TYPES.includes(type as any)) throw new Error("Ungültiger Kartentyp.");
   if (!CARD_POSITIONS.includes(position as any)) throw new Error("Ungültige Kartenposition.");
-  if (!title || !prompt) throw new Error("Bitte Titel und Frage/Aufgabe ausfüllen.");
-  if (!competency || !evidenceKey) throw new Error("Bitte Lernziel/Kompetenz und Nachweis-Schlüssel angeben.");\n  if (!Array.isArray(options) || options.length < 2 || options.some((option) => !option.id || !option.label?.trim() || !["success","partial","not_yet"].includes(option.outcome))) throw new Error("Bitte mindestens zwei gültige, bewertete Antwortoptionen angeben.");
+  if (!title || !prompt || !competency || !evidenceKey) throw new Error("Bitte Titel, Aufgabe, Lernziel und Nachweis-Schlüssel ausfüllen.");
+  if (!Array.isArray(options) || options.length < 2 || options.length > 8 || options.some((option) =>
+    !option || typeof option.id !== "string" || typeof option.label !== "string" || !option.label.trim() ||
+    !["success", "partial", "not_yet"].includes(option.outcome)
+  )) throw new Error("Bitte mindestens zwei gültige, bewertete Antwortoptionen angeben.");
 
   const { data: scenario, error: readError } = await supabase.from("scenarios").select("learning_cards").eq("id", scenarioId).single();
   if (readError) throw new Error(readError.message);
@@ -37,8 +51,10 @@ export async function createScenarioLearningCard(scenarioId: string, formData: F
     title,
     prompt,
     position: position as LearningCard["position"],
-    options,
+    options: options.map((option) => ({ id: option.id, label: option.label.trim(), outcome: option.outcome })),
     required: formData.get("required") === "on",
+    competency,
+    evidenceKey,
   };
   const { error } = await supabase.from("scenarios").update({ learning_cards: [...cards, card] }).eq("id", scenarioId);
   if (error) throw new Error(error.message);
