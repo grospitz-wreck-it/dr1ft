@@ -112,6 +112,8 @@ export function PostCard({ item, userId, classInstanceId, initiallyLiked, onView
           setSelectedTaskOptions(restoredOptionIds);
         }
         setTaskResponseSaved(true);
+      } catch (restoreError) {
+        console.error("[PostCard] Lernkarten-Antwort konnte nicht wiederhergestellt werden:", restoreError);
       } finally {
         if (active) setTaskResponseLoading(false);
       }
