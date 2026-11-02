@@ -9,6 +9,8 @@ type BloomLevel = "understand" | "apply" | "analyze" | "evaluate" | "create";
 type Props = {
   scenarioId: string;
   learningCards?: any[];
+  competencies?: { id: string; title: string }[];
+  missions?: any[];
   contentItems?: { id: string; title?: string | null; body?: string | null; type?: string | null; media_url?: string | null; media_type?: string | null; status?: string | null }[];
   latestDesign?: {
     id: string; version: number; status: string; title: string;
@@ -47,7 +49,7 @@ function GoalCard({ active, option, onClick }: { active: boolean; option: typeof
   </button>;
 }
 
-export function LearningDesignStudio({ scenarioId, latestDesign, contentItems = [], learningCards = [] }: Props) {
+export function LearningDesignStudio({ scenarioId, latestDesign, contentItems = [], learningCards = [], competencies = [], missions = [] }: Props) {
   const [duration, setDuration] = useState(25);
     const [goal, setGoal] = useState<BloomLevel>((latestDesign?.bloom_target as BloomLevel) || "evaluate");
   const [learningPattern, setLearningPattern] = useState("experience_first");
@@ -176,7 +178,7 @@ export function LearningDesignStudio({ scenarioId, latestDesign, contentItems = 
           </div>
         </div>
 
-        <ContentModulePicker selected={contentModules} onChange={setContentModules} scenarioId={scenarioId} cards={learningCards} />
+        <ContentModulePicker selected={contentModules} onChange={setContentModules} scenarioId={scenarioId} cards={learningCards} competencies={competencies} missions={missions} />
 
         <div className="grid gap-4 lg:grid-cols-[0.75fr_1.25fr]">
           <div className="rounded-2xl border border-slate-200 bg-slate-50/80 p-4">
