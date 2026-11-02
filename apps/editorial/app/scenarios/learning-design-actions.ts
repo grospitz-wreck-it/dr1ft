@@ -236,6 +236,13 @@ export async function generateLearningDesign(scenarioId: string, rawConfig: Lear
     "Lernschritte: EXAKT " + config.learningStepCount,
     "Learning Model: " + config.primaryLearningModel,
     "Bloom-Ziel: " + config.bloomTarget,
+    "VERBINDLICHE ZIELLOGIK:",
+    "Das Bloom-Ziel ist das kognitive Anspruchsniveau, kein konkretes inhaltliches Lernziel.",
+    "Erzeuge konkrete, beobachtbare Lernziele, die zum Szenario und zu den ausgewählten Kompetenzen passen.",
+    "Jedes konkrete Lernziel muss exakt das vorgegebene Bloom-Niveau " + config.bloomTarget + " tragen. Verwende kein niedrigeres oder höheres Niveau.",
+    "Formuliere die Titel als konkrete Fähigkeiten im Szenario-Kontext, nicht als allgemeine Bloom-Begriffe wie Verstehen, Anwenden oder Analysieren.",
+    "Alle Lernschritte müssen auf die gelieferten objectiveCodes verweisen. Erfinde keine zusätzlichen Lernziele in Lernschritten, Aufgaben oder Reflexionen.",
+    "Die Lernziele bilden eine einzige verbindliche Liste. Keine alternativen, zusätzlichen oder widersprüchlichen Zielsysteme erzeugen.",
     "Learning Pattern: " + (config.learningPattern || "selbst wählen"),
     "",
     "LEITPLANKEN FÜR DAS LEARNING PATTERN:",
@@ -288,6 +295,22 @@ export async function generateLearningDesign(scenarioId: string, rawConfig: Lear
   const draft = (await geminiJson(prompt)) as GeneratedLearningDesign;
   if (!Array.isArray(draft.steps) || draft.steps.length !== config.learningStepCount) {
     throw new Error("Die KI lieferte nicht exakt " + config.learningStepCount + " Lernschritte.");
+  }
+  if (!Array.isArray(draft.objectives) || draft.objectives.length === 0) {
+    throw new Error("Die KI hat keine konkreten Lernziele erstellt. Bitte versuche es erneut.");
+  }
+
+  // The selected Bloom level is authoritative; do not let generated metadata drift.
+  draft.bloomTarget = config.bloomTarget;
+  for (const objective of draft.objectives) {
+    objective.bloomLevel = config.bloomTarget;
+  }
+  const objectiveCodes = new Set(draft.objectives.map((objective) => objective.code));
+  for (const step of draft.steps) {
+    step.objectiveCodes = (step.objectiveCodes ?? []).filter((code) => objectiveCodes.has(code));
+    if (step.objectiveCodes.length === 0) {
+      throw new Error("Ein Lernschritt ist keinem konkreten Lernziel zugeordnet. Bitte generiere den Lernweg erneut.");
+    }
   }
 
   const validCompetencies = new Set((competencies ?? []).map((item) => item.slug));
