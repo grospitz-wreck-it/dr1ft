@@ -1,4 +1,4 @@
-import { Plus, Trash2, Layers3, Flag, MessageCircle, Brain, CheckCircle2 } from "lucide-react";
+import { Plus, Trash2, Layers3 } from "lucide-react";
 import { createScenarioLearningCard, deleteScenarioLearningCard } from "./learning-cards-actions";
 
 type Card = { id: string; type: string; title: string; prompt: string; position: string; options?: string[]; required?: boolean };
