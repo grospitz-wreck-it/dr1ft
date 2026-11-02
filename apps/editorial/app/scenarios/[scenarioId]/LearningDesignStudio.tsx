@@ -7,7 +7,10 @@ import { ContentModulePicker, type ContentModuleId } from "./ContentModulePicker
 type BloomLevel = "understand" | "apply" | "analyze" | "evaluate" | "create";
 
 type Props = {
+  /** Existing scenario learning goals supplied by the scenario setup. */
   scenarioId: string;
+  learningCards?: any[];
+  learningObjectives?: { id: string; title: string }[];
   contentItems?: { id: string; title?: string | null; body?: string | null; type?: string | null; media_url?: string | null; media_type?: string | null; status?: string | null }[];
   latestDesign?: {
     id: string; version: number; status: string; title: string;
@@ -46,9 +49,17 @@ function GoalCard({ active, option, onClick }: { active: boolean; option: typeof
   </button>;
 }
 
-export function LearningDesignStudio({ scenarioId, latestDesign, contentItems = [] }: Props) {
+export function LearningDesignStudio({ scenarioId, latestDesign, contentItems = [], learningCards = [], learningObjectives = [] }: Props) {
   const [duration, setDuration] = useState(25);
     const [goal, setGoal] = useState<BloomLevel>((latestDesign?.bloom_target as BloomLevel) || "evaluate");
+  const [learningPattern, setLearningPattern] = useState("experience_first");
+
+  const PATTERNS = [
+    { value: "experience_first", title: "Erleben zuerst", note: "Eine Feed-Situation öffnet den Lernweg." },
+    { value: "decision_first", title: "Entscheidung zuerst", note: "Eine Entscheidung macht den Konflikt greifbar." },
+    { value: "challenge_first", title: "Herausforderung zuerst", note: "Eine Aufgabe setzt den Lernprozess in Gang." },
+    { value: "explore_discover", title: "Entdecken", note: "Hinweise und Perspektiven werden erkundet." },
+  ] as const;
   const [contentModules, setContentModules] = useState<ContentModuleId[]>(["feed_post"]);
   const [ambient, setAmbient] = useState<"focused" | "balanced" | "lively">("balanced");
   const [showFlowPreview, setShowFlowPreview] = useState(false);
@@ -60,7 +71,14 @@ export function LearningDesignStudio({ scenarioId, latestDesign, contentItems = 
   const [message, setMessage] = useState("");
 
   const selectedGoal = GOALS.find((item) => item.value === goal) ?? GOALS[3];
-  const preview = PATHS[goal];
+  const selectedPattern = PATTERNS.find((item) => item.value === learningPattern) ?? PATTERNS[0];
+  const patternOpenings: Record<string, string> = {
+    experience_first: "Feed-Situation erleben",
+    decision_first: "Erste Entscheidung treffen",
+    challenge_first: "Herausforderung annehmen",
+    explore_discover: "Offene Hinweise erkunden",
+  };
+  const preview = [patternOpenings[learningPattern], ...PATHS[goal].slice(1)];
   const stepCount = duration <= 10 ? 3 : duration <= 25 ? 5 : duration <= 45 ? 7 : 9;
   const ambientMinutes = ambient === "focused" ? 0 : ambient === "balanced" ? 5 : 12;
   const totalDuration = duration + ambientMinutes;
@@ -100,6 +118,7 @@ export function LearningDesignStudio({ scenarioId, latestDesign, contentItems = 
             learningStepCount: stepCount,
             primaryLearningModel: "backward_design",
             bloomTarget: goal,
+            learningPattern,
             allowedContentModules: contentModules,
           }),
         });
@@ -120,7 +139,7 @@ export function LearningDesignStudio({ scenarioId, latestDesign, contentItems = 
           <div className="min-w-0">
             <p className="text-[11px] font-bold uppercase tracking-[0.14em] text-violet-700">Lernweg gestalten</p>
             <h2 className="mt-1 text-xl font-bold tracking-tight text-slate-950">Was sollen Lernende am Ende können?</h2>
-            <p className="mt-1 max-w-3xl text-sm leading-5 text-slate-500">Du triffst drei einfache Entscheidungen. Die didaktische Struktur entsteht im Hintergrund – nachvollziehbar statt kompliziert.</p>
+            <p className="mt-1 max-w-3xl text-sm leading-5 text-slate-500">Du bestimmst Ziel und Einstieg. DR1FT entwickelt daraus den passenden Lernweg.</p>
           </div>
           {latestDesign && <span className="ml-auto hidden shrink-0 rounded-full bg-white/80 px-3 py-1.5 text-xs font-semibold text-violet-700 shadow-sm sm:block">Entwurf v{latestDesign.version}</span>}
         </div>
@@ -128,18 +147,42 @@ export function LearningDesignStudio({ scenarioId, latestDesign, contentItems = 
 
       <div className="space-y-7 p-5 sm:p-7">
         <div>
-          <div className="flex items-center gap-2"><Target className="h-4 w-4 text-violet-600" /><h3 className="text-sm font-bold text-slate-900">1. Lernziel wählen</h3></div>
-          <p className="mt-1 text-xs text-slate-500">Das ist keine Kosmetik: Deine Auswahl steuert den kognitiven Anspruch und wird an die Generierung übergeben.</p>
+          <div className="flex items-center gap-2"><Target className="h-4 w-4 text-violet-600" /><h3 className="text-sm font-bold text-slate-900">1. Kognitives Anspruchsniveau wählen</h3></div>
+          <p className="mt-1 text-xs text-slate-500">Diese Auswahl legt fest, auf welchem Denk-Niveau gelernt wird. Sie ist kein eigenes Lernziel, sondern prägt die konkreten Lernziele des Szenarios.</p>
           <div className="mt-3 grid gap-2 sm:grid-cols-2 lg:grid-cols-5">
             {GOALS.map((option) => <GoalCard key={option.value} active={goal === option.value} option={option} onClick={() => { setGoal(option.value); setFlowOrder(null); }} />)}
           </div>
         </div>
 
-        <ContentModulePicker selected={contentModules} onChange={setContentModules} />
+        <div>
+          <h3 className="text-sm font-bold text-slate-900">2. Wie beginnt das Szenario?</h3>
+          <p className="mt-1 text-xs text-slate-500">Das Lernmuster bestimmt den dramaturgischen Einstieg – nicht einen starren Ablauf.</p>
+          <div className="mt-3 grid gap-2 sm:grid-cols-2 xl:grid-cols-4">
+            {PATTERNS.map((pattern) => (
+              <button
+                key={pattern.value}
+                type="button"
+                aria-pressed={learningPattern === pattern.value}
+                onClick={() => { setLearningPattern(pattern.value); setFlowOrder(null); }}
+                className={"rounded-xl border px-3 py-3 text-left transition " + (learningPattern === pattern.value
+                  ? "border-violet-400 bg-violet-50 ring-1 ring-violet-200"
+                  : "border-slate-200 bg-white hover:border-violet-200")}
+              >
+                <span className="flex items-center justify-between gap-2">
+                  <span className="text-xs font-semibold text-slate-900">{pattern.title}</span>
+                  {learningPattern === pattern.value && <CheckCircle2 className="h-4 w-4 shrink-0 text-violet-600" />}
+                </span>
+                <span className="mt-1 block text-[11px] leading-4 text-slate-500">{pattern.note}</span>
+              </button>
+            ))}
+          </div>
+        </div>
+
+        <ContentModulePicker selected={contentModules} onChange={setContentModules} scenarioId={scenarioId} cards={learningCards} learningObjectives={learningObjectives} />
 
         <div className="grid gap-4 lg:grid-cols-[0.75fr_1.25fr]">
           <div className="rounded-2xl border border-slate-200 bg-slate-50/80 p-4">
-            <div className="flex items-center gap-2"><Clock3 className="h-4 w-4 text-violet-600" /><h3 className="text-sm font-bold text-slate-900">3. Rahmen festlegen</h3></div>
+            <div className="flex items-center gap-2"><Clock3 className="h-4 w-4 text-violet-600" /><h3 className="text-sm font-bold text-slate-900">3. Zeitrahmen</h3></div>
             <div className="mt-3 grid gap-3">
               <label className="text-xs font-semibold text-slate-600">Zeit
                 <select value={duration} onChange={(e) => { setDuration(Number(e.target.value)); setFlowOrder(null); }} className="mt-1.5 w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm text-slate-800 outline-none focus:border-violet-400">
@@ -158,13 +201,15 @@ export function LearningDesignStudio({ scenarioId, latestDesign, contentItems = 
 
           <div className="relative overflow-hidden rounded-2xl border border-violet-100 bg-gradient-to-br from-violet-50 via-white to-sky-50 p-4">
             <div className="absolute -right-8 -top-8 text-7xl opacity-[0.08]">🧭</div>
-            <p className="text-[11px] font-bold uppercase tracking-wide text-violet-700">So könnte sich der Lernweg anfühlen</p>
+            <p className="text-[11px] font-bold uppercase tracking-wide text-violet-700">So greifen Einstieg und Lernziel ineinander</p>
             <div className="mt-2 flex flex-wrap items-center gap-2">
-              {preview.map((item, index) => <span key={item} className="flex items-center gap-2"><span className="rounded-full border border-violet-100 bg-white px-3 py-2 text-xs font-semibold text-slate-700 shadow-sm">{item}</span>{index < preview.length - 1 && <ArrowRight className="h-4 w-4 text-violet-400" />}</span>)}
+              {preview.map((item, index) => <span key={item} className="flex items-center gap-2"><span className={"rounded-full border px-3 py-2 text-xs font-semibold shadow-sm " + (index === 0 ? "border-fuchsia-200 bg-fuchsia-50 text-fuchsia-800" : "border-violet-100 bg-white text-slate-700")}>{item}</span>{index < preview.length - 1 && <ArrowRight className="h-4 w-4 text-violet-400" />}</span>)}
             </div>
-            <div className="mt-5 space-y-2 rounded-xl border border-white/80 bg-white/70 p-3 text-xs leading-5 text-slate-600">
-              <div><strong className="text-slate-800">Pädagogische Einordnung:</strong> {pedagogy[goal].model}</div>
-              <div>{pedagogy[goal].note}</div>
+            <div className="mt-4 rounded-xl border border-white/80 bg-white/70 p-3 text-xs leading-5 text-slate-600">
+              <div><strong className="text-slate-800">Dein Einstieg:</strong> {selectedPattern.title} – {selectedPattern.note}</div>
+              <div className="mt-1"><strong className="text-slate-800">Dein kognitives Ziel:</strong> {selectedGoal.title} – {selectedGoal.subtitle}</div>
+              <div className="mt-2 border-t border-violet-50 pt-2"><strong className="text-slate-800">Pädagogische Einordnung:</strong> {pedagogy[goal].model}</div>
+              <div className="mt-1">{pedagogy[goal].note}</div>
               <div className="border-t border-violet-50 pt-2 text-slate-500"><strong className="text-slate-700">{duration <= 10 ? "Kompakt" : duration <= 25 ? "Standard" : duration <= 45 ? "Vertiefend" : "Ausführlich"}:</strong> ca. {stepCount} Lernmomente werden passend zur gewählten Zeit geplant.</div>
             </div>
           </div>

@@ -27,6 +27,27 @@ export default async function FeedPage() {
     ? await supabase.from("scenarios").select("id, title, description, ambient_density, cover_image_url").in("id", assignedScenarioIds).order("created_at", { ascending: true })
     : { data: [] as { id: string; title: string; description: string | null; ambient_density: string | null }[] };
   const scenarioIntros = assignedScenarios ?? [];
+  const { data: scenarioLearningCardRows } = assignedScenarioIds.length
+    ? await supabase.from("scenarios").select("id,title,learning_cards").in("id", assignedScenarioIds)
+    : { data: [] as { id: string; title: string; learning_cards: unknown }[] };
+  const scenarioLearningCards = (scenarioLearningCardRows ?? []).flatMap((scenario: any) =>
+    (Array.isArray(scenario.learning_cards) ? scenario.learning_cards : [])
+      .filter((card: any) => card && typeof card.id === "string" && typeof card.title === "string" && typeof card.prompt === "string" && Array.isArray(card.options))
+      .map((card: any) => ({
+        id: card.id,
+        scenarioId: scenario.id,
+        scenarioTitle: scenario.title,
+        type: String(card.type ?? "decision"),
+        title: card.title,
+        prompt: card.prompt,
+        position: card.position === "before_feed" ? "before_feed" as const : "feed_end" as const,
+        objective: typeof card.objective === "string" ? card.objective : "",
+        objectiveId: typeof card.objectiveId === "string" ? card.objectiveId : "",
+        required: card.required === true,
+        options: card.options.filter((option: any) => option && typeof option.id === "string" && typeof option.label === "string" && ["success", "partial", "not_yet"].includes(option.outcome)),
+      }))
+      .filter((card: any) => card.options.length >= 2)
+  );
   const scenarioIntro = scenarioIntros[0] ?? null;
   const scenarioIntroTitle = scenarioIntros.length > 1
     ? "Mehrere Perspektiven. Ein gemeinsamer Feed."
@@ -256,5 +277,5 @@ export default async function FeedPage() {
   }));
   const likedContentIds = new Set((recentInteractions ?? []).filter((i) => i.interaction_type === "like").map((i) => i.content_item_id));
 
-  return <FeedClient scenarioSummaries={scenarioIntros.map((scenario) => ({ id: scenario.id, title: scenario.title, description: scenario.description, coverImageUrl: scenario.cover_image_url ?? null }))} initialItems={items} userId={user.id} classInstanceId={classInstanceId} likedContentIds={likedContentIds} scenarioIntro={scenarioIntro ? { ...scenarioIntro, title: scenarioIntroTitle ?? scenarioIntro.title, description: scenarioIntroDescription } : null} scenarioIds={assignedScenarioIds} scenarioMissionCount={scenarioMissionIds.length} completedScenarioMissionCount={new Set((completedScenarioMissions ?? []).map((mission) => mission.mission_id)).size} profile={{ displayName: currentProfile?.display_name ?? "DR1FT User", username: currentProfile?.username ?? "user", avatarSeed: currentProfile?.avatar_seed ?? user.id }} />;
+  return <FeedClient learningCards={scenarioLearningCards} scenarioSummaries={scenarioIntros.map((scenario) => ({ id: scenario.id, title: scenario.title, description: scenario.description, coverImageUrl: scenario.cover_image_url ?? null }))} initialItems={items} userId={user.id} classInstanceId={classInstanceId} likedContentIds={likedContentIds} scenarioIntro={scenarioIntro ? { ...scenarioIntro, title: scenarioIntroTitle ?? scenarioIntro.title, description: scenarioIntroDescription } : null} scenarioIds={assignedScenarioIds} scenarioMissionCount={scenarioMissionIds.length} completedScenarioMissionCount={new Set((completedScenarioMissions ?? []).map((mission) => mission.mission_id)).size} profile={{ displayName: currentProfile?.display_name ?? "DR1FT User", username: currentProfile?.username ?? "user", avatarSeed: currentProfile?.avatar_seed ?? user.id }} />;
 }
