@@ -45,6 +45,7 @@ export function ContentModulePicker({ selected, onChange, scenarioId, cards = []
         <button type="button" onClick={() => setOpen(true)} className="inline-flex items-center gap-2 rounded-full border border-dashed border-sky-300 bg-gradient-to-r from-sky-50 to-fuchsia-50 px-4 py-2 text-sm font-bold text-sky-700 shadow-sm transition hover:-translate-y-0.5 hover:shadow-md">
           <Plus className="h-4 w-4" /> Content-Module
         </button>
+        <LearningCardsModal scenarioId={scenarioId} cards={cards} />
       </div>
 
       {open && (
