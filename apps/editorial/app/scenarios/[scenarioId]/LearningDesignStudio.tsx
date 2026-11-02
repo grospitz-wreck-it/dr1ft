@@ -6,7 +6,7 @@ import { ContentModulePicker, type ContentModuleId } from "./ContentModulePicker
 
 type BloomLevel = "understand" | "apply" | "analyze" | "evaluate" | "create";
 
-type Props = {
+type Props = {\n  /** Existing scenario learning goals supplied by the scenario setup. */
   scenarioId: string;
   learningCards?: any[];
   competencies?: { id: string; title: string }[];
