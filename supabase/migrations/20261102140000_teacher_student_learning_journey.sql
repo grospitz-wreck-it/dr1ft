@@ -48,6 +48,7 @@ begin
       ui.id::text as event_id,
       'interaction'::text as source_type,
       case ui.interaction_type
+        when 'view' then 'Beitrag angesehen'
         when 'inspect_source' then 'Quelle geprüft'
         when 'inspect_media' then 'Bild oder Medium geprüft'
         when 'inspect_context' then 'Kontext geprüft'
@@ -80,7 +81,7 @@ begin
     where ui.user_id = p_student_id
       and ui.class_instance_id = p_class_id
       and ui.interaction_type in (
-        'inspect_source', 'inspect_media', 'inspect_context',
+        'view', 'inspect_source', 'inspect_media', 'inspect_context',
         'compare_information', 'learning_task_response',
         'like', 'comment', 'share', 'ignore', 'report'
       )
