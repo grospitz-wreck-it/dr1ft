@@ -153,7 +153,7 @@ export function LearningDesignStudio({ scenarioId, latestDesign, contentItems = 
                 key={pattern.value}
                 type="button"
                 aria-pressed={learningPattern === pattern.value}
-                onClick={() => setLearningPattern(pattern.value)}
+                onClick={() => { setLearningPattern(pattern.value); setFlowOrder(null); }}
                 className={"rounded-xl border px-3 py-3 text-left transition " + (learningPattern === pattern.value
                   ? "border-violet-400 bg-violet-50 ring-1 ring-violet-200"
                   : "border-slate-200 bg-white hover:border-violet-200")}
