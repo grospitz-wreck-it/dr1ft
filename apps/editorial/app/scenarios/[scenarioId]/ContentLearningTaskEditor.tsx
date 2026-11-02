@@ -204,6 +204,9 @@ export function ContentLearningTaskEditor({ scenarioId, contentItemId, initialTa
             </label>
           </section>
 
+          <details className="rounded-xl border border-slate-200 bg-white">
+            <summary className="cursor-pointer list-none px-3 py-3 text-xs font-semibold text-slate-700">Weitere Lernaktionen &amp; Lernnachweise <span className="font-normal text-slate-400">· optional</span></summary>
+            <div className="border-t border-slate-100 p-3">
           <div className="space-y-3">
             <div className="flex flex-wrap items-center justify-between gap-3">
               <p className="max-w-2xl text-xs leading-relaxed text-slate-500">Alle Aktionen sind im Player immer sichtbar. Hier legst du fest, welche davon als Lernnachweis zählen und wann Lernende eine Rückmeldung erhalten.</p>
@@ -275,6 +278,8 @@ export function ContentLearningTaskEditor({ scenarioId, contentItemId, initialTa
               </div>
             </div>
           </div>
+            </div>
+          </details>
 
           <div className="rounded-2xl border border-violet-100 bg-gradient-to-r from-violet-50/70 to-white p-3 sm:p-4">
             <div className="flex flex-wrap items-center gap-2">
