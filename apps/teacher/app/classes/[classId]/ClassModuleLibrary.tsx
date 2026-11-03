@@ -16,7 +16,7 @@ type Scenario = {
   age_rating: string;
 };
 
-type TeacherModule = { id: string; module_id: string; school_id: string; assigned_by: string; is_active: boolean; title: string; description: string | null; introTitle?: string | null; introText?: string | null; cover_image_url: string | null; scheduled_start_at: string | null; scheduled_end_at: string | null; posts: Array<{ id: string; postType: "text" | "image" | "embed" | "mixed"; title: string; body: string; embedUrl: string; imageUrl: string | null }> };
+type TeacherModule = { id: string; module_id: string; school_id: string; assigned_by: string; is_active: boolean; title: string; description: string | null; introTitle?: string | null; introText?: string | null; visibility_scope?: "private" | "school" | "class"; cover_image_url: string | null; scheduled_start_at: string | null; scheduled_end_at: string | null; posts: Array<{ id: string; postType: "text" | "image" | "embed" | "mixed"; title: string; body: string; embedUrl: string; imageUrl: string | null }> };
 
 type Assignment = {
   scenario_id: string;
@@ -281,7 +281,7 @@ function TeacherModuleCard({ classId, schoolId, module, onError }: {
       </div>
       <div className="flex items-center justify-between gap-3 border-t border-violet-100 px-3 py-2 sm:px-4">
         <button type="button" onClick={() => setScheduleOpen(value => !value)} className="inline-flex items-center gap-1.5 text-[11px] font-medium text-violet-700 hover:text-violet-900"><CalendarClock className="h-3.5 w-3.5" />{scheduleOpen ? "Zeitplan schließen" : (module.scheduled_start_at || module.scheduled_end_at) ? "Zeitplan bearbeiten" : "Zeitplan festlegen"}</button>
-        <TeacherModuleBuilderModal classInstanceId={classId} schoolId={schoolId} editModule={{ id: module.module_id, title: module.title, description: module.description ?? "", introTitle: module.introTitle, introText: module.introText, posts: module.posts }} triggerLabel="Bearbeiten" />
+        <TeacherModuleBuilderModal classInstanceId={classId} schoolId={schoolId} editModule={{ id: module.module_id, title: module.title, description: module.description ?? "", introTitle: module.introTitle, introText: module.introText, visibilityScope: module.visibility_scope, posts: module.posts }} triggerLabel="Bearbeiten" />
         {(module.scheduled_start_at || module.scheduled_end_at) && !scheduleOpen && <p className="mt-1 text-[10px] text-slate-500">{module.scheduled_start_at ? new Date(module.scheduled_start_at).toLocaleString("de-DE") : "Sofort"}{module.scheduled_end_at ? " – " + new Date(module.scheduled_end_at).toLocaleString("de-DE") : ""}</p>}
         {scheduleOpen && <div className="mt-3 rounded-lg bg-violet-50/70 p-3">
           <p className="text-xs text-slate-600">Lege fest, wann das Modul für diese Klasse verfügbar ist. Ohne Zeitangabe bleibt es dauerhaft verfügbar.</p>
