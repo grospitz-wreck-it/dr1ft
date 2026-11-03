@@ -27,7 +27,7 @@ export default async function ClassDetailPage({
       "id,name,access_code,is_active,status,grade_level,school_year,school_id,class_image_path,class_image_position_x,class_image_position_y,class_image_zoom",
     )
     .eq("id", classId)
-    .maybeSingle(), 10000, { data: null, error: new Error("Klassenabfrage hat zu lange gedauert.") });
+    .maybeSingle(), 10000, { data: null, error: null } as any);
 
   if (!instance) {
     return (
