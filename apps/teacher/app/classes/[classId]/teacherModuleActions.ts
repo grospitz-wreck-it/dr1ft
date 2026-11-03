@@ -101,6 +101,9 @@ export async function saveTeacherCreatedModule(formData: FormData) {
   for (let index = 0; index < posts.length; index++) {
     const post = posts[index];
     if (!post.id || !["text", "image", "embed", "mixed"].includes(post.postType)) throw new Error("Ungültiger Beitrag.");
+    // Always let the server mint the database primary key. Client draft IDs are
+    // only correlation keys for uploaded files and must never become DB IDs.
+    const postId = crypto.randomUUID();
     const embed = post.embedUrl ? validateEmbed(post.embedUrl) : null;
     const file = post.imageField ? formData.get(post.imageField) : null;
     let imagePath: string | null = null;
@@ -109,12 +112,12 @@ export async function saveTeacherCreatedModule(formData: FormData) {
         throw new Error("Bilder müssen JPG, PNG, WebP oder GIF sein und dürfen maximal 10 MB groß sein.");
       }
       const ext = file.type === "image/jpeg" ? "jpg" : file.type.split("/")[1];
-      imagePath = `${schoolId}/${module.id}/${post.id}.${ext}`;
+      imagePath = `${schoolId}/${module.id}/${postId}.${ext}`;
       const { error: uploadError } = await supabase.storage.from("teacher-module-assets").upload(imagePath, file, { contentType: file.type, upsert: true });
       if (uploadError) throw new Error(uploadError.message);
     }
     rows.push({
-      id: post.id,
+      id: postId,
       module_id: module.id,
       post_type: post.postType,
       title: String(post.title ?? "").slice(0, 180),
