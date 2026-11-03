@@ -39,7 +39,9 @@ export async function saveTeacherCreatedModule(formData: FormData) {
   const classInstanceId = String(formData.get("classInstanceId") ?? "");
   const schoolId = String(formData.get("schoolId") ?? "");
   const title = String(formData.get("title") ?? "").trim();
-  const description = String(formData.get("description") ?? "").trim();\n  const introTitle = String(formData.get("introTitle") ?? "").trim().slice(0, 120);\n  const introText = String(formData.get("introText") ?? "").trim().slice(0, 1200);
+  const description = String(formData.get("description") ?? "").trim();
+  const introTitle = String(formData.get("introTitle") ?? "").trim().slice(0, 120);
+  const introText = String(formData.get("introText") ?? "").trim().slice(0, 1200);
   const postsRaw = String(formData.get("posts") ?? "[]");
   if (!classInstanceId || !schoolId) throw new Error("Klassen- oder Schulzuordnung fehlt.");
   if (!title || title.length > 120) throw new Error("Bitte einen Modultitel mit maximal 120 Zeichen angeben.");
@@ -209,7 +211,9 @@ export async function updateTeacherCreatedModule(formData: FormData) {
     }
     rows.push({ id: postId, module_id: moduleId, post_type: post.postType, title: String(post.title ?? "").slice(0,180), body: String(post.body ?? "").slice(0,12000), image_path: imagePath, embed_provider: embed?.provider ?? null, embed_url: embed?.url ?? null, sort_order: index, status: "published" });
   }
-  const introTitle = String(formData.get("introTitle") ?? "").trim().slice(0, 120);\n  const introText = String(formData.get("introText") ?? "").trim().slice(0, 1200);\n  const { error: updateModuleError } = await supabase.from("teacher_modules").update({ title, description, intro_title: introTitle || null, intro_text: introText || null }).eq("id", moduleId);
+  const introTitle = String(formData.get("introTitle") ?? "").trim().slice(0, 120);
+  const introText = String(formData.get("introText") ?? "").trim().slice(0, 1200);
+  const { error: updateModuleError } = await supabase.from("teacher_modules").update({ title, description, intro_title: introTitle || null, intro_text: introText || null }).eq("id", moduleId);
   if (updateModuleError) throw new Error(updateModuleError.message);
   const removedIds = (currentPosts ?? []).filter((post: any) => !keepIds.has(post.id)).map((post: any) => post.id);
   if (removedIds.length) {
