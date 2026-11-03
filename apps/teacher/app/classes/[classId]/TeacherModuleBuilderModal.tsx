@@ -16,9 +16,12 @@ type DraftPost = {
   imageSettings: { brightness: number; contrast: number; saturation: number; grayscale: number; zoom: number; x: number; y: number };
 };
 
-type EditableModule = { id: string; title: string; description: string; introTitle?: string | null; introText?: string | null; posts: Array<{ id: string; postType: DraftPost["postType"]; title: string; body: string; embedUrl: string; imageUrl: string | null }> };\n\nexport function TeacherModuleBuilderModal({ classInstanceId, schoolId, editModule, triggerLabel = "Eigenes Modul erstellen" }: { classInstanceId: string; schoolId: string; editModule?: EditableModule; triggerLabel?: string }) {
+type EditableModule = { id: string; title: string; description: string; introTitle?: string | null; introText?: string | null; posts: Array<{ id: string; postType: DraftPost["postType"]; title: string; body: string; embedUrl: string; imageUrl: string | null }> };
+
+export function TeacherModuleBuilderModal({ classInstanceId, schoolId, editModule, triggerLabel = "Eigenes Modul erstellen" }: { classInstanceId: string; schoolId: string; editModule?: EditableModule; triggerLabel?: string }) {
   const [open, setOpen] = useState(false);
-  const [moduleId, setModuleId] = useState<string | null>(null);\n  const [title, setTitle] = useState("");
+  const [moduleId, setModuleId] = useState<string | null>(null);
+  const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
   const [introTitle, setIntroTitle] = useState("");
   const [introText, setIntroText] = useState("");
@@ -122,7 +125,8 @@ type EditableModule = { id: string; title: string; description: string; introTit
     posts.forEach((post) => { const file = imageFiles.get(post.id); if (file) form.set("image_" + post.id, file); });
     startTransition(async () => {
       try {
-        if (moduleId) form.set("moduleId", moduleId);\n        if (moduleId) await updateTeacherCreatedModule(form); else await saveTeacherCreatedModule(form);
+        if (moduleId) form.set("moduleId", moduleId);
+        if (moduleId) await updateTeacherCreatedModule(form); else await saveTeacherCreatedModule(form);
         setOpen(false);
         reset();
         router.refresh();
