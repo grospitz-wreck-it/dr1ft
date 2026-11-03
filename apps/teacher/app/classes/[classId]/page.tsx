@@ -51,6 +51,17 @@ export default async function ClassDetailPage({
   }
 
   const parallelQueriesStartedAt = Date.now();
+  const timed = async <T,>(label: string, query: Promise<T>): Promise<T> => {
+    const startedAt = Date.now();
+    try {
+      const result = await query;
+      console.info("[class-page-query]", label, Date.now() - startedAt, "ms");
+      return result;
+    } catch (error) {
+      console.error("[class-page-query]", label, "failed", Date.now() - startedAt, "ms", error);
+      throw error;
+    }
+  };
   const [
     { data: roster },
     { data: scenarios },
@@ -61,52 +72,40 @@ export default async function ClassDetailPage({
     { data: userResult },
     { data: session },
   ] = await Promise.all([
-    supabase
+    timed("roster", supabase
       .from("class_instance_memberships")
-      .select(
-        "user_id,role,left_at,user_profiles(display_name,username,avatar_seed)",
-      )
+      .select("user_id,role,left_at,user_profiles(display_name,username,avatar_seed)")
       .eq("class_instance_id", classId)
-      .is("left_at", null),
-
-    supabase
+      .is("left_at", null)),
+    timed("scenarios", supabase
       .from("scenarios")
       .select("id,title,description,cover_image_url,age_rating")
-      .order("title"),
-
-    supabase
+      .order("title")),
+    timed("scenario-assignments", supabase
       .from("class_instance_scenario_assignments")
       .select("scenario_id,pacing_mode,scheduled_start_at,scheduled_end_at,show_reports_at_end,archived_at,is_active,scenarios(title)")
       .eq("class_instance_id", classId)
-      .is("archived_at", null),
-
-    supabase
+      .is("archived_at", null)),
+    timed("teacher-module-assignments", supabase
       .from("teacher_module_class_assignments")
       .select("id,module_id,school_id,assigned_by,is_active,scheduled_start_at,scheduled_end_at,teacher_modules(id,title,description,intro_title,intro_text,visibility_scope,status,teacher_module_posts(id,post_type,title,body,image_path,embed_provider,embed_url,sort_order,status))")
-      .eq("class_instance_id", classId),
-
-    supabase
+      .eq("class_instance_id", classId)),
+    timed("available-teacher-modules", supabase
       .from("teacher_modules")
       .select("id,title,description,visibility_scope,created_by,teacher_module_posts(id,post_type,title,body,image_path,embed_provider,embed_url,sort_order,status)")
       .eq("school_id", instance.school_id)
       .eq("status", "published")
-      .order("updated_at", { ascending: false }),
-
-    instance.school_id
-      ? supabase
-          .from("schools")
-          .select(
-            "id,name,region,school_image_path,school_image_position_x,school_image_position_y,school_image_zoom",
-          )
+      .order("updated_at", { ascending: false })),
+    timed("school", instance.school_id
+      ? supabase.from("schools")
+          .select("id,name,region,school_image_path,school_image_position_x,school_image_position_y,school_image_zoom")
           .eq("id", instance.school_id)
           .maybeSingle()
-      : Promise.resolve({ data: null }),
-
-    supabase.auth.getUser(),
-    supabase.auth.getSession(),
+      : Promise.resolve({ data: null })),
+    timed("auth-user", supabase.auth.getUser()),
+    timed("auth-session", supabase.auth.getSession()),
   ]);
   console.info("[class-page-timing] parallel-queries", Date.now() - parallelQueriesStartedAt, "ms");
-
   const user = userResult.user;
   const accessToken = session.session?.access_token;
 
