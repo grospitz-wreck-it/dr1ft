@@ -6,7 +6,7 @@ import { BookOpen, CalendarClock, Check, Image as ImageIcon, Pencil, Plus, Searc
 import { toggleScenarioAssignment } from "../actions";
 import { ScenarioToggle } from "./ScenarioToggle";
 import { TeacherModuleBuilderModal } from "./TeacherModuleBuilderModal";
-import { archiveTeacherModuleAssignment, assignExistingTeacherModule, setTeacherModuleAssignmentActive, updateTeacherModuleSchedule } from "./teacherModuleActions";
+import { archiveTeacherModuleAssignment, assignExistingTeacherModule, getTeacherModulePosts, setTeacherModuleAssignmentActive, updateTeacherModuleSchedule } from "./teacherModuleActions";
 
 type Scenario = {
   id: string;
@@ -204,6 +204,63 @@ export function ClassModuleLibrary({
 }
 
 
+function TeacherModuleEditButton({ classId, schoolId, module, onError }: {
+  classId: string;
+  schoolId: string;
+  module: TeacherModule;
+  onError: (message: string) => void;
+}) {
+  const [loading, setLoading] = useState(false);
+  const [editModule, setEditModule] = useState<null | {
+    id: string;
+    title: string;
+    description: string;
+    introTitle?: string | null;
+    introText?: string | null;
+    visibilityScope?: "private" | "school" | "class";
+    posts: TeacherModule["posts"];
+  }>(null);
+
+  async function openEditor() {
+    if (loading) return;
+    setLoading(true);
+    try {
+      const posts = await getTeacherModulePosts(classId, module.module_id);
+      setEditModule({
+        id: module.module_id,
+        title: module.title,
+        description: module.description ?? "",
+        introTitle: module.introTitle,
+        introText: module.introText,
+        visibilityScope: module.visibility_scope,
+        posts,
+      });
+    } catch (cause) {
+      onError(cause instanceof Error ? cause.message : "Modulbeiträge konnten nicht geladen werden.");
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  return (
+    <>
+      <button type="button" onClick={openEditor} disabled={loading} className="rounded-lg border border-violet-200 bg-white px-3 py-1.5 text-[11px] font-semibold text-violet-700 hover:bg-violet-50 disabled:opacity-50">
+        {loading ? "Lädt …" : "Bearbeiten"}
+      </button>
+      {editModule && (
+        <TeacherModuleBuilderModal
+          classInstanceId={classId}
+          schoolId={schoolId}
+          editModule={editModule}
+          triggerLabel="Bearbeiten"
+          openImmediately
+          onClose={() => setEditModule(null)}
+        />
+      )}
+    </>
+  );
+}
+
 function TeacherModuleCard({ classId, schoolId, module, onError }: {
   classId: string;
   schoolId: string;
@@ -281,7 +338,7 @@ function TeacherModuleCard({ classId, schoolId, module, onError }: {
       </div>
       <div className="flex items-center justify-between gap-3 border-t border-violet-100 px-3 py-2 sm:px-4">
         <button type="button" onClick={() => setScheduleOpen(value => !value)} className="inline-flex items-center gap-1.5 text-[11px] font-medium text-violet-700 hover:text-violet-900"><CalendarClock className="h-3.5 w-3.5" />{scheduleOpen ? "Zeitplan schließen" : (module.scheduled_start_at || module.scheduled_end_at) ? "Zeitplan bearbeiten" : "Zeitplan festlegen"}</button>
-        <TeacherModuleBuilderModal classInstanceId={classId} schoolId={schoolId} editModule={{ id: module.module_id, title: module.title, description: module.description ?? "", introTitle: module.introTitle, introText: module.introText, visibilityScope: module.visibility_scope, posts: module.posts }} triggerLabel="Bearbeiten" />
+        <TeacherModuleEditButton classId={classId} schoolId={schoolId} module={module} onError={onError} />
         {(module.scheduled_start_at || module.scheduled_end_at) && !scheduleOpen && <p className="mt-1 text-[10px] text-slate-500">{module.scheduled_start_at ? new Date(module.scheduled_start_at).toLocaleString("de-DE") : "Sofort"}{module.scheduled_end_at ? " – " + new Date(module.scheduled_end_at).toLocaleString("de-DE") : ""}</p>}
         {scheduleOpen && <div className="mt-3 rounded-lg bg-violet-50/70 p-3">
           <p className="text-xs text-slate-600">Lege fest, wann das Modul für diese Klasse verfügbar ist. Ohne Zeitangabe bleibt es dauerhaft verfügbar.</p>
