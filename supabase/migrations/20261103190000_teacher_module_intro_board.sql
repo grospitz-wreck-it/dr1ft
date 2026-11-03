@@ -7,3 +7,6 @@ alter table public.teacher_modules
 comment on column public.teacher_modules.intro_title is 'Optional title shown on the module introduction board.';
 comment on column public.teacher_modules.intro_text is 'Optional introduction text shown before module posts.';
 comment on column public.teacher_modules.intro_image_path is 'Optional private image stored in teacher-module-assets.';
+
+-- Refresh PostgREST so the new columns are immediately visible to the app.
+notify pgrst, 'reload schema';
