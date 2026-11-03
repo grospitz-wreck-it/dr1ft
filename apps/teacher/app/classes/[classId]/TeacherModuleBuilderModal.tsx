@@ -27,7 +27,9 @@ export function TeacherModuleBuilderModal({ classInstanceId, schoolId, editModul
   const [titleCardEnabled, setTitleCardEnabled] = useState(true);
   const [visibilityScope, setVisibilityScope] = useState<"private" | "school" | "class">("class");
   const [posts, setPosts] = useState<DraftPost[]>([]);
-  const [selectedId, setSelectedId] = useState<string | null>(null);\n  const [previewMode, setPreviewMode] = useState(false);\n  const [previewDevice, setPreviewDevice] = useState<"mobile" | "desktop">("desktop");
+  const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [previewMode, setPreviewMode] = useState(false);
+  const [previewDevice, setPreviewDevice] = useState<"mobile" | "desktop">("desktop");
   const [dragId, setDragId] = useState<string | null>(null);
   const [imageEditorOpen, setImageEditorOpen] = useState(false);
   const [error, setError] = useState("");
