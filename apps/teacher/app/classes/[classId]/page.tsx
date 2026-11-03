@@ -20,15 +20,17 @@ export default async function ClassDetailPage({
   const supabase = supabaseServerClient();
   const { classId } = params;
 
-  const {
-    data: instance,
-  } = await supabase
-    .from("class_instances")
-    .select(
-      "id,name,access_code,is_active,status,grade_level,school_year,school_id,class_image_path,class_image_position_x,class_image_position_y,class_image_zoom",
-    )
-    .eq("id", classId)
-    .maybeSingle();
+  const { data: instance } = await withTimeout(
+    supabase
+      .from("class_instances")
+      .select(
+        "id,name,access_code,is_active,status,grade_level,school_year,school_id,class_image_path,class_image_position_x,class_image_position_y,class_image_zoom",
+      )
+      .eq("id", classId)
+      .maybeSingle(),
+    5000,
+    { data: null } as any,
+  );
 
   if (!instance) {
     return (
@@ -54,6 +56,36 @@ export default async function ClassDetailPage({
     );
   }
 
+  // Start the dashboard request before the remaining page queries so its
+  // latency overlaps with the class data loading instead of adding to it.
+  const { data: session } = await supabase.auth.getSession();
+  const dashboardPromise = (async () => {
+    if (!session.session?.access_token) return {};
+    const dashboardRes = await withTimeout(
+      fetch(
+        `${process.env.NEXT_PUBLIC_SUPABASE_URL}/functions/v1/teacher-dashboard`,
+        {
+          method: "POST",
+          headers: {
+            Authorization: `Bearer ${session.session.access_token}`,
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({ classId }),
+          cache: "no-store",
+          signal: AbortSignal.timeout(5000),
+        },
+      ),
+      5500,
+      null,
+    );
+    if (dashboardRes?.ok) return await dashboardRes.json().catch(() => ({}));
+    if (dashboardRes) {
+      const errorBody = await dashboardRes.text().catch(() => "");
+      console.error("[class-page] teacher-dashboard returned", dashboardRes.status, errorBody);
+    }
+    return {};
+  })();
+
   const [
     { data: roster },
     { data: scenarios },
@@ -61,7 +93,6 @@ export default async function ClassDetailPage({
     { data: teacherModuleAssignments },
     { data: availableTeacherModules },
     { data: school },
-    { data: userResult },
   ] = await Promise.all([
     withTimeout(supabase
       .from("class_instance_memberships")
@@ -108,11 +139,9 @@ export default async function ClassDetailPage({
         )
       : Promise.resolve({ data: null }),
 
-    withTimeout(supabase.auth.getUser(), 8000, { data: { user: null } } as any),
   ]);
 
-  // Supabase auth.getUser() nests the user under data.user.
-  const user = userResult?.data?.user ?? null;
+  const user = session.session?.user ?? null;
 
   const teacherMembership = user
     ? await supabase
@@ -150,35 +179,7 @@ export default async function ClassDetailPage({
   const activeAssignment = activeAssignments[0] ?? null;
   const reportingUnlocked = !activeAssignment?.show_reports_at_end || Boolean(activeAssignment?.scheduled_end_at && new Date(activeAssignment.scheduled_end_at).getTime() <= Date.now());
 
-  const { data: session } = await supabase.auth.getSession();
-
-  let dashboard: any = {};
-
-  if (session.session?.access_token) {
-    const dashboardRes = await withTimeout(
-      fetch(
-        `${process.env.NEXT_PUBLIC_SUPABASE_URL}/functions/v1/teacher-dashboard`,
-        {
-          method: "POST",
-          headers: {
-            Authorization: `Bearer ${session.session.access_token}`,
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({ classId }),
-          cache: "no-store",
-          signal: AbortSignal.timeout(5000),
-        },
-      ),
-      5500,
-      null,
-    );
-
-    if (dashboardRes?.ok) {
-      dashboard = await dashboardRes.json().catch(() => ({}));
-    } else if (dashboardRes) {
-      console.error("[class-page] teacher-dashboard returned", dashboardRes.status);
-    }
-  }
+  const dashboard: any = await dashboardPromise;
 
   const competencyRows = dashboard.studentCompetencyProgress ?? [];
   const missionRows = dashboard.studentMissionProgress ?? [];
