@@ -166,7 +166,7 @@ using (
     select 1 from public.class_instance_memberships cim
     where cim.class_instance_id = teacher_module_class_assignments.class_instance_id
       and cim.user_id = auth.uid()
-      and cim.role in ('teacher','school_admin','school_lead')
+      and cim.role in ('teacher','school_admin')
       and cim.left_at is null
   )
 )
@@ -176,7 +176,7 @@ with check (
     select 1 from public.class_instance_memberships cim
     where cim.class_instance_id = teacher_module_class_assignments.class_instance_id
       and cim.user_id = auth.uid()
-      and cim.role in ('teacher','school_admin','school_lead')
+      and cim.role in ('teacher','school_admin')
       and cim.left_at is null
   )
 );
