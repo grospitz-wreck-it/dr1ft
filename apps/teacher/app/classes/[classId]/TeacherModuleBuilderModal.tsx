@@ -2,27 +2,29 @@
 
 import { useEffect, useMemo, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { ArrowDown, ArrowUp, Check, GripVertical, ImagePlus, Link2, Plus, Save, Type, X, Wand2, RotateCcw, SlidersHorizontal } from "lucide-react";
+import { ArrowDown, ArrowUp, Check, GripVertical, ImagePlus, Link2, Plus, Save, Type, X, Wand2, RotateCcw, SlidersHorizontal, BarChart3, CircleCheck } from "lucide-react";
 import { saveTeacherCreatedModule, updateTeacherCreatedModule } from "./teacherModuleActions";
 
 type DraftPost = {
   id: string;
-  postType: "text" | "image" | "embed" | "mixed";
+  postType: "text" | "image" | "embed" | "mixed" | "poll" | "true_false";
   title: string;
   body: string;
   embedUrl: string;
+  interactionData: { options: [string, string]; correctAnswer?: "true" | "false"; explanation?: string };
   imageFile: File | null;
   existingImageUrl?: string | null;
   imageSettings: { brightness: number; contrast: number; saturation: number; grayscale: number; zoom: number; x: number; y: number };
 };
 
-type EditableModule = { id: string; title: string; description: string; introTitle?: string | null; introText?: string | null; visibilityScope?: "private" | "school" | "class"; posts: Array<{ id: string; postType: DraftPost["postType"]; title: string; body: string; embedUrl: string; imageUrl: string | null }> };
+type EditableModule = { id: string; title: string; description: string; introTitle?: string | null; introText?: string | null; visibilityScope?: "private" | "school" | "class"; titleCardEnabled?: boolean; posts: Array<{ id: string; postType: DraftPost["postType"]; title: string; body: string; embedUrl: string; imageUrl: string | null }> };
 
 export function TeacherModuleBuilderModal({ classInstanceId, schoolId, editModule, triggerLabel = "Eigenes Modul erstellen", autoOpen = false }: { classInstanceId: string; schoolId: string; editModule?: EditableModule; triggerLabel?: string; autoOpen?: boolean }) {
   const [open, setOpen] = useState(false);
   const [moduleId, setModuleId] = useState<string | null>(null);
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
+  const [titleCardEnabled, setTitleCardEnabled] = useState(true);
   const [introTitle, setIntroTitle] = useState("");
   const [introText, setIntroText] = useState("");
   const [visibilityScope, setVisibilityScope] = useState<"private" | "school" | "class">("class");
@@ -51,7 +53,7 @@ export function TeacherModuleBuilderModal({ classInstanceId, schoolId, editModul
   }
   function reset() {
     setModuleId(null);
-    setTitle(""); setDescription(""); setIntroTitle(""); setIntroText(""); setVisibilityScope("class");
+    setTitle(""); setDescription(""); setTitleCardEnabled(true); setIntroTitle(""); setIntroText(""); setVisibilityScope("class");
     setPosts([]); setSelectedId(null); setError(""); setImageEditorOpen(false);
   }
   function openEditor() {
@@ -61,6 +63,7 @@ export function TeacherModuleBuilderModal({ classInstanceId, schoolId, editModul
       setModuleId(editModule.id);
       setTitle(editModule.title);
       setDescription(editModule.description);
+      setTitleCardEnabled(editModule.titleCardEnabled ?? true);
       setIntroTitle(editModule.introTitle ?? "");
       setIntroText(editModule.introText ?? "");
       setVisibilityScope(editModule.visibilityScope ?? "class");
@@ -70,6 +73,7 @@ export function TeacherModuleBuilderModal({ classInstanceId, schoolId, editModul
         title: post.title ?? "",
         body: post.body ?? "",
         embedUrl: post.embedUrl ?? "",
+        interactionData: post.interactionData ?? { options: ["Echt", "Fake"] },
         imageFile: null,
         existingImageUrl: post.imageUrl,
         imageSettings: { brightness: 100, contrast: 100, saturation: 100, grayscale: 0, zoom: 1, x: 50, y: 50 },
@@ -86,7 +90,7 @@ export function TeacherModuleBuilderModal({ classInstanceId, schoolId, editModul
   }, [autoOpen, editModule]);
 
   function addPost(type: DraftPost["postType"]) {
-    const post: DraftPost = { id: crypto.randomUUID(), postType: type, title: "", body: "", embedUrl: "", imageFile: null, imageSettings: { brightness: 100, contrast: 100, saturation: 100, grayscale: 0, zoom: 1, x: 50, y: 50 } };
+    const post: DraftPost = { id: crypto.randomUUID(), postType: type, title: "", body: "", embedUrl: "", interactionData: { options: ["Echt", "Fake"], correctAnswer: "true", explanation: "" }, imageFile: null, imageSettings: { brightness: 100, contrast: 100, saturation: 100, grayscale: 0, zoom: 1, x: 50, y: 50 } };
     setPosts((items) => [...items, post]);
     setSelectedId(post.id);
   }
@@ -154,12 +158,13 @@ export function TeacherModuleBuilderModal({ classInstanceId, schoolId, editModul
     form.set("schoolId", schoolId);
     form.set("title", title);
     form.set("description", description);
+    form.set("titleCardEnabled", String(titleCardEnabled));
     form.set("introTitle", introTitle);
     form.set("introText", introText);
     form.set("visibilityScope", visibilityScope);
     form.set("posts", JSON.stringify(posts.map((post, index) => ({
       id: post.id, postType: post.postType, title: post.title, body: post.body,
-      embedUrl: post.embedUrl, sortOrder: index, imageField: imageFiles.has(post.id) ? "image_" + post.id : undefined,
+      embedUrl: post.embedUrl, interactionData: post.interactionData, sortOrder: index, imageField: imageFiles.has(post.id) ? "image_" + post.id : undefined,
     }))));
     posts.forEach((post) => { const file = imageFiles.get(post.id); if (file) form.set("image_" + post.id, file); });
     startTransition(async () => {
@@ -184,7 +189,7 @@ export function TeacherModuleBuilderModal({ classInstanceId, schoolId, editModul
       </button>
       {open && (
         <div className="fixed inset-0 z-[150] flex items-center justify-center bg-slate-950/65 p-3 backdrop-blur-sm sm:p-6" role="dialog" aria-modal="true" aria-labelledby="teacher-module-title">
-          <div className="flex max-h-[94vh] w-full max-w-5xl flex-col overflow-hidden rounded-3xl border border-white/20 bg-white shadow-2xl">
+          <div className="flex max-h-[94vh] w-full max-w-6xl flex-col overflow-hidden rounded-3xl border border-violet-100 bg-white shadow-[0_30px_100px_rgba(37,20,70,.28)]">
             <header className="flex items-start justify-between gap-4 border-b border-slate-200 px-5 py-4 sm:px-7">
               <div>
                 <p className="text-[10px] font-bold uppercase tracking-[.18em] text-violet-600">DR1FT · EIGENES MODUL</p>
@@ -194,7 +199,7 @@ export function TeacherModuleBuilderModal({ classInstanceId, schoolId, editModul
               <button type="button" onClick={() => setOpen(false)} aria-label="Schließen" className="rounded-xl p-2 text-slate-500 hover:bg-slate-100"><X className="h-5 w-5" /></button>
             </header>
             <div className="min-h-0 flex-1 overflow-y-auto p-4 sm:p-6">
-              <div className="grid gap-5 lg:grid-cols-[minmax(0,1fr)_minmax(300px,1.05fr)]">
+              <div className="grid gap-5 lg:grid-cols-[minmax(280px,.78fr)_minmax(0,1.22fr)]">
                 <section className="space-y-3">
                   <label className="block text-xs font-semibold text-slate-700">Modultitel
                     <input value={title} onChange={(event) => setTitle(event.target.value)} maxLength={120} placeholder="z. B. KI im Alltag" className="mt-1.5 w-full rounded-xl border border-slate-200 px-3 py-2.5 text-sm outline-none focus:border-violet-400 focus:ring-4 focus:ring-violet-100" />
@@ -210,36 +215,27 @@ export function TeacherModuleBuilderModal({ classInstanceId, schoolId, editModul
                     </select>
                     <span className="mt-1 block font-normal text-slate-500">Aktivierte Module bleiben für die Schüler:innen der jeweiligen Klasse sichtbar.</span>
                   </label>
-                  <details className="rounded-2xl border border-violet-200 bg-violet-50/50 p-3">
-                    <summary className="cursor-pointer text-xs font-bold text-violet-800">Optionale Einleitungstafel für den Schüler-Feed</summary>
-                    <p className="mt-2 text-[11px] leading-5 text-slate-500">Nur wenn du hier etwas einträgst, erscheint vor den Beiträgen eine eigene Einleitung.</p>
-                    <label className="mt-3 block text-xs font-semibold text-slate-700">Titel der Einleitung
-                      <input value={introTitle} onChange={event => setIntroTitle(event.target.value)} maxLength={120} placeholder="z. B. Darum geht es in diesem Modul" className="mt-1.5 w-full rounded-xl border border-slate-200 px-3 py-2.5 text-sm"/>
-                    </label>
-                    <label className="mt-3 block text-xs font-semibold text-slate-700">Einleitungstext
-                      <textarea value={introText} onChange={event => setIntroText(event.target.value)} rows={3} maxLength={1200} placeholder="Was sollen die Schüler:innen vor dem Start wissen?" className="mt-1.5 w-full resize-y rounded-xl border border-slate-200 px-3 py-2.5 text-sm"/>
-                    </label>
-                  </details>
+                  <label className="flex items-center justify-between gap-3 rounded-2xl border border-violet-200 bg-violet-50/70 p-3">
+                    <span><span className="block text-xs font-bold text-violet-900">Titelcard im Schüler-Feed</span><span className="mt-1 block text-[11px] font-normal text-violet-700">Zeigt Modultitel und Beschreibung vor dem Start.</span></span>
+                    <input type="checkbox" checked={titleCardEnabled} onChange={event=>setTitleCardEnabled(event.target.checked)} className="h-5 w-9 accent-violet-600"/>
+                  </label>
                   <div className="rounded-2xl border border-slate-200 bg-slate-50/70 p-3">
                     <div className="flex items-center justify-between gap-2">
                       <div><h3 className="text-sm font-bold text-slate-900">Beiträge</h3><p className="text-[11px] text-slate-500">Thumbnails ziehen, um die Reihenfolge zu ändern.</p></div>
                       <span className="rounded-full bg-violet-100 px-2.5 py-1 text-[10px] font-bold text-violet-700">{posts.length} / 40</span>
                     </div>
-                    <div className="mt-3 grid grid-cols-3 gap-2 sm:grid-cols-4">
+                    <div className="mt-3 space-y-2">
                       {thumbnails.map((post) => (
-                        <div key={post.id} draggable onDragStart={() => setDragId(post.id)} onDragOver={(event) => event.preventDefault()} onDrop={() => { if (dragId) movePost(dragId, post.id); setDragId(null); }} onDragEnd={() => setDragId(null)}
-                          className={"group relative cursor-grab overflow-hidden rounded-xl border bg-white text-left transition active:cursor-grabbing " + (selectedId === post.id ? "border-violet-500 ring-2 ring-violet-100" : "border-slate-200 hover:border-violet-300")}>
-                          <button type="button" onClick={() => setSelectedId(post.id)} className="block w-full text-left">
-                            <div className="flex aspect-[4/3] items-center justify-center overflow-hidden bg-gradient-to-br from-violet-100 to-cyan-100">
-                              {post.imageFile ? <img src={URL.createObjectURL(post.imageFile)} alt="" className="h-full w-full object-cover" /> : post.existingImageUrl ? <img src={post.existingImageUrl} alt="" className="h-full w-full object-cover" /> : post.postType === "embed" ? <Link2 className="h-7 w-7 text-violet-500" /> : post.postType === "text" ? <Type className="h-7 w-7 text-violet-500" /> : <ImagePlus className="h-7 w-7 text-violet-500" />}
+                        <div key={post.id} draggable onDragStart={(event) => { setDragId(post.id); event.dataTransfer.effectAllowed = "move"; event.dataTransfer.setData("text/plain", post.id); }} onDragOver={(event) => { event.preventDefault(); event.dataTransfer.dropEffect = "move"; }} onDrop={(event) => { event.preventDefault(); const sourceId = event.dataTransfer.getData("text/plain") || dragId; if (sourceId) movePost(sourceId, post.id); setDragId(null); }} onDragEnd={() => setDragId(null)}
+                          className={"group relative flex cursor-grab items-center gap-3 overflow-hidden rounded-xl border bg-white p-2 text-left transition active:cursor-grabbing " + (selectedId === post.id ? "border-violet-500 bg-violet-50/40 ring-2 ring-violet-100" : "border-slate-200 hover:border-violet-300")}>
+                          <span className="grid h-9 w-7 shrink-0 place-items-center text-slate-400"><GripVertical className="h-4 w-4"/></span>
+                          <button type="button" onClick={() => setSelectedId(post.id)} className="flex min-w-0 flex-1 items-center gap-3 text-left">
+                            <div className="grid h-14 w-20 shrink-0 place-items-center overflow-hidden rounded-lg bg-gradient-to-br from-violet-100 to-cyan-100">
+                              {post.imageFile ? <img src={URL.createObjectURL(post.imageFile)} alt="" className="h-full w-full object-cover" /> : post.existingImageUrl ? <img src={post.existingImageUrl} alt="" className="h-full w-full object-cover" /> : post.postType === "embed" ? <Link2 className="h-6 w-6 text-violet-500" /> : post.postType === "poll" ? <BarChart3 className="h-6 w-6 text-violet-500"/> : post.postType === "true_false" ? <CircleCheck className="h-6 w-6 text-violet-500"/> : <Type className="h-6 w-6 text-violet-500" />}
                             </div>
-                            <div className="truncate px-2 py-1.5 text-[10px] font-semibold text-slate-700">{String(post.index + 1).padStart(2,"0")} · {post.title || (post.postType === "embed" ? "Embed" : post.postType === "image" ? "Bild" : "Text")}</div>
+                            <span className="min-w-0 flex-1"><span className="block text-[9px] font-bold uppercase tracking-wider text-violet-600">{post.postType === "poll" ? "Umfrage" : post.postType === "true_false" ? "Richtig / Falsch" : post.postType === "embed" ? "Embed" : post.postType === "image" ? "Bild" : "Text / Bild"}</span><span className="mt-1 block truncate text-xs font-bold text-slate-900">{post.title || "Unbenannter Beitrag"}</span><span className="mt-0.5 block truncate text-[10px] text-slate-500">{String(post.index + 1).padStart(2,"0")} · {post.body || "Noch kein Inhalt"}</span></span>
                           </button>
-                          <span className="absolute right-1 top-1 rounded-md bg-white/90 p-1 text-slate-500 shadow-sm"><GripVertical className="h-3 w-3" /></span>
-                          <div className="flex justify-between border-t border-slate-100 px-1">
-                            <button type="button" aria-label="Nach oben" onClick={() => moveBy(post.index, -1)} disabled={post.index === 0} className="p-1 text-slate-500 disabled:opacity-20"><ArrowUp className="h-3 w-3" /></button>
-                            <button type="button" aria-label="Nach unten" onClick={() => moveBy(post.index, 1)} disabled={post.index === posts.length - 1} className="p-1 text-slate-500 disabled:opacity-20"><ArrowDown className="h-3 w-3" /></button>
-                          </div>
+                          <div className="flex shrink-0 items-center gap-1"><button type="button" aria-label="Nach oben" onClick={() => moveBy(post.index, -1)} disabled={post.index === 0} className="rounded-md p-1.5 text-slate-500 hover:bg-slate-100 disabled:opacity-20"><ArrowUp className="h-3.5 w-3.5" /></button><button type="button" aria-label="Nach unten" onClick={() => moveBy(post.index, 1)} disabled={post.index === posts.length - 1} className="rounded-md p-1.5 text-slate-500 hover:bg-slate-100 disabled:opacity-20"><ArrowDown className="h-3.5 w-3.5" /></button></div>
                         </div>
                       ))}
                       {posts.length === 0 && <div className="col-span-full rounded-xl border border-dashed border-violet-200 bg-white px-3 py-8 text-center text-xs text-slate-500">Noch keine Beiträge. Füge unten deinen ersten Post hinzu.</div>}
@@ -247,7 +243,7 @@ export function TeacherModuleBuilderModal({ classInstanceId, schoolId, editModul
                     <div className="mt-3 flex flex-wrap gap-2">
                       <button type="button" disabled={posts.length >= 40} onClick={() => addPost("text")} className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs font-semibold text-slate-700 hover:border-violet-300"><Type className="h-3.5 w-3.5" /> Text</button>
                       <button type="button" disabled={posts.length >= 40} onClick={() => addPost("image")} className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs font-semibold text-slate-700 hover:border-violet-300"><ImagePlus className="h-3.5 w-3.5" /> Bild</button>
-                      <button type="button" disabled={posts.length >= 40} onClick={() => addPost("embed")} className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs font-semibold text-slate-700 hover:border-violet-300"><Link2 className="h-3.5 w-3.5" /> Embed</button>
+                      <button type="button" disabled={posts.length >= 40} onClick={() => addPost("embed")} className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs font-semibold text-slate-700 hover:border-violet-300"><Link2 className="h-3.5 w-3.5" /> Embed</button><button type="button" disabled={posts.length >= 40} onClick={() => addPost("poll")} className="inline-flex items-center gap-1.5 rounded-lg border border-violet-200 bg-violet-50 px-3 py-2 text-xs font-semibold text-violet-700"><BarChart3 className="h-3.5 w-3.5"/> Umfrage</button><button type="button" disabled={posts.length >= 40} onClick={() => addPost("true_false")} className="inline-flex items-center gap-1.5 rounded-lg border border-violet-200 bg-violet-50 px-3 py-2 text-xs font-semibold text-violet-700"><CircleCheck className="h-3.5 w-3.5"/> Richtig / Falsch</button>
                     </div>
                   </div>
                 </section>
@@ -261,7 +257,7 @@ export function TeacherModuleBuilderModal({ classInstanceId, schoolId, editModul
                       <label className="block text-xs font-semibold text-slate-700">Text
                         <textarea value={selected.body} onChange={(event) => updatePost(selected.id, { body: event.target.value })} rows={6} maxLength={12000} placeholder="Schreibe deinen Beitrag …" className="mt-1.5 w-full resize-y rounded-lg border border-slate-200 px-3 py-2 text-sm" />
                       </label>
-                      {(selected.postType === "image" || selected.postType === "mixed") && <>
+                      {(selected.postType === "image" || selected.postType === "mixed" || selected.postType === "poll" || selected.postType === "true_false") && <>
                         <label className="block text-xs font-semibold text-slate-700">Bild hochladen<input type="file" accept="image/jpeg,image/png,image/webp" onChange={(event) => { updatePost(selected.id, { imageFile: event.target.files?.[0] ?? null }); setImageEditorOpen(false); }} className="mt-1.5 block w-full text-xs text-slate-600" /></label>
                         {(selected.imageFile || selected.existingImageUrl) && <div className="overflow-hidden rounded-xl border border-slate-200 bg-slate-950">
                           <div className="relative aspect-video overflow-hidden"><img src={selected.imageFile ? URL.createObjectURL(selected.imageFile) : selected.existingImageUrl!} alt="Bildvorschau" className="h-full w-full object-cover" style={{ objectPosition: selected.imageSettings.x + "% " + selected.imageSettings.y + "%", transform: "scale(" + selected.imageSettings.zoom + ")", filter: `brightness(${selected.imageSettings.brightness}%) contrast(${selected.imageSettings.contrast}%) saturate(${selected.imageSettings.saturation}%) grayscale(${selected.imageSettings.grayscale}%)` }} /></div>
@@ -274,6 +270,8 @@ export function TeacherModuleBuilderModal({ classInstanceId, schoolId, editModul
                           </div>}
                         </div>}
                       </>}
+                      {selected.postType === "poll" && <div className="rounded-xl border border-violet-200 bg-violet-50/60 p-3 space-y-3"><p className="text-xs font-bold text-violet-900">Antwortmöglichkeiten</p>{([0,1] as const).map(index=><label key={index} className="block text-xs font-semibold text-slate-700">Antwort {index+1}<input value={selected.interactionData.options[index]} onChange={event=>updatePost(selected.id,{interactionData:{...selected.interactionData,options:selected.interactionData.options.map((value,i)=>i===index?event.target.value:value) as [string,string]}})} maxLength={100} className="mt-1 w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm"/></label>)}<p className="text-[10px] text-slate-500">Schüler:innen stimmen ab. Nach der Abstimmung sehen sie die aktuelle Verteilung.</p></div>}
+                      {selected.postType === "true_false" && <div className="rounded-xl border border-violet-200 bg-violet-50/60 p-3 space-y-3"><p className="text-xs font-bold text-violet-900">Richtige Antwort</p><div className="flex gap-2"><button type="button" onClick={()=>updatePost(selected.id,{interactionData:{...selected.interactionData,correctAnswer:"true"}})} className={"flex-1 rounded-lg border px-3 py-2 text-xs font-semibold "+(selected.interactionData.correctAnswer==="true"?"border-violet-500 bg-violet-100 text-violet-800":"border-slate-200 bg-white")}>Richtig</button><button type="button" onClick={()=>updatePost(selected.id,{interactionData:{...selected.interactionData,correctAnswer:"false"}})} className={"flex-1 rounded-lg border px-3 py-2 text-xs font-semibold "+(selected.interactionData.correctAnswer==="false"?"border-violet-500 bg-violet-100 text-violet-800":"border-slate-200 bg-white")}>Falsch</button></div><label className="block text-xs font-semibold text-slate-700">Erklärung nach der Antwort<textarea value={selected.interactionData.explanation??""} onChange={event=>updatePost(selected.id,{interactionData:{...selected.interactionData,explanation:event.target.value}})} rows={3} maxLength={1200} className="mt-1 w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm"/></label></div>}
                       {(selected.postType === "embed" || selected.postType === "mixed") && <label className="block text-xs font-semibold text-slate-700">YouTube- oder Vimeo-URL<input value={selected.embedUrl} onChange={(event) => updatePost(selected.id, { embedUrl: event.target.value })} placeholder="https://…" className="mt-1.5 w-full rounded-lg border border-slate-200 px-3 py-2 text-sm" /></label>}
                       <div className="rounded-xl bg-slate-50 p-3"><p className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Vorschau</p><h4 className="mt-2 text-sm font-bold text-slate-900">{selected.title || "Dein Beitrag"}</h4><p className="mt-1 whitespace-pre-wrap text-xs leading-5 text-slate-600">{selected.body || "Dein Text erscheint hier in der Vorschau."}</p>{selected.embedUrl && (getEmbedPreviewUrl(selected.embedUrl) ? <div className="mt-3 overflow-hidden rounded-xl bg-slate-950"><div className="aspect-video"><iframe src={getEmbedPreviewUrl(selected.embedUrl)!} title="Video-Vorschau" className="h-full w-full" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" allowFullScreen referrerPolicy="strict-origin-when-cross-origin" /></div></div> : <p className="mt-2 text-xs text-amber-700">Bitte eine gültige YouTube- oder Vimeo-URL einfügen.</p>)}</div>
                     </div>
