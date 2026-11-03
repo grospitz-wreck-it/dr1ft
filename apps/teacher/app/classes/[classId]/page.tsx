@@ -4,14 +4,6 @@ import { StudentRoster } from "./StudentRoster";
 import { ClassLearningInsights } from "./ClassLearningInsights";
 import ClassImageWorkspace from "./ClassImageWorkspace";
 
-function withTimeout<T>(promise: PromiseLike<T>, ms: number, fallback: T): Promise<T> {
-  let timer: ReturnType<typeof setTimeout>;
-  return Promise.race([
-    Promise.resolve(promise),
-    new Promise<T>((resolve) => { timer = setTimeout(() => resolve(fallback), ms); }),
-  ]).finally(() => clearTimeout(timer!));
-}
-
 export default async function ClassDetailPage({
   params,
 }: {
@@ -20,17 +12,15 @@ export default async function ClassDetailPage({
   const supabase = supabaseServerClient();
   const { classId } = params;
 
-  const { data: instance } = await withTimeout(
-    supabase
-      .from("class_instances")
-      .select(
-        "id,name,access_code,is_active,status,grade_level,school_year,school_id,class_image_path,class_image_position_x,class_image_position_y,class_image_zoom",
-      )
-      .eq("id", classId)
-      .maybeSingle(),
-    5000,
-    { data: null } as any,
-  );
+  const {
+    data: instance,
+  } = await supabase
+    .from("class_instances")
+    .select(
+      "id,name,access_code,is_active,status,grade_level,school_year,school_id,class_image_path,class_image_position_x,class_image_position_y,class_image_zoom",
+    )
+    .eq("id", classId)
+    .maybeSingle();
 
   if (!instance) {
     return (
@@ -56,44 +46,6 @@ export default async function ClassDetailPage({
     );
   }
 
-  // Start the dashboard request before the remaining page queries so its
-  // latency overlaps with the class data loading instead of adding to it.
-  const { data: session } = await supabase.auth.getSession();
-  const user = session.session?.user ?? null;
-  const dashboardPromise = (async () => {
-    try {
-      if (!session.session?.access_token) return {};
-      const dashboardRes = await withTimeout(
-        fetch(
-          `${process.env.NEXT_PUBLIC_SUPABASE_URL}/functions/v1/teacher-dashboard`,
-          {
-            method: "POST",
-            headers: {
-              Authorization: `Bearer ${session.session.access_token}`,
-              "Content-Type": "application/json",
-            },
-            body: JSON.stringify({ classId }),
-            cache: "no-store",
-            signal: AbortSignal.timeout(5000),
-          },
-        ),
-        5500,
-        null,
-      );
-      if (dashboardRes?.ok) return await dashboardRes.json().catch(() => ({}));
-      if (dashboardRes) {
-        const errorBody = await dashboardRes.text().catch(() => "");
-        console.error("[class-page] teacher-dashboard returned", dashboardRes.status, errorBody);
-      } else {
-        console.warn("[class-page] teacher-dashboard timed out; rendering without learning insights");
-      }
-      return {};
-    } catch (error) {
-      console.error("[class-page] teacher-dashboard failed; rendering without learning insights", error);
-      return {};
-    }
-  })();
-
   const [
     { data: roster },
     { data: scenarios },
@@ -101,86 +53,89 @@ export default async function ClassDetailPage({
     { data: teacherModuleAssignments },
     { data: availableTeacherModules },
     { data: school },
-    { data: schoolMembership },
+    { data: userResult },
   ] = await Promise.all([
-    withTimeout(supabase
+    supabase
       .from("class_instance_memberships")
       .select(
         "user_id,role,left_at,user_profiles(display_name,username,avatar_seed)",
       )
       .eq("class_instance_id", classId)
-      .is("left_at", null), 8000, { data: [] } as any),
+      .is("left_at", null),
 
-    withTimeout(supabase
+    supabase
       .from("scenarios")
       .select("id,title,description,cover_image_url,age_rating")
-      .order("title"), 8000, { data: [] } as any),
+      .order("title"),
 
-    withTimeout(supabase
+    supabase
       .from("class_instance_scenario_assignments")
       .select("scenario_id,pacing_mode,scheduled_start_at,scheduled_end_at,show_reports_at_end,archived_at,is_active,scenarios(title)")
       .eq("class_instance_id", classId)
-      .is("archived_at", null), 8000, { data: [] } as any),
+      .is("archived_at", null),
 
-    withTimeout(supabase
+    supabase
       .from("teacher_module_class_assignments")
       .select("id,module_id,school_id,assigned_by,is_active,scheduled_start_at,scheduled_end_at,teacher_modules(id,title,description,intro_title,intro_text,visibility_scope,status,teacher_module_posts(id,post_type,title,body,image_path,embed_provider,embed_url,sort_order,status))")
-      .eq("class_instance_id", classId), 8000, { data: [] } as any),
+      .eq("class_instance_id", classId),
 
-    withTimeout(supabase
+    supabase
       .from("teacher_modules")
       .select("id,title,description,visibility_scope,created_by,teacher_module_posts(id,post_type,title,body,image_path,embed_provider,embed_url,sort_order,status)")
       .eq("school_id", instance.school_id)
       .eq("status", "published")
-      .order("updated_at", { ascending: false }), 8000, { data: [] } as any),
+      .order("updated_at", { ascending: false }),
 
     instance.school_id
-      ? withTimeout(
-          supabase
-            .from("schools")
-            .select(
-              "id,name,region,school_image_path,school_image_position_x,school_image_position_y,school_image_zoom",
-            )
-            .eq("id", instance.school_id)
-            .maybeSingle(),
-          8000,
-          { data: null } as any,
-        )
+      ? supabase
+          .from("schools")
+          .select(
+            "id,name,region,school_image_path,school_image_position_x,school_image_position_y,school_image_zoom",
+          )
+          .eq("id", instance.school_id)
+          .maybeSingle()
       : Promise.resolve({ data: null }),
 
-    user?.id && instance.school_id
-      ? withTimeout(
-          supabase
-            .from("school_memberships")
-            .select("role")
-            .eq("school_id", instance.school_id)
-            .eq("user_id", user.id)
-            .eq("active", true)
-            .maybeSingle(),
-          8000,
-          { data: null } as any,
-        )
-      : Promise.resolve({ data: null }),
-
+    supabase.auth.getUser(),
   ]);
 
+  const user = userResult.user;
+
+  const teacherMembership = user
+    ? await supabase
+        .from("class_instance_memberships")
+        .select("id")
+        .eq("class_instance_id", classId)
+        .eq("user_id", user.id)
+        .eq("role", "teacher")
+        .is("left_at", null)
+        .maybeSingle()
+    : { data: null };
+
+  const { data: schoolMembership } = user && instance.school_id
+    ? await supabase
+        .from("school_memberships")
+        .select("role")
+        .eq("school_id", instance.school_id)
+        .eq("user_id", user.id)
+        .eq("active", true)
+        .maybeSingle()
+    : { data: null };
+
   const canEditClassImage = Boolean(
-    (roster ?? []).some(
-      (row: any) =>
-        row.user_id === user?.id &&
-        row.left_at == null &&
-        ["teacher", "school_admin"].includes(row.role),
-    ) ||
+    teacherMembership.data ||
     ["school_admin", "school_lead"].includes(schoolMembership?.role),
   );
 
-  const classImageUrlPromise: Promise<string | null> =
-    canEditClassImage && instance.class_image_path
-      ? supabase.storage
-          .from("class-images")
-          .createSignedUrl(instance.class_image_path, 60 * 60)
-          .then(({ data }) => data?.signedUrl ?? null)
-      : Promise.resolve(null);
+  let classImageUrl: string | null = null;
+
+  if (canEditClassImage && instance.class_image_path) {
+    const { data } = await supabase.storage
+      .from("class-images")
+      .createSignedUrl(instance.class_image_path, 60 * 60);
+
+    classImageUrl = data?.signedUrl ?? null;
+  }
 
   const students = (roster ?? [])
     .filter((row: any) => row.role === "student")
@@ -195,7 +150,26 @@ export default async function ClassDetailPage({
   const activeAssignment = activeAssignments[0] ?? null;
   const reportingUnlocked = !activeAssignment?.show_reports_at_end || Boolean(activeAssignment?.scheduled_end_at && new Date(activeAssignment.scheduled_end_at).getTime() <= Date.now());
 
-  const dashboard: any = await dashboardPromise;
+  const { data: session } = await supabase.auth.getSession();
+
+  let dashboard: any = {};
+
+  if (session.session?.access_token) {
+    const dashboardRes = await fetch(
+      `${process.env.NEXT_PUBLIC_SUPABASE_URL}/functions/v1/teacher-dashboard`,
+      {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${session.session.access_token}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ classId }),
+        cache: "no-store",
+      },
+    );
+
+    dashboard = await dashboardRes.json().catch(() => ({}));
+  }
 
   const competencyRows = dashboard.studentCompetencyProgress ?? [];
   const missionRows = dashboard.studentMissionProgress ?? [];
@@ -283,10 +257,7 @@ export default async function ClassDetailPage({
     ? `${completed} von ${total} Mission-Abschlüssen über alle Schüler:innen · ${studentsWithCompletedModule} von ${studentsWithMissionData.length} Schüler:innen haben alle Missionen abgeschlossen`
     : "Noch keine auswertbaren Missionsfortschritte vorhanden.";
 
-  // Sign module assets for both module collections concurrently. Previously
-  // the available-library collection was fully awaited before assigned modules
-  // started signing their images, extending the page's critical path.
-  const availableTeacherModulesPromise = Promise.all(
+  const availableTeacherModulesData = await Promise.all(
     (availableTeacherModules ?? []).map(async (module: any) => {
       const posts = await Promise.all(
         [...(module.teacher_module_posts ?? [])]
@@ -303,7 +274,7 @@ export default async function ClassDetailPage({
     }),
   );
 
-  const teacherModulesPromise = Promise.all(
+  const teacherModulesData = await Promise.all(
     (teacherModuleAssignments ?? [])
       .filter((row: any) => row.teacher_modules?.status === "published")
       .map(async (row: any) => {
@@ -321,12 +292,6 @@ export default async function ClassDetailPage({
         return { id: row.id, module_id: row.module_id, school_id: row.school_id, assigned_by: row.assigned_by, is_active: row.is_active, scheduled_start_at: row.scheduled_start_at, scheduled_end_at: row.scheduled_end_at, title: row.teacher_modules.title, description: row.teacher_modules.description, introTitle: row.teacher_modules.intro_title, introText: row.teacher_modules.intro_text, visibility_scope: row.teacher_modules.visibility_scope, cover_image_url: posts.find((post: any) => post.imageUrl)?.imageUrl ?? null, posts };
       }),
   );
-
-  const [classImageUrl, availableTeacherModulesData, teacherModulesData] = await Promise.all([
-    classImageUrlPromise,
-    availableTeacherModulesPromise,
-    teacherModulesPromise,
-  ]);
 
   const schoolImageUrl = school?.school_image_path
     ? `${process.env.NEXT_PUBLIC_SUPABASE_URL}/storage/v1/object/public/school-images/${school.school_image_path}`
@@ -401,6 +366,8 @@ export default async function ClassDetailPage({
         <ClassModuleLibrary
           classId={classId}
           schoolId={instance.school_id}
+          teacherModules={teacherModulesData}
+          availableTeacherModules={availableTeacherModulesData}
           scenarios={(scenarios ?? []).map((scenario: any) => ({
             id: scenario.id,
             title: scenario.title,
@@ -408,8 +375,6 @@ export default async function ClassDetailPage({
             cover_image_url: scenario.cover_image_url ?? null,
             age_rating: scenario.age_rating ?? "Alle Altersgruppen",
           }))}
-          availableTeacherModules={availableTeacherModulesData}
-          teacherModules={teacherModulesData}
           assignments={activeAssignments.map((item: any) => ({
             scenario_id: item.scenario_id,
             is_active: item.is_active !== false,
