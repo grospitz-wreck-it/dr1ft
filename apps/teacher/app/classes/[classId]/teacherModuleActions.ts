@@ -76,7 +76,7 @@ export async function saveTeacherCreatedModule(formData: FormData) {
       .select("id,role")
       .eq("class_instance_id", classInstanceId)
       .eq("user_id", user.id)
-      .eq("role", "teacher")
+      .in("role", ["teacher", "school_admin", "school_lead"])
       .is("left_at", null)
       .maybeSingle();
     isClassTeacher = !membershipError && Boolean(membership);
