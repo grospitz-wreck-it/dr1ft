@@ -21,7 +21,7 @@ export default async function TeacherHomePage() {
 
   const { data: memberships } = await supabase
     .from("class_instance_memberships")
-    .select("class_instance_id, role, class_instances(id,name,is_active,grade_level,school_year,school_id,class_image_path)")
+    .select("class_instance_id, role, class_instances(id,name,is_active,grade_level,school_year,school_id,class_image_path,class_image_position_x,class_image_position_y,class_image_zoom)")
     .eq("role", "teacher")
     .is("left_at", null);
 
@@ -77,7 +77,11 @@ export default async function TeacherHomePage() {
     }
     return {
       id: item.id, name: item.name, gradeLevel: item.grade_level, schoolYear: item.school_year,
-      isActive: item.is_active, thumbnailUrl, studentCount: studentsByClass.get(item.id) ?? 0,
+      isActive: item.is_active, thumbnailUrl,
+      imagePositionX: item.class_image_position_x ?? 50,
+      imagePositionY: item.class_image_position_y ?? 50,
+      imageZoom: item.class_image_zoom ?? 1,
+      studentCount: studentsByClass.get(item.id) ?? 0,
       missions: assignmentsByClass.get(item.id) ?? [],
     };
   }));
