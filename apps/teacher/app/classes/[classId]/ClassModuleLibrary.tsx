@@ -271,7 +271,7 @@ function TeacherModuleCard({ classId, schoolId, module, onError }: {
           <p className="mt-1 line-clamp-2 text-xs leading-4 text-slate-600">{module.description?.trim() || "Für dieses Modul liegt noch keine Kurzbeschreibung vor."}</p>
         </div>
         <div className="flex shrink-0 flex-col items-center gap-1.5">
-          <TeacherModuleBuilderModal classInstanceId={classId} schoolId={schoolId} editModule={{ id: module.module_id, title: module.title, description: module.description ?? "", introTitle: module.introTitle, introText: module.introText, posts: module.posts }} triggerLabel="Bearbeiten" />
+
           <button type="button" role="switch" aria-checked={active} aria-label={active ? module.title + " deaktivieren" : module.title + " aktivieren"} onClick={() => setStatus(!active)} disabled={pending} className={"relative inline-flex h-6 w-11 items-center rounded-full transition-colors disabled:opacity-50 " + (active ? "bg-violet-600" : "bg-slate-300")}>
             <span className={"inline-block h-4 w-4 rounded-full bg-white shadow transition-transform " + (active ? "translate-x-6" : "translate-x-1")} />
           </button>
@@ -279,7 +279,7 @@ function TeacherModuleCard({ classId, schoolId, module, onError }: {
           <button type="button" onClick={archive} disabled={pending} aria-label="Modul aus Klasse entfernen" title="Modul aus dieser Klasse entfernen" className="mt-1 inline-flex h-8 w-8 items-center justify-center rounded-xl border border-white/80 bg-white/65 text-slate-500 shadow-[0_4px_14px_rgba(30,41,59,.10)] backdrop-blur-xl transition hover:border-rose-200 hover:bg-rose-50 hover:text-rose-600 disabled:opacity-50"><Trash2 className="h-3.5 w-3.5" /></button>
         </div>
       </div>
-      {active && <div className="border-t border-violet-100 px-3 py-2 sm:px-4">
+      <div className="flex items-center justify-between gap-3 border-t border-violet-100 px-3 py-2 sm:px-4">
         <button type="button" onClick={() => setScheduleOpen(value => !value)} className="inline-flex items-center gap-1.5 text-[11px] font-medium text-violet-700 hover:text-violet-900"><CalendarClock className="h-3.5 w-3.5" />{scheduleOpen ? "Zeitplan schließen" : (module.scheduled_start_at || module.scheduled_end_at) ? "Zeitplan bearbeiten" : "Zeitplan festlegen"}</button>
         {(module.scheduled_start_at || module.scheduled_end_at) && !scheduleOpen && <p className="mt-1 text-[10px] text-slate-500">{module.scheduled_start_at ? new Date(module.scheduled_start_at).toLocaleString("de-DE") : "Sofort"}{module.scheduled_end_at ? " – " + new Date(module.scheduled_end_at).toLocaleString("de-DE") : ""}</p>}
         {scheduleOpen && <div className="mt-3 rounded-lg bg-violet-50/70 p-3">
@@ -290,7 +290,7 @@ function TeacherModuleCard({ classId, schoolId, module, onError }: {
           </div>
           <div className="mt-3 flex flex-wrap items-center gap-3"><button type="button" onClick={saveSchedule} disabled={pending} className="rounded-lg bg-violet-600 px-3 py-2 text-xs font-semibold text-white hover:bg-violet-700 disabled:opacity-50">{pending ? "Speichert …" : "Zeitplan speichern"}</button>{scheduleMessage && <p role="status" className="text-xs text-slate-600">{scheduleMessage}</p>}</div>
         </div>}
-      </div>}
+      </div>
     </article>
   );
 }
