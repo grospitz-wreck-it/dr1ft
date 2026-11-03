@@ -6,7 +6,7 @@ import { BookOpen, CalendarClock, Check, Image as ImageIcon, Pencil, Plus, Searc
 import { toggleScenarioAssignment } from "../actions";
 import { ScenarioToggle } from "./ScenarioToggle";
 import { TeacherModuleBuilderModal } from "./TeacherModuleBuilderModal";
-import { archiveTeacherModuleAssignment, setTeacherModuleAssignmentActive, updateTeacherModuleSchedule } from "./teacherModuleActions";
+import { archiveTeacherModuleAssignment, assignExistingTeacherModule, setTeacherModuleAssignmentActive, updateTeacherModuleSchedule } from "./teacherModuleActions";
 
 type Scenario = {
   id: string;
@@ -31,6 +31,7 @@ export function ClassModuleLibrary({
   classId,
   schoolId,
   teacherModules,
+  availableTeacherModules,
   scenarios,
   assignments,
   moduleStatus,
@@ -39,6 +40,7 @@ export function ClassModuleLibrary({
   classId: string;
   schoolId: string | null;
   teacherModules: TeacherModule[];
+  availableTeacherModules: Array<{ id: string; module_id: string; title: string; description: string; visibility_scope: "private" | "school" | "class"; posts: TeacherModule["posts"] }>;
   scenarios: Scenario[];
   assignments: Assignment[];
   moduleStatus: "Abgeschlossen" | "In Bearbeitung" | "Noch nicht begonnen";
@@ -46,6 +48,7 @@ export function ClassModuleLibrary({
 }) {
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState("");
+  const [libraryTab, setLibraryTab] = useState<"dr1ft" | "own">("dr1ft");
   const [pendingId, setPendingId] = useState<string | null>(null);
   const [error, setError] = useState("");
   const [pending, startTransition] = useTransition();
