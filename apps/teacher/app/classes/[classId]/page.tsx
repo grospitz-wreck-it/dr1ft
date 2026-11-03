@@ -69,30 +69,30 @@ export default async function ClassDetailPage({
         "user_id,role,left_at,user_profiles(display_name,username,avatar_seed)",
       )
       .eq("class_instance_id", classId)
-      .is("left_at", null), 8000, { data: [] }),
+      .is("left_at", null), 8000, { data: [] } as any),
 
     withTimeout(supabase
       .from("scenarios")
       .select("id,title,description,cover_image_url,age_rating")
-      .order("title"), 8000, { data: [] }),
+      .order("title"), 8000, { data: [] } as any),
 
     withTimeout(supabase
       .from("class_instance_scenario_assignments")
       .select("scenario_id,pacing_mode,scheduled_start_at,scheduled_end_at,show_reports_at_end,archived_at,is_active,scenarios(title)")
       .eq("class_instance_id", classId)
-      .is("archived_at", null), 8000, { data: [] }),
+      .is("archived_at", null), 8000, { data: [] } as any),
 
     withTimeout(supabase
       .from("teacher_module_class_assignments")
       .select("id,module_id,school_id,assigned_by,is_active,scheduled_start_at,scheduled_end_at,teacher_modules(id,title,description,intro_title,intro_text,visibility_scope,status,teacher_module_posts(id,post_type,title,body,image_path,embed_provider,embed_url,sort_order,status))")
-      .eq("class_instance_id", classId), 8000, { data: [] }),
+      .eq("class_instance_id", classId), 8000, { data: [] } as any),
 
     withTimeout(supabase
       .from("teacher_modules")
       .select("id,title,description,visibility_scope,created_by,teacher_module_posts(id,post_type,title,body,image_path,embed_provider,embed_url,sort_order,status)")
       .eq("school_id", instance.school_id)
       .eq("status", "published")
-      .order("updated_at", { ascending: false }), 8000, { data: [] }),
+      .order("updated_at", { ascending: false }), 8000, { data: [] } as any),
 
     instance.school_id
       ? withTimeout(
@@ -104,11 +104,11 @@ export default async function ClassDetailPage({
             .eq("id", instance.school_id)
             .maybeSingle(),
           8000,
-          { data: null },
+          { data: null } as any,
         )
       : Promise.resolve({ data: null }),
 
-    withTimeout(supabase.auth.getUser(), 8000, { data: { user: null } }),
+    withTimeout(supabase.auth.getUser(), 8000, { data: { user: null } } as any),
   ]);
 
   // Supabase auth.getUser() nests the user under data.user.
