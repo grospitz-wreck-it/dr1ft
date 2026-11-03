@@ -119,7 +119,7 @@ export default async function ClassDetailPage({
         .eq("user_id", user.id)
         .eq("role", "teacher")
         .is("left_at", null)
-        .maybeSingle(), 7000, { data: null })
+        .maybeSingle(), 7000, { data: null } as any)
     : { data: null };
 
   const canEditClassImage = Boolean(teacherMembership.data);
