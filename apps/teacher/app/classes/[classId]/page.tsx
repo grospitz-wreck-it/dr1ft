@@ -11,6 +11,8 @@ export default async function ClassDetailPage({
 }) {
   const supabase = supabaseServerClient();
   const { classId } = params;
+  const pageStartedAt = Date.now();
+  const instanceStartedAt = Date.now();
 
   const {
     data: instance,
@@ -21,6 +23,8 @@ export default async function ClassDetailPage({
     )
     .eq("id", classId)
     .maybeSingle();
+
+  console.info("[class-page-timing] instance", Date.now() - instanceStartedAt, "ms");
 
   if (!instance) {
     return (
@@ -46,6 +50,7 @@ export default async function ClassDetailPage({
     );
   }
 
+  const parallelQueriesStartedAt = Date.now();
   const [
     { data: roster },
     { data: scenarios },
@@ -100,12 +105,17 @@ export default async function ClassDetailPage({
     supabase.auth.getUser(),
     supabase.auth.getSession(),
   ]);
+  console.info("[class-page-timing] parallel-queries", Date.now() - parallelQueriesStartedAt, "ms");
 
   const user = userResult.user;
   const accessToken = session.session?.access_token;
 
   const dashboardPromise = (async () => {
-    if (!accessToken) return {};
+    const dashboardStartedAt = Date.now();
+    if (!accessToken) {
+      console.info("[class-page-timing] dashboard-no-token", Date.now() - dashboardStartedAt, "ms");
+      return {};
+    }
     try {
       const response = await fetch(
         `${process.env.NEXT_PUBLIC_SUPABASE_URL}/functions/v1/teacher-dashboard`,
@@ -121,15 +131,20 @@ export default async function ClassDetailPage({
       );
       if (!response.ok) {
         console.error("[class-page] teacher-dashboard returned", response.status, await response.text().catch(() => ""));
+        console.info("[class-page-timing] dashboard", Date.now() - dashboardStartedAt, "ms");
         return {};
       }
-      return await response.json().catch(() => ({}));
+      const result = await response.json().catch(() => ({}));
+      console.info("[class-page-timing] dashboard", Date.now() - dashboardStartedAt, "ms");
+      return result;
     } catch (error) {
       console.error("[class-page] teacher-dashboard failed", error);
+      console.info("[class-page-timing] dashboard-error", Date.now() - dashboardStartedAt, "ms");
       return {};
     }
   })();
 
+  const membershipStartedAt = Date.now();
   const [teacherMembership, schoolMembership] = await Promise.all([
     user
       ? supabase.from("class_instance_memberships").select("id")
@@ -142,6 +157,7 @@ export default async function ClassDetailPage({
           .eq("active", true).maybeSingle()
       : Promise.resolve({ data: null }),
   ]);
+  console.info("[class-page-timing] memberships", Date.now() - membershipStartedAt, "ms");
 
   const canEditClassImage = Boolean(
     teacherMembership.data ||
@@ -154,6 +170,7 @@ export default async function ClassDetailPage({
         .then(({ data }) => data?.signedUrl ?? null)
     : Promise.resolve(null);
 
+const moduleAssetsStartedAt = Date.now();
 const availableTeacherModulesPromise = Promise.all(
     (availableTeacherModules ?? []).map(async (module: any) => {
       const posts = await Promise.all(
@@ -191,6 +208,7 @@ const teacherModulesPromise = Promise.all(
   );
 
   const [availableTeacherModulesData, teacherModulesData] = await Promise.all([availableTeacherModulesPromise, teacherModulesPromise]);
+  console.info("[class-page-timing] module-assets", Date.now() - moduleAssetsStartedAt, "ms");
 
   const students = (roster ?? [])
     .filter((row: any) => row.role === "student")
@@ -205,7 +223,9 @@ const teacherModulesPromise = Promise.all(
   const activeAssignment = activeAssignments[0] ?? null;
   const reportingUnlocked = !activeAssignment?.show_reports_at_end || Boolean(activeAssignment?.scheduled_end_at && new Date(activeAssignment.scheduled_end_at).getTime() <= Date.now());
 
+  const imageAndDashboardStartedAt = Date.now();
   const [dashboard, classImageUrl] = await Promise.all([dashboardPromise, classImagePromise]);
+  console.info("[class-page-timing] dashboard-and-class-image-wait", Date.now() - imageAndDashboardStartedAt, "ms");
 
   const competencyRows = dashboard.studentCompetencyProgress ?? [];
   const missionRows = dashboard.studentMissionProgress ?? [];
@@ -315,6 +335,8 @@ const teacherModulesPromise = Promise.all(
     classImageUrl
       ? instance.class_image_zoom ?? 1
       : school?.school_image_zoom ?? 1;
+
+  console.info("[class-page-timing] total-server-render", Date.now() - pageStartedAt, "ms");
 
   return (
     <main className="min-h-screen bg-canvas">
