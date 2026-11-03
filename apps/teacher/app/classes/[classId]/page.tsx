@@ -4,6 +4,13 @@ import { StudentRoster } from "./StudentRoster";
 import { ClassLearningInsights } from "./ClassLearningInsights";
 import ClassImageWorkspace from "./ClassImageWorkspace";
 
+function withTimeout<T>(promise: PromiseLike<T>, ms: number, fallback: T): Promise<T> {
+  return Promise.race([
+    Promise.resolve(promise),
+    new Promise<T>((resolve) => setTimeout(() => resolve(fallback), ms)),
+  ]);
+}
+
 export default async function ClassDetailPage({
   params,
 }: {
@@ -14,13 +21,13 @@ export default async function ClassDetailPage({
 
   const {
     data: instance,
-  } = await supabase
+  } = await withTimeout(supabase
     .from("class_instances")
     .select(
       "id,name,access_code,is_active,status,grade_level,school_year,school_id,class_image_path,class_image_position_x,class_image_position_y,class_image_zoom",
     )
     .eq("id", classId)
-    .maybeSingle();
+    .maybeSingle(), 10000, { data: null, error: new Error("Klassenabfrage hat zu lange gedauert.") });
 
   if (!instance) {
     return (
@@ -54,7 +61,7 @@ export default async function ClassDetailPage({
     { data: availableTeacherModules },
     { data: school },
     { data: userResult },
-  ] = await Promise.all([
+  ] = await withTimeout(Promise.all([
     supabase
       .from("class_instance_memberships")
       .select(
@@ -97,30 +104,38 @@ export default async function ClassDetailPage({
       : Promise.resolve({ data: null }),
 
     supabase.auth.getUser(),
-  ]);
+  ]), 12000, [
+    { data: null }, { data: null }, { data: null }, { data: null },
+    { data: null }, { data: null }, { data: null, user: null },
+  ] as any);
 
   const user = userResult.user;
 
   const teacherMembership = user
-    ? await supabase
+    ? await withTimeout(supabase
         .from("class_instance_memberships")
         .select("id")
         .eq("class_instance_id", classId)
         .eq("user_id", user.id)
         .eq("role", "teacher")
         .is("left_at", null)
-        .maybeSingle()
+        .maybeSingle(), 7000, { data: null })
     : { data: null };
 
   const canEditClassImage = Boolean(teacherMembership.data);
+  // Class assets are visible to every active member of this class, not only
+  // the teacher who uploaded them. The signed URL is still issued only after
+  // the membership-scoped roster query confirms access to this class.
+  const canViewClassAssets = Boolean(user && (roster ?? []).some((row: any) => row.user_id === user.id));
 
   let classImageUrl: string | null = null;
 
-  if (canEditClassImage && instance.class_image_path) {
-    const { data } = await supabase.storage
-      .from("class-images")
-      .createSignedUrl(instance.class_image_path, 60 * 60);
-
+  if (canViewClassAssets && instance.class_image_path) {
+    const { data } = await withTimeout(
+      supabase.storage.from("class-images").createSignedUrl(instance.class_image_path, 60 * 60),
+      7000,
+      { data: null },
+    );
     classImageUrl = data?.signedUrl ?? null;
   }
 
@@ -137,25 +152,34 @@ export default async function ClassDetailPage({
   const activeAssignment = activeAssignments[0] ?? null;
   const reportingUnlocked = !activeAssignment?.show_reports_at_end || Boolean(activeAssignment?.scheduled_end_at && new Date(activeAssignment.scheduled_end_at).getTime() <= Date.now());
 
-  const { data: session } = await supabase.auth.getSession();
+  const sessionResult = await withTimeout(supabase.auth.getSession(), 5000, { data: { session: null } } as any);
+  const session = sessionResult.data;
 
+  // Learning insights are supplementary. A slow Edge Function must never
+  // take down the complete class page; show the rest of the class normally.
   let dashboard: any = {};
 
   if (session.session?.access_token) {
-    const dashboardRes = await fetch(
-      `${process.env.NEXT_PUBLIC_SUPABASE_URL}/functions/v1/teacher-dashboard`,
-      {
-        method: "POST",
-        headers: {
-          Authorization: `Bearer ${session.session.access_token}`,
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({ classId }),
-        cache: "no-store",
-      },
-    );
-
-    dashboard = await dashboardRes.json().catch(() => ({}));
+    try {
+      const dashboardRes = await withTimeout(
+        fetch(`${process.env.NEXT_PUBLIC_SUPABASE_URL}/functions/v1/teacher-dashboard`, {
+          method: "POST",
+          headers: {
+            Authorization: `Bearer ${session.session.access_token}`,
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({ classId }),
+          cache: "no-store",
+          signal: AbortSignal.timeout(9000),
+        }),
+        10000,
+        null,
+      );
+      if (dashboardRes?.ok) dashboard = await dashboardRes.json().catch(() => ({}));
+      else if (dashboardRes) console.error("[class-page] teacher-dashboard returned", dashboardRes.status);
+    } catch (error) {
+      console.error("[class-page] teacher-dashboard unavailable; rendering without insights", error);
+    }
   }
 
   const competencyRows = dashboard.studentCompetencyProgress ?? [];
