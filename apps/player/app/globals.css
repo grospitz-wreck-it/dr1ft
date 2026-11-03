@@ -306,8 +306,42 @@ body.dark-mode {
 .player-mobile-activity > div:first-child { border-color: #eeeaf5; }
 .player-mobile-activity-list { max-height: calc(min(68vh, 520px) - 64px); }
 .dark-mode .player-mobile-header { color: #e8e1f1 !important; background: rgba(23,17,38,.97) !important; border-color: #3b3153 !important; }
-.dark-mode .player-mobile-header nav a[aria-current="page"] { background: rgba(124,58,237,.22) !important; color: #d2c4e8 !important; }
-.dark-mode .player-mobile-header nav a:not([aria-current]) { color: #aaa0ba !important; }
+.dark-mode .player-mobile-header nav a[aria-current="page"] {
+  border-color: rgba(192,132,252,.34) !important;
+  background: linear-gradient(145deg, rgba(91,65,126,.58), rgba(43,34,65,.72)) !important;
+  color: #f0d9ff !important;
+}
+.dark-mode .player-mobile-header nav a:not([aria-current]) {
+  border-color: rgba(167,139,250,.26) !important;
+  background: linear-gradient(145deg, rgba(75,58,105,.46), rgba(36,27,55,.58)) !important;
+  color: #c4b5fd !important;
+}
+.player-mobile-header nav a {
+  border: 1px solid rgba(167,139,250,.34) !important;
+  border-radius: 16px !important;
+  background: linear-gradient(145deg, rgba(255,255,255,.66), rgba(245,240,255,.42)) !important;
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.78), 0 4px 14px rgba(76,29,149,.08) !important;
+  backdrop-filter: blur(18px);
+  -webkit-backdrop-filter: blur(18px);
+}
+.player-mobile-header nav a[aria-current="page"] {
+  border-color: rgba(139,92,246,.58) !important;
+  background: linear-gradient(145deg, rgba(237,228,255,.82), rgba(224,214,255,.58)) !important;
+  color: #5b21b6 !important;
+}
+.player-mobile-header nav a:not([aria-current="page"]) {
+  color: #6d28d9 !important;
+}
+.player-mobile-header nav a:hover {
+  border-color: rgba(139,92,246,.58) !important;
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.9), 0 7px 20px rgba(124,58,237,.12) !important;
+}
+.dark-mode .player-mobile-header nav a[aria-current="page"] {
+  background: linear-gradient(145deg, rgba(91,65,126,.58), rgba(43,34,65,.72)) !important;
+}
+.dark-mode .player-mobile-header nav a:not([aria-current="page"]) {
+  background: linear-gradient(145deg, rgba(75,58,105,.46), rgba(36,27,55,.58)) !important;
+}
 .dark-mode .player-mobile-activity { color: #e2daee; background: #1c172b; border-color: #3b3153; }
 .dark-mode .player-mobile-activity > div:first-child { border-color: #342a47; }
 .dark-mode .player-mobile-activity a:hover { background: rgba(167,139,250,.10); }
