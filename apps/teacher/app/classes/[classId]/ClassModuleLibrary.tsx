@@ -2,10 +2,11 @@
 
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { BookOpen, Check, Plus, Search, X } from "lucide-react";
+import { BookOpen, CalendarClock, Check, Image as ImageIcon, Plus, Search, Trash2, X } from "lucide-react";
 import { toggleScenarioAssignment } from "../actions";
 import { ScenarioToggle } from "./ScenarioToggle";
 import { TeacherModuleBuilderModal } from "./TeacherModuleBuilderModal";
+import { archiveTeacherModuleAssignment, setTeacherModuleAssignmentActive } from "./teacherModuleActions";
 
 type Scenario = {
   id: string;
@@ -15,7 +16,7 @@ type Scenario = {
   age_rating: string;
 };
 
-type TeacherModule = { id: string; title: string; description: string | null; status: string };
+type TeacherModule = { id: string; module_id: string; school_id: string; assigned_by: string; is_active: boolean; title: string; description: string | null; cover_image_url: string | null };
 
 type Assignment = {
   scenario_id: string;
@@ -92,18 +93,7 @@ export function ClassModuleLibrary({
       <div className="bg-slate-50/60 p-3 sm:p-4">
         {teacherModules.length > 0 && (
           <div className="mb-3 space-y-2">
-            {teacherModules.map((module) => (
-              <article key={module.id} className="rounded-xl border border-violet-200 bg-white px-4 py-3">
-                <div className="flex items-center justify-between gap-3">
-                  <div className="min-w-0">
-                    <p className="text-[10px] font-bold uppercase tracking-wider text-violet-600">Eigenes Modul · nur diese Klasse</p>
-                    <h3 className="mt-1 truncate text-sm font-bold text-slate-900">{module.title}</h3>
-                    {module.description && <p className="mt-1 line-clamp-2 text-xs text-slate-500">{module.description}</p>}
-                  </div>
-                  <span className="shrink-0 rounded-full bg-emerald-50 px-2.5 py-1 text-[10px] font-semibold text-emerald-700"><Check className="mr-1 inline h-3 w-3" />Veröffentlicht</span>
-                </div>
-              </article>
-            ))}
+            {teacherModules.map((module) => (\n              <TeacherModuleCard key={module.id} classId={classId} module={module} onError={setError} />\n            ))}
           </div>
         )}
         {assignments.length > 0 ? (
