@@ -88,8 +88,9 @@ export default async function ClassDetailPage({
       .is("archived_at", null)),
     timed("teacher-module-assignments", supabase
       .from("teacher_module_class_assignments")
-      .select("id,module_id,school_id,assigned_by,is_active,scheduled_start_at,scheduled_end_at,teacher_modules(id,title,description,intro_title,intro_text,visibility_scope,status)")
-      .eq("class_instance_id", classId)),
+      .select("id,module_id,school_id,assigned_by,is_active,scheduled_start_at,scheduled_end_at,archived_at,teacher_modules(id,title,description,intro_title,intro_text,visibility_scope,status)")
+      .eq("class_instance_id", classId)
+      .is("archived_at", null)),
     timed("available-teacher-modules", supabase
       .from("teacher_modules")
       .select("id,title,description,visibility_scope,created_by")
