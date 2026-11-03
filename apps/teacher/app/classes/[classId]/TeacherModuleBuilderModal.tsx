@@ -190,7 +190,8 @@ export function TeacherModuleBuilderModal({ classInstanceId, schoolId, editModul
                 <div>
                 <p className="text-[10px] font-extrabold uppercase tracking-[.22em] text-violet-700">DR1FT · DEIN CONTENT-STUDIO</p>
                 <h2 id="teacher-module-title" className="mt-1 text-[23px] font-extrabold tracking-tight text-slate-950">{moduleId ? "Modul bearbeiten" : "Modul erstellen"}</h2>
-                <p className="mt-1 text-sm text-slate-500">Gestalte ein Lernmodul, das deine Klasse gerne entdeckt.</p>
+                <p className="mt-1 text-sm text-slate-500">Erstelle und strukturiere Inhalte für deine Klasse.</p>
+                </div>
               </div>
               <button type="button" onClick={() => setOpen(false)} aria-label="Schließen" className="rounded-xl p-2 text-slate-500 hover:bg-slate-100"><X className="h-5 w-5" /></button>
             </header>
@@ -278,7 +279,7 @@ export function TeacherModuleBuilderModal({ classInstanceId, schoolId, editModul
                     {!posts.length&&<div className="drift-builder-empty rounded-[20px] px-6 py-16 text-center"><div className="mx-auto mb-3 grid h-14 w-14 place-items-center rounded-2xl bg-violet-100 text-violet-600"><Wand2 className="h-7 w-7"/></div><h4 className="text-sm font-extrabold text-slate-900">Dein Modul wartet auf Inhalte</h4><p className="mt-1 text-xs text-slate-500">Wähle links einen Kartentyp und leg los.</p></div>}
                   </div>
                 </section>
-                )}      </section>
+                 )}
               </div>
               {error && <p role="alert" className="mt-4 rounded-xl bg-rose-50 px-4 py-3 text-xs text-rose-700">{error}</p>}
             </div>
