@@ -183,29 +183,29 @@ export function TeacherModuleBuilderModal({ classInstanceId, schoolId, editModul
       </button>
       {open && (
         <div className="fixed inset-0 z-[150] flex items-center justify-center bg-slate-950/65 p-3 backdrop-blur-sm sm:p-6" role="dialog" aria-modal="true" aria-labelledby="teacher-module-title">
-          <div className="flex h-[min(744px,calc(100dvh-48px))] w-full max-w-[1044px] flex-col overflow-hidden rounded-[22px] border border-violet-100 bg-white shadow-[0_30px_100px_rgba(37,20,70,.28)]">
-            <header className="flex min-h-[94px] shrink-0 items-start justify-between gap-4 border-b border-slate-200 px-6 py-4 sm:px-[26px]">
+          <div className="drift-builder-shell flex h-[min(790px,calc(100dvh-40px))] w-full max-w-[1120px] flex-col overflow-hidden rounded-[28px] border border-white/80 bg-white shadow-[0_34px_110px_rgba(57,38,110,.30)]">
+            <header className="drift-builder-header relative flex min-h-[104px] shrink-0 items-center justify-between gap-4 overflow-hidden border-b border-violet-100 px-6 py-4 sm:px-8">
               <div>
-                <p className="text-[10px] font-bold uppercase tracking-[.18em] text-violet-600">DR1FT · EIGENES MODUL</p>
-                <h2 id="teacher-module-title" className="mt-1 text-xl font-bold text-slate-950">{moduleId ? "Modul bearbeiten" : "Modul erstellen"}</h2>
-                <p className="mt-1 text-sm text-slate-500">Nur für diese Schule und die ausgewählte Klasseninstanz.</p>
+                <p className="text-[10px] font-extrabold uppercase tracking-[.22em] text-violet-700">DR1FT · DEIN CONTENT-STUDIO</p>
+                <h2 id="teacher-module-title" className="mt-1 text-[23px] font-extrabold tracking-tight text-slate-950">{moduleId ? "Modul bearbeiten" : "Modul erstellen"}</h2>
+                <p className="mt-1 text-sm text-slate-500">Gestalte ein Lernmodul, das deine Klasse gerne entdeckt.</p>
               </div>
               <button type="button" onClick={() => setOpen(false)} aria-label="Schließen" className="rounded-xl p-2 text-slate-500 hover:bg-slate-100"><X className="h-5 w-5" /></button>
             </header>
             <div className="min-h-0 flex-1 overflow-y-auto p-4 sm:px-[22px] sm:py-4 lg:overflow-hidden">
-              <div className="grid h-auto min-h-full gap-[18px] lg:h-full lg:min-h-0 lg:grid-cols-[minmax(0,383px)_minmax(0,1fr)]">
-                <section className="space-y-2.5 pr-0.5 lg:min-h-0 lg:overflow-y-auto">
-                  <label className="block text-xs font-semibold text-slate-700">Modultitel
+              <div className="grid h-auto min-h-full gap-4 lg:h-full lg:min-h-0 lg:grid-cols-[minmax(0,390px)_minmax(0,1fr)]">
+                <section className="drift-builder-left space-y-3 pr-0.5 lg:min-h-0 lg:overflow-y-auto">
+                  <div className="drift-builder-details space-y-3 rounded-[22px] p-4"><div className="flex items-center gap-2"><span className="drift-builder-step">01</span><h3 className="text-sm font-extrabold text-slate-900">Dein Modul</h3><span className="ml-auto rounded-full bg-white/80 px-2.5 py-1 text-[9px] font-bold text-violet-700">BASIS</span></div><label className="block text-xs font-bold text-slate-700">Modultitel
                     <input value={title} onChange={(event) => setTitle(event.target.value)} maxLength={120} placeholder="z. B. KI im Alltag" className="mt-1.5 w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm outline-none transition focus:border-violet-400 focus:ring-4 focus:ring-violet-100" />
                   </label>
                   <label className="block text-xs font-semibold text-slate-700">Kurzbeschreibung
                     <textarea value={description} onChange={(event) => setDescription(event.target.value)} rows={3} maxLength={500} placeholder="Worum geht es in diesem Modul?" className="mt-1.5 w-full resize-y rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm outline-none transition focus:border-violet-400 focus:ring-4 focus:ring-violet-100" />
                   </label>
-                  <label className="flex items-center justify-between gap-3 rounded-2xl border border-violet-200 bg-violet-50/70 p-3">
+                  <label className="drift-builder-toggle flex items-center justify-between gap-3 rounded-2xl p-3">
                     <span><span className="block text-xs font-bold text-violet-900">Titelcard im Schüler-Feed</span><span className="mt-1 block text-[11px] font-normal text-violet-700">Zeigt Modultitel und Beschreibung vor dem Start.</span></span>
                     <input type="checkbox" checked={titleCardEnabled} onChange={event=>setTitleCardEnabled(event.target.checked)} className="h-5 w-9 accent-violet-600"/>
                   </label>
-                  <label className="block rounded-2xl border border-slate-200 p-3 text-xs font-semibold text-slate-700">Wer darf dieses Modul im Lehrkraftbereich sehen?
+                  <label className="drift-builder-visibility block rounded-2xl p-3 text-xs font-bold text-slate-700">Wer darf dieses Modul im Lehrkraftbereich sehen?
                     <select value={visibilityScope} onChange={event => setVisibilityScope(event.target.value as "private" | "school" | "class")} className="mt-2 w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm font-medium">
                       <option value="private">Nur für mich</option>
                       <option value="school">Alle Lehrkräfte und Schuladmins meiner Schule</option>
@@ -213,7 +213,7 @@ export function TeacherModuleBuilderModal({ classInstanceId, schoolId, editModul
                     </select>
                     <span className="mt-1 block font-normal text-slate-500">Aktivierte Module bleiben für die Schüler:innen der jeweiligen Klasse sichtbar.</span>
                   </label>
-                  <div className="rounded-[16px] border border-slate-200 bg-slate-50/70 p-3">
+                  </div><div className="drift-builder-posts rounded-[22px] p-3.5">
                     <div className="flex items-center justify-between gap-2">
                       <div><h3 className="text-sm font-bold text-slate-900">Beiträge</h3><p className="text-[11px] text-slate-500">Karten am Griff ziehen, um die Reihenfolge zu ändern.</p></div>
                       <span className="rounded-full bg-violet-100 px-2.5 py-1 text-[10px] font-bold text-violet-700">{posts.length} / 40</span>
@@ -241,8 +241,8 @@ export function TeacherModuleBuilderModal({ classInstanceId, schoolId, editModul
                     </div>
                   </div>
                 </section>
-                <section className="flex min-h-[320px] min-w-0 flex-col overflow-y-auto rounded-[16px] border border-slate-200 px-3.5 py-3 lg:min-h-0">
-                  <div className="flex shrink-0 items-center justify-between gap-2"><h3 className="text-sm font-bold text-slate-900">Beitrag bearbeiten</h3>{selected && <button type="button" onClick={() => { setPosts((items) => items.filter((item) => item.id !== selected.id)); setSelectedId(null); }} className="text-xs font-semibold text-rose-600 hover:text-rose-700">Beitrag entfernen</button>}</div>
+                <section className="drift-builder-canvas flex min-h-[320px] min-w-0 flex-col overflow-y-auto rounded-[24px] px-5 py-4 lg:min-h-0">
+                  <div className="flex shrink-0 items-center justify-between gap-2"><div><p className="text-[9px] font-extrabold uppercase tracking-[.2em] text-violet-600">DEINE CONTENT-KARTE</p><h3 className="mt-1 text-sm font-extrabold text-slate-900">Beitrag gestalten</h3></div>{selected && <button type="button" onClick={() => { setPosts((items) => items.filter((item) => item.id !== selected.id)); setSelectedId(null); }} className="text-xs font-semibold text-rose-600 hover:text-rose-700">Beitrag entfernen</button>}</div>
                   {selected ? (
                     <div className="mt-3 space-y-3">
                       <label className="block text-xs font-semibold text-slate-700">Überschrift
@@ -267,14 +267,14 @@ export function TeacherModuleBuilderModal({ classInstanceId, schoolId, editModul
                       {selected.postType === "poll" && <div className="rounded-xl border border-violet-200 bg-violet-50/60 p-3 space-y-3"><p className="text-xs font-bold text-violet-900">Antwortmöglichkeiten</p>{([0,1] as const).map(index=><label key={index} className="block text-xs font-semibold text-slate-700">Antwort {index+1}<input value={selected.interactionData.options[index]} onChange={event=>updatePost(selected.id,{interactionData:{...selected.interactionData,options:selected.interactionData.options.map((value,i)=>i===index?event.target.value:value) as [string,string]}})} maxLength={100} className="mt-1 w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm"/></label>)}<p className="text-[10px] text-slate-500">Schüler:innen stimmen ab. Nach der Abstimmung sehen sie die aktuelle Verteilung.</p></div>}
                       {selected.postType === "true_false" && <div className="rounded-xl border border-violet-200 bg-violet-50/60 p-3 space-y-3"><p className="text-xs font-bold text-violet-900">Richtige Antwort</p><div className="flex gap-2"><button type="button" onClick={()=>updatePost(selected.id,{interactionData:{...selected.interactionData,correctAnswer:"true"}})} className={"flex-1 rounded-lg border px-3 py-2 text-xs font-semibold "+(selected.interactionData.correctAnswer==="true"?"border-violet-500 bg-violet-100 text-violet-800":"border-slate-200 bg-white")}>Richtig</button><button type="button" onClick={()=>updatePost(selected.id,{interactionData:{...selected.interactionData,correctAnswer:"false"}})} className={"flex-1 rounded-lg border px-3 py-2 text-xs font-semibold "+(selected.interactionData.correctAnswer==="false"?"border-violet-500 bg-violet-100 text-violet-800":"border-slate-200 bg-white")}>Falsch</button></div><label className="block text-xs font-semibold text-slate-700">Erklärung nach der Antwort<textarea value={selected.interactionData.explanation??""} onChange={event=>updatePost(selected.id,{interactionData:{...selected.interactionData,explanation:event.target.value}})} rows={3} maxLength={1200} className="mt-1 w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm"/></label></div>}
                       {(selected.postType === "embed" || selected.postType === "mixed") && <label className="block text-xs font-semibold text-slate-700">YouTube- oder Vimeo-URL<input value={selected.embedUrl} onChange={(event) => updatePost(selected.id, { embedUrl: event.target.value })} placeholder="https://…" className="mt-1.5 w-full rounded-lg border border-slate-200 px-3 py-2 text-sm" /></label>}
-                      <div className="rounded-xl bg-slate-50 p-3"><p className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Vorschau</p><h4 className="mt-2 text-sm font-bold text-slate-900">{selected.title || "Dein Beitrag"}</h4><p className="mt-1 whitespace-pre-wrap text-xs leading-5 text-slate-600">{selected.body || "Dein Text erscheint hier in der Vorschau."}</p>{selected.embedUrl && (getEmbedPreviewUrl(selected.embedUrl) ? <div className="mt-3 overflow-hidden rounded-xl bg-slate-950"><div className="aspect-video"><iframe src={getEmbedPreviewUrl(selected.embedUrl)!} title="Video-Vorschau" className="h-full w-full" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" allowFullScreen referrerPolicy="strict-origin-when-cross-origin" /></div></div> : <p className="mt-2 text-xs text-amber-700">Bitte eine gültige YouTube- oder Vimeo-URL einfügen.</p>)}</div>
+                      <div className="drift-builder-preview overflow-hidden rounded-[20px] p-4"><div className="mb-3 flex items-center gap-2"><span className="drift-builder-preview-dot"/><p className="text-[10px] font-extrabold uppercase tracking-[.16em] text-violet-700">Live-Vorschau</p></div><h4 className="mt-2 text-sm font-bold text-slate-900">{selected.title || "Dein Beitrag"}</h4><p className="mt-1 whitespace-pre-wrap text-xs leading-5 text-slate-600">{selected.body || "Dein Text erscheint hier in der Vorschau."}</p>{selected.embedUrl && (getEmbedPreviewUrl(selected.embedUrl) ? <div className="mt-3 overflow-hidden rounded-xl bg-slate-950"><div className="aspect-video"><iframe src={getEmbedPreviewUrl(selected.embedUrl)!} title="Video-Vorschau" className="h-full w-full" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" allowFullScreen referrerPolicy="strict-origin-when-cross-origin" /></div></div> : <p className="mt-2 text-xs text-amber-700">Bitte eine gültige YouTube- oder Vimeo-URL einfügen.</p>)}</div>
                     </div>
                   ) : <div className="flex min-h-64 flex-1 items-center justify-center px-6 text-center text-xs text-slate-500">Wähle ein Thumbnail aus oder erstelle einen neuen Beitrag.</div>}
                 </section>
               </div>
               {error && <p role="alert" className="mt-4 rounded-xl bg-rose-50 px-4 py-3 text-xs text-rose-700">{error}</p>}
             </div>
-            <footer className="flex min-h-[56px] shrink-0 flex-wrap items-center justify-between gap-3 border-t border-slate-200 px-5 py-2.5 sm:px-[26px]">
+            <footer className="drift-builder-footer flex min-h-[64px] shrink-0 flex-wrap items-center justify-between gap-3 border-t border-violet-100 px-5 py-3 sm:px-8">
               <p className="text-[11px] text-slate-500">Veröffentlichung nur für diese Klasseninstanz.</p>
               <div className="flex gap-2"><button type="button" onClick={() => setOpen(false)} className="rounded-xl border border-slate-200 px-4 py-2 text-sm font-semibold text-slate-600 hover:bg-slate-50">Abbrechen</button><button type="button" onClick={publish} disabled={pending} className="inline-flex items-center gap-2 rounded-xl bg-violet-600 px-4 py-2 text-sm font-semibold text-white hover:bg-violet-700 disabled:opacity-50">{pending ? "Speichert …" : <><Save className="h-4 w-4" /> {moduleId ? "Änderungen speichern" : "Veröffentlichen"}</>}</button></div>
             </footer>
