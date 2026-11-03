@@ -265,8 +265,6 @@ export async function updateTeacherCreatedModule(formData: FormData) {
     }
     rows.push({ id: postId, module_id: moduleId, post_type: post.postType, title: String(post.title ?? "").slice(0,180), body: String(post.body ?? "").slice(0,12000), image_path: imagePath, interaction_data: post.interactionData ?? {}, embed_provider: embed?.provider ?? null, embed_url: embed?.url ?? null, sort_order: index, status: "published" });
   }
-  const introTitle = String(formData.get("introTitle") ?? "").trim().slice(0, 120);
-  const introText = String(formData.get("introText") ?? "").trim().slice(0, 1200);
   const visibilityScope = ["private", "school", "class"].includes(String(formData.get("visibilityScope"))) ? String(formData.get("visibilityScope")) : "class";
   const { error: updateModuleError } = await supabase.from("teacher_modules").update({ title, description, title_card_enabled: titleCardEnabled, visibility_scope: visibilityScope }).eq("id", moduleId);
   if (updateModuleError) throw new Error(updateModuleError.message);
