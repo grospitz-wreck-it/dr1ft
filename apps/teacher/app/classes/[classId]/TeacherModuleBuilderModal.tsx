@@ -25,6 +25,7 @@ export function TeacherModuleBuilderModal({ classInstanceId, schoolId, editModul
   const [description, setDescription] = useState("");
   const [introTitle, setIntroTitle] = useState("");
   const [introText, setIntroText] = useState("");
+  const [visibilityScope, setVisibilityScope] = useState<"private" | "school" | "class">("class");
   const [posts, setPosts] = useState<DraftPost[]>([]);
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [dragId, setDragId] = useState<string | null>(null);
@@ -50,7 +51,7 @@ export function TeacherModuleBuilderModal({ classInstanceId, schoolId, editModul
   }
   function reset() {
     setModuleId(null);
-    setTitle(""); setDescription(""); setIntroTitle(""); setIntroText("");
+    setTitle(""); setDescription(""); setIntroTitle(""); setIntroText(""); setVisibilityScope("class");
     setPosts([]); setSelectedId(null); setError(""); setImageEditorOpen(false);
   }
   function openEditor() {
@@ -146,6 +147,7 @@ export function TeacherModuleBuilderModal({ classInstanceId, schoolId, editModul
     form.set("description", description);
     form.set("introTitle", introTitle);
     form.set("introText", introText);
+    form.set("visibilityScope", visibilityScope);
     form.set("posts", JSON.stringify(posts.map((post, index) => ({
       id: post.id, postType: post.postType, title: post.title, body: post.body,
       embedUrl: post.embedUrl, sortOrder: index, imageField: imageFiles.has(post.id) ? "image_" + post.id : undefined,
@@ -190,6 +192,14 @@ export function TeacherModuleBuilderModal({ classInstanceId, schoolId, editModul
                   </label>
                   <label className="block text-xs font-semibold text-slate-700">Kurzbeschreibung
                     <textarea value={description} onChange={(event) => setDescription(event.target.value)} rows={3} maxLength={500} placeholder="Worum geht es in diesem Modul?" className="mt-1.5 w-full resize-y rounded-xl border border-slate-200 px-3 py-2.5 text-sm outline-none focus:border-violet-400 focus:ring-4 focus:ring-violet-100" />
+                  </label>
+                  <label className="block rounded-2xl border border-slate-200 p-3 text-xs font-semibold text-slate-700">Wer darf dieses Modul im Lehrkraftbereich sehen?
+                    <select value={visibilityScope} onChange={event => setVisibilityScope(event.target.value as "private" | "school" | "class")} className="mt-2 w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm font-medium">
+                      <option value="private">Nur für mich</option>
+                      <option value="school">Alle Lehrkräfte und Schuladmins meiner Schule</option>
+                      <option value="class">Nur diese Klasse</option>
+                    </select>
+                    <span className="mt-1 block font-normal text-slate-500">Aktivierte Module bleiben für die Schüler:innen der jeweiligen Klasse sichtbar.</span>
                   </label>
                   <details className="rounded-2xl border border-violet-200 bg-violet-50/50 p-3">
                     <summary className="cursor-pointer text-xs font-bold text-violet-800">Optionale Einleitungstafel für den Schüler-Feed</summary>
