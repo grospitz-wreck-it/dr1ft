@@ -76,7 +76,7 @@ export default async function ClassDetailPage({
 
     supabase
       .from("teacher_module_class_assignments")
-      .select("id,module_id,school_id,assigned_by,is_active,scheduled_start_at,scheduled_end_at,teacher_modules(id,title,description,intro_title,intro_text,status,teacher_module_posts(id,post_type,title,body,image_path,embed_provider,embed_url,sort_order,status))")
+      .select("id,module_id,school_id,assigned_by,is_active,scheduled_start_at,scheduled_end_at,teacher_modules(id,title,description,intro_title,intro_text,visibility_scope,status,teacher_module_posts(id,post_type,title,body,image_path,embed_provider,embed_url,sort_order,status))")
       .eq("class_instance_id", classId),
 
     supabase
