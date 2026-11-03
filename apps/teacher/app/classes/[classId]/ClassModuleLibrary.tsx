@@ -148,6 +148,10 @@ export function ClassModuleLibrary({
               <button type="button" onClick={() => setOpen(false)} aria-label="Schließen" className="rounded-xl p-2 text-slate-500 transition hover:bg-slate-100 hover:text-slate-900"><X className="h-5 w-5" /></button>
             </div>
             <div className="border-b border-slate-100 px-5 py-3 sm:px-7">
+              <div className="mb-3 inline-flex rounded-xl bg-slate-100 p-1">
+                <button type="button" onClick={() => setLibraryTab("dr1ft")} className={"rounded-lg px-3 py-2 text-xs font-semibold " + (libraryTab === "dr1ft" ? "bg-white text-violet-700 shadow-sm" : "text-slate-500")}>DR1FT-Szenarien</button>
+                <button type="button" onClick={() => setLibraryTab("own")} className={"rounded-lg px-3 py-2 text-xs font-semibold " + (libraryTab === "own" ? "bg-white text-violet-700 shadow-sm" : "text-slate-500")}>Eigene Szenarien</button>
+              </div>
               <label className="flex items-center gap-2 rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5">
                 <Search className="h-4 w-4 shrink-0 text-slate-400" />
                 <input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Module suchen …" className="w-full bg-transparent text-sm text-slate-900 outline-none placeholder:text-slate-400" />
