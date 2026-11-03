@@ -15,6 +15,8 @@ type Scenario = {
   age_rating: string;
 };
 
+type TeacherModule = { id: string; title: string; description: string | null; status: string };
+
 type Assignment = {
   scenario_id: string;
   is_active: boolean;
@@ -27,6 +29,7 @@ type Assignment = {
 export function ClassModuleLibrary({
   classId,
   schoolId,
+  teacherModules,
   scenarios,
   assignments,
   moduleStatus,
@@ -34,6 +37,7 @@ export function ClassModuleLibrary({
 }: {
   classId: string;
   schoolId: string | null;
+  teacherModules: TeacherModule[];
   scenarios: Scenario[];
   assignments: Assignment[];
   moduleStatus: "Abgeschlossen" | "In Bearbeitung" | "Noch nicht begonnen";
@@ -86,6 +90,22 @@ export function ClassModuleLibrary({
       </div>
 
       <div className="bg-slate-50/60 p-3 sm:p-4">
+        {teacherModules.length > 0 && (
+          <div className="mb-3 space-y-2">
+            {teacherModules.map((module) => (
+              <article key={module.id} className="rounded-xl border border-violet-200 bg-white px-4 py-3">
+                <div className="flex items-center justify-between gap-3">
+                  <div className="min-w-0">
+                    <p className="text-[10px] font-bold uppercase tracking-wider text-violet-600">Eigenes Modul · nur diese Klasse</p>
+                    <h3 className="mt-1 truncate text-sm font-bold text-slate-900">{module.title}</h3>
+                    {module.description && <p className="mt-1 line-clamp-2 text-xs text-slate-500">{module.description}</p>}
+                  </div>
+                  <span className="shrink-0 rounded-full bg-emerald-50 px-2.5 py-1 text-[10px] font-semibold text-emerald-700"><Check className="mr-1 inline h-3 w-3" />Veröffentlicht</span>
+                </div>
+              </article>
+            ))}
+          </div>
+        )}
         {assignments.length > 0 ? (
           <div className="space-y-3">
             {assignments.map((assignment) => {
