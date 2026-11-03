@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { BookOpen, Check, Plus, Search, X } from "lucide-react";
 import { toggleScenarioAssignment } from "../actions";
 import { ScenarioToggle } from "./ScenarioToggle";
+import { TeacherModuleBuilderModal } from "./TeacherModuleBuilderModal";
 
 type Scenario = {
   id: string;
@@ -25,12 +26,14 @@ type Assignment = {
 
 export function ClassModuleLibrary({
   classId,
+  schoolId,
   scenarios,
   assignments,
   moduleStatus,
   moduleReport,
 }: {
   classId: string;
+  schoolId: string | null;
   scenarios: Scenario[];
   assignments: Assignment[];
   moduleStatus: "Abgeschlossen" | "In Bearbeitung" | "Noch nicht begonnen";
@@ -74,9 +77,12 @@ export function ClassModuleLibrary({
           <h2 className="mt-1.5 text-lg font-semibold text-slate-950">Modul für diese Klasse</h2>
           <p className="mt-1 text-sm text-slate-500">Wähle ein Lernmodul aus der DR1FT-Bibliothek. Lernfortschritte bleiben auch beim Wechsel erhalten.</p>
         </div>
-        <button type="button" onClick={() => { setOpen(true); setError(""); }} className="inline-flex shrink-0 items-center gap-2 rounded-xl bg-violet-600 px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-violet-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-violet-400 focus-visible:ring-offset-2">
-          <Plus className="h-4 w-4" /> Modul wählen
-        </button>
+        <div className="flex flex-wrap items-center gap-2">
+          {schoolId && <TeacherModuleBuilderModal classInstanceId={classId} schoolId={schoolId} />}
+          <button type="button" onClick={() => { setOpen(true); setError(""); }} className="inline-flex shrink-0 items-center gap-2 rounded-xl bg-violet-600 px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-violet-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-violet-400 focus-visible:ring-offset-2">
+            <Plus className="h-4 w-4" /> Modul wählen
+          </button>
+        </div>
       </div>
 
       <div className="bg-slate-50/60 p-3 sm:p-4">
