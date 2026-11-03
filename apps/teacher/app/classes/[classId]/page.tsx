@@ -93,6 +93,7 @@ export default async function ClassDetailPage({
     { data: teacherModuleAssignments },
     { data: availableTeacherModules },
     { data: school },
+    { data: schoolMembership },
   ] = await Promise.all([
     withTimeout(supabase
       .from("class_instance_memberships")
@@ -139,22 +140,31 @@ export default async function ClassDetailPage({
         )
       : Promise.resolve({ data: null }),
 
+    user?.id && instance.school_id
+      ? withTimeout(
+          supabase
+            .from("school_memberships")
+            .select("role")
+            .eq("school_id", instance.school_id)
+            .eq("user_id", user.id)
+            .eq("active", true)
+            .maybeSingle(),
+          8000,
+          { data: null } as any,
+        )
+      : Promise.resolve({ data: null }),
+
   ]);
 
-  const user = session.session?.user ?? null;
-
-  const teacherMembership = user
-    ? await supabase
-        .from("class_instance_memberships")
-        .select("id")
-        .eq("class_instance_id", classId)
-        .eq("user_id", user.id)
-        .eq("role", "teacher")
-        .is("left_at", null)
-        .maybeSingle()
-    : { data: null };
-
-  const canEditClassImage = Boolean(teacherMembership.data);
+  const canEditClassImage = Boolean(
+    (roster ?? []).some(
+      (row: any) =>
+        row.user_id === user?.id &&
+        row.left_at == null &&
+        ["teacher", "school_admin"].includes(row.role),
+    ) ||
+    ["school_admin", "school_lead"].includes(schoolMembership?.role),
+  );
 
   let classImageUrl: string | null = null;
 
