@@ -54,6 +54,7 @@ export default async function ClassDetailPage({
     { data: availableTeacherModules },
     { data: school },
     { data: userResult },
+    { data: session },
   ] = await Promise.all([
     supabase
       .from("class_instance_memberships")
@@ -97,45 +98,61 @@ export default async function ClassDetailPage({
       : Promise.resolve({ data: null }),
 
     supabase.auth.getUser(),
+    supabase.auth.getSession(),
   ]);
 
   const user = userResult.user;
+  const accessToken = session.session?.access_token;
 
-  const teacherMembership = user
-    ? await supabase
-        .from("class_instance_memberships")
-        .select("id")
-        .eq("class_instance_id", classId)
-        .eq("user_id", user.id)
-        .eq("role", "teacher")
-        .is("left_at", null)
-        .maybeSingle()
-    : { data: null };
+  const dashboardPromise = (async () => {
+    if (!accessToken) return {};
+    try {
+      const response = await fetch(
+        `${process.env.NEXT_PUBLIC_SUPABASE_URL}/functions/v1/teacher-dashboard`,
+        {
+          method: "POST",
+          headers: {
+            Authorization: `Bearer ${accessToken}`,
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({ classId }),
+          cache: "no-store",
+        },
+      );
+      if (!response.ok) {
+        console.error("[class-page] teacher-dashboard returned", response.status, await response.text().catch(() => ""));
+        return {};
+      }
+      return await response.json().catch(() => ({}));
+    } catch (error) {
+      console.error("[class-page] teacher-dashboard failed", error);
+      return {};
+    }
+  })();
 
-  const { data: schoolMembership } = user && instance.school_id
-    ? await supabase
-        .from("school_memberships")
-        .select("role")
-        .eq("school_id", instance.school_id)
-        .eq("user_id", user.id)
-        .eq("active", true)
-        .maybeSingle()
-    : { data: null };
+  const [teacherMembership, schoolMembership] = await Promise.all([
+    user
+      ? supabase.from("class_instance_memberships").select("id")
+          .eq("class_instance_id", classId).eq("user_id", user.id)
+          .eq("role", "teacher").is("left_at", null).maybeSingle()
+      : Promise.resolve({ data: null }),
+    user && instance.school_id
+      ? supabase.from("school_memberships").select("role")
+          .eq("school_id", instance.school_id).eq("user_id", user.id)
+          .eq("active", true).maybeSingle()
+      : Promise.resolve({ data: null }),
+  ]);
 
   const canEditClassImage = Boolean(
     teacherMembership.data ||
-    ["school_admin", "school_lead"].includes(schoolMembership?.role),
+    ["school_admin", "school_lead"].includes(schoolMembership.data?.role),
   );
 
-  let classImageUrl: string | null = null;
-
-  if (canEditClassImage && instance.class_image_path) {
-    const { data } = await supabase.storage
-      .from("class-images")
-      .createSignedUrl(instance.class_image_path, 60 * 60);
-
-    classImageUrl = data?.signedUrl ?? null;
-  }
+  const classImagePromise = canEditClassImage && instance.class_image_path
+    ? supabase.storage.from("class-images")
+        .createSignedUrl(instance.class_image_path, 60 * 60)
+        .then(({ data }) => data?.signedUrl ?? null)
+    : Promise.resolve(null);
 
   const students = (roster ?? [])
     .filter((row: any) => row.role === "student")
@@ -150,26 +167,8 @@ export default async function ClassDetailPage({
   const activeAssignment = activeAssignments[0] ?? null;
   const reportingUnlocked = !activeAssignment?.show_reports_at_end || Boolean(activeAssignment?.scheduled_end_at && new Date(activeAssignment.scheduled_end_at).getTime() <= Date.now());
 
-  const { data: session } = await supabase.auth.getSession();
-
-  let dashboard: any = {};
-
-  if (session.session?.access_token) {
-    const dashboardRes = await fetch(
-      `${process.env.NEXT_PUBLIC_SUPABASE_URL}/functions/v1/teacher-dashboard`,
-      {
-        method: "POST",
-        headers: {
-          Authorization: `Bearer ${session.session.access_token}`,
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({ classId }),
-        cache: "no-store",
-      },
-    );
-
-    dashboard = await dashboardRes.json().catch(() => ({}));
-  }
+  const dashboard: any = await dashboardPromise;
+  const classImageUrl: string | null = await classImagePromise;
 
   const competencyRows = dashboard.studentCompetencyProgress ?? [];
   const missionRows = dashboard.studentMissionProgress ?? [];
@@ -257,7 +256,7 @@ export default async function ClassDetailPage({
     ? `${completed} von ${total} Mission-Abschlüssen über alle Schüler:innen · ${studentsWithCompletedModule} von ${studentsWithMissionData.length} Schüler:innen haben alle Missionen abgeschlossen`
     : "Noch keine auswertbaren Missionsfortschritte vorhanden.";
 
-  const availableTeacherModulesData = await Promise.all(
+const availableTeacherModulesPromise = Promise.all(
     (availableTeacherModules ?? []).map(async (module: any) => {
       const posts = await Promise.all(
         [...(module.teacher_module_posts ?? [])]
@@ -274,7 +273,7 @@ export default async function ClassDetailPage({
     }),
   );
 
-  const teacherModulesData = await Promise.all(
+const teacherModulesPromise = Promise.all(
     (teacherModuleAssignments ?? [])
       .filter((row: any) => row.teacher_modules?.status === "published")
       .map(async (row: any) => {
@@ -292,6 +291,9 @@ export default async function ClassDetailPage({
         return { id: row.id, module_id: row.module_id, school_id: row.school_id, assigned_by: row.assigned_by, is_active: row.is_active, scheduled_start_at: row.scheduled_start_at, scheduled_end_at: row.scheduled_end_at, title: row.teacher_modules.title, description: row.teacher_modules.description, introTitle: row.teacher_modules.intro_title, introText: row.teacher_modules.intro_text, visibility_scope: row.teacher_modules.visibility_scope, cover_image_url: posts.find((post: any) => post.imageUrl)?.imageUrl ?? null, posts };
       }),
   );
+
+  const [availableTeacherModulesData, teacherModulesData] = await Promise.all([availableTeacherModulesPromise, teacherModulesPromise]);
+  const classImageUrl: string | null = await classImagePromise;
 
   const schoolImageUrl = school?.school_image_path
     ? `${process.env.NEXT_PUBLIC_SUPABASE_URL}/storage/v1/object/public/school-images/${school.school_image_path}`
