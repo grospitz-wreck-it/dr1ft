@@ -82,7 +82,10 @@ export async function saveTeacherCreatedModule(formData: FormData) {
     isClassTeacher = !membershipError && Boolean(membership);
   }
 
-  if (!schoolMembership || (!isSchoolAdmin && !isClassTeacher)) {
+  // A class teacher may be assigned directly to a class instance even if
+  // no separate school_memberships row exists (legacy/imported memberships).
+  // School admins and school leads are authorized at school scope.
+  if (!isSchoolAdmin && !isClassTeacher) {
     throw new Error("Du hast keine Berechtigung, Inhalte für diese Klasse zu erstellen.");
   }
 
