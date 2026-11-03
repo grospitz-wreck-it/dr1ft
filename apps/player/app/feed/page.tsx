@@ -54,7 +54,7 @@ export default async function FeedPage() {
             embedProvider: post.embed_provider ?? null,
             embedUrl: post.embed_url ?? null,
             sortOrder: post.sort_order ?? 0,
-            interactionData: post.interaction_data ?? {},
+            interactionData: { options: Array.isArray(post.interaction_data?.options) ? post.interaction_data.options : ["Echt", "Fake"] },
           };
         }));
       return {
