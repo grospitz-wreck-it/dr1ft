@@ -223,7 +223,7 @@ export async function updateTeacherModuleSchedule(classInstanceId: string, assig
     .eq("user_id", user.id)
     .eq("active", true)
     .maybeSingle();
-  const isSchoolAdmin = schoolMembership?.role === "school_admin";
+  const isSchoolAdmin = ["school_admin", "school_lead"].includes(schoolMembership?.role ?? "");
   let isClassTeacher = false;
   if (!isSchoolAdmin) {
     const { data: membership } = await supabase
