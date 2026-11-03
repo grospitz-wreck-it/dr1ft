@@ -24,7 +24,7 @@ export function TeacherModuleBuilderModal({ classInstanceId, schoolId }: { class
   const [error, setError] = useState("");
   const [pending, startTransition] = useTransition();
   const router = useRouter();
-  const selected = posts.find((post) => post.id === selectedId) ?? null;
+  const selected = posts.find((post) => post.id === selectedId) ?? null;\n  function getEmbedPreviewUrl(raw: string) {\n    try {\n      const url = new URL(raw);\n      const host = url.hostname.toLowerCase().replace(/^www\\./, "");\n      if (["youtube.com", "m.youtube.com", "youtu.be"].includes(host)) {\n        const id = host === "youtu.be" ? url.pathname.split("/").filter(Boolean)[0] : url.searchParams.get("v") || url.pathname.split("/").filter(Boolean).pop();\n        return id && /^[a-zA-Z0-9_-]{6,20}$/.test(id) ? "https://www.youtube-nocookie.com/embed/" + id : null;\n      }\n      if (host === "vimeo.com" || host === "player.vimeo.com") {\n        const id = url.pathname.split("/").filter(Boolean).pop();\n        return id && /^\\d+$/.test(id) ? "https://player.vimeo.com/video/" + id : null;\n      }\n    } catch {}\n    return null;\n  }
 
   function reset() {
     setTitle(""); setDescription(""); setPosts([]); setSelectedId(null); setError("");
@@ -66,7 +66,7 @@ export function TeacherModuleBuilderModal({ classInstanceId, schoolId }: { class
       setError("Jeder Beitrag benötigt mindestens einen Inhalt.");
       return;
     }
-    const editedFiles = await Promise.all(posts.map(async post => post.imageFile ? [post.id, await processEditedImage(post.imageFile, post.imageSettings)] as const : null));\n    const imageFiles = new Map(editedFiles.filter((item): item is readonly [string, File] => item !== null));\n    const form = new FormData();
+    let editedFiles: (readonly [string, File] | null)[];\n    try { editedFiles = await Promise.all(posts.map(async post => post.imageFile ? [post.id, await processEditedImage(post.imageFile, post.imageSettings)] as const : null)); }\n    catch (cause) { setError(cause instanceof Error ? cause.message : "Bildbearbeitung fehlgeschlagen."); return; }\n    const imageFiles = new Map(editedFiles.filter((item): item is readonly [string, File] => item !== null));\n    const form = new FormData();
     form.set("classInstanceId", classInstanceId);
     form.set("schoolId", schoolId);
     form.set("title", title);
@@ -170,7 +170,7 @@ export function TeacherModuleBuilderModal({ classInstanceId, schoolId }: { class
                         </div>}
                       </>}
                       {(selected.postType === "embed" || selected.postType === "mixed") && <label className="block text-xs font-semibold text-slate-700">YouTube- oder Vimeo-URL<input value={selected.embedUrl} onChange={(event) => updatePost(selected.id, { embedUrl: event.target.value })} placeholder="https://…" className="mt-1.5 w-full rounded-lg border border-slate-200 px-3 py-2 text-sm" /></label>}
-                      <div className="rounded-xl bg-slate-50 p-3"><p className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Vorschau</p><h4 className="mt-2 text-sm font-bold text-slate-900">{selected.title || "Dein Beitrag"}</h4><p className="mt-1 whitespace-pre-wrap text-xs leading-5 text-slate-600">{selected.body || "Dein Text erscheint hier in der Vorschau."}</p>{selected.embedUrl && <p className="mt-2 truncate text-xs text-violet-600">{selected.embedUrl}</p>}</div>
+                      <div className="rounded-xl bg-slate-50 p-3"><p className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Vorschau</p><h4 className="mt-2 text-sm font-bold text-slate-900">{selected.title || "Dein Beitrag"}</h4><p className="mt-1 whitespace-pre-wrap text-xs leading-5 text-slate-600">{selected.body || "Dein Text erscheint hier in der Vorschau."}</p>{selected.embedUrl && (getEmbedPreviewUrl(selected.embedUrl) ? <div className="mt-3 overflow-hidden rounded-xl bg-slate-950"><div className="aspect-video"><iframe src={getEmbedPreviewUrl(selected.embedUrl)!} title="Video-Vorschau" className="h-full w-full" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" allowFullScreen referrerPolicy="strict-origin-when-cross-origin" /></div></div> : <p className="mt-2 text-xs text-amber-700">Bitte eine gültige YouTube- oder Vimeo-URL einfügen.</p>)}</div>
                     </div>
                   ) : <div className="flex min-h-64 items-center justify-center text-center text-xs text-slate-500">Wähle ein Thumbnail aus oder erstelle einen neuen Beitrag.</div>}
                 </section>
