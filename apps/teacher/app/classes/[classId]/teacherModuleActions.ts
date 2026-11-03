@@ -423,7 +423,7 @@ export async function assignExistingTeacherModule(classInstanceId: string, modul
   const authorized = schoolMember?.role === "school_admin" || classMember?.role === "teacher" || (module.created_by === user.id && module.visibility_scope !== "school");
   if (!authorized) throw new Error("Du darfst dieses Modul dieser Klasse nicht zuweisen.");
   const { error } = await supabase.from("teacher_module_class_assignments").upsert({
-    module_id: moduleId, school_id: targetClass.school_id, class_instance_id: classInstanceId, assigned_by: user.id, is_active: true,
+    module_id: moduleId, school_id: targetClass.school_id, class_instance_id: classInstanceId, assigned_by: user.id, is_active: true, archived_at: null,
   }, { onConflict: "module_id,class_instance_id" });
   if (error) throw new Error(error.message);
   revalidatePath(`/classes/${classInstanceId}`);
