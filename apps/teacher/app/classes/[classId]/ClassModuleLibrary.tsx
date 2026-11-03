@@ -2,7 +2,7 @@
 
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { BookOpen, CalendarClock, Check, Image as ImageIcon, Plus, Search, Trash2, X } from "lucide-react";
+import { BookOpen, CalendarClock, Check, Image as ImageIcon, Pencil, Plus, Search, Trash2, X } from "lucide-react";
 import { toggleScenarioAssignment } from "../actions";
 import { ScenarioToggle } from "./ScenarioToggle";
 import { TeacherModuleBuilderModal } from "./TeacherModuleBuilderModal";
@@ -16,7 +16,7 @@ type Scenario = {
   age_rating: string;
 };
 
-type TeacherModule = { id: string; module_id: string; school_id: string; assigned_by: string; is_active: boolean; title: string; description: string | null; cover_image_url: string | null; scheduled_start_at: string | null; scheduled_end_at: string | null };
+type TeacherModule = { id: string; module_id: string; school_id: string; assigned_by: string; is_active: boolean; title: string; description: string | null; cover_image_url: string | null; scheduled_start_at: string | null; scheduled_end_at: string | null; posts: Array<{ id: string; postType: "text" | "image" | "embed" | "mixed"; title: string; body: string; embedUrl: string; imageUrl: string | null }> };
 
 type Assignment = {
   scenario_id: string;
@@ -94,7 +94,7 @@ export function ClassModuleLibrary({
         {teacherModules.length > 0 && (
           <div className="mb-3 space-y-2">
             {teacherModules.map((module) => (
-              <TeacherModuleCard key={module.id} classId={classId} module={module} onError={setError} />
+              <TeacherModuleCard key={module.id} classId={classId} schoolId={schoolId ?? ""} module={module} onError={setError} />
             ))}
           </div>
         )}
@@ -252,7 +252,7 @@ function TeacherModuleCard({ classId, module, onError }: {
           <p className="mt-1 line-clamp-2 text-xs leading-4 text-slate-600">{module.description?.trim() || "Für dieses Modul liegt noch keine Kurzbeschreibung vor."}</p>
         </div>
         <div className="flex shrink-0 flex-col items-center gap-1.5">
-          <button type="button" role="switch" aria-checked={active} aria-label={active ? module.title + " deaktivieren" : module.title + " aktivieren"} onClick={() => setStatus(!active)} disabled={pending} className={"relative inline-flex h-6 w-11 items-center rounded-full transition-colors disabled:opacity-50 " + (active ? "bg-violet-600" : "bg-slate-300")}>
+          <TeacherModuleBuilderModal classInstanceId={classId} schoolId={schoolId} editModule={{ id: module.module_id, title: module.title, description: module.description ?? "", posts: module.posts }} triggerLabel="Bearbeiten" />\n          <button type="button" role="switch" aria-checked={active} aria-label={active ? module.title + " deaktivieren" : module.title + " aktivieren"} onClick={() => setStatus(!active)} disabled={pending} className={"relative inline-flex h-6 w-11 items-center rounded-full transition-colors disabled:opacity-50 " + (active ? "bg-violet-600" : "bg-slate-300")}>
             <span className={"inline-block h-4 w-4 rounded-full bg-white shadow transition-transform " + (active ? "translate-x-6" : "translate-x-1")} />
           </button>
           <span className="text-[9px] text-slate-400">{pending ? "…" : active ? "Aktiv" : "Inaktiv"}</span>
