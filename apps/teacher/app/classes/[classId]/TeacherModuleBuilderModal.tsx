@@ -192,9 +192,9 @@ export function TeacherModuleBuilderModal({ classInstanceId, schoolId, editModul
               </div>
               <button type="button" onClick={() => setOpen(false)} aria-label="Schließen" className="rounded-xl p-2 text-slate-500 hover:bg-slate-100"><X className="h-5 w-5" /></button>
             </header>
-            <div className="min-h-0 flex-1 overflow-hidden p-4 sm:px-[22px] sm:py-4">
-              <div className="grid h-full min-h-0 gap-[18px] lg:grid-cols-[minmax(0,383px)_minmax(0,1fr)]">
-                <section className="min-h-0 space-y-2.5 overflow-y-auto pr-0.5">
+            <div className="min-h-0 flex-1 overflow-y-auto p-4 sm:px-[22px] sm:py-4 lg:overflow-hidden">
+              <div className="grid h-auto min-h-full gap-[18px] lg:h-full lg:min-h-0 lg:grid-cols-[minmax(0,383px)_minmax(0,1fr)]">
+                <section className="space-y-2.5 pr-0.5 lg:min-h-0 lg:overflow-y-auto">
                   <label className="block text-xs font-semibold text-slate-700">Modultitel
                     <input value={title} onChange={(event) => setTitle(event.target.value)} maxLength={120} placeholder="z. B. KI im Alltag" className="mt-1.5 w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm outline-none transition focus:border-violet-400 focus:ring-4 focus:ring-violet-100" />
                   </label>
@@ -241,7 +241,7 @@ export function TeacherModuleBuilderModal({ classInstanceId, schoolId, editModul
                     </div>
                   </div>
                 </section>
-                <section className="flex min-h-0 min-w-0 flex-col overflow-y-auto rounded-[16px] border border-slate-200 px-3.5 py-3">
+                <section className="flex min-h-[320px] min-w-0 flex-col overflow-y-auto rounded-[16px] border border-slate-200 px-3.5 py-3 lg:min-h-0">
                   <div className="flex shrink-0 items-center justify-between gap-2"><h3 className="text-sm font-bold text-slate-900">Beitrag bearbeiten</h3>{selected && <button type="button" onClick={() => { setPosts((items) => items.filter((item) => item.id !== selected.id)); setSelectedId(null); }} className="text-xs font-semibold text-rose-600 hover:text-rose-700">Beitrag entfernen</button>}</div>
                   {selected ? (
                     <div className="mt-3 space-y-3">
