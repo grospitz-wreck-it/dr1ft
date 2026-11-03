@@ -69,7 +69,7 @@ export function TeacherModuleBuilderModal({ classInstanceId, schoolId, editModul
         title: post.title ?? "",
         body: post.body ?? "",
         embedUrl: post.embedUrl ?? "",
-        interactionData: post.interactionData ?? { options: ["Echt", "Fake"] },
+        interactionData: post.interactionData ?? { options: ["Echt", "Fake"] as [string, string] },
         imageFile: null,
         existingImageUrl: post.imageUrl,
         imageSettings: { brightness: 100, contrast: 100, saturation: 100, grayscale: 0, zoom: 1, x: 50, y: 50 },
