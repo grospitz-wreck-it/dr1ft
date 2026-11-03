@@ -106,10 +106,12 @@ export default async function ClassDetailPage({
     supabase.auth.getUser(),
   ]), 12000, [
     { data: null }, { data: null }, { data: null }, { data: null },
-    { data: null }, { data: null }, { data: null, user: null },
+    { data: null }, { data: null }, { data: { user: null } },
   ] as any);
 
-  const user = userResult.user;
+  // Supabase auth.getUser() returns the user inside data.user. The Promise.all
+  // timeout fallback must preserve that response shape as well.
+  const user = userResult?.user ?? null;
 
   const teacherMembership = user
     ? await withTimeout(supabase
