@@ -114,11 +114,10 @@ export async function saveTeacherCreatedModule(formData: FormData) {
     const file = post.imageField ? formData.get(post.imageField) : null;
     let imagePath: string | null = null;
     if (file instanceof File && file.size > 0) {
-      if (!["image/jpeg", "image/png", "image/webp", "image/gif"].includes(file.type) || file.size > 10 * 1024 * 1024) {
-        throw new Error("Bilder müssen JPG, PNG, WebP oder GIF sein und dürfen maximal 10 MB groß sein.");
+      if (file.type !== "image/webp" || file.size > 8 * 1024 * 1024) {
+        throw new Error("Bilder müssen vor dem Upload in WebP umgewandelt werden und dürfen maximal 8 MB groß sein.");
       }
-      const ext = file.type === "image/jpeg" ? "jpg" : file.type.split("/")[1];
-      imagePath = `${schoolId}/${module.id}/${postId}.${ext}`;
+      imagePath = `${schoolId}/${module.id}/${postId}.webp`;
       const { error: uploadError } = await supabase.storage.from("teacher-module-assets").upload(imagePath, file, { contentType: file.type, upsert: true });
       if (uploadError) throw new Error(uploadError.message);
     }
@@ -204,9 +203,8 @@ export async function updateTeacherCreatedModule(formData: FormData) {
     const file = post.imageField ? formData.get(post.imageField) : null;
     let imagePath: string | null = isExisting ? (currentById.get(post.id) as any).image_path : null;
     if (file instanceof File && file.size > 0) {
-      if (!["image/jpeg","image/png","image/webp","image/gif"].includes(file.type) || file.size > 10*1024*1024) throw new Error("Bilder müssen JPG, PNG, WebP oder GIF sein und dürfen maximal 10 MB groß sein.");
-      const ext = file.type === "image/jpeg" ? "jpg" : file.type.split("/")[1];
-      imagePath = `${schoolId}/${moduleId}/${postId}.${ext}`;
+      if (file.type !== "image/webp" || file.size > 8 * 1024 * 1024) throw new Error("Bilder müssen vor dem Upload in WebP umgewandelt werden und dürfen maximal 8 MB groß sein.");
+      imagePath = `${schoolId}/${moduleId}/${postId}.webp`;
       const { error: uploadError } = await supabase.storage.from("teacher-module-assets").upload(imagePath, file, { contentType: file.type, upsert: true });
       if (uploadError) throw new Error(uploadError.message);
     }
