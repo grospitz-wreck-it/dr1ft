@@ -27,7 +27,7 @@ export default async function FeedPage() {
   // content_items. Load only active assignments for this learner's class.
   const { data: teacherModuleAssignments } = await supabase
     .from("teacher_module_class_assignments")
-    .select("id,module_id,scheduled_start_at,scheduled_end_at,teacher_modules(id,title,description,status,teacher_module_posts(id,post_type,title,body,image_path,embed_provider,embed_url,sort_order,status))")
+    .select("id,module_id,scheduled_start_at,scheduled_end_at,teacher_modules(id,title,description,intro_title,intro_text,status,teacher_module_posts(id,post_type,title,body,image_path,embed_provider,embed_url,sort_order,status))")
     .eq("class_instance_id", classInstanceId)
     .eq("is_active", true);
   const availableTeacherModules = await Promise.all((teacherModuleAssignments ?? [])
