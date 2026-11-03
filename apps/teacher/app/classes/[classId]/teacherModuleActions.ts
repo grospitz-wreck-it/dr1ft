@@ -157,6 +157,72 @@ export async function saveTeacherCreatedModule(formData: FormData) {
 }
 
 
+export async function updateTeacherCreatedModule(formData: FormData) {
+  const supabase = supabaseServerClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) throw new Error("Nicht authentifiziert.");
+  const moduleId = String(formData.get("moduleId") ?? "");
+  const classInstanceId = String(formData.get("classInstanceId") ?? "");
+  const schoolId = String(formData.get("schoolId") ?? "");
+  const title = String(formData.get("title") ?? "").trim();
+  const description = String(formData.get("description") ?? "").trim();
+  let posts: PostInput[];
+  try { posts = JSON.parse(String(formData.get("posts") ?? "[]")); }
+  catch { throw new Error("Die Beitragsdaten sind ungültig."); }
+  if (!moduleId || !classInstanceId || !schoolId) throw new Error("Modul- oder Klassenzuordnung fehlt.");
+  if (!title || title.length > 120) throw new Error("Bitte einen Modultitel mit maximal 120 Zeichen angeben.");
+  if (!Array.isArray(posts) || posts.length < 1 || posts.length > 40) throw new Error("Ein Modul benötigt mindestens einen und höchstens 40 Beiträge.");
+
+  const { data: module, error: moduleError } = await supabase.from("teacher_modules")
+    .select("id,school_id,created_by")
+    .eq("id", moduleId).eq("school_id", schoolId).maybeSingle();
+  if (moduleError || !module) throw new Error("Das Modul wurde nicht gefunden.");
+  if (module.created_by !== user.id) throw new Error("Nur die erstellende Lehrkraft kann dieses Modul bearbeiten.");
+
+  const { data: classInstance } = await supabase.from("class_instances").select("id,school_id").eq("id", classInstanceId).maybeSingle();
+  if (!classInstance || classInstance.school_id !== schoolId) throw new Error("Die Klasse gehört nicht zu dieser Schule.");
+  const { data: admin } = await supabase.from("school_memberships").select("role").eq("school_id", schoolId).eq("user_id", user.id).eq("active", true).maybeSingle();
+  const { data: teacher } = await supabase.from("class_instance_memberships").select("id").eq("class_instance_id", classInstanceId).eq("user_id", user.id).eq("role", "teacher").is("left_at", null).maybeSingle();
+  if (admin?.role !== "school_admin" && !teacher) throw new Error("Du darfst dieses Modul nicht bearbeiten.");
+
+  const { data: currentPosts, error: currentError } = await supabase.from("teacher_module_posts")
+    .select("id,image_path").eq("module_id", moduleId);
+  if (currentError) throw new Error(currentError.message);
+  const currentById = new Map((currentPosts ?? []).map((post: any) => [post.id, post]));
+  const keepIds = new Set<string>();
+  const rows = [];
+  for (let index = 0; index < posts.length; index++) {
+    const post = posts[index];
+    if (!post.id || !["text","image","embed","mixed"].includes(post.postType)) throw new Error("Ungültiger Beitrag.");
+    const isExisting = currentById.has(post.id);
+    const postId = isExisting ? post.id : crypto.randomUUID();
+    keepIds.add(postId);
+    const embed = post.embedUrl ? validateEmbed(post.embedUrl) : null;
+    const file = post.imageField ? formData.get(post.imageField) : null;
+    let imagePath: string | null = isExisting ? (currentById.get(post.id) as any).image_path : null;
+    if (file instanceof File && file.size > 0) {
+      if (!["image/jpeg","image/png","image/webp","image/gif"].includes(file.type) || file.size > 10*1024*1024) throw new Error("Bilder müssen JPG, PNG, WebP oder GIF sein und dürfen maximal 10 MB groß sein.");
+      const ext = file.type === "image/jpeg" ? "jpg" : file.type.split("/")[1];
+      imagePath = `${schoolId}/${moduleId}/${postId}.${ext}`;
+      const { error: uploadError } = await supabase.storage.from("teacher-module-assets").upload(imagePath, file, { contentType: file.type, upsert: true });
+      if (uploadError) throw new Error(uploadError.message);
+    }
+    rows.push({ id: postId, module_id: moduleId, post_type: post.postType, title: String(post.title ?? "").slice(0,180), body: String(post.body ?? "").slice(0,12000), image_path: imagePath, embed_provider: embed?.provider ?? null, embed_url: embed?.url ?? null, sort_order: index, status: "published" });
+  }
+  const { error: updateModuleError } = await supabase.from("teacher_modules").update({ title, description }).eq("id", moduleId);
+  if (updateModuleError) throw new Error(updateModuleError.message);
+  const removedIds = (currentPosts ?? []).filter((post: any) => !keepIds.has(post.id)).map((post: any) => post.id);
+  if (removedIds.length) {
+    const { error } = await supabase.from("teacher_module_posts").delete().in("id", removedIds).eq("module_id", moduleId);
+    if (error) throw new Error(error.message);
+  }
+  const { error: postsError } = await supabase.from("teacher_module_posts").upsert(rows, { onConflict: "id" });
+  if (postsError) throw new Error(postsError.message);
+  revalidatePath(`/classes/${classInstanceId}`);
+  return { moduleId };
+}
+
+
 export async function setTeacherModuleAssignmentActive(classInstanceId: string, assignmentId: string, active: boolean) {
   const supabase = supabaseServerClient();
   const { data: { user } } = await supabase.auth.getUser();
