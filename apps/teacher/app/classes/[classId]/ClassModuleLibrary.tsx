@@ -186,8 +186,9 @@ export function ClassModuleLibrary({
 }
 
 
-function TeacherModuleCard({ classId, module, onError }: {
+function TeacherModuleCard({ classId, schoolId, module, onError }: {
   classId: string;
+  schoolId: string;
   module: TeacherModule;
   onError: (message: string) => void;
 }) {
