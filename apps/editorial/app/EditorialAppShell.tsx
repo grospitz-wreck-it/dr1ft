@@ -5,7 +5,7 @@ import { usePathname } from "next/navigation";
 import { EditorialSidebar } from "./EditorialSidebar";
 
 const PUBLIC_PATHS = ["/login", "/forgot-password", "/reset-password"];
-
+  const pathname = (usePathname() ?? "/").split("?")[0].replace(/\/+$/, "") || "/";
 export function EditorialAppShell({ children }: { children: ReactNode }) {
   const pathname = (usePathname() ?? "/").split("?")[0].replace(/\\/+$/, "") || "/";
   const isPublicAuthPage = PUBLIC_PATHS.some(
