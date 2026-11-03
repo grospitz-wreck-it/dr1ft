@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState, useTransition } from "react";
+import { useEffect, useMemo, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { ArrowDown, ArrowUp, Check, GripVertical, ImagePlus, Link2, Plus, Save, Type, X, Wand2, RotateCcw, SlidersHorizontal } from "lucide-react";
 import { saveTeacherCreatedModule, updateTeacherCreatedModule } from "./teacherModuleActions";
@@ -18,7 +18,7 @@ type DraftPost = {
 
 type EditableModule = { id: string; title: string; description: string; introTitle?: string | null; introText?: string | null; visibilityScope?: "private" | "school" | "class"; posts: Array<{ id: string; postType: DraftPost["postType"]; title: string; body: string; embedUrl: string; imageUrl: string | null }> };
 
-export function TeacherModuleBuilderModal({ classInstanceId, schoolId, editModule, triggerLabel = "Eigenes Modul erstellen" }: { classInstanceId: string; schoolId: string; editModule?: EditableModule; triggerLabel?: string }) {
+export function TeacherModuleBuilderModal({ classInstanceId, schoolId, editModule, triggerLabel = "Eigenes Modul erstellen", autoOpen = false }: { classInstanceId: string; schoolId: string; editModule?: EditableModule; triggerLabel?: string; autoOpen?: boolean }) {
   const [open, setOpen] = useState(false);
   const [moduleId, setModuleId] = useState<string | null>(null);
   const [title, setTitle] = useState("");
@@ -81,6 +81,11 @@ export function TeacherModuleBuilderModal({ classInstanceId, schoolId, editModul
     }
     setOpen(true);
   }
+  useEffect(() => {
+    if (autoOpen && editModule) openEditor();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [autoOpen, editModule?.id]);
+
   function addPost(type: DraftPost["postType"]) {
     const post: DraftPost = { id: crypto.randomUUID(), postType: type, title: "", body: "", embedUrl: "", imageFile: null, imageSettings: { brightness: 100, contrast: 100, saturation: 100, grayscale: 0, zoom: 1, x: 50, y: 50 } };
     setPosts((items) => [...items, post]);
