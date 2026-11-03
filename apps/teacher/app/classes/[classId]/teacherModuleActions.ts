@@ -96,7 +96,6 @@ export async function saveTeacherCreatedModule(formData: FormData) {
   const description = String(formData.get("description") ?? "").trim();
   const titleCardEnabled = formData.get("titleCardEnabled") !== "false";
   const visibilityScope = ["private", "school", "class"].includes(String(formData.get("visibilityScope"))) ? String(formData.get("visibilityScope")) : "class";
-    const titleCardEnabled = formData.get("titleCardEnabled") !== "false";
   const postsRaw = String(formData.get("posts") ?? "[]");
   if (!classInstanceId || !schoolId) throw new Error("Klassen- oder Schulzuordnung fehlt.");
   if (!title || title.length > 120) throw new Error("Bitte einen Modultitel mit maximal 120 Zeichen angeben.");
