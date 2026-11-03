@@ -90,7 +90,7 @@ export async function POST(request: NextRequest, { params }: Context) {
     const { error } = await auth.supabase.from("school_sso_connections").upsert({
       school_id: params.schoolId,
       provider: PROVIDER,
-      issuer_url: issuerUrl,
+      issuer_url: parsed.toString(),
       client_id: clientId,
       ...(encrypted ?? {}),
       ...(existing && !encrypted ? { secret_ciphertext: existing.secret_ciphertext, secret_iv: existing.secret_iv } : {}),
