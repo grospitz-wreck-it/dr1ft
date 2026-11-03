@@ -43,7 +43,6 @@ export async function saveTeacherCreatedModule(formData: FormData) {
   const visibilityScope = ["private", "school", "class"].includes(String(formData.get("visibilityScope"))) ? String(formData.get("visibilityScope")) : "class";
     const introTitle = String(formData.get("introTitle") ?? "").trim().slice(0, 120);
   const introText = String(formData.get("introText") ?? "").trim().slice(0, 1200);
-  const visibilityScope = ["private", "school", "class"].includes(String(formData.get("visibilityScope"))) ? String(formData.get("visibilityScope")) : "class";
   const postsRaw = String(formData.get("posts") ?? "[]");
   if (!classInstanceId || !schoolId) throw new Error("Klassen- oder Schulzuordnung fehlt.");
   if (!title || title.length > 120) throw new Error("Bitte einen Modultitel mit maximal 120 Zeichen angeben.");
@@ -215,6 +214,7 @@ export async function updateTeacherCreatedModule(formData: FormData) {
   }
   const introTitle = String(formData.get("introTitle") ?? "").trim().slice(0, 120);
   const introText = String(formData.get("introText") ?? "").trim().slice(0, 1200);
+  const visibilityScope = ["private", "school", "class"].includes(String(formData.get("visibilityScope"))) ? String(formData.get("visibilityScope")) : "class";
   const { error: updateModuleError } = await supabase.from("teacher_modules").update({ title, description, intro_title: introTitle || null, intro_text: introText || null, visibility_scope: visibilityScope }).eq("id", moduleId);
   if (updateModuleError) throw new Error(updateModuleError.message);
   const removedIds = (currentPosts ?? []).filter((post: any) => !keepIds.has(post.id)).map((post: any) => post.id);
