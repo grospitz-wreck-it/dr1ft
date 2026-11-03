@@ -42,14 +42,14 @@ begin
     where sm.school_id = v_school_id
       and sm.user_id = auth.uid()
       and sm.active = true
-      and sm.role in ('school_admin', 'school_lead')
+      and sm.role in ('school_admin')
   ) or exists (
     select 1
     from public.class_instance_memberships cim
     where cim.class_instance_id = p_instance_id
       and cim.user_id = auth.uid()
       and cim.left_at is null
-      and cim.role in ('teacher', 'school_admin', 'school_lead')
+      and cim.role in ('teacher', 'school_admin')
   )
   into v_authorized;
 
@@ -96,7 +96,7 @@ using (
       where sm.school_id = teacher_modules.school_id
         and sm.user_id = auth.uid()
         and sm.active = true
-        and sm.role in ('teacher', 'school_admin', 'school_lead')
+        and sm.role in ('teacher', 'school_admin')
     )
     or exists (
       select 1
@@ -105,7 +105,7 @@ using (
       where ci.school_id = teacher_modules.school_id
         and cim.user_id = auth.uid()
         and cim.left_at is null
-        and cim.role in ('teacher', 'school_admin', 'school_lead')
+        and cim.role in ('teacher', 'school_admin')
     )
   )
 )
@@ -118,7 +118,7 @@ with check (
       where sm.school_id = teacher_modules.school_id
         and sm.user_id = auth.uid()
         and sm.active = true
-        and sm.role in ('teacher', 'school_admin', 'school_lead')
+        and sm.role in ('teacher', 'school_admin')
     )
     or exists (
       select 1
@@ -127,7 +127,7 @@ with check (
       where ci.school_id = teacher_modules.school_id
         and cim.user_id = auth.uid()
         and cim.left_at is null
-        and cim.role in ('teacher', 'school_admin', 'school_lead')
+        and cim.role in ('teacher', 'school_admin')
     )
   )
 );
@@ -169,7 +169,7 @@ using (
     where ci.id = class_instance_scenario_assignments.class_instance_id
       and sm.user_id = auth.uid()
       and sm.active = true
-      and sm.role in ('school_admin', 'school_lead')
+      and sm.role in ('school_admin')
   )
 )
 with check (
@@ -180,6 +180,6 @@ with check (
     where ci.id = class_instance_scenario_assignments.class_instance_id
       and sm.user_id = auth.uid()
       and sm.active = true
-      and sm.role in ('school_admin', 'school_lead')
+      and sm.role in ('school_admin')
   )
 );
