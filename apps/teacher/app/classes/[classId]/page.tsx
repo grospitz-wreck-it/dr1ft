@@ -88,11 +88,11 @@ export default async function ClassDetailPage({
       .is("archived_at", null)),
     timed("teacher-module-assignments", supabase
       .from("teacher_module_class_assignments")
-      .select("id,module_id,school_id,assigned_by,is_active,scheduled_start_at,scheduled_end_at,teacher_modules(id,title,description,intro_title,intro_text,visibility_scope,status,teacher_module_posts(id,post_type,title,body,image_path,embed_provider,embed_url,sort_order,status))")
+      .select("id,module_id,school_id,assigned_by,is_active,scheduled_start_at,scheduled_end_at,teacher_modules(id,title,description,intro_title,intro_text,visibility_scope,status)")
       .eq("class_instance_id", classId)),
     timed("available-teacher-modules", supabase
       .from("teacher_modules")
-      .select("id,title,description,visibility_scope,created_by,teacher_module_posts(id,post_type,title,body,image_path,embed_provider,embed_url,sort_order,status)")
+      .select("id,title,description,visibility_scope,created_by")
       .eq("school_id", instance.school_id)
       .eq("status", "published")
       .order("updated_at", { ascending: false })),
@@ -170,44 +170,39 @@ export default async function ClassDetailPage({
     : Promise.resolve(null);
 
 const moduleAssetsStartedAt = Date.now();
-const availableTeacherModulesPromise = Promise.all(
-    (availableTeacherModules ?? []).map(async (module: any) => {
-      const posts = await Promise.all(
-        [...(module.teacher_module_posts ?? [])]
-          .filter((post: any) => post.status === "published")
-          .sort((a: any, b: any) => Number(a.sort_order ?? 0) - Number(b.sort_order ?? 0))
-          .map(async (post: any) => {
-            const { data: imageData } = post.image_path
-              ? await supabase.storage.from("teacher-module-assets").createSignedUrl(post.image_path, 60 * 60)
-              : { data: null };
-            return { id: post.id, postType: post.post_type, title: post.title ?? "", body: post.body ?? "", embedUrl: post.embed_url ?? "", imageUrl: imageData?.signedUrl ?? null };
-          }),
-      );
-      return { id: module.id, module_id: module.id, title: module.title, description: module.description ?? "", visibility_scope: module.visibility_scope, posts };
-    }),
-  );
 
-const teacherModulesPromise = Promise.all(
-    (teacherModuleAssignments ?? [])
-      .filter((row: any) => row.teacher_modules?.status === "published")
-      .map(async (row: any) => {
-        const posts = await Promise.all(
-          [...(row.teacher_modules.teacher_module_posts ?? [])]
-            .filter((post: any) => post.status === "published")
-            .sort((a: any, b: any) => Number(a.sort_order ?? 0) - Number(b.sort_order ?? 0))
-            .map(async (post: any) => {
-              const { data: imageData } = post.image_path
-                ? await supabase.storage.from("teacher-module-assets").createSignedUrl(post.image_path, 60 * 60)
-                : { data: null };
-              return { id: post.id, postType: post.post_type, title: post.title ?? "", body: post.body ?? "", embedUrl: post.embed_url ?? "", imageUrl: imageData?.signedUrl ?? null };
-            }),
-        );
-        return { id: row.id, module_id: row.module_id, school_id: row.school_id, assigned_by: row.assigned_by, is_active: row.is_active, scheduled_start_at: row.scheduled_start_at, scheduled_end_at: row.scheduled_end_at, title: row.teacher_modules.title, description: row.teacher_modules.description, introTitle: row.teacher_modules.intro_title, introText: row.teacher_modules.intro_text, visibility_scope: row.teacher_modules.visibility_scope, cover_image_url: posts.find((post: any) => post.imageUrl)?.imageUrl ?? null, posts };
-      }),
-  );
+// Keep the class page lightweight: module metadata is enough for the initial
+// view. Full posts and signed image URLs are loaded only when a teacher edits
+// a module (see getTeacherModulePosts in teacherModuleActions.ts).
+const availableTeacherModulesData = (availableTeacherModules ?? []).map((module: any) => ({
+  id: module.id,
+  module_id: module.id,
+  title: module.title,
+  description: module.description ?? "",
+  visibility_scope: module.visibility_scope,
+  posts: [],
+}));
 
-  const [availableTeacherModulesData, teacherModulesData] = await Promise.all([availableTeacherModulesPromise, teacherModulesPromise]);
-  console.info("[class-page-timing] module-assets", Date.now() - moduleAssetsStartedAt, "ms");
+const teacherModulesData = (teacherModuleAssignments ?? [])
+  .filter((row: any) => row.teacher_modules?.status === "published")
+  .map((row: any) => ({
+    id: row.id,
+    module_id: row.module_id,
+    school_id: row.school_id,
+    assigned_by: row.assigned_by,
+    is_active: row.is_active,
+    scheduled_start_at: row.scheduled_start_at,
+    scheduled_end_at: row.scheduled_end_at,
+    title: row.teacher_modules.title,
+    description: row.teacher_modules.description,
+    introTitle: row.teacher_modules.intro_title,
+    introText: row.teacher_modules.intro_text,
+    visibility_scope: row.teacher_modules.visibility_scope,
+    cover_image_url: null,
+    posts: [],
+  }));
+
+console.info("[class-page-timing] module-metadata", Date.now() - moduleAssetsStartedAt, "ms");
 
   const students = (roster ?? [])
     .filter((row: any) => row.role === "student")
