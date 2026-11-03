@@ -16,7 +16,7 @@ type DraftPost = {
   imageSettings: { brightness: number; contrast: number; saturation: number; grayscale: number; zoom: number; x: number; y: number };
 };
 
-type EditableModule = { id: string; title: string; description: string; introTitle?: string | null; introText?: string | null; posts: Array<{ id: string; postType: DraftPost["postType"]; title: string; body: string; embedUrl: string; imageUrl: string | null }> };
+type EditableModule = { id: string; title: string; description: string; introTitle?: string | null; introText?: string | null; visibilityScope?: "private" | "school" | "class"; posts: Array<{ id: string; postType: DraftPost["postType"]; title: string; body: string; embedUrl: string; imageUrl: string | null }> };
 
 export function TeacherModuleBuilderModal({ classInstanceId, schoolId, editModule, triggerLabel = "Eigenes Modul erstellen" }: { classInstanceId: string; schoolId: string; editModule?: EditableModule; triggerLabel?: string }) {
   const [open, setOpen] = useState(false);
@@ -63,6 +63,7 @@ export function TeacherModuleBuilderModal({ classInstanceId, schoolId, editModul
       setDescription(editModule.description);
       setIntroTitle(editModule.introTitle ?? "");
       setIntroText(editModule.introText ?? "");
+      setVisibilityScope(editModule.visibilityScope ?? "class");
       const loadedPosts: DraftPost[] = editModule.posts.map((post) => ({
         id: post.id,
         postType: post.postType,
@@ -170,8 +171,8 @@ export function TeacherModuleBuilderModal({ classInstanceId, schoolId, editModul
 
   return (
     <>
-      <button type="button" onClick={openEditor} className="inline-flex items-center gap-2 rounded-xl border border-violet-200 bg-white px-3.5 py-2.5 text-sm font-semibold text-violet-700 shadow-sm transition hover:bg-violet-50">
-        <Plus className="h-4 w-4" /> {triggerLabel}
+      <button type="button" onClick={openEditor} className={editModule ? "inline-flex items-center rounded-lg px-2 py-1 text-[11px] font-medium text-violet-700 transition hover:bg-violet-50" : "inline-flex items-center gap-2 rounded-xl border border-violet-200 bg-white px-3.5 py-2.5 text-sm font-semibold text-violet-700 shadow-sm transition hover:bg-violet-50"}>
+        {!editModule && <Plus className="mr-2 h-4 w-4" />} {triggerLabel}
       </button>
       {open && (
         <div className="fixed inset-0 z-[150] flex items-center justify-center bg-slate-950/65 p-3 backdrop-blur-sm sm:p-6" role="dialog" aria-modal="true" aria-labelledby="teacher-module-title">
