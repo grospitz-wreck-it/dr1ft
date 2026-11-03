@@ -319,7 +319,49 @@ export async function setTeacherModuleAssignmentActive(classInstanceId: string, 
 }
 
 export async function archiveTeacherModuleAssignment(classInstanceId: string, assignmentId: string) {
-  return setTeacherModuleAssignmentActive(classInstanceId, assignmentId, false);
+  const supabase = supabaseServerClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) throw new Error("Nicht authentifiziert.");
+  const { data: assignment, error: lookupError } = await supabase.from("teacher_module_class_assignments")
+    .select("id,school_id").eq("id", assignmentId).eq("class_instance_id", classInstanceId).maybeSingle();
+  if (lookupError || !assignment) throw new Error("Modulzuordnung nicht gefunden.");
+  const { data: admin } = await supabase.from("school_memberships").select("role")
+    .eq("school_id", assignment.school_id).eq("user_id", user.id).eq("active", true).maybeSingle();
+  const { data: teacher } = await supabase.from("class_instance_memberships").select("id")
+    .eq("class_instance_id", classInstanceId).eq("user_id", user.id).eq("role", "teacher").is("left_at", null).maybeSingle();
+  if (admin?.role !== "school_admin" && !teacher) throw new Error("Du darfst dieses Modul nicht archivieren.");
+  const { error } = await supabase.from("teacher_module_class_assignments")
+    .update({ archived_at: new Date().toISOString(), is_active: false })
+    .eq("id", assignmentId).eq("class_instance_id", classInstanceId);
+  if (error) throw new Error(error.message);
+  revalidatePath("/classes/" + classInstanceId);
+}
+
+export async function deleteTeacherCreatedModule(classInstanceId: string, moduleId: string) {
+  const supabase = supabaseServerClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) throw new Error("Nicht authentifiziert.");
+  const { data: module, error: moduleError } = await supabase.from("teacher_modules")
+    .select("id,school_id,created_by").eq("id", moduleId).maybeSingle();
+  if (moduleError || !module) throw new Error("Eigenes Modul nicht gefunden.");
+  if (module.created_by !== user.id) throw new Error("Nur die erstellende Person darf dieses Modul endgültig löschen.");
+  const { data: classInstance } = await supabase.from("class_instances").select("id,school_id").eq("id", classInstanceId).maybeSingle();
+  if (!classInstance || classInstance.school_id !== module.school_id) throw new Error("Klasse und Modul gehören nicht zur selben Schule.");
+  const { data: admin } = await supabase.from("school_memberships").select("role")
+    .eq("school_id", module.school_id).eq("user_id", user.id).eq("active", true).maybeSingle();
+  const { data: teacher } = await supabase.from("class_instance_memberships").select("id")
+    .eq("class_instance_id", classInstanceId).eq("user_id", user.id).eq("role", "teacher").is("left_at", null).maybeSingle();
+  if (admin?.role !== "school_admin" && !teacher) throw new Error("Du darfst dieses Modul nicht löschen.");
+  const { data: files, error: listError } = await supabase.storage.from("teacher-module-assets").list(module.school_id + "/" + module.id);
+  if (listError) throw new Error("Modulmedien konnten nicht geladen werden: " + listError.message);
+  const objectPaths = (files ?? []).filter((file: any) => file.name).map((file: any) => module.school_id + "/" + module.id + "/" + file.name);
+  if (objectPaths.length) {
+    const { error: storageError } = await supabase.storage.from("teacher-module-assets").remove(objectPaths);
+    if (storageError) throw new Error("Modulmedien konnten nicht gelöscht werden: " + storageError.message);
+  }
+  const { error: deleteError } = await supabase.from("teacher_modules").delete().eq("id", moduleId).eq("created_by", user.id);
+  if (deleteError) throw new Error(deleteError.message);
+  revalidatePath("/classes/" + classInstanceId);
 }
 
 export async function updateTeacherModuleSchedule(classInstanceId: string, assignmentId: string, startAt: string | null, endAt: string | null) {
