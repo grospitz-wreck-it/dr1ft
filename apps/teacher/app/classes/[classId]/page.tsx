@@ -50,6 +50,7 @@ export default async function ClassDetailPage({
     { data: roster },
     { data: scenarios },
     { data: assignments },
+    { data: teacherModuleAssignments },
     { data: school },
     { data: userResult },
   ] = await Promise.all([
@@ -71,6 +72,12 @@ export default async function ClassDetailPage({
       .select("scenario_id,pacing_mode,scheduled_start_at,scheduled_end_at,show_reports_at_end,archived_at,is_active,scenarios(title)")
       .eq("class_instance_id", classId)
       .is("archived_at", null),
+
+    supabase
+      .from("teacher_module_class_assignments")
+      .select("is_active,teacher_modules(id,title,description,status)")
+      .eq("class_instance_id", classId)
+      .eq("is_active", true),
 
     instance.school_id
       ? supabase
@@ -310,6 +317,7 @@ export default async function ClassDetailPage({
             cover_image_url: scenario.cover_image_url ?? null,
             age_rating: scenario.age_rating ?? "Alle Altersgruppen",
           }))}
+          teacherModules={(teacherModuleAssignments ?? []).map((row: any) => row.teacher_modules).filter((item: any) => item?.status === "published")}
           assignments={activeAssignments.map((item: any) => ({
             scenario_id: item.scenario_id,
             is_active: item.is_active !== false,
