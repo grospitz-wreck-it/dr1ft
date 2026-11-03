@@ -75,7 +75,7 @@ export default async function ClassDetailPage({
 
     supabase
       .from("teacher_module_class_assignments")
-      .select("id,module_id,school_id,assigned_by,is_active,scheduled_start_at,scheduled_end_at,teacher_modules(id,title,description,status,teacher_module_posts(id,post_type,title,body,image_path,embed_provider,embed_url,sort_order,status))")
+      .select("id,module_id,school_id,assigned_by,is_active,scheduled_start_at,scheduled_end_at,teacher_modules(id,title,description,intro_title,intro_text,status,teacher_module_posts(id,post_type,title,body,image_path,embed_provider,embed_url,sort_order,status))")
       .eq("class_instance_id", classId),
 
     instance.school_id
@@ -321,7 +321,7 @@ export default async function ClassDetailPage({
               const { data: imageData } = post.image_path ? await supabase.storage.from("teacher-module-assets").createSignedUrl(post.image_path, 60 * 60) : { data: null };
               return { id: post.id, postType: post.post_type, title: post.title ?? "", body: post.body ?? "", embedUrl: post.embed_url ?? "", imageUrl: imageData?.signedUrl ?? null };
             }));
-            return { id: row.id, module_id: row.module_id, school_id: row.school_id, assigned_by: row.assigned_by, is_active: row.is_active, scheduled_start_at: row.scheduled_start_at, scheduled_end_at: row.scheduled_end_at, title: row.teacher_modules.title, description: row.teacher_modules.description, cover_image_url: posts.find((post: any) => post.imageUrl)?.imageUrl ?? null, posts };
+            return { id: row.id, module_id: row.module_id, school_id: row.school_id, assigned_by: row.assigned_by, is_active: row.is_active, scheduled_start_at: row.scheduled_start_at, scheduled_end_at: row.scheduled_end_at, title: row.teacher_modules.title, description: row.teacher_modules.description, introTitle: row.teacher_modules.intro_title, introText: row.teacher_modules.intro_text, cover_image_url: posts.find((post: any) => post.imageUrl)?.imageUrl ?? null, posts };
           }))}
           assignments={activeAssignments.map((item: any) => ({
             scenario_id: item.scenario_id,
