@@ -12,6 +12,7 @@ type DraftPost = {
   body: string;
   embedUrl: string;
   imageFile: File | null;
+  imageSettings: { brightness: number; contrast: number; saturation: number; grayscale: number; zoom: number; x: number; y: number };
 };
 
 export function TeacherModuleBuilderModal({ classInstanceId, schoolId }: { classInstanceId: string; schoolId: string }) {
@@ -20,17 +21,49 @@ export function TeacherModuleBuilderModal({ classInstanceId, schoolId }: { class
   const [description, setDescription] = useState("");
   const [posts, setPosts] = useState<DraftPost[]>([]);
   const [selectedId, setSelectedId] = useState<string | null>(null);
-  const [dragId, setDragId] = useState<string | null>(null);\n  const [imageEditorOpen, setImageEditorOpen] = useState(false);
+  const [dragId, setDragId] = useState<string | null>(null);
+  const [imageEditorOpen, setImageEditorOpen] = useState(false);
+  const [imageEditorOpen, setImageEditorOpen] = useState(false);
   const [error, setError] = useState("");
   const [pending, startTransition] = useTransition();
   const router = useRouter();
-  const selected = posts.find((post) => post.id === selectedId) ?? null;\n  function getEmbedPreviewUrl(raw: string) {\n    try {\n      const url = new URL(raw);\n      const host = url.hostname.toLowerCase().replace(/^www\\./, "");\n      if (["youtube.com", "m.youtube.com", "youtu.be"].includes(host)) {\n        const id = host === "youtu.be" ? url.pathname.split("/").filter(Boolean)[0] : url.searchParams.get("v") || url.pathname.split("/").filter(Boolean).pop();\n        return id && /^[a-zA-Z0-9_-]{6,20}$/.test(id) ? "https://www.youtube-nocookie.com/embed/" + id : null;\n      }\n      if (host === "vimeo.com" || host === "player.vimeo.com") {\n        const id = url.pathname.split("/").filter(Boolean).pop();\n        return id && /^\\d+$/.test(id) ? "https://player.vimeo.com/video/" + id : null;\n      }\n    } catch {}\n    return null;\n  }
+  const selected = posts.find((post) => post.id === selectedId) ?? null;
+  function getEmbedPreviewUrl(raw: string) {
+    try {
+      const url = new URL(raw);
+      const host = url.hostname.toLowerCase().replace(/^www\./, "");
+      if (["youtube.com", "m.youtube.com", "youtu.be"].includes(host)) {
+        const id = host === "youtu.be" ? url.pathname.split("/").filter(Boolean)[0] : url.searchParams.get("v") || url.pathname.split("/").filter(Boolean).pop();
+        return id && /^[a-zA-Z0-9_-]{6,20}$/.test(id) ? "https://www.youtube-nocookie.com/embed/" + id : null;
+      }
+      if (host === "vimeo.com" || host === "player.vimeo.com") {
+        const id = url.pathname.split("/").filter(Boolean).pop();
+        return id && /^\d+$/.test(id) ? "https://player.vimeo.com/video/" + id : null;
+      }
+    } catch {}
+    return null;
+  }
+  function getEmbedPreviewUrl(raw: string) {
+    try {
+      const url = new URL(raw);
+      const host = url.hostname.toLowerCase().replace(/^www\\./, "");
+      if (["youtube.com", "m.youtube.com", "youtu.be"].includes(host)) {
+        const id = host === "youtu.be" ? url.pathname.split("/").filter(Boolean)[0] : url.searchParams.get("v") || url.pathname.split("/").filter(Boolean).pop();
+        return id && /^[a-zA-Z0-9_-]{6,20}$/.test(id) ? "https://www.youtube-nocookie.com/embed/" + id : null;
+      }
+      if (host === "vimeo.com" || host === "player.vimeo.com") {
+        const id = url.pathname.split("/").filter(Boolean).pop();
+        return id && /^\\d+$/.test(id) ? "https://player.vimeo.com/video/" + id : null;
+      }
+    } catch {}
+    return null;
+  }
 
   function reset() {
     setTitle(""); setDescription(""); setPosts([]); setSelectedId(null); setError("");
   }
   function addPost(type: DraftPost["postType"]) {
-    const post: DraftPost = { id: crypto.randomUUID(), postType: type, title: "", body: "", embedUrl: "", imageFile: null };
+    const post: DraftPost = { id: crypto.randomUUID(), postType: type, title: "", body: "", embedUrl: "", imageFile: null, imageSettings: { brightness: 100, contrast: 100, saturation: 100, grayscale: 0, zoom: 1, x: 50, y: 50 } };
     setPosts((items) => [...items, post]);
     setSelectedId(post.id);
   }
@@ -58,7 +91,26 @@ export function TeacherModuleBuilderModal({ classInstanceId, schoolId }: { class
       return next;
     });
   }
-  async function processEditedImage(file: File, settings: DraftPost["imageSettings"]) {\n    const source = URL.createObjectURL(file);\n    try {\n      const image = new Image();\n      image.src = source;\n      await new Promise<void>((resolve, reject) => { image.onload = () => resolve(); image.onerror = () => reject(new Error("Bild konnte nicht geladen werden.")); });\n      const canvas = document.createElement("canvas");\n      canvas.width = image.naturalWidth; canvas.height = image.naturalHeight;\n      const context = canvas.getContext("2d");\n      if (!context) throw new Error("Bildbearbeitung wird in diesem Browser nicht unterstützt.");\n      context.filter = `brightness(${settings.brightness}%) contrast(${settings.contrast}%) saturate(${settings.saturation}%) grayscale(${settings.grayscale}%)`;\n      const width = canvas.width / settings.zoom, height = canvas.height / settings.zoom;\n      const sx = (canvas.width - width) * settings.x / 100, sy = (canvas.height - height) * settings.y / 100;\n      context.drawImage(image, sx, sy, width, height, 0, 0, canvas.width, canvas.height);\n      const blob = await new Promise<Blob>((resolve, reject) => canvas.toBlob(value => value ? resolve(value) : reject(new Error("Bearbeitetes Bild konnte nicht exportiert werden.")), "image/jpeg", 0.92));\n      return new File([blob], file.name.replace(/\\.[^.]+$/, "") + "-dr1ft.jpg", { type: "image/jpeg" });\n    } finally { URL.revokeObjectURL(source); }\n  }\n\n  async function publish() {
+  async function processEditedImage(file: File, settings: DraftPost["imageSettings"]) {
+    const source = URL.createObjectURL(file);
+    try {
+      const image = new Image();
+      image.src = source;
+      await new Promise<void>((resolve, reject) => { image.onload = () => resolve(); image.onerror = () => reject(new Error("Bild konnte nicht geladen werden.")); });
+      const canvas = document.createElement("canvas");
+      canvas.width = image.naturalWidth; canvas.height = image.naturalHeight;
+      const context = canvas.getContext("2d");
+      if (!context) throw new Error("Bildbearbeitung wird in diesem Browser nicht unterstützt.");
+      context.filter = `brightness(${settings.brightness}%) contrast(${settings.contrast}%) saturate(${settings.saturation}%) grayscale(${settings.grayscale}%)`;
+      const width = canvas.width / settings.zoom, height = canvas.height / settings.zoom;
+      const sx = (canvas.width - width) * settings.x / 100, sy = (canvas.height - height) * settings.y / 100;
+      context.drawImage(image, sx, sy, width, height, 0, 0, canvas.width, canvas.height);
+      const blob = await new Promise<Blob>((resolve, reject) => canvas.toBlob(value => value ? resolve(value) : reject(new Error("Bearbeitetes Bild konnte nicht exportiert werden.")), "image/jpeg", 0.92));
+      return new File([blob], file.name.replace(/\\.[^.]+$/, "") + "-dr1ft.jpg", { type: "image/jpeg" });
+    } finally { URL.revokeObjectURL(source); }
+  }
+
+  async function publish() {
     setError("");
     if (!title.trim()) { setError("Bitte gib deinem Modul einen Titel."); return; }
     if (!posts.length) { setError("Füge mindestens einen Beitrag hinzu."); return; }
@@ -66,7 +118,11 @@ export function TeacherModuleBuilderModal({ classInstanceId, schoolId }: { class
       setError("Jeder Beitrag benötigt mindestens einen Inhalt.");
       return;
     }
-    let editedFiles: (readonly [string, File] | null)[];\n    try { editedFiles = await Promise.all(posts.map(async post => post.imageFile ? [post.id, await processEditedImage(post.imageFile, post.imageSettings)] as const : null)); }\n    catch (cause) { setError(cause instanceof Error ? cause.message : "Bildbearbeitung fehlgeschlagen."); return; }\n    const imageFiles = new Map(editedFiles.filter((item): item is readonly [string, File] => item !== null));\n    const form = new FormData();
+    let editedFiles: (readonly [string, File] | null)[];
+    try { editedFiles = await Promise.all(posts.map(async post => post.imageFile ? [post.id, await processEditedImage(post.imageFile, post.imageSettings)] as const : null)); }
+    catch (cause) { setError(cause instanceof Error ? cause.message : "Bildbearbeitung fehlgeschlagen."); return; }
+    const imageFiles = new Map(editedFiles.filter((item): item is readonly [string, File] => item !== null));
+    const form = new FormData();
     form.set("classInstanceId", classInstanceId);
     form.set("schoolId", schoolId);
     form.set("title", title);
