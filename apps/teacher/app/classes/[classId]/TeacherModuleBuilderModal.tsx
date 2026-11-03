@@ -23,7 +23,6 @@ export function TeacherModuleBuilderModal({ classInstanceId, schoolId }: { class
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [dragId, setDragId] = useState<string | null>(null);
   const [imageEditorOpen, setImageEditorOpen] = useState(false);
-  const [imageEditorOpen, setImageEditorOpen] = useState(false);
   const [error, setError] = useState("");
   const [pending, startTransition] = useTransition();
   const router = useRouter();
@@ -43,24 +42,8 @@ export function TeacherModuleBuilderModal({ classInstanceId, schoolId }: { class
     } catch {}
     return null;
   }
-  function getEmbedPreviewUrl(raw: string) {
-    try {
-      const url = new URL(raw);
-      const host = url.hostname.toLowerCase().replace(/^www\\./, "");
-      if (["youtube.com", "m.youtube.com", "youtu.be"].includes(host)) {
-        const id = host === "youtu.be" ? url.pathname.split("/").filter(Boolean)[0] : url.searchParams.get("v") || url.pathname.split("/").filter(Boolean).pop();
-        return id && /^[a-zA-Z0-9_-]{6,20}$/.test(id) ? "https://www.youtube-nocookie.com/embed/" + id : null;
-      }
-      if (host === "vimeo.com" || host === "player.vimeo.com") {
-        const id = url.pathname.split("/").filter(Boolean).pop();
-        return id && /^\\d+$/.test(id) ? "https://player.vimeo.com/video/" + id : null;
-      }
-    } catch {}
-    return null;
-  }
-
   function reset() {
-    setTitle(""); setDescription(""); setPosts([]); setSelectedId(null); setError("");
+    setTitle(""); setDescription(""); setPosts([]); setSelectedId(null); setError(""); setImageEditorOpen(false);
   }
   function addPost(type: DraftPost["postType"]) {
     const post: DraftPost = { id: crypto.randomUUID(), postType: type, title: "", body: "", embedUrl: "", imageFile: null, imageSettings: { brightness: 100, contrast: 100, saturation: 100, grayscale: 0, zoom: 1, x: 50, y: 50 } };
