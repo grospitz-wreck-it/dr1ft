@@ -158,7 +158,7 @@ export function ClassModuleLibrary({
               </label>
             </div>
             <div className="min-h-0 flex-1 overflow-y-auto p-4 sm:p-6">
-              <div className="grid gap-3 sm:grid-cols-2">
+              {libraryTab === "dr1ft" ? <div className="grid gap-3 sm:grid-cols-2">
                 {filtered.map((scenario) => {
                   const isActive = assignedIds.has(scenario.id);
                   return (
@@ -178,8 +178,19 @@ export function ClassModuleLibrary({
                     </article>
                   );
                 })}
-              </div>
-              {filtered.length === 0 && <p className="py-12 text-center text-sm text-slate-500">Keine passenden Module gefunden.</p>}
+              </div> : <div className="space-y-3">
+                {availableTeacherModules.filter((module) => {
+                  const needle = query.trim().toLocaleLowerCase("de");
+                  return (!needle || (module.title + " " + module.description).toLocaleLowerCase("de").includes(needle)) && !teacherModules.some((assigned) => assigned.module_id === module.id);
+                }).map((module) => (
+                  <article key={module.id} className="flex items-center justify-between gap-4 rounded-2xl border border-slate-200 bg-white p-4">
+                    <div><p className="text-[10px] font-bold uppercase tracking-wider text-violet-600">Eigenes Szenario</p><h3 className="mt-1 text-sm font-bold text-slate-900">{module.title}</h3><p className="mt-1 text-xs text-slate-600">{module.description}</p></div>
+                    <button type="button" disabled={pending} onClick={() => { setPendingId(module.id); startTransition(async () => { try { await assignExistingTeacherModule(classId, module.id); router.refresh(); } catch (cause) { setError(cause instanceof Error ? cause.message : "Zuweisung fehlgeschlagen."); } finally { setPendingId(null); } }); }} className="rounded-xl bg-violet-600 px-3 py-2 text-xs font-semibold text-white">{pendingId === module.id ? "…" : "Aktivieren"}</button>
+                  </article>
+                ))}
+                {availableTeacherModules.length === 0 && <p className="py-12 text-center text-sm text-slate-500">Keine eigenen Szenarien verfügbar.</p>}
+              </div>}
+              {libraryTab === "dr1ft" && filtered.length === 0 && <p className="py-12 text-center text-sm text-slate-500">Keine passenden Module gefunden.</p>}
               {error && <p role="alert" className="mt-4 rounded-xl bg-rose-50 px-4 py-3 text-xs text-rose-700">{error}</p>}
             </div>
             <div className="flex justify-end border-t border-slate-200 px-5 py-3 sm:px-7">
