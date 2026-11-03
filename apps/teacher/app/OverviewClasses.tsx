@@ -13,6 +13,9 @@ type ClassItem = {
   schoolYear: string;
   isActive: boolean;
   thumbnailUrl: string | null;
+  imagePositionX: number;
+  imagePositionY: number;
+  imageZoom: number;
   studentCount: number;
   missions: Mission[];
 };
@@ -76,7 +79,7 @@ export function OverviewClasses({ classes }: { classes: ClassItem[] }) {
             <article key={item.id} className="group overflow-hidden rounded-2xl border border-slate-200/90 bg-white shadow-sm transition hover:-translate-y-0.5 hover:border-violet-200 hover:shadow-lg">
               <div className="flex gap-4 p-4 sm:p-5">
                 <div className="relative h-24 w-28 shrink-0 overflow-hidden rounded-xl bg-gradient-to-br from-violet-100 via-fuchsia-50 to-cyan-100 sm:h-28 sm:w-36">
-                  {item.thumbnailUrl ? <img src={item.thumbnailUrl} alt="" className="h-full w-full object-cover" /> : <div className="grid h-full place-items-center text-violet-400"><Users className="h-8 w-8" /></div>}
+                  {item.thumbnailUrl ? <img src={item.thumbnailUrl} alt="" className="h-full w-full object-cover" style={{ objectPosition: `${item.imagePositionX}% ${item.imagePositionY}%`, transform: `scale(${item.imageZoom})` }} /> : <div className="grid h-full place-items-center text-violet-400"><Users className="h-8 w-8" /></div>}
                   <span className="absolute left-2 top-2 rounded-full border border-white/70 bg-white/90 px-2 py-1 text-[9px] font-extrabold uppercase tracking-wide text-violet-700">DR1FT</span>
                 </div>
                 <div className="min-w-0 flex-1">
