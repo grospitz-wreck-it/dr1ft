@@ -83,8 +83,7 @@ export function TeacherModuleBuilderModal({ classInstanceId, schoolId, editModul
   }
   useEffect(() => {
     if (autoOpen && editModule) openEditor();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [autoOpen, editModule?.id]);
+  }, [autoOpen, editModule]);
 
   function addPost(type: DraftPost["postType"]) {
     const post: DraftPost = { id: crypto.randomUUID(), postType: type, title: "", body: "", embedUrl: "", imageFile: null, imageSettings: { brightness: 100, contrast: 100, saturation: 100, grayscale: 0, zoom: 1, x: 50, y: 50 } };
