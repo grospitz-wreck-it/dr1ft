@@ -116,16 +116,20 @@ export function TeacherModuleBuilderModal({ classInstanceId, schoolId, editModul
       const image = new Image();
       image.src = source;
       await new Promise<void>((resolve, reject) => { image.onload = () => resolve(); image.onerror = () => reject(new Error("Bild konnte nicht geladen werden.")); });
+      const maxDimension = 1920;
+      const resizeFactor = Math.min(1, maxDimension / Math.max(image.naturalWidth, image.naturalHeight));
       const canvas = document.createElement("canvas");
-      canvas.width = image.naturalWidth; canvas.height = image.naturalHeight;
+      canvas.width = Math.max(1, Math.round(image.naturalWidth * resizeFactor));
+      canvas.height = Math.max(1, Math.round(image.naturalHeight * resizeFactor));
       const context = canvas.getContext("2d");
       if (!context) throw new Error("Bildbearbeitung wird in diesem Browser nicht unterstützt.");
       context.filter = `brightness(${settings.brightness}%) contrast(${settings.contrast}%) saturate(${settings.saturation}%) grayscale(${settings.grayscale}%)`;
       const width = canvas.width / settings.zoom, height = canvas.height / settings.zoom;
       const sx = (canvas.width - width) * settings.x / 100, sy = (canvas.height - height) * settings.y / 100;
       context.drawImage(image, sx, sy, width, height, 0, 0, canvas.width, canvas.height);
-      const blob = await new Promise<Blob>((resolve, reject) => canvas.toBlob(value => value ? resolve(value) : reject(new Error("Bearbeitetes Bild konnte nicht exportiert werden.")), "image/jpeg", 0.92));
-      return new File([blob], file.name.replace(/\\.[^.]+$/, "") + "-dr1ft.jpg", { type: "image/jpeg" });
+      const blob = await new Promise<Blob>((resolve, reject) => canvas.toBlob(value => value ? resolve(value) : reject(new Error("Bearbeitetes Bild konnte nicht exportiert werden.")), "image/webp", 0.82));
+      if (blob.type !== "image/webp") throw new Error("Dieser Browser unterstützt keine WebP-Konvertierung.");
+      return new File([blob], file.name.replace(/\\.[^.]+$/, "") + "-dr1ft.webp", { type: "image/webp" });
     } finally { URL.revokeObjectURL(source); }
   }
 
