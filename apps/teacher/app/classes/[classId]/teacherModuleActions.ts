@@ -222,6 +222,7 @@ export async function updateTeacherCreatedModule(formData: FormData) {
   const schoolId = String(formData.get("schoolId") ?? "");
   const title = String(formData.get("title") ?? "").trim();
   const description = String(formData.get("description") ?? "").trim();
+  const titleCardEnabled = formData.get("titleCardEnabled") !== "false";
   let posts: PostInput[];
   try { posts = JSON.parse(String(formData.get("posts") ?? "[]")); }
   catch { throw new Error("Die Beitragsdaten sind ungültig."); }
