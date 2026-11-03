@@ -2,11 +2,11 @@
 
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { BookOpen, CalendarClock, Check, Image as ImageIcon, Pencil, Plus, Search, Trash2, X } from "lucide-react";
+import { BookOpen, Archive, CalendarClock, Check, Image as ImageIcon, Pencil, Plus, Search, Trash2, X } from "lucide-react";
 import { toggleScenarioAssignment } from "../actions";
 import { ScenarioToggle } from "./ScenarioToggle";
 import { TeacherModuleBuilderModal } from "./TeacherModuleBuilderModal";
-import { archiveTeacherModuleAssignment, assignExistingTeacherModule, getTeacherModulePosts, setTeacherModuleAssignmentActive, updateTeacherModuleSchedule } from "./teacherModuleActions";
+import { archiveTeacherModuleAssignment, assignExistingTeacherModule, deleteTeacherCreatedModule, getTeacherModulePosts, setTeacherModuleAssignmentActive, updateTeacherModuleSchedule } from "./teacherModuleActions";
 
 type Scenario = {
   id: string;
@@ -301,14 +301,18 @@ function TeacherModuleCard({ classId, schoolId, module, onError }: {
   }
 
   function archive() {
-    if (pending || !window.confirm("Dieses Modul aus der Klasse entfernen? Das veröffentlichte Modul und die Inhalte bleiben erhalten.")) return;
+    if (pending || !window.confirm("Dieses Modul archivieren? Inhalte und Lernstände bleiben erhalten.")) return;
     startTransition(async () => {
-      try {
-        await archiveTeacherModuleAssignment(classId, module.id);
-        router.refresh();
-      } catch (cause) {
-        onError(cause instanceof Error ? cause.message : "Modul konnte nicht entfernt werden.");
-      }
+      try { await archiveTeacherModuleAssignment(classId, module.id); router.refresh(); }
+      catch (cause) { onError(cause instanceof Error ? cause.message : "Modul konnte nicht archiviert werden."); }
+    });
+  }
+
+  function removePermanently() {
+    if (pending || !window.confirm("Dieses selbst erstellte Modul einschließlich aller Beiträge und Medien endgültig löschen?")) return;
+    startTransition(async () => {
+      try { await deleteTeacherCreatedModule(classId, module.module_id); router.refresh(); }
+      catch (cause) { onError(cause instanceof Error ? cause.message : "Modul konnte nicht gelöscht werden."); }
     });
   }
 
@@ -332,12 +336,11 @@ function TeacherModuleCard({ classId, schoolId, module, onError }: {
             <span className={"inline-block h-4 w-4 rounded-full bg-white shadow transition-transform " + (active ? "translate-x-6" : "translate-x-1")} />
           </button>
           <span className="text-[9px] text-slate-400">{pending ? "…" : active ? "Aktiv" : "Inaktiv"}</span>
-          <button type="button" onClick={archive} disabled={pending} aria-label="Modul aus Klasse entfernen" title="Modul aus dieser Klasse entfernen" className="mt-1 inline-flex h-8 w-8 items-center justify-center rounded-xl border border-white/80 bg-white/65 text-slate-500 shadow-[0_4px_14px_rgba(30,41,59,.10)] backdrop-blur-xl transition hover:border-rose-200 hover:bg-rose-50 hover:text-rose-600 disabled:opacity-50"><Trash2 className="h-3.5 w-3.5" /></button>
         </div>
       </div>
       <div className="flex items-center justify-between gap-3 border-t border-violet-100 px-3 py-2 sm:px-4">
         <button type="button" onClick={() => setScheduleOpen(value => !value)} className="inline-flex items-center gap-1.5 text-[11px] font-medium text-violet-700 hover:text-violet-900"><CalendarClock className="h-3.5 w-3.5" />{scheduleOpen ? "Zeitplan schließen" : (module.scheduled_start_at || module.scheduled_end_at) ? "Zeitplan bearbeiten" : "Zeitplan festlegen"}</button>
-        <TeacherModuleEditButton classId={classId} schoolId={schoolId} module={module} onError={onError} />
+        <div className="ml-auto flex shrink-0 items-center gap-2"><button type="button" onClick={removePermanently} disabled={pending} aria-label="Eigenes Modul endgültig löschen" title="Eigenes Modul und alle Inhalte löschen" className="inline-flex h-9 w-9 items-center justify-center rounded-xl border border-rose-200 bg-white text-rose-600 transition hover:bg-rose-50 disabled:opacity-50"><Trash2 className="h-4 w-4" /></button><button type="button" onClick={archive} disabled={pending} aria-label="Modul archivieren" title="Modul archivieren – Inhalte und Lernstände behalten" className="inline-flex h-9 w-9 items-center justify-center rounded-xl border border-violet-200 bg-white text-violet-700 transition hover:bg-violet-50 disabled:opacity-50"><Archive className="h-4 w-4" /></button><TeacherModuleEditButton classId={classId} schoolId={schoolId} module={module} onError={onError} /></div>
         {(module.scheduled_start_at || module.scheduled_end_at) && !scheduleOpen && <p className="mt-1 text-[10px] text-slate-500">{module.scheduled_start_at ? new Date(module.scheduled_start_at).toLocaleString("de-DE") : "Sofort"}{module.scheduled_end_at ? " – " + new Date(module.scheduled_end_at).toLocaleString("de-DE") : ""}</p>}
         {scheduleOpen && <div className="mt-3 rounded-lg bg-violet-50/70 p-3">
           <p className="text-xs text-slate-600">Lege fest, wann das Modul für diese Klasse verfügbar ist. Ohne Zeitangabe bleibt es dauerhaft verfügbar.</p>
