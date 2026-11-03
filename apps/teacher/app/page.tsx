@@ -40,7 +40,7 @@ export default async function TeacherHomePage() {
     ...(schoolMemberships ?? []).map((membership: any) => membership.school_id),
   ].filter(Boolean)));
   const { data: schoolRows } = schoolIds.length
-    ? await supabase.from("schools").select("id, name, region").in("id", schoolIds)
+    ? await supabase.from("schools").select("id, name, region, school_image_path, school_image_position_x, school_image_position_y, school_image_zoom").in("id", schoolIds)
     : { data: [] as any[] };
   const schoolsById = new Map((schoolRows ?? []).map((school: any) => [school.id, school]));
   const linkedSchools = Array.from(schoolsById.values());
@@ -70,17 +70,24 @@ export default async function TeacherHomePage() {
     assignmentsByClass.set(row.class_instance_id, current);
   });
   const overviewClasses = await Promise.all(classes.map(async (item: any) => {
+    const school = schoolsById.get(item.school_id) as any;
     let thumbnailUrl: string | null = null;
-    if (item.class_image_path) {
+    const hasClassImage = Boolean(item.class_image_path);
+    if (hasClassImage) {
       const { data } = await supabase.storage.from("class-images").createSignedUrl(item.class_image_path, 60 * 60);
       thumbnailUrl = data?.signedUrl ?? null;
+    }
+    // Match the class detail header: use the school image when no class
+    // image is set, and carry over the crop belonging to the chosen image.
+    if (!thumbnailUrl && school?.school_image_path) {
+      thumbnailUrl = `${process.env.NEXT_PUBLIC_SUPABASE_URL}/storage/v1/object/public/school-images/${school.school_image_path}`;
     }
     return {
       id: item.id, name: item.name, gradeLevel: item.grade_level, schoolYear: item.school_year,
       isActive: item.is_active, thumbnailUrl,
-      imagePositionX: item.class_image_position_x ?? 50,
-      imagePositionY: item.class_image_position_y ?? 50,
-      imageZoom: item.class_image_zoom ?? 1,
+      imagePositionX: hasClassImage ? item.class_image_position_x ?? 50 : school?.school_image_position_x ?? 50,
+      imagePositionY: hasClassImage ? item.class_image_position_y ?? 50 : school?.school_image_position_y ?? 50,
+      imageZoom: hasClassImage ? item.class_image_zoom ?? 1 : school?.school_image_zoom ?? 1,
       studentCount: studentsByClass.get(item.id) ?? 0,
       missions: assignmentsByClass.get(item.id) ?? [],
     };
