@@ -65,7 +65,7 @@ export async function POST(request: NextRequest, { params }: Context) {
 
   try {
     const body = await request.json();
-    const issuerUrl = String(body.issuerUrl ?? "").trim().replace(/\/+$/, "");
+    const issuerUrl = String(body.issuerUrl ?? "").trim();
     const clientId = String(body.clientId ?? "").trim();
     const secret = String(body.clientSecret ?? "");
     const enabled = body.enabled === true;
