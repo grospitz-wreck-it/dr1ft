@@ -49,7 +49,35 @@ export function TeacherModuleBuilderModal({ classInstanceId, schoolId, editModul
     return null;
   }
   function reset() {
-    setTitle(""); setDescription(""); setPosts([]); setSelectedId(null); setError(""); setImageEditorOpen(false);
+    setModuleId(null);
+    setTitle(""); setDescription(""); setIntroTitle(""); setIntroText("");
+    setPosts([]); setSelectedId(null); setError(""); setImageEditorOpen(false);
+  }
+  function openEditor() {
+    setError("");
+    setImageEditorOpen(false);
+    if (editModule) {
+      setModuleId(editModule.id);
+      setTitle(editModule.title);
+      setDescription(editModule.description);
+      setIntroTitle(editModule.introTitle ?? "");
+      setIntroText(editModule.introText ?? "");
+      const loadedPosts: DraftPost[] = editModule.posts.map((post) => ({
+        id: post.id,
+        postType: post.postType,
+        title: post.title ?? "",
+        body: post.body ?? "",
+        embedUrl: post.embedUrl ?? "",
+        imageFile: null,
+        existingImageUrl: post.imageUrl,
+        imageSettings: { brightness: 100, contrast: 100, saturation: 100, grayscale: 0, zoom: 1, x: 50, y: 50 },
+      }));
+      setPosts(loadedPosts);
+      setSelectedId(loadedPosts[0]?.id ?? null);
+    } else {
+      reset();
+    }
+    setOpen(true);
   }
   function addPost(type: DraftPost["postType"]) {
     const post: DraftPost = { id: crypto.randomUUID(), postType: type, title: "", body: "", embedUrl: "", imageFile: null, imageSettings: { brightness: 100, contrast: 100, saturation: 100, grayscale: 0, zoom: 1, x: 50, y: 50 } };
@@ -141,7 +169,7 @@ export function TeacherModuleBuilderModal({ classInstanceId, schoolId, editModul
   return (
     <>
       <button type="button" onClick={openEditor} className="inline-flex items-center gap-2 rounded-xl border border-violet-200 bg-white px-3.5 py-2.5 text-sm font-semibold text-violet-700 shadow-sm transition hover:bg-violet-50">
-        <Plus className="h-4 w-4" /> Eigenes Modul erstellen
+        <Plus className="h-4 w-4" /> {triggerLabel}
       </button>
       {open && (
         <div className="fixed inset-0 z-[150] flex items-center justify-center bg-slate-950/65 p-3 backdrop-blur-sm sm:p-6" role="dialog" aria-modal="true" aria-labelledby="teacher-module-title">
