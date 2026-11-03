@@ -104,7 +104,7 @@ export default async function ClassDetailPage({
       : Promise.resolve({ data: null })),
     timed("auth-user", supabase.auth.getUser()),
     timed("auth-session", supabase.auth.getSession()),
-  ]);
+  ] as const);
   console.info("[class-page-timing] parallel-queries", Date.now() - parallelQueriesStartedAt, "ms");
   const user = userResult.user;
   const accessToken = session.session?.access_token;
