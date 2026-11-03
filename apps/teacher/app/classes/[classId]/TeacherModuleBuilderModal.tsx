@@ -16,10 +16,12 @@ type DraftPost = {
   imageSettings: { brightness: number; contrast: number; saturation: number; grayscale: number; zoom: number; x: number; y: number };
 };
 
-type EditableModule = { id: string; title: string; description: string; posts: Array<{ id: string; postType: DraftPost["postType"]; title: string; body: string; embedUrl: string; imageUrl: string | null }> };\n\nexport function TeacherModuleBuilderModal({ classInstanceId, schoolId, editModule, triggerLabel = "Eigenes Modul erstellen" }: { classInstanceId: string; schoolId: string; editModule?: EditableModule; triggerLabel?: string }) {
+type EditableModule = { id: string; title: string; description: string; introTitle?: string | null; introText?: string | null; posts: Array<{ id: string; postType: DraftPost["postType"]; title: string; body: string; embedUrl: string; imageUrl: string | null }> };\n\nexport function TeacherModuleBuilderModal({ classInstanceId, schoolId, editModule, triggerLabel = "Eigenes Modul erstellen" }: { classInstanceId: string; schoolId: string; editModule?: EditableModule; triggerLabel?: string }) {
   const [open, setOpen] = useState(false);
   const [moduleId, setModuleId] = useState<string | null>(null);\n  const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
+  const [introTitle, setIntroTitle] = useState("");
+  const [introText, setIntroText] = useState("");
   const [posts, setPosts] = useState<DraftPost[]>([]);
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [dragId, setDragId] = useState<string | null>(null);
@@ -111,6 +113,8 @@ type EditableModule = { id: string; title: string; description: string; posts: A
     form.set("schoolId", schoolId);
     form.set("title", title);
     form.set("description", description);
+    form.set("introTitle", introTitle);
+    form.set("introText", introText);
     form.set("posts", JSON.stringify(posts.map((post, index) => ({
       id: post.id, postType: post.postType, title: post.title, body: post.body,
       embedUrl: post.embedUrl, sortOrder: index, imageField: imageFiles.has(post.id) ? "image_" + post.id : undefined,
@@ -155,6 +159,16 @@ type EditableModule = { id: string; title: string; description: string; posts: A
                   <label className="block text-xs font-semibold text-slate-700">Kurzbeschreibung
                     <textarea value={description} onChange={(event) => setDescription(event.target.value)} rows={3} maxLength={500} placeholder="Worum geht es in diesem Modul?" className="mt-1.5 w-full resize-y rounded-xl border border-slate-200 px-3 py-2.5 text-sm outline-none focus:border-violet-400 focus:ring-4 focus:ring-violet-100" />
                   </label>
+                  <details className="rounded-2xl border border-violet-200 bg-violet-50/50 p-3">
+                    <summary className="cursor-pointer text-xs font-bold text-violet-800">Optionale Einleitungstafel für den Schüler-Feed</summary>
+                    <p className="mt-2 text-[11px] leading-5 text-slate-500">Nur wenn du hier etwas einträgst, erscheint vor den Beiträgen eine eigene Einleitung.</p>
+                    <label className="mt-3 block text-xs font-semibold text-slate-700">Titel der Einleitung
+                      <input value={introTitle} onChange={event => setIntroTitle(event.target.value)} maxLength={120} placeholder="z. B. Darum geht es in diesem Modul" className="mt-1.5 w-full rounded-xl border border-slate-200 px-3 py-2.5 text-sm"/>
+                    </label>
+                    <label className="mt-3 block text-xs font-semibold text-slate-700">Einleitungstext
+                      <textarea value={introText} onChange={event => setIntroText(event.target.value)} rows={3} maxLength={1200} placeholder="Was sollen die Schüler:innen vor dem Start wissen?" className="mt-1.5 w-full resize-y rounded-xl border border-slate-200 px-3 py-2.5 text-sm"/>
+                    </label>
+                  </details>
                   <div className="rounded-2xl border border-slate-200 bg-slate-50/70 p-3">
                     <div className="flex items-center justify-between gap-2">
                       <div><h3 className="text-sm font-bold text-slate-900">Beiträge</h3><p className="text-[11px] text-slate-500">Thumbnails ziehen, um die Reihenfolge zu ändern.</p></div>
