@@ -174,14 +174,14 @@ export function PlayerShell({ children }: { children: React.ReactNode }) {
     }
 
     function queueCompletedIntervals() {
-      for (const [key, pending] of pendingMs) {
+      pendingMs.forEach((pending, key) => {
         const wholeSeconds = Math.min(60, Math.floor(pending.milliseconds / 1000));
-        if (wholeSeconds < 1) continue;
+        if (wholeSeconds < 1) return;
         const eventId = createEventId();
         queuedEvents.push({ eventId, activityType: pending.activityType, scenarioId: pending.scenarioId, durationSeconds: wholeSeconds });
         pending.milliseconds -= wholeSeconds * 1000;
         if (pending.milliseconds <= 0) pendingMs.delete(key);
-      }
+      });
     }
 
     async function persistQueuedEvents() {
