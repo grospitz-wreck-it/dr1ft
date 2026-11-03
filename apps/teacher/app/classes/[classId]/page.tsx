@@ -75,7 +75,7 @@ export default async function ClassDetailPage({
 
     supabase
       .from("teacher_module_class_assignments")
-      .select("id,module_id,school_id,assigned_by,is_active,scheduled_start_at,scheduled_end_at,teacher_modules(id,title,description,status,teacher_module_posts(image_path,sort_order))")
+      .select("id,module_id,school_id,assigned_by,is_active,scheduled_start_at,scheduled_end_at,teacher_modules(id,title,description,status,teacher_module_posts(id,post_type,title,body,image_path,embed_provider,embed_url,sort_order,status))")
       .eq("class_instance_id", classId),
 
     instance.school_id
@@ -317,10 +317,11 @@ export default async function ClassDetailPage({
             age_rating: scenario.age_rating ?? "Alle Altersgruppen",
           }))}
           teacherModules={await Promise.all((teacherModuleAssignments ?? []).filter((row: any) => row.teacher_modules?.status === "published").map(async (row: any) => {
-            const posts = [...(row.teacher_modules.teacher_module_posts ?? [])].sort((a: any, b: any) => Number(a.sort_order ?? 0) - Number(b.sort_order ?? 0));
-            const imagePath = posts.find((post: any) => post.image_path)?.image_path ?? null;
-            const { data: imageData } = imagePath ? await supabase.storage.from("teacher-module-assets").createSignedUrl(imagePath, 60 * 60) : { data: null };
-            return { id: row.id, module_id: row.module_id, school_id: row.school_id, assigned_by: row.assigned_by, is_active: row.is_active, scheduled_start_at: row.scheduled_start_at, scheduled_end_at: row.scheduled_end_at, title: row.teacher_modules.title, description: row.teacher_modules.description, cover_image_url: imageData?.signedUrl ?? null };
+            const posts = await Promise.all([...(row.teacher_modules.teacher_module_posts ?? [])].filter((post: any) => post.status === "published").sort((a: any, b: any) => Number(a.sort_order ?? 0) - Number(b.sort_order ?? 0)).map(async (post: any) => {
+              const { data: imageData } = post.image_path ? await supabase.storage.from("teacher-module-assets").createSignedUrl(post.image_path, 60 * 60) : { data: null };
+              return { id: post.id, postType: post.post_type, title: post.title ?? "", body: post.body ?? "", embedUrl: post.embed_url ?? "", imageUrl: imageData?.signedUrl ?? null };
+            }));
+            return { id: row.id, module_id: row.module_id, school_id: row.school_id, assigned_by: row.assigned_by, is_active: row.is_active, scheduled_start_at: row.scheduled_start_at, scheduled_end_at: row.scheduled_end_at, title: row.teacher_modules.title, description: row.teacher_modules.description, cover_image_url: posts.find((post: any) => post.imageUrl)?.imageUrl ?? null, posts };
           }))}
           assignments={activeAssignments.map((item: any) => ({
             scenario_id: item.scenario_id,
