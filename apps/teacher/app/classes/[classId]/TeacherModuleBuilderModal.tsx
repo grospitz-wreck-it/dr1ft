@@ -183,8 +183,8 @@ export function TeacherModuleBuilderModal({ classInstanceId, schoolId, editModul
       </button>
       {open && (
         <div className="fixed inset-0 z-[150] flex items-center justify-center bg-slate-950/65 p-3 backdrop-blur-sm sm:p-6" role="dialog" aria-modal="true" aria-labelledby="teacher-module-title">
-          <div className="drift-builder-shell flex h-[min(790px,calc(100dvh-40px))] w-full max-w-[1120px] flex-col overflow-hidden rounded-[28px] border border-white/80 bg-white shadow-[0_34px_110px_rgba(57,38,110,.30)]">
-            <header className="drift-builder-header relative flex min-h-[104px] shrink-0 items-center justify-between gap-4 overflow-hidden border-b border-violet-100 px-6 py-4 sm:px-8">
+          <div className="drift-builder-shell flex h-[calc(100dvh-44px)] w-full max-w-[1456px] flex-col overflow-hidden rounded-[28px] border border-white/80 bg-white shadow-[0_34px_110px_rgba(57,38,110,.30)]">
+            <header className="drift-builder-header relative flex min-h-[130px] shrink-0 items-center justify-between gap-4 overflow-hidden border-b border-violet-100 px-6 py-4 sm:px-8">
               <div className="relative z-10 flex items-center gap-4">
                 <div className="drift-builder-mark"><Wand2 className="h-6 w-6"/></div>
                 <div>
@@ -194,9 +194,9 @@ export function TeacherModuleBuilderModal({ classInstanceId, schoolId, editModul
               </div>
               <button type="button" onClick={() => setOpen(false)} aria-label="Schließen" className="rounded-xl p-2 text-slate-500 hover:bg-slate-100"><X className="h-5 w-5" /></button>
             </header>
-            <div className="min-h-0 flex-1 overflow-y-auto p-4 sm:px-[22px] sm:py-4 lg:overflow-hidden">
-              <div className="grid h-auto min-h-full gap-4 lg:h-full lg:min-h-0 lg:grid-cols-[minmax(0,390px)_minmax(0,1fr)]">
-                <section className="drift-builder-left flex min-h-0 flex-col gap-4 overflow-y-auto pr-1">
+            <div className="min-h-0 flex-1 overflow-hidden p-0">
+              <div className="grid h-full min-h-0 gap-0 lg:grid-cols-[minmax(0,464px)_minmax(0,1fr)]">
+                <section className="drift-builder-left flex min-h-0 flex-col gap-4 overflow-y-auto border-r border-violet-100 px-6 py-5 sm:px-7">
                   <div className="drift-builder-cover relative overflow-hidden rounded-[22px]">
                     {posts.find(post => post.imageFile || post.existingImageUrl) ? <img src={(() => { const p=posts.find(post => post.imageFile || post.existingImageUrl)!; return p.imageFile ? URL.createObjectURL(p.imageFile) : p.existingImageUrl!; })()} alt="" className="h-full w-full object-cover"/> : <div className="drift-builder-cover-art"><span className="drift-cover-orb drift-cover-orb-a"/><span className="drift-cover-orb drift-cover-orb-b"/><span className="drift-cover-stars">✦　✧　✦</span><span className="drift-cover-word">DR1FT</span><span className="drift-cover-caption">LEARN · CREATE · DISCOVER</span></div>}
                     <span className="absolute bottom-3 left-4 rounded-full border border-white/40 bg-slate-950/35 px-3 py-1 text-[9px] font-extrabold uppercase tracking-[.2em] text-white backdrop-blur">Dein Lernmodul</span>
@@ -230,7 +230,7 @@ export function TeacherModuleBuilderModal({ classInstanceId, schoolId, editModul
                   </div>
                 </section>
                 {selected ? (
-                  <section className="drift-builder-canvas flex min-h-[360px] min-w-0 flex-col overflow-y-auto rounded-[24px] px-5 py-4 lg:min-h-0">
+                  <section className="drift-builder-canvas flex min-h-0 min-w-0 flex-col overflow-y-auto px-5 py-5 sm:px-6 lg:min-h-0">
                     <div className="mb-3 flex items-center justify-between"><button type="button" onClick={()=>setSelectedId(null)} className="text-xs font-bold text-violet-700">← Zurück zu allen Beiträgen</button><span className="text-[10px] font-bold uppercase tracking-widest text-violet-600">Beitrag bearbeiten</span></div>
                                       <div className="flex shrink-0 items-center justify-between gap-2"><div><p className="text-[9px] font-extrabold uppercase tracking-[.2em] text-violet-600">DEINE CONTENT-KARTE</p><h3 className="mt-1 text-sm font-extrabold text-slate-900">Beitrag gestalten</h3></div>{selected && <button type="button" onClick={() => { setPosts((items) => items.filter((item) => item.id !== selected.id)); setSelectedId(null); }} className="text-xs font-semibold text-rose-600 hover:text-rose-700">Beitrag entfernen</button>}</div>
                   {selected ? (
