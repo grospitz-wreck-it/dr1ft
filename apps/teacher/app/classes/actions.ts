@@ -181,6 +181,16 @@ export async function archiveScenarioAssignment(classId: string, scenarioId: str
   revalidatePath("/classes");
 }
 
+export async function resetScenarioAssignment(classId: string, scenarioId: string) {
+  const supabase = supabaseServerClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) throw new Error("Nicht authentifiziert");
+  await assertCanManageClass(supabase, user.id, classId);
+  const { error } = await supabase.from("class_instance_scenario_assignments")
+    .delete().eq("class_instance_id", classId).eq("scenario_id", scenarioId);
+  if (error) throw new Error(error.message);
+  revalidatePath("/classes/" + classId);
+}
 export async function updateScenarioPacing(
   classId: string,
   scenarioId: string,
