@@ -51,7 +51,7 @@ export default async function ClassDetailPage({
   }
 
   const parallelQueriesStartedAt = Date.now();
-  const timed = async <T,>(label: string, query: Promise<T>): Promise<T> => {
+  const timed = async <T,>(label: string, query: PromiseLike<T>): Promise<T> => {
     const startedAt = Date.now();
     try {
       const result = await query;
