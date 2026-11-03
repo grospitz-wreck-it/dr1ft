@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { ArrowDown, ArrowUp, Check, GripVertical, ImagePlus, Link2, Plus, Save, Type, X, Wand2, RotateCcw, SlidersHorizontal, BarChart3, CircleCheck, Copy, Play } from "lucide-react";
+import { ArrowDown, ArrowUp, Check, GripVertical, ImagePlus, Link2, Plus, Save, Type, X, Wand2, RotateCcw, SlidersHorizontal, BarChart3, CircleCheck, Copy, Play, Monitor, Smartphone } from "lucide-react";
 import { saveTeacherCreatedModule, updateTeacherCreatedModule } from "./teacherModuleActions";
 
 type DraftPost = {
@@ -27,7 +27,7 @@ export function TeacherModuleBuilderModal({ classInstanceId, schoolId, editModul
   const [titleCardEnabled, setTitleCardEnabled] = useState(true);
   const [visibilityScope, setVisibilityScope] = useState<"private" | "school" | "class">("class");
   const [posts, setPosts] = useState<DraftPost[]>([]);
-  const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [selectedId, setSelectedId] = useState<string | null>(null);\n  const [previewMode, setPreviewMode] = useState(false);\n  const [previewDevice, setPreviewDevice] = useState<"mobile" | "desktop">("desktop");
   const [dragId, setDragId] = useState<string | null>(null);
   const [imageEditorOpen, setImageEditorOpen] = useState(false);
   const [error, setError] = useState("");
@@ -52,7 +52,7 @@ export function TeacherModuleBuilderModal({ classInstanceId, schoolId, editModul
   function reset() {
     setModuleId(null);
     setTitle(""); setDescription(""); setTitleCardEnabled(true); setVisibilityScope("class");
-    setPosts([]); setSelectedId(null); setError(""); setImageEditorOpen(false);
+    setPosts([]); setSelectedId(null); setPreviewMode(false); setPreviewDevice("desktop"); setError(""); setImageEditorOpen(false);
   }
   function openEditor() {
     setError("");
@@ -272,7 +272,7 @@ export function TeacherModuleBuilderModal({ classInstanceId, schoolId, editModul
                                   <section className="drift-builder-canvas flex min-h-[360px] min-w-0 flex-col overflow-y-auto rounded-[24px] px-5 py-4 lg:min-h-0">
                   <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
                     <div><div className="flex items-center gap-2"><span className="drift-builder-step">03</span><h3 className="text-[21px] font-extrabold tracking-tight text-slate-950">Beiträge ({posts.length})</h3></div><p className="mt-1 text-xs text-slate-600">Ziehe die Karten per Drag & Drop in die gewünschte Reihenfolge.</p></div>
-                    <div className="flex items-center gap-2"><span className="rounded-xl border border-violet-100 bg-white px-3 py-2 text-[10px] font-bold text-violet-700">{posts.length} / 40 Karten</span><button type="button" onClick={()=>setSelectedId(posts[0]?.id ?? null)} disabled={!posts.length} className="inline-flex items-center gap-2 rounded-xl border border-violet-200 bg-violet-50 px-4 py-2.5 text-xs font-extrabold text-violet-700 disabled:opacity-40"><Play className="h-3.5 w-3.5"/> Vorschau</button></div>
+                    <div className="flex items-center gap-2"><span className="rounded-xl border border-violet-100 bg-white px-3 py-2 text-[10px] font-bold text-violet-700">{posts.length} / 40 Karten</span><button type="button" onClick={()=>setPreviewMode(true)} disabled={!posts.length} className="inline-flex items-center gap-2 rounded-xl border border-violet-200 bg-violet-50 px-4 py-2.5 text-xs font-extrabold text-violet-700 disabled:opacity-40"><Play className="h-3.5 w-3.5"/> Vorschau</button></div>
                   </div>
                   <div className="space-y-3">
                     {thumbnails.map(post=><article key={post.id} draggable onDragStart={event=>{setDragId(post.id);event.dataTransfer.effectAllowed="move";event.dataTransfer.setData("text/plain",post.id);}} onDragOver={event=>{event.preventDefault();event.dataTransfer.dropEffect="move";}} onDrop={event=>{event.preventDefault();const source=event.dataTransfer.getData("text/plain")||dragId;if(source)movePost(source,post.id);setDragId(null);}} onDragEnd={()=>setDragId(null)} className="drift-builder-post-row group flex items-center gap-3 rounded-[20px] p-3">
