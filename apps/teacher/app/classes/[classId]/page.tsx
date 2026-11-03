@@ -61,30 +61,37 @@ export default async function ClassDetailPage({
   const { data: session } = await supabase.auth.getSession();
   const user = session.session?.user ?? null;
   const dashboardPromise = (async () => {
-    if (!session.session?.access_token) return {};
-    const dashboardRes = await withTimeout(
-      fetch(
-        `${process.env.NEXT_PUBLIC_SUPABASE_URL}/functions/v1/teacher-dashboard`,
-        {
-          method: "POST",
-          headers: {
-            Authorization: `Bearer ${session.session.access_token}`,
-            "Content-Type": "application/json",
+    try {
+      if (!session.session?.access_token) return {};
+      const dashboardRes = await withTimeout(
+        fetch(
+          `${process.env.NEXT_PUBLIC_SUPABASE_URL}/functions/v1/teacher-dashboard`,
+          {
+            method: "POST",
+            headers: {
+              Authorization: `Bearer ${session.session.access_token}`,
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify({ classId }),
+            cache: "no-store",
+            signal: AbortSignal.timeout(5000),
           },
-          body: JSON.stringify({ classId }),
-          cache: "no-store",
-          signal: AbortSignal.timeout(5000),
-        },
-      ),
-      5500,
-      null,
-    );
-    if (dashboardRes?.ok) return await dashboardRes.json().catch(() => ({}));
-    if (dashboardRes) {
-      const errorBody = await dashboardRes.text().catch(() => "");
-      console.error("[class-page] teacher-dashboard returned", dashboardRes.status, errorBody);
+        ),
+        5500,
+        null,
+      );
+      if (dashboardRes?.ok) return await dashboardRes.json().catch(() => ({}));
+      if (dashboardRes) {
+        const errorBody = await dashboardRes.text().catch(() => "");
+        console.error("[class-page] teacher-dashboard returned", dashboardRes.status, errorBody);
+      } else {
+        console.warn("[class-page] teacher-dashboard timed out; rendering without learning insights");
+      }
+      return {};
+    } catch (error) {
+      console.error("[class-page] teacher-dashboard failed; rendering without learning insights", error);
+      return {};
     }
-    return {};
   })();
 
   const [
