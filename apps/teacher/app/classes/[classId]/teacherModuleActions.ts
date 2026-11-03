@@ -31,6 +31,53 @@ function validateEmbed(raw: string) {
   throw new Error("Unterstützt werden aktuell YouTube und Vimeo.");
 }
 
+export async function getTeacherModulePosts(classInstanceId: string, moduleId: string) {
+  const supabase = supabaseServerClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) throw new Error("Nicht authentifiziert");
+
+  // The assignment lookup is class-scoped and subject to the existing RLS
+  // policies. Never return posts for a module not assigned to this class.
+  const { data: assignment, error: assignmentError } = await supabase
+    .from("teacher_module_class_assignments")
+    .select("id")
+    .eq("class_instance_id", classInstanceId)
+    .eq("module_id", moduleId)
+    .maybeSingle();
+
+  if (assignmentError || !assignment) {
+    throw new Error("Du hast keinen Zugriff auf dieses Modul.");
+  }
+
+  const { data: posts, error: postsError } = await supabase
+    .from("teacher_module_posts")
+    .select("id,post_type,title,body,image_path,embed_url,sort_order,status")
+    .eq("module_id", moduleId)
+    .eq("status", "published")
+    .order("sort_order", { ascending: true });
+
+  if (postsError) throw new Error("Modulbeiträge konnten nicht geladen werden.");
+
+  return await Promise.all((posts ?? []).map(async (post: any) => {
+    const { data: imageData, error: imageError } = post.image_path
+      ? await supabase.storage.from("teacher-module-assets").createSignedUrl(post.image_path, 60 * 60)
+      : { data: null, error: null };
+
+    if (imageError) {
+      throw new Error("Ein Modulbild konnte nicht geladen werden.");
+    }
+
+    return {
+      id: post.id,
+      postType: post.post_type,
+      title: post.title ?? "",
+      body: post.body ?? "",
+      embedUrl: post.embed_url ?? "",
+      imageUrl: imageData?.signedUrl ?? null,
+    };
+  }));
+}
+
 export async function saveTeacherCreatedModule(formData: FormData) {
   const supabase = supabaseServerClient();
   const { data: { user } } = await supabase.auth.getUser();
