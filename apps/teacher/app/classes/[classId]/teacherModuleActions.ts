@@ -52,7 +52,7 @@ export async function saveTeacherCreatedModule(formData: FormData) {
     .is("left_at", null)
     .maybeSingle();
 
-  if (membershipError || !membership || !["teacher", "school_admin", "school_lead"].includes(membership.role)) {
+  if (membershipError || !membership || !["teacher", "school_admin"].includes(membership.role)) {
     throw new Error("Du hast keine Berechtigung, Inhalte für diese Klasse zu erstellen.");
   }
   const membershipSchoolId = (membership as any).class_instances?.school_id;
