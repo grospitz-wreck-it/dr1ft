@@ -154,6 +154,44 @@ export default async function ClassDetailPage({
         .then(({ data }) => data?.signedUrl ?? null)
     : Promise.resolve(null);
 
+const availableTeacherModulesPromise = Promise.all(
+    (availableTeacherModules ?? []).map(async (module: any) => {
+      const posts = await Promise.all(
+        [...(module.teacher_module_posts ?? [])]
+          .filter((post: any) => post.status === "published")
+          .sort((a: any, b: any) => Number(a.sort_order ?? 0) - Number(b.sort_order ?? 0))
+          .map(async (post: any) => {
+            const { data: imageData } = post.image_path
+              ? await supabase.storage.from("teacher-module-assets").createSignedUrl(post.image_path, 60 * 60)
+              : { data: null };
+            return { id: post.id, postType: post.post_type, title: post.title ?? "", body: post.body ?? "", embedUrl: post.embed_url ?? "", imageUrl: imageData?.signedUrl ?? null };
+          }),
+      );
+      return { id: module.id, module_id: module.id, title: module.title, description: module.description ?? "", visibility_scope: module.visibility_scope, posts };
+    }),
+  );
+
+const teacherModulesPromise = Promise.all(
+    (teacherModuleAssignments ?? [])
+      .filter((row: any) => row.teacher_modules?.status === "published")
+      .map(async (row: any) => {
+        const posts = await Promise.all(
+          [...(row.teacher_modules.teacher_module_posts ?? [])]
+            .filter((post: any) => post.status === "published")
+            .sort((a: any, b: any) => Number(a.sort_order ?? 0) - Number(b.sort_order ?? 0))
+            .map(async (post: any) => {
+              const { data: imageData } = post.image_path
+                ? await supabase.storage.from("teacher-module-assets").createSignedUrl(post.image_path, 60 * 60)
+                : { data: null };
+              return { id: post.id, postType: post.post_type, title: post.title ?? "", body: post.body ?? "", embedUrl: post.embed_url ?? "", imageUrl: imageData?.signedUrl ?? null };
+            }),
+        );
+        return { id: row.id, module_id: row.module_id, school_id: row.school_id, assigned_by: row.assigned_by, is_active: row.is_active, scheduled_start_at: row.scheduled_start_at, scheduled_end_at: row.scheduled_end_at, title: row.teacher_modules.title, description: row.teacher_modules.description, introTitle: row.teacher_modules.intro_title, introText: row.teacher_modules.intro_text, visibility_scope: row.teacher_modules.visibility_scope, cover_image_url: posts.find((post: any) => post.imageUrl)?.imageUrl ?? null, posts };
+      }),
+  );
+
+  const [availableTeacherModulesData, teacherModulesData] = await Promise.all([availableTeacherModulesPromise, teacherModulesPromise]);
+
   const students = (roster ?? [])
     .filter((row: any) => row.role === "student")
     .map((row: any) => ({
@@ -167,8 +205,7 @@ export default async function ClassDetailPage({
   const activeAssignment = activeAssignments[0] ?? null;
   const reportingUnlocked = !activeAssignment?.show_reports_at_end || Boolean(activeAssignment?.scheduled_end_at && new Date(activeAssignment.scheduled_end_at).getTime() <= Date.now());
 
-  const dashboard: any = await dashboardPromise;
-  const classImageUrl: string | null = await classImagePromise;
+  const [dashboard, classImageUrl] = await Promise.all([dashboardPromise, classImagePromise]);
 
   const competencyRows = dashboard.studentCompetencyProgress ?? [];
   const missionRows = dashboard.studentMissionProgress ?? [];
@@ -256,43 +293,7 @@ export default async function ClassDetailPage({
     ? `${completed} von ${total} Mission-Abschlüssen über alle Schüler:innen · ${studentsWithCompletedModule} von ${studentsWithMissionData.length} Schüler:innen haben alle Missionen abgeschlossen`
     : "Noch keine auswertbaren Missionsfortschritte vorhanden.";
 
-const availableTeacherModulesPromise = Promise.all(
-    (availableTeacherModules ?? []).map(async (module: any) => {
-      const posts = await Promise.all(
-        [...(module.teacher_module_posts ?? [])]
-          .filter((post: any) => post.status === "published")
-          .sort((a: any, b: any) => Number(a.sort_order ?? 0) - Number(b.sort_order ?? 0))
-          .map(async (post: any) => {
-            const { data: imageData } = post.image_path
-              ? await supabase.storage.from("teacher-module-assets").createSignedUrl(post.image_path, 60 * 60)
-              : { data: null };
-            return { id: post.id, postType: post.post_type, title: post.title ?? "", body: post.body ?? "", embedUrl: post.embed_url ?? "", imageUrl: imageData?.signedUrl ?? null };
-          }),
-      );
-      return { id: module.id, module_id: module.id, title: module.title, description: module.description ?? "", visibility_scope: module.visibility_scope, posts };
-    }),
-  );
 
-const teacherModulesPromise = Promise.all(
-    (teacherModuleAssignments ?? [])
-      .filter((row: any) => row.teacher_modules?.status === "published")
-      .map(async (row: any) => {
-        const posts = await Promise.all(
-          [...(row.teacher_modules.teacher_module_posts ?? [])]
-            .filter((post: any) => post.status === "published")
-            .sort((a: any, b: any) => Number(a.sort_order ?? 0) - Number(b.sort_order ?? 0))
-            .map(async (post: any) => {
-              const { data: imageData } = post.image_path
-                ? await supabase.storage.from("teacher-module-assets").createSignedUrl(post.image_path, 60 * 60)
-                : { data: null };
-              return { id: post.id, postType: post.post_type, title: post.title ?? "", body: post.body ?? "", embedUrl: post.embed_url ?? "", imageUrl: imageData?.signedUrl ?? null };
-            }),
-        );
-        return { id: row.id, module_id: row.module_id, school_id: row.school_id, assigned_by: row.assigned_by, is_active: row.is_active, scheduled_start_at: row.scheduled_start_at, scheduled_end_at: row.scheduled_end_at, title: row.teacher_modules.title, description: row.teacher_modules.description, introTitle: row.teacher_modules.intro_title, introText: row.teacher_modules.intro_text, visibility_scope: row.teacher_modules.visibility_scope, cover_image_url: posts.find((post: any) => post.imageUrl)?.imageUrl ?? null, posts };
-      }),
-  );
-
-  const [availableTeacherModulesData, teacherModulesData] = await Promise.all([availableTeacherModulesPromise, teacherModulesPromise]);
 
   const schoolImageUrl = school?.school_image_path
     ? `${process.env.NEXT_PUBLIC_SUPABASE_URL}/storage/v1/object/public/school-images/${school.school_image_path}`
