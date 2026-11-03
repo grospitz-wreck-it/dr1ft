@@ -201,3 +201,48 @@ export async function setTeacherModuleAssignmentActive(classInstanceId: string, 
 export async function archiveTeacherModuleAssignment(classInstanceId: string, assignmentId: string) {
   return setTeacherModuleAssignmentActive(classInstanceId, assignmentId, false);
 }
+
+export async function updateTeacherModuleSchedule(classInstanceId: string, assignmentId: string, startAt: string | null, endAt: string | null) {
+  const supabase = supabaseServerClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) throw new Error("Nicht authentifiziert.");
+  if (startAt && endAt && new Date(endAt) <= new Date(startAt)) throw new Error("Das Ende muss nach dem Start liegen.");
+
+  const { data: assignment, error: lookupError } = await supabase
+    .from("teacher_module_class_assignments")
+    .select("id,school_id")
+    .eq("id", assignmentId)
+    .eq("class_instance_id", classInstanceId)
+    .maybeSingle();
+  if (lookupError || !assignment) throw new Error("Modulzuordnung nicht gefunden.");
+
+  const { data: schoolMembership } = await supabase
+    .from("school_memberships")
+    .select("role")
+    .eq("school_id", assignment.school_id)
+    .eq("user_id", user.id)
+    .eq("active", true)
+    .maybeSingle();
+  const isSchoolAdmin = schoolMembership?.role === "school_admin";
+  let isClassTeacher = false;
+  if (!isSchoolAdmin) {
+    const { data: membership } = await supabase
+      .from("class_instance_memberships")
+      .select("id")
+      .eq("class_instance_id", classInstanceId)
+      .eq("user_id", user.id)
+      .eq("role", "teacher")
+      .is("left_at", null)
+      .maybeSingle();
+    isClassTeacher = Boolean(membership);
+  }
+  if (!isSchoolAdmin && !isClassTeacher) throw new Error("Du darfst diesen Zeitplan nicht ändern.");
+
+  const { error } = await supabase
+    .from("teacher_module_class_assignments")
+    .update({ scheduled_start_at: startAt, scheduled_end_at: endAt })
+    .eq("id", assignmentId)
+    .eq("class_instance_id", classInstanceId);
+  if (error) throw new Error(error.message);
+  revalidatePath(`/classes/${classInstanceId}`);
+}
