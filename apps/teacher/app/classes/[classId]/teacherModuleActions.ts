@@ -68,7 +68,7 @@ export async function saveTeacherCreatedModule(formData: FormData) {
     .eq("active", true)
     .maybeSingle();
 
-  const isSchoolAdmin = ["school_admin", "school_lead"].includes(schoolMembership?.role ?? "");
+  const isSchoolAdmin = ["school_admin"].includes(schoolMembership?.role ?? "");
   let isClassTeacher = false;
   if (!isSchoolAdmin) {
     const { data: membership, error: membershipError } = await supabase
@@ -76,7 +76,7 @@ export async function saveTeacherCreatedModule(formData: FormData) {
       .select("id,role")
       .eq("class_instance_id", classInstanceId)
       .eq("user_id", user.id)
-      .in("role", ["teacher", "school_admin", "school_lead"])
+      .eq("role", "teacher")
       .is("left_at", null)
       .maybeSingle();
     isClassTeacher = !membershipError && Boolean(membership);
@@ -177,7 +177,7 @@ export async function setTeacherModuleAssignmentActive(classInstanceId: string, 
     .eq("user_id", user.id)
     .eq("active", true)
     .maybeSingle();
-  const isSchoolAdmin = ["school_admin", "school_lead"].includes(schoolMembership?.role ?? "");
+  const isSchoolAdmin = ["school_admin"].includes(schoolMembership?.role ?? "");
   let isClassTeacher = false;
   if (!isSchoolAdmin) {
     const { data: membership } = await supabase
@@ -226,7 +226,7 @@ export async function updateTeacherModuleSchedule(classInstanceId: string, assig
     .eq("user_id", user.id)
     .eq("active", true)
     .maybeSingle();
-  const isSchoolAdmin = ["school_admin", "school_lead"].includes(schoolMembership?.role ?? "");
+  const isSchoolAdmin = ["school_admin"].includes(schoolMembership?.role ?? "");
   let isClassTeacher = false;
   if (!isSchoolAdmin) {
     const { data: membership } = await supabase
