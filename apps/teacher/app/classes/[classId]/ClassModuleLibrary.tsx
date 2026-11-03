@@ -16,7 +16,7 @@ type Scenario = {
   age_rating: string;
 };
 
-type TeacherModule = { id: string; module_id: string; school_id: string; assigned_by: string; is_active: boolean; title: string; description: string | null; introTitle?: string | null; introText?: string | null; visibility_scope?: "private" | "school" | "class"; title_card_enabled?: boolean; canManage: boolean; cover_image_url: string | null; scheduled_start_at: string | null; scheduled_end_at: string | null; posts: Array<{ id: string; postType: "text" | "image" | "embed" | "mixed"; title: string; body: string; embedUrl: string; imageUrl: string | null }> };
+type TeacherModule = { id: string; module_id: string; school_id: string; assigned_by: string; is_active: boolean; title: string; description: string | null; introTitle?: string | null; introText?: string | null; visibility_scope?: "private" | "school" | "class"; title_card_enabled?: boolean; canManage: boolean; cover_image_url: string | null; scheduled_start_at: string | null; scheduled_end_at: string | null; posts: Array<{ id: string; postType: "text" | "image" | "embed" | "mixed" | "poll" | "true_false"; title: string; body: string; embedUrl: string; imageUrl: string | null; interactionData?: { options: [string, string]; correctAnswer?: "true" | "false"; explanation?: string } }> };
 
 type Assignment = {
   scenario_id: string;
