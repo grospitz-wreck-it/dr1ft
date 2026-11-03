@@ -4,6 +4,25 @@ import { useRef, useState } from "react";
 import { createBrowserClient } from "@supabase/ssr";
 import { useRouter } from "next/navigation";
 
+async function convertToWebP(source: File, maxDimension = 1920, quality = 0.82): Promise<File> {
+  const objectUrl = URL.createObjectURL(source);
+  try {
+    const image = new Image(); image.src = objectUrl;
+    await new Promise<void>((resolve, reject) => { image.onload = () => resolve(); image.onerror = () => reject(new Error("Bild konnte nicht gelesen werden.")); });
+    const factor = Math.min(1, maxDimension / Math.max(image.naturalWidth, image.naturalHeight));
+    const canvas = document.createElement("canvas");
+    canvas.width = Math.max(1, Math.round(image.naturalWidth * factor));
+    canvas.height = Math.max(1, Math.round(image.naturalHeight * factor));
+    const context = canvas.getContext("2d");
+    if (!context) throw new Error("Bildoptimierung wird in diesem Browser nicht unterstützt.");
+    context.drawImage(image, 0, 0, canvas.width, canvas.height);
+    const blob = await new Promise<Blob>((resolve, reject) => canvas.toBlob(value => value ? resolve(value) : reject(new Error("WebP-Konvertierung fehlgeschlagen.")), "image/webp", quality));
+    if (blob.type !== "image/webp") throw new Error("Dieser Browser unterstützt keine WebP-Konvertierung.");
+    const baseName = source.name.replace(/\.[^.]+$/, "") || "dr1ft-image";
+    return new File([blob], baseName + ".webp", { type: "image/webp", lastModified: Date.now() });
+  } finally { URL.revokeObjectURL(objectUrl); }
+}
+
 type Props = {
   classId: string;
   imagePath: string | null;
@@ -72,16 +91,14 @@ export default function ClassImageEditor({
       let nextPath = imagePath;
 
       if (file) {
-        const extension =
-          file.name.split(".").pop()?.toLowerCase() || "jpg";
-
-        const path = `${classId}/class-${Date.now()}.${extension}`;
+        const optimizedFile = await convertToWebP(file);
+        const path = `${classId}/class-${Date.now()}.webp`;
 
         const { error: uploadError } = await supabase.storage
           .from("class-images")
-          .upload(path, file, {
+          .upload(path, optimizedFile, {
             upsert: false,
-            contentType: file.type,
+            contentType: "image/webp",
           });
 
         if (uploadError) {
