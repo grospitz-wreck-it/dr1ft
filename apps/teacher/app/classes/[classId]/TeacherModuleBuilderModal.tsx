@@ -215,7 +215,7 @@ export function TeacherModuleBuilderModal({ classInstanceId, schoolId, editModul
                   </label>
                   <div className="rounded-2xl border border-slate-200 bg-slate-50/70 p-3">
                     <div className="flex items-center justify-between gap-2">
-                      <div><h3 className="text-sm font-bold text-slate-900">Beiträge</h3><p className="text-[11px] text-slate-500">Thumbnails ziehen, um die Reihenfolge zu ändern.</p></div>
+                      <div><h3 className="text-sm font-bold text-slate-900">Beiträge</h3><p className="text-[11px] text-slate-500">Karten am Griff ziehen, um die Reihenfolge zu ändern.</p></div>
                       <span className="rounded-full bg-violet-100 px-2.5 py-1 text-[10px] font-bold text-violet-700">{posts.length} / 40</span>
                     </div>
                     <div className="mt-3 space-y-2">
