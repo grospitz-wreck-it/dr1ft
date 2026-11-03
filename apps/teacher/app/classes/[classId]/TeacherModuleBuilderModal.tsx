@@ -58,6 +58,8 @@ export function TeacherModuleBuilderModal({ classInstanceId, schoolId, editModul
   }
   function openEditor() {
     setError("");
+    setPreviewMode(false);
+    setPreviewDevice("desktop");
     setImageEditorOpen(false);
     if (editModule) {
       setModuleId(editModule.id);
