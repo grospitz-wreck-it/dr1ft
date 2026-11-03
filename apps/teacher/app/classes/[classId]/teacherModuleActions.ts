@@ -5,7 +5,8 @@ import { supabaseServerClient } from "../../../lib/supabaseServerClient";
 
 type PostInput = {
   id: string;
-  postType: "text" | "image" | "embed" | "mixed";
+  postType: "text" | "image" | "embed" | "mixed" | "poll" | "true_false";
+  interactionData?: { options?: [string,string]; correctAnswer?: "true" | "false"; explanation?: string };
   title: string;
   body: string;
   embedUrl?: string;
@@ -50,7 +51,7 @@ export async function getTeacherModulePosts(classInstanceId: string, moduleId: s
       .maybeSingle(),
     supabase
       .from("teacher_module_posts")
-      .select("id,post_type,title,body,image_path,embed_url,sort_order,status")
+      .select("id,post_type,title,body,image_path,embed_url,interaction_data,sort_order,status")
       .eq("module_id", moduleId)
       .eq("status", "published")
       .order("sort_order", { ascending: true }),
@@ -79,6 +80,7 @@ export async function getTeacherModulePosts(classInstanceId: string, moduleId: s
       body: post.body ?? "",
       embedUrl: post.embed_url ?? "",
       imageUrl: imageData?.signedUrl ?? null,
+      interactionData: post.interaction_data ?? { options: ["Echt", "Fake"] },
     };
   }));
 }
@@ -92,9 +94,9 @@ export async function saveTeacherCreatedModule(formData: FormData) {
   const schoolId = String(formData.get("schoolId") ?? "");
   const title = String(formData.get("title") ?? "").trim();
   const description = String(formData.get("description") ?? "").trim();
+  const titleCardEnabled = formData.get("titleCardEnabled") !== "false";
   const visibilityScope = ["private", "school", "class"].includes(String(formData.get("visibilityScope"))) ? String(formData.get("visibilityScope")) : "class";
-    const introTitle = String(formData.get("introTitle") ?? "").trim().slice(0, 120);
-  const introText = String(formData.get("introText") ?? "").trim().slice(0, 1200);
+    const titleCardEnabled = formData.get("titleCardEnabled") !== "false";
   const postsRaw = String(formData.get("posts") ?? "[]");
   if (!classInstanceId || !schoolId) throw new Error("Klassen- oder Schulzuordnung fehlt.");
   if (!title || title.length > 120) throw new Error("Bitte einen Modultitel mit maximal 120 Zeichen angeben.");
@@ -150,7 +152,7 @@ export async function saveTeacherCreatedModule(formData: FormData) {
 
   const { data: module, error: moduleError } = await supabase
     .from("teacher_modules")
-    .insert({ school_id: schoolId, created_by: user.id, title, description, intro_title: introTitle || null, intro_text: introText || null, visibility_scope: visibilityScope, status: "draft" })
+    .insert({ school_id: schoolId, created_by: user.id, title, description, title_card_enabled: titleCardEnabled, intro_title: null, intro_text: null, visibility_scope: visibilityScope, status: "draft" })
     .select("id")
     .single();
   if (moduleError || !module) throw new Error(moduleError?.message ?? "Modul konnte nicht angelegt werden.");
@@ -158,7 +160,7 @@ export async function saveTeacherCreatedModule(formData: FormData) {
   const rows = [];
   for (let index = 0; index < posts.length; index++) {
     const post = posts[index];
-    if (!post.id || !["text", "image", "embed", "mixed"].includes(post.postType)) throw new Error("Ungültiger Beitrag.");
+    if (!post.id || !["text", "image", "embed", "mixed", "poll", "true_false"].includes(post.postType)) throw new Error("Ungültiger Beitrag.");
     // Always let the server mint the database primary key. Client draft IDs are
     // only correlation keys for uploaded files and must never become DB IDs.
     const postId = crypto.randomUUID();
@@ -180,6 +182,7 @@ export async function saveTeacherCreatedModule(formData: FormData) {
       title: String(post.title ?? "").slice(0, 180),
       body: String(post.body ?? "").slice(0, 12000),
       image_path: imagePath,
+      interaction_data: post.interactionData ?? {},
       embed_provider: embed?.provider ?? null,
       embed_url: embed?.url ?? null,
       sort_order: index,
@@ -247,7 +250,7 @@ export async function updateTeacherCreatedModule(formData: FormData) {
   const rows = [];
   for (let index = 0; index < posts.length; index++) {
     const post = posts[index];
-    if (!post.id || !["text","image","embed","mixed"].includes(post.postType)) throw new Error("Ungültiger Beitrag.");
+    if (!post.id || !["text","image","embed","mixed","poll","true_false"].includes(post.postType)) throw new Error("Ungültiger Beitrag.");
     const isExisting = currentById.has(post.id);
     const postId = isExisting ? post.id : crypto.randomUUID();
     keepIds.add(postId);
@@ -260,12 +263,12 @@ export async function updateTeacherCreatedModule(formData: FormData) {
       const { error: uploadError } = await supabase.storage.from("teacher-module-assets").upload(imagePath, file, { contentType: file.type, upsert: true });
       if (uploadError) throw new Error(uploadError.message);
     }
-    rows.push({ id: postId, module_id: moduleId, post_type: post.postType, title: String(post.title ?? "").slice(0,180), body: String(post.body ?? "").slice(0,12000), image_path: imagePath, embed_provider: embed?.provider ?? null, embed_url: embed?.url ?? null, sort_order: index, status: "published" });
+    rows.push({ id: postId, module_id: moduleId, post_type: post.postType, title: String(post.title ?? "").slice(0,180), body: String(post.body ?? "").slice(0,12000), image_path: imagePath, interaction_data: post.interactionData ?? {}, embed_provider: embed?.provider ?? null, embed_url: embed?.url ?? null, sort_order: index, status: "published" });
   }
   const introTitle = String(formData.get("introTitle") ?? "").trim().slice(0, 120);
   const introText = String(formData.get("introText") ?? "").trim().slice(0, 1200);
   const visibilityScope = ["private", "school", "class"].includes(String(formData.get("visibilityScope"))) ? String(formData.get("visibilityScope")) : "class";
-  const { error: updateModuleError } = await supabase.from("teacher_modules").update({ title, description, intro_title: introTitle || null, intro_text: introText || null, visibility_scope: visibilityScope }).eq("id", moduleId);
+  const { error: updateModuleError } = await supabase.from("teacher_modules").update({ title, description, title_card_enabled: titleCardEnabled, visibility_scope: visibilityScope }).eq("id", moduleId);
   if (updateModuleError) throw new Error(updateModuleError.message);
   const removedIds = (currentPosts ?? []).filter((post: any) => !keepIds.has(post.id)).map((post: any) => post.id);
   if (removedIds.length) {
