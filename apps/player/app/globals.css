@@ -457,3 +457,91 @@ body.dark-mode {
 .dark-mode .learning-card-result.is-partial { border-color: #354c78; background: linear-gradient(120deg,#202d4a,#30264a); }
 .dark-mode .learning-card-result.is-retry { border-color: #67406b; background: linear-gradient(120deg,#35203e,#3b202e); }
 .dark-mode .learning-card-retry { color: #e9d5ff; background: rgba(255,255,255,.09); }
+
+
+/* Unified DR1FT glass control language: shared shape and material for buttons
+   across the Player app. Existing semantic text/icon colors remain intact. */
+@layer components {
+  .player-mobile-header button,
+  main button,
+  .dark-post-menu button,
+  .dark-share-dialog button {
+    border-radius: 16px;
+    border: 1px solid rgba(167, 139, 250, .34);
+    background: linear-gradient(145deg, rgba(255,255,255,.66), rgba(245,240,255,.42));
+    box-shadow:
+      inset 0 1px 0 rgba(255,255,255,.78),
+      0 4px 14px rgba(76,29,149,.08);
+    backdrop-filter: blur(18px);
+    -webkit-backdrop-filter: blur(18px);
+    transition:
+      background-color .18s ease,
+      border-color .18s ease,
+      box-shadow .18s ease,
+      transform .18s ease;
+  }
+
+  .player-mobile-header button:hover:not(:disabled),
+  main button:hover:not(:disabled),
+  .dark-post-menu button:hover:not(:disabled),
+  .dark-share-dialog button:hover:not(:disabled) {
+    border-color: rgba(139, 92, 246, .58);
+    background: linear-gradient(145deg, rgba(255,255,255,.82), rgba(237,228,255,.64));
+    box-shadow:
+      inset 0 1px 0 rgba(255,255,255,.9),
+      0 7px 20px rgba(124,58,237,.12);
+  }
+
+  .player-mobile-header button:active:not(:disabled),
+  main button:active:not(:disabled),
+  .dark-post-menu button:active:not(:disabled),
+  .dark-share-dialog button:active:not(:disabled) {
+    transform: translateY(1px);
+  }
+
+  .player-mobile-header button:focus-visible,
+  main button:focus-visible,
+  .dark-post-menu button:focus-visible,
+  .dark-share-dialog button:focus-visible {
+    outline: 2px solid rgba(139, 92, 246, .72);
+    outline-offset: 2px;
+  }
+
+  .player-mobile-header button:disabled,
+  main button:disabled,
+  .dark-post-menu button:disabled,
+  .dark-share-dialog button:disabled {
+    opacity: .48;
+    cursor: not-allowed;
+  }
+
+  .dark-mode .player-mobile-header button,
+  .dark-mode main button,
+  .dark-mode .dark-post-menu button,
+  .dark-mode .dark-share-dialog button {
+    border-color: rgba(167, 139, 250, .26);
+    background: linear-gradient(145deg, rgba(75,58,105,.46), rgba(36,27,55,.58));
+    box-shadow:
+      inset 0 1px 0 rgba(255,255,255,.10),
+      0 4px 16px rgba(0,0,0,.18);
+    color: inherit;
+  }
+
+  .dark-mode .player-mobile-header button:hover:not(:disabled),
+  .dark-mode main button:hover:not(:disabled),
+  .dark-mode .dark-post-menu button:hover:not(:disabled),
+  .dark-mode .dark-share-dialog button:hover:not(:disabled) {
+    border-color: rgba(192,132,252,.48);
+    background: linear-gradient(145deg, rgba(91,65,126,.58), rgba(43,34,65,.72));
+    box-shadow:
+      inset 0 1px 0 rgba(255,255,255,.14),
+      0 7px 22px rgba(0,0,0,.24);
+  }
+
+  .dark-mode .player-mobile-header button:focus-visible,
+  .dark-mode main button:focus-visible,
+  .dark-mode .dark-post-menu button:focus-visible,
+  .dark-mode .dark-share-dialog button:focus-visible {
+    outline-color: rgba(103,232,249,.72);
+  }
+}
