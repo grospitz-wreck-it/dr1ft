@@ -204,13 +204,13 @@ export function ClassModuleLibrary({
 }
 
 
-function TeacherModuleEditButton({ classId, schoolId, module }: {
+function TeacherModuleEditButton({ classId, schoolId, module, onError }: {
   classId: string;
   schoolId: string;
   module: TeacherModule;
+  onError: (message: string) => void;
 }) {
   const [loading, setLoading] = useState(false);
-  const [editError, setEditError] = useState("");
   const [editModule, setEditModule] = useState<null | {
     id: string;
     title: string;
@@ -224,7 +224,6 @@ function TeacherModuleEditButton({ classId, schoolId, module }: {
   async function openEditor() {
     if (loading) return;
     setLoading(true);
-    setEditError("");
     try {
       const posts = await getTeacherModulePosts(classId, module.module_id);
       setEditModule({
@@ -237,7 +236,7 @@ function TeacherModuleEditButton({ classId, schoolId, module }: {
         posts,
       });
     } catch (cause) {
-      setEditError(cause instanceof Error ? cause.message : "Modulbeiträge konnten nicht geladen werden.");
+      onError(cause instanceof Error ? cause.message : "Modulbeiträge konnten nicht geladen werden.");
     } finally {
       setLoading(false);
     }
@@ -248,7 +247,6 @@ function TeacherModuleEditButton({ classId, schoolId, module }: {
       <button type="button" onClick={openEditor} disabled={loading} aria-label="Modul bearbeiten" className="inline-flex h-9 w-9 items-center justify-center rounded-xl border border-slate-200 bg-white text-slate-700 transition hover:border-violet-200 hover:bg-violet-50 hover:text-violet-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-violet-400 focus-visible:ring-offset-2 disabled:cursor-wait disabled:opacity-60">
         <Pencil className="h-4 w-4" />
       </button>
-      {editError && <p role="alert" className="absolute z-20 mt-10 max-w-xs rounded-lg bg-rose-50 px-3 py-2 text-xs text-rose-700 shadow">{editError}</p>}
       {editModule && (
         <TeacherModuleBuilderModal
           classInstanceId={classId}
@@ -351,7 +349,7 @@ function TeacherModuleCard({ classId, schoolId, module }: {
             <span className="mx-1 h-5 w-px bg-slate-200" aria-hidden="true" />
             {module.canManage && <button type="button" onClick={removePermanently} disabled={pending} title="Modul endgültig löschen" aria-label="Modul endgültig löschen" className="inline-flex h-9 w-9 items-center justify-center rounded-xl border border-rose-300 bg-white text-rose-700 shadow-sm transition hover:border-rose-400 hover:bg-rose-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-rose-400 focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50" ><Trash2 className="h-4 w-4" /></button>}
             <button type="button" onClick={archive} disabled={pending} title="Modul archivieren" aria-label="Modul archivieren" className="inline-flex h-9 w-9 items-center justify-center rounded-xl border border-violet-200 bg-white text-violet-700 shadow-sm transition hover:border-violet-300 hover:bg-violet-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-violet-400 focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"><Archive className="h-4 w-4" /></button>
-            {module.canManage && <TeacherModuleEditButton classId={classId} schoolId={schoolId} module={module} />}
+            {module.canManage && <TeacherModuleEditButton classId={classId} schoolId={schoolId} module={module} onError={setActionError} />}
           </div>
           {(module.scheduled_start_at || module.scheduled_end_at) && !scheduleOpen && <p className="ml-auto text-right text-[10px] text-slate-500">{module.scheduled_start_at ? new Date(module.scheduled_start_at).toLocaleString("de-DE") : "Sofort"}{module.scheduled_end_at ? " – " + new Date(module.scheduled_end_at).toLocaleString("de-DE") : ""}</p>}
         </div>
