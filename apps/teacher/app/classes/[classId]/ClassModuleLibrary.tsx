@@ -97,7 +97,7 @@ export function ClassModuleLibrary({
         {teacherModules.length > 0 && (
           <div className="mb-3 space-y-2">
             {teacherModules.map((module) => (
-              <TeacherModuleCard key={module.id} classId={classId} schoolId={schoolId ?? ""} module={module} onError={setError} />
+              <TeacherModuleCard key={module.id} classId={classId} schoolId={schoolId ?? ""} module={module} />
             ))}
           </div>
         )}
@@ -204,11 +204,10 @@ export function ClassModuleLibrary({
 }
 
 
-function TeacherModuleEditButton({ classId, schoolId, module, onError }: {
+function TeacherModuleEditButton({ classId, schoolId, module }: {
   classId: string;
   schoolId: string;
   module: TeacherModule;
-  onError: (message: string) => void;
 }) {
   const [loading, setLoading] = useState(false);
   const [editError, setEditError] = useState("");
@@ -263,11 +262,10 @@ function TeacherModuleEditButton({ classId, schoolId, module, onError }: {
   );
 }
 
-function TeacherModuleCard({ classId, schoolId, module, onError }: {
+function TeacherModuleCard({ classId, schoolId, module }: {
   classId: string;
   schoolId: string;
   module: TeacherModule;
-  onError: (message: string) => void;
 }) {
   const [active, setActive] = useState(module.is_active);
   const [pending, startTransition] = useTransition();
@@ -280,6 +278,7 @@ function TeacherModuleCard({ classId, schoolId, module, onError }: {
 
   function saveSchedule() {
     setScheduleMessage("");
+    setActionError("");
     if (startAt && endAt && new Date(endAt) <= new Date(startAt)) { setScheduleMessage("Das Ende muss nach dem Start liegen."); return; }
     startTransition(async () => {
       try {
@@ -292,6 +291,7 @@ function TeacherModuleCard({ classId, schoolId, module, onError }: {
 
   function setStatus(next: boolean) {
     if (pending || next === active) return;
+    setActionError("");
     setActive(next);
     startTransition(async () => {
       try {
@@ -305,6 +305,7 @@ function TeacherModuleCard({ classId, schoolId, module, onError }: {
   }
 
   function archive() {
+    setActionError("");
     if (pending || !window.confirm("Dieses Modul archivieren? Inhalte und Lernstände bleiben erhalten.")) return;
     startTransition(async () => {
       try { await archiveTeacherModuleAssignment(classId, module.id); router.refresh(); }
@@ -313,6 +314,7 @@ function TeacherModuleCard({ classId, schoolId, module, onError }: {
   }
 
   function removePermanently() {
+    setActionError("");
     if (pending || !window.confirm("Dieses selbst erstellte Modul einschließlich aller Beiträge und Medien endgültig löschen?")) return;
     startTransition(async () => {
       try { await deleteTeacherCreatedModule(classId, module.module_id); router.refresh(); }
@@ -349,7 +351,7 @@ function TeacherModuleCard({ classId, schoolId, module, onError }: {
             <span className="mx-1 h-5 w-px bg-slate-200" aria-hidden="true" />
             {module.canManage && <button type="button" onClick={removePermanently} disabled={pending} title="Modul endgültig löschen" aria-label="Modul endgültig löschen" className="inline-flex h-9 w-9 items-center justify-center rounded-xl border border-rose-300 bg-white text-rose-700 shadow-sm transition hover:border-rose-400 hover:bg-rose-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-rose-400 focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50" ><Trash2 className="h-4 w-4" /></button>}
             <button type="button" onClick={archive} disabled={pending} title="Modul archivieren" aria-label="Modul archivieren" className="inline-flex h-9 w-9 items-center justify-center rounded-xl border border-violet-200 bg-white text-violet-700 shadow-sm transition hover:border-violet-300 hover:bg-violet-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-violet-400 focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"><Archive className="h-4 w-4" /></button>
-            {module.canManage && <TeacherModuleEditButton classId={classId} schoolId={schoolId} module={module} onError={onError} />}
+            {module.canManage && <TeacherModuleEditButton classId={classId} schoolId={schoolId} module={module} />}
           </div>
           {(module.scheduled_start_at || module.scheduled_end_at) && !scheduleOpen && <p className="ml-auto text-right text-[10px] text-slate-500">{module.scheduled_start_at ? new Date(module.scheduled_start_at).toLocaleString("de-DE") : "Sofort"}{module.scheduled_end_at ? " – " + new Date(module.scheduled_end_at).toLocaleString("de-DE") : ""}</p>}
         </div>
