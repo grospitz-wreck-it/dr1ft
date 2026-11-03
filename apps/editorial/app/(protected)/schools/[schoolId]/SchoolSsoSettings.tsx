@@ -1,12 +1,12 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { CheckCircle2, Eye, EyeOff, KeyRound, Loader2, LockKeyhole, RefreshCw, ShieldCheck, Trash2 } from "lucide-react";
+import { Eye, EyeOff, KeyRound, Loader2, LockKeyhole, ShieldCheck, Trash2 } from "lucide-react";
 
 type Config = { configured: boolean; issuerUrl: string; clientId: string; enabled: boolean; secretConfigured: boolean; updatedAt: string | null };
 
-export function SchoolSsoSettings({ schoolId, initialIssuerUrl }: { schoolId: string; initialIssuerUrl?: string | null }) {
-  const [config, setConfig] = useState<Config>({ configured: false, issuerUrl: initialIssuerUrl ?? "", clientId: "", enabled: false, secretConfigured: false, updatedAt: null });
+export function SchoolSsoSettings({ schoolId }: { schoolId: string }) {
+  const [config, setConfig] = useState<Config>({ configured: false, issuerUrl: "", clientId: "", enabled: false, secretConfigured: false, updatedAt: null });
   const [clientSecret, setClientSecret] = useState("");
   const [showSecret, setShowSecret] = useState(false);
   const [loading, setLoading] = useState(true);
@@ -48,7 +48,7 @@ export function SchoolSsoSettings({ schoolId, initialIssuerUrl }: { schoolId: st
       const response = await fetch(`/api/schools/${schoolId}/sso`, { method: "DELETE" });
       const data = await response.json();
       if (!response.ok) throw new Error(data.error ?? "Entfernen fehlgeschlagen.");
-      setConfig({ configured: false, issuerUrl: initialIssuerUrl ?? "", clientId: "", enabled: false, secretConfigured: false, updatedAt: null });
+      setConfig({ configured: false, issuerUrl: "", clientId: "", enabled: false, secretConfigured: false, updatedAt: null });
       setClientSecret("");
       setMessage({ type: "success", text: "IServ-Verbindung entfernt." });
     } catch (error) { setMessage({ type: "error", text: error instanceof Error ? error.message : "Entfernen fehlgeschlagen." }); }
