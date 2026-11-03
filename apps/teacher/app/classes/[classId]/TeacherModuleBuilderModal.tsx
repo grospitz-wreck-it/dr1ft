@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { ArrowDown, ArrowUp, Check, GripVertical, ImagePlus, Link2, Plus, Save, Type, X, Wand2, RotateCcw, SlidersHorizontal, BarChart3, CircleCheck } from "lucide-react";
+import { ArrowDown, ArrowUp, Check, GripVertical, ImagePlus, Link2, Plus, Save, Type, X, Wand2, RotateCcw, SlidersHorizontal, BarChart3, CircleCheck, Copy, Play } from "lucide-react";
 import { saveTeacherCreatedModule, updateTeacherCreatedModule } from "./teacherModuleActions";
 
 type DraftPost = {
@@ -75,7 +75,7 @@ export function TeacherModuleBuilderModal({ classInstanceId, schoolId, editModul
         imageSettings: { brightness: 100, contrast: 100, saturation: 100, grayscale: 0, zoom: 1, x: 50, y: 50 },
       }));
       setPosts(loadedPosts);
-      setSelectedId(loadedPosts[0]?.id ?? null);
+      setSelectedId(null);
     } else {
       reset();
     }
@@ -93,7 +93,7 @@ export function TeacherModuleBuilderModal({ classInstanceId, schoolId, editModul
   function updatePost(id: string, patch: Partial<DraftPost>) {
     setPosts((items) => items.map((post) => post.id === id ? { ...post, ...patch } : post));
   }
-  function movePost(id: string, targetId: string) {
+  function duplicatePost(post: DraftPost) {\n    const copy = { ...post, id: crypto.randomUUID(), imageFile: post.imageFile, imageSettings: { ...post.imageSettings }, interactionData: { ...post.interactionData, options: [...post.interactionData.options] as [string,string] } };\n    setPosts(items => { const index = items.findIndex(item => item.id === post.id); const next = [...items]; next.splice(index + 1, 0, copy); return next; });\n    setSelectedId(copy.id);\n  }\n  function movePost(id: string, targetId: string) {
     if (id === targetId) return;
     setPosts((items) => {
       const from = items.findIndex((post) => post.id === id);
@@ -196,55 +196,43 @@ export function TeacherModuleBuilderModal({ classInstanceId, schoolId, editModul
             </header>
             <div className="min-h-0 flex-1 overflow-y-auto p-4 sm:px-[22px] sm:py-4 lg:overflow-hidden">
               <div className="grid h-auto min-h-full gap-4 lg:h-full lg:min-h-0 lg:grid-cols-[minmax(0,390px)_minmax(0,1fr)]">
-                <section className="drift-builder-left space-y-3 pr-0.5 lg:min-h-0 lg:overflow-y-auto">
-                  <div className="drift-builder-details space-y-3 rounded-[22px] p-4"><div className="flex items-center gap-2"><span className="drift-builder-step">01</span><h3 className="text-sm font-extrabold text-slate-900">Dein Modul</h3><span className="ml-auto rounded-full bg-white/80 px-2.5 py-1 text-[9px] font-bold text-violet-700">BASIS</span></div><label className="block text-xs font-bold text-slate-700">Modultitel
-                    <input value={title} onChange={(event) => setTitle(event.target.value)} maxLength={120} placeholder="z. B. KI im Alltag" className="mt-1.5 w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm outline-none transition focus:border-violet-400 focus:ring-4 focus:ring-violet-100" />
-                  </label>
-                  <label className="block text-xs font-semibold text-slate-700">Kurzbeschreibung
-                    <textarea value={description} onChange={(event) => setDescription(event.target.value)} rows={3} maxLength={500} placeholder="Worum geht es in diesem Modul?" className="mt-1.5 w-full resize-y rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm outline-none transition focus:border-violet-400 focus:ring-4 focus:ring-violet-100" />
-                  </label>
-                  <label className="drift-builder-toggle flex items-center justify-between gap-3 rounded-2xl p-3">
-                    <span><span className="block text-xs font-bold text-violet-900">Titelcard im Schüler-Feed</span><span className="mt-1 block text-[11px] font-normal text-violet-700">Zeigt Modultitel und Beschreibung vor dem Start.</span></span>
-                    <input type="checkbox" checked={titleCardEnabled} onChange={event=>setTitleCardEnabled(event.target.checked)} className="h-5 w-9 accent-violet-600"/>
-                  </label>
-                  <label className="drift-builder-visibility block rounded-2xl p-3 text-xs font-bold text-slate-700">Wer darf dieses Modul im Lehrkraftbereich sehen?
-                    <select value={visibilityScope} onChange={event => setVisibilityScope(event.target.value as "private" | "school" | "class")} className="mt-2 w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm font-medium">
-                      <option value="private">Nur für mich</option>
-                      <option value="school">Alle Lehrkräfte und Schuladmins meiner Schule</option>
-                      <option value="class">Nur diese Klasse</option>
-                    </select>
-                    <span className="mt-1 block font-normal text-slate-500">Aktivierte Module bleiben für die Schüler:innen der jeweiligen Klasse sichtbar.</span>
-                  </label>
-                  </div><div className="drift-builder-posts rounded-[22px] p-3.5">
-                    <div className="flex items-center justify-between gap-2">
-                      <div><h3 className="text-sm font-bold text-slate-900">Beiträge</h3><p className="text-[11px] text-slate-500">Karten am Griff ziehen, um die Reihenfolge zu ändern.</p></div>
-                      <span className="rounded-full bg-violet-100 px-2.5 py-1 text-[10px] font-bold text-violet-700">{posts.length} / 40</span>
-                    </div>
-                    <div className="mt-2.5 space-y-2">
-                      {thumbnails.map((post) => (
-                        <div key={post.id} draggable onDragStart={(event) => { setDragId(post.id); event.dataTransfer.effectAllowed = "move"; event.dataTransfer.setData("text/plain", post.id); }} onDragOver={(event) => { event.preventDefault(); event.dataTransfer.dropEffect = "move"; }} onDrop={(event) => { event.preventDefault(); const sourceId = event.dataTransfer.getData("text/plain") || dragId; if (sourceId) movePost(sourceId, post.id); setDragId(null); }} onDragEnd={() => setDragId(null)}
-                          className={"group relative flex cursor-grab items-center gap-3 overflow-hidden rounded-xl border bg-white p-2 text-left transition active:cursor-grabbing " + (selectedId === post.id ? "border-violet-500 bg-violet-50/40 ring-2 ring-violet-100" : "border-slate-200 hover:border-violet-300")}>
-                          <span className="grid h-9 w-7 shrink-0 place-items-center text-slate-400"><GripVertical className="h-4 w-4"/></span>
-                          <button type="button" onClick={() => setSelectedId(post.id)} className="flex min-w-0 flex-1 items-center gap-3 text-left">
-                            <div className="grid h-14 w-20 shrink-0 place-items-center overflow-hidden rounded-lg bg-gradient-to-br from-violet-100 to-cyan-100">
-                              {post.imageFile ? <img src={URL.createObjectURL(post.imageFile)} alt="" className="h-full w-full object-cover" /> : post.existingImageUrl ? <img src={post.existingImageUrl} alt="" className="h-full w-full object-cover" /> : post.postType === "embed" ? <Link2 className="h-6 w-6 text-violet-500" /> : post.postType === "poll" ? <BarChart3 className="h-6 w-6 text-violet-500"/> : post.postType === "true_false" ? <CircleCheck className="h-6 w-6 text-violet-500"/> : <Type className="h-6 w-6 text-violet-500" />}
-                            </div>
-                            <span className="min-w-0 flex-1"><span className="block text-[9px] font-bold uppercase tracking-wider text-violet-600">{post.postType === "poll" ? "Umfrage" : post.postType === "true_false" ? "Richtig / Falsch" : post.postType === "embed" ? "Embed" : post.postType === "image" ? "Bild" : "Text / Bild"}</span><span className="mt-1 block truncate text-xs font-bold text-slate-900">{post.title || "Unbenannter Beitrag"}</span><span className="mt-0.5 block truncate text-[10px] text-slate-500">{String(post.index + 1).padStart(2,"0")} · {post.body || "Noch kein Inhalt"}</span></span>
-                          </button>
-                          <div className="flex shrink-0 items-center gap-1"><button type="button" aria-label="Nach oben" onClick={() => moveBy(post.index, -1)} disabled={post.index === 0} className="rounded-md p-1.5 text-slate-500 hover:bg-slate-100 disabled:opacity-20"><ArrowUp className="h-3.5 w-3.5" /></button><button type="button" aria-label="Nach unten" onClick={() => moveBy(post.index, 1)} disabled={post.index === posts.length - 1} className="rounded-md p-1.5 text-slate-500 hover:bg-slate-100 disabled:opacity-20"><ArrowDown className="h-3.5 w-3.5" /></button></div>
-                        </div>
-                      ))}
-                      {posts.length === 0 && <div className="col-span-full rounded-xl border border-dashed border-violet-200 bg-white px-3 py-8 text-center text-xs text-slate-500">Noch keine Beiträge. Füge unten deinen ersten Post hinzu.</div>}
-                    </div>
-                    <div className="mt-3 flex flex-wrap gap-2">
-                      <button type="button" disabled={posts.length >= 40} onClick={() => addPost("text")} className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs font-semibold text-slate-700 hover:border-violet-300"><Type className="h-3.5 w-3.5" /> Text</button>
-                      <button type="button" disabled={posts.length >= 40} onClick={() => addPost("image")} className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs font-semibold text-slate-700 hover:border-violet-300"><ImagePlus className="h-3.5 w-3.5" /> Bild</button>
-                      <button type="button" disabled={posts.length >= 40} onClick={() => addPost("embed")} className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs font-semibold text-slate-700 hover:border-violet-300"><Link2 className="h-3.5 w-3.5" /> Embed</button><button type="button" disabled={posts.length >= 40} onClick={() => addPost("poll")} className="inline-flex items-center gap-1.5 rounded-lg border border-violet-200 bg-violet-50 px-3 py-2 text-xs font-semibold text-violet-700"><BarChart3 className="h-3.5 w-3.5"/> Umfrage</button><button type="button" disabled={posts.length >= 40} onClick={() => addPost("true_false")} className="inline-flex items-center gap-1.5 rounded-lg border border-violet-200 bg-violet-50 px-3 py-2 text-xs font-semibold text-violet-700"><CircleCheck className="h-3.5 w-3.5"/> Richtig / Falsch</button>
+                <section className="drift-builder-left flex min-h-0 flex-col gap-4 overflow-y-auto pr-1">
+                  <div className="drift-builder-cover relative overflow-hidden rounded-[22px]">
+                    {posts.find(post => post.imageFile || post.existingImageUrl) ? <img src={(() => { const p=posts.find(post => post.imageFile || post.existingImageUrl)!; return p.imageFile ? URL.createObjectURL(p.imageFile) : p.existingImageUrl!; })()} alt="" className="h-full w-full object-cover"/> : <div className="drift-builder-cover-art"><span className="drift-cover-orb drift-cover-orb-a"/><span className="drift-cover-orb drift-cover-orb-b"/><span className="drift-cover-stars">✦　✧　✦</span><span className="drift-cover-word">DR1FT</span><span className="drift-cover-caption">LEARN · CREATE · DISCOVER</span></div>}
+                    <span className="absolute bottom-3 left-4 rounded-full border border-white/40 bg-slate-950/35 px-3 py-1 text-[9px] font-extrabold uppercase tracking-[.2em] text-white backdrop-blur">Dein Lernmodul</span>
+                  </div>
+                  <div className="drift-builder-details space-y-3 rounded-[22px] p-4">
+                    <div className="flex items-center gap-2"><span className="drift-builder-step">01</span><h3 className="text-sm font-extrabold text-slate-900">Dein Modul</h3></div>
+                    <label className="block text-xs font-bold text-slate-700">Modultitel
+                      <input value={title} onChange={event=>setTitle(event.target.value)} maxLength={120} placeholder="z. B. Echt oder Fake?" className="drift-builder-input mt-1.5 w-full"/>
+                    </label>
+                    <label className="block text-xs font-bold text-slate-700">Kurzbeschreibung
+                      <textarea value={description} onChange={event=>setDescription(event.target.value)} rows={3} maxLength={500} placeholder="Worum geht es in diesem Modul?" className="drift-builder-input mt-1.5 w-full resize-y"/>
+                    </label>
+                    <label className="block text-xs font-bold text-slate-700">Sichtbarkeit
+                      <select value={visibilityScope} onChange={event=>setVisibilityScope(event.target.value as "private"|"school"|"class")} className="drift-builder-input mt-1.5 w-full">
+                        <option value="private">Nur für mich</option><option value="school">Alle Lehrkräfte meiner Schule</option><option value="class">Nur diese Klasse</option>
+                      </select>
+                    </label>
+                    <label className="drift-builder-toggle flex items-center justify-between gap-3 rounded-xl p-3">
+                      <span><span className="block text-xs font-extrabold text-violet-950">Titelcard im Schüler-Feed</span><span className="mt-1 block text-[10px] text-violet-700">Titel und Beschreibung vor dem Start anzeigen</span></span>
+                      <input type="checkbox" checked={titleCardEnabled} onChange={event=>setTitleCardEnabled(event.target.checked)} className="h-5 w-9 accent-violet-600"/>
+                    </label>
+                  </div>
+                  <div className="drift-builder-add rounded-[22px] p-4">
+                    <div className="mb-3 flex items-center gap-2"><span className="drift-builder-step">02</span><h3 className="text-sm font-extrabold text-slate-950">Inhalt hinzufügen</h3></div>
+                    <div className="grid grid-cols-2 gap-2.5">
+                      <button type="button" disabled={posts.length>=40} onClick={()=>addPost("mixed")} className="drift-builder-add-tile"><Type className="h-6 w-6"/><span>Text / Bild</span></button>
+                      <button type="button" disabled={posts.length>=40} onClick={()=>addPost("poll")} className="drift-builder-add-tile"><BarChart3 className="h-6 w-6"/><span>Umfrage</span></button>
+                      <button type="button" disabled={posts.length>=40} onClick={()=>addPost("true_false")} className="drift-builder-add-tile"><CircleCheck className="h-6 w-6"/><span>Richtig / Falsch</span></button>
+                      <button type="button" disabled={posts.length>=40} onClick={()=>addPost("embed")} className="drift-builder-add-tile"><Link2 className="h-6 w-6"/><span>Embed</span></button>
                     </div>
                   </div>
                 </section>
-                <section className="drift-builder-canvas flex min-h-[320px] min-w-0 flex-col overflow-y-auto rounded-[24px] px-5 py-4 lg:min-h-0">
-                  <div className="flex shrink-0 items-center justify-between gap-2"><div><p className="text-[9px] font-extrabold uppercase tracking-[.2em] text-violet-600">DEINE CONTENT-KARTE</p><h3 className="mt-1 text-sm font-extrabold text-slate-900">Beitrag gestalten</h3></div>{selected && <button type="button" onClick={() => { setPosts((items) => items.filter((item) => item.id !== selected.id)); setSelectedId(null); }} className="text-xs font-semibold text-rose-600 hover:text-rose-700">Beitrag entfernen</button>}</div>
+                {selected ? (
+                  <section className="drift-builder-canvas flex min-h-[360px] min-w-0 flex-col overflow-y-auto rounded-[24px] px-5 py-4 lg:min-h-0">
+                    <div className="mb-3 flex items-center justify-between"><button type="button" onClick={()=>setSelectedId(null)} className="text-xs font-bold text-violet-700">← Zurück zu allen Beiträgen</button><span className="text-[10px] font-bold uppercase tracking-widest text-violet-600">Beitrag bearbeiten</span></div>
+                                      <div className="flex shrink-0 items-center justify-between gap-2"><div><p className="text-[9px] font-extrabold uppercase tracking-[.2em] text-violet-600">DEINE CONTENT-KARTE</p><h3 className="mt-1 text-sm font-extrabold text-slate-900">Beitrag gestalten</h3></div>{selected && <button type="button" onClick={() => { setPosts((items) => items.filter((item) => item.id !== selected.id)); setSelectedId(null); }} className="text-xs font-semibold text-rose-600 hover:text-rose-700">Beitrag entfernen</button>}</div>
                   {selected ? (
                     <div className="mt-3 space-y-3">
                       <label className="block text-xs font-semibold text-slate-700">Überschrift
@@ -272,7 +260,25 @@ export function TeacherModuleBuilderModal({ classInstanceId, schoolId, editModul
                       <div className="drift-builder-preview overflow-hidden rounded-[20px] p-4"><div className="mb-3 flex items-center gap-2"><span className="drift-builder-preview-dot"/><p className="text-[10px] font-extrabold uppercase tracking-[.16em] text-violet-700">Live-Vorschau</p></div><h4 className="mt-2 text-sm font-bold text-slate-900">{selected.title || "Dein Beitrag"}</h4><p className="mt-1 whitespace-pre-wrap text-xs leading-5 text-slate-600">{selected.body || "Dein Text erscheint hier in der Vorschau."}</p>{selected.embedUrl && (getEmbedPreviewUrl(selected.embedUrl) ? <div className="mt-3 overflow-hidden rounded-xl bg-slate-950"><div className="aspect-video"><iframe src={getEmbedPreviewUrl(selected.embedUrl)!} title="Video-Vorschau" className="h-full w-full" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" allowFullScreen referrerPolicy="strict-origin-when-cross-origin" /></div></div> : <p className="mt-2 text-xs text-amber-700">Bitte eine gültige YouTube- oder Vimeo-URL einfügen.</p>)}</div>
                     </div>
                   ) : <div className="flex min-h-64 flex-1 items-center justify-center px-6 text-center text-xs text-slate-500">Wähle ein Thumbnail aus oder erstelle einen neuen Beitrag.</div>}
+          
+                  </section>
+                ) : (
+                                  <section className="drift-builder-canvas flex min-h-[360px] min-w-0 flex-col overflow-y-auto rounded-[24px] px-5 py-4 lg:min-h-0">
+                  <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
+                    <div><div className="flex items-center gap-2"><span className="drift-builder-step">03</span><h3 className="text-[21px] font-extrabold tracking-tight text-slate-950">Beiträge ({posts.length})</h3></div><p className="mt-1 text-xs text-slate-600">Ziehe die Karten per Drag & Drop in die gewünschte Reihenfolge.</p></div>
+                    <div className="flex items-center gap-2"><span className="rounded-xl border border-violet-100 bg-white px-3 py-2 text-[10px] font-bold text-violet-700">{posts.length} / 40 Karten</span><button type="button" onClick={()=>setSelectedId(posts[0]?.id ?? null)} disabled={!posts.length} className="inline-flex items-center gap-2 rounded-xl border border-violet-200 bg-violet-50 px-4 py-2.5 text-xs font-extrabold text-violet-700 disabled:opacity-40"><Play className="h-3.5 w-3.5"/> Vorschau</button></div>
+                  </div>
+                  <div className="space-y-3">
+                    {thumbnails.map(post=><article key={post.id} draggable onDragStart={event=>{setDragId(post.id);event.dataTransfer.effectAllowed="move";event.dataTransfer.setData("text/plain",post.id);}} onDragOver={event=>{event.preventDefault();event.dataTransfer.dropEffect="move";}} onDrop={event=>{event.preventDefault();const source=event.dataTransfer.getData("text/plain")||dragId;if(source)movePost(source,post.id);setDragId(null);}} onDragEnd={()=>setDragId(null)} className="drift-builder-post-row group flex items-center gap-3 rounded-[20px] p-3">
+                      <span className="grid h-10 w-6 shrink-0 place-items-center text-slate-500"><GripVertical className="h-5 w-5"/></span><span className="grid h-10 w-10 shrink-0 place-items-center rounded-xl border border-violet-100 bg-white text-sm font-extrabold text-slate-900">{post.index+1}</span>
+                      <div className="drift-builder-post-thumb grid h-[82px] w-[142px] shrink-0 place-items-center overflow-hidden rounded-xl">{post.imageFile?<img src={URL.createObjectURL(post.imageFile)} alt="" className="h-full w-full object-cover"/>:post.existingImageUrl?<img src={post.existingImageUrl} alt="" className="h-full w-full object-cover"/>:post.postType==="poll"?<BarChart3 className="h-8 w-8 text-violet-600"/>:post.postType==="true_false"?<CircleCheck className="h-8 w-8 text-violet-600"/>:post.postType==="embed"?<Link2 className="h-8 w-8 text-violet-600"/>:<Type className="h-8 w-8 text-violet-600"/>}</div>
+                      <div className="min-w-0 flex-1"><span className="drift-builder-type-badge">{post.postType==="poll"?"▥  Umfrage":post.postType==="true_false"?"☑  Richtig / Falsch":post.postType==="embed"?"↗  Embed":"T  Text / Bild"}</span><h4 className="mt-2 truncate text-[15px] font-extrabold text-slate-950">{post.title||"Neuer Beitrag"}</h4><p className="mt-1 line-clamp-1 text-xs text-slate-600">{post.body||"Noch keine Beschreibung hinzugefügt."}</p></div>
+                      <div className="flex shrink-0 items-center gap-1.5"><button type="button" onClick={()=>setSelectedId(post.id)} aria-label="Beitrag bearbeiten" className="drift-builder-icon-btn"><Wand2 className="h-4 w-4"/></button><button type="button" onClick={()=>duplicatePost(post)} aria-label="Beitrag duplizieren" className="drift-builder-icon-btn"><Copy className="h-4 w-4"/></button><button type="button" onClick={()=>{setPosts(items=>items.filter(item=>item.id!==post.id));if(selectedId===post.id)setSelectedId(null);}} aria-label="Beitrag löschen" className="drift-builder-icon-btn drift-builder-delete"><X className="h-4 w-4"/></button></div>
+                    </article>)}
+                    {!posts.length&&<div className="drift-builder-empty rounded-[20px] px-6 py-16 text-center"><div className="mx-auto mb-3 grid h-14 w-14 place-items-center rounded-2xl bg-violet-100 text-violet-600"><Wand2 className="h-7 w-7"/></div><h4 className="text-sm font-extrabold text-slate-900">Dein Modul wartet auf Inhalte</h4><p className="mt-1 text-xs text-slate-500">Wähle links einen Kartentyp und leg los.</p></div>}
+                  </div>
                 </section>
+                )}      </section>
               </div>
               {error && <p role="alert" className="mt-4 rounded-xl bg-rose-50 px-4 py-3 text-xs text-rose-700">{error}</p>}
             </div>
