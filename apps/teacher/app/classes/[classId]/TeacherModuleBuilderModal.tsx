@@ -183,8 +183,8 @@ export function TeacherModuleBuilderModal({ classInstanceId, schoolId, editModul
       </button>
       {open && (
         <div className="fixed inset-0 z-[150] flex items-center justify-center bg-slate-950/65 p-3 backdrop-blur-sm sm:p-6" role="dialog" aria-modal="true" aria-labelledby="teacher-module-title">
-          <div className="flex max-h-[94vh] w-full max-w-6xl flex-col overflow-hidden rounded-3xl border border-violet-100 bg-white shadow-[0_30px_100px_rgba(37,20,70,.28)]">
-            <header className="flex items-start justify-between gap-4 border-b border-slate-200 px-5 py-4 sm:px-7">
+          <div className="flex h-[min(744px,calc(100dvh-48px))] w-full max-w-[1044px] flex-col overflow-hidden rounded-[22px] border border-violet-100 bg-white shadow-[0_30px_100px_rgba(37,20,70,.28)]">
+            <header className="flex min-h-[94px] shrink-0 items-start justify-between gap-4 border-b border-slate-200 px-6 py-4 sm:px-[26px]">
               <div>
                 <p className="text-[10px] font-bold uppercase tracking-[.18em] text-violet-600">DR1FT · EIGENES MODUL</p>
                 <h2 id="teacher-module-title" className="mt-1 text-xl font-bold text-slate-950">{moduleId ? "Modul bearbeiten" : "Modul erstellen"}</h2>
@@ -192,14 +192,14 @@ export function TeacherModuleBuilderModal({ classInstanceId, schoolId, editModul
               </div>
               <button type="button" onClick={() => setOpen(false)} aria-label="Schließen" className="rounded-xl p-2 text-slate-500 hover:bg-slate-100"><X className="h-5 w-5" /></button>
             </header>
-            <div className="min-h-0 flex-1 overflow-y-auto p-4 sm:p-6">
-              <div className="grid gap-5 lg:grid-cols-[minmax(280px,.78fr)_minmax(0,1.22fr)]">
-                <section className="space-y-3">
+            <div className="min-h-0 flex-1 overflow-hidden p-4 sm:px-[22px] sm:py-4">
+              <div className="grid h-full min-h-0 gap-[18px] lg:grid-cols-[minmax(0,383px)_minmax(0,1fr)]">
+                <section className="min-h-0 space-y-2.5 overflow-y-auto pr-0.5">
                   <label className="block text-xs font-semibold text-slate-700">Modultitel
-                    <input value={title} onChange={(event) => setTitle(event.target.value)} maxLength={120} placeholder="z. B. KI im Alltag" className="mt-1.5 w-full rounded-xl border border-slate-200 px-3 py-2.5 text-sm outline-none focus:border-violet-400 focus:ring-4 focus:ring-violet-100" />
+                    <input value={title} onChange={(event) => setTitle(event.target.value)} maxLength={120} placeholder="z. B. KI im Alltag" className="mt-1.5 w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm outline-none transition focus:border-violet-400 focus:ring-4 focus:ring-violet-100" />
                   </label>
                   <label className="block text-xs font-semibold text-slate-700">Kurzbeschreibung
-                    <textarea value={description} onChange={(event) => setDescription(event.target.value)} rows={3} maxLength={500} placeholder="Worum geht es in diesem Modul?" className="mt-1.5 w-full resize-y rounded-xl border border-slate-200 px-3 py-2.5 text-sm outline-none focus:border-violet-400 focus:ring-4 focus:ring-violet-100" />
+                    <textarea value={description} onChange={(event) => setDescription(event.target.value)} rows={3} maxLength={500} placeholder="Worum geht es in diesem Modul?" className="mt-1.5 w-full resize-y rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm outline-none transition focus:border-violet-400 focus:ring-4 focus:ring-violet-100" />
                   </label>
                   <label className="flex items-center justify-between gap-3 rounded-2xl border border-violet-200 bg-violet-50/70 p-3">
                     <span><span className="block text-xs font-bold text-violet-900">Titelcard im Schüler-Feed</span><span className="mt-1 block text-[11px] font-normal text-violet-700">Zeigt Modultitel und Beschreibung vor dem Start.</span></span>
@@ -213,12 +213,12 @@ export function TeacherModuleBuilderModal({ classInstanceId, schoolId, editModul
                     </select>
                     <span className="mt-1 block font-normal text-slate-500">Aktivierte Module bleiben für die Schüler:innen der jeweiligen Klasse sichtbar.</span>
                   </label>
-                  <div className="rounded-2xl border border-slate-200 bg-slate-50/70 p-3">
+                  <div className="rounded-[16px] border border-slate-200 bg-slate-50/70 p-3">
                     <div className="flex items-center justify-between gap-2">
                       <div><h3 className="text-sm font-bold text-slate-900">Beiträge</h3><p className="text-[11px] text-slate-500">Karten am Griff ziehen, um die Reihenfolge zu ändern.</p></div>
                       <span className="rounded-full bg-violet-100 px-2.5 py-1 text-[10px] font-bold text-violet-700">{posts.length} / 40</span>
                     </div>
-                    <div className="mt-3 space-y-2">
+                    <div className="mt-2.5 space-y-2">
                       {thumbnails.map((post) => (
                         <div key={post.id} draggable onDragStart={(event) => { setDragId(post.id); event.dataTransfer.effectAllowed = "move"; event.dataTransfer.setData("text/plain", post.id); }} onDragOver={(event) => { event.preventDefault(); event.dataTransfer.dropEffect = "move"; }} onDrop={(event) => { event.preventDefault(); const sourceId = event.dataTransfer.getData("text/plain") || dragId; if (sourceId) movePost(sourceId, post.id); setDragId(null); }} onDragEnd={() => setDragId(null)}
                           className={"group relative flex cursor-grab items-center gap-3 overflow-hidden rounded-xl border bg-white p-2 text-left transition active:cursor-grabbing " + (selectedId === post.id ? "border-violet-500 bg-violet-50/40 ring-2 ring-violet-100" : "border-slate-200 hover:border-violet-300")}>
@@ -241,8 +241,8 @@ export function TeacherModuleBuilderModal({ classInstanceId, schoolId, editModul
                     </div>
                   </div>
                 </section>
-                <section className="min-w-0 rounded-2xl border border-slate-200 p-4">
-                  <div className="flex items-center justify-between"><h3 className="text-sm font-bold text-slate-900">Beitrag bearbeiten</h3>{selected && <button type="button" onClick={() => { setPosts((items) => items.filter((item) => item.id !== selected.id)); setSelectedId(null); }} className="text-xs font-semibold text-rose-600 hover:text-rose-700">Beitrag entfernen</button>}</div>
+                <section className="flex min-h-0 min-w-0 flex-col overflow-y-auto rounded-[16px] border border-slate-200 px-3.5 py-3">
+                  <div className="flex shrink-0 items-center justify-between gap-2"><h3 className="text-sm font-bold text-slate-900">Beitrag bearbeiten</h3>{selected && <button type="button" onClick={() => { setPosts((items) => items.filter((item) => item.id !== selected.id)); setSelectedId(null); }} className="text-xs font-semibold text-rose-600 hover:text-rose-700">Beitrag entfernen</button>}</div>
                   {selected ? (
                     <div className="mt-3 space-y-3">
                       <label className="block text-xs font-semibold text-slate-700">Überschrift
@@ -269,12 +269,12 @@ export function TeacherModuleBuilderModal({ classInstanceId, schoolId, editModul
                       {(selected.postType === "embed" || selected.postType === "mixed") && <label className="block text-xs font-semibold text-slate-700">YouTube- oder Vimeo-URL<input value={selected.embedUrl} onChange={(event) => updatePost(selected.id, { embedUrl: event.target.value })} placeholder="https://…" className="mt-1.5 w-full rounded-lg border border-slate-200 px-3 py-2 text-sm" /></label>}
                       <div className="rounded-xl bg-slate-50 p-3"><p className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Vorschau</p><h4 className="mt-2 text-sm font-bold text-slate-900">{selected.title || "Dein Beitrag"}</h4><p className="mt-1 whitespace-pre-wrap text-xs leading-5 text-slate-600">{selected.body || "Dein Text erscheint hier in der Vorschau."}</p>{selected.embedUrl && (getEmbedPreviewUrl(selected.embedUrl) ? <div className="mt-3 overflow-hidden rounded-xl bg-slate-950"><div className="aspect-video"><iframe src={getEmbedPreviewUrl(selected.embedUrl)!} title="Video-Vorschau" className="h-full w-full" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" allowFullScreen referrerPolicy="strict-origin-when-cross-origin" /></div></div> : <p className="mt-2 text-xs text-amber-700">Bitte eine gültige YouTube- oder Vimeo-URL einfügen.</p>)}</div>
                     </div>
-                  ) : <div className="flex min-h-64 items-center justify-center text-center text-xs text-slate-500">Wähle ein Thumbnail aus oder erstelle einen neuen Beitrag.</div>}
+                  ) : <div className="flex min-h-64 flex-1 items-center justify-center px-6 text-center text-xs text-slate-500">Wähle ein Thumbnail aus oder erstelle einen neuen Beitrag.</div>}
                 </section>
               </div>
               {error && <p role="alert" className="mt-4 rounded-xl bg-rose-50 px-4 py-3 text-xs text-rose-700">{error}</p>}
             </div>
-            <footer className="flex flex-wrap items-center justify-between gap-3 border-t border-slate-200 px-5 py-3 sm:px-7">
+            <footer className="flex min-h-[56px] shrink-0 flex-wrap items-center justify-between gap-3 border-t border-slate-200 px-5 py-2.5 sm:px-[26px]">
               <p className="text-[11px] text-slate-500">Veröffentlichung nur für diese Klasseninstanz.</p>
               <div className="flex gap-2"><button type="button" onClick={() => setOpen(false)} className="rounded-xl border border-slate-200 px-4 py-2 text-sm font-semibold text-slate-600 hover:bg-slate-50">Abbrechen</button><button type="button" onClick={publish} disabled={pending} className="inline-flex items-center gap-2 rounded-xl bg-violet-600 px-4 py-2 text-sm font-semibold text-white hover:bg-violet-700 disabled:opacity-50">{pending ? "Speichert …" : <><Save className="h-4 w-4" /> {moduleId ? "Änderungen speichern" : "Veröffentlichen"}</>}</button></div>
             </footer>
