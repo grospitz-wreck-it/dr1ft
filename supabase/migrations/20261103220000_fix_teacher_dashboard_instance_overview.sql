@@ -42,7 +42,7 @@ begin
     raise exception 'Keine Berechtigung für diese Klasseninstanz';
   end if;
   return query
-  select count(ui.*)::bigint, count(distinct cim.user_id)::bigint
+  select count(*)::bigint, count(distinct cim.user_id)::bigint
   from public.class_instance_memberships cim
   join public.user_interactions ui on ui.user_id = cim.user_id and ui.created_at > now() - interval '30 days'
   where cim.class_instance_id = p_class_id and cim.role = 'student' and cim.left_at is null;
