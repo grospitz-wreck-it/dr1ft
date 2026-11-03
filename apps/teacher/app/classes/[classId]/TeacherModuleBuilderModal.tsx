@@ -185,7 +185,9 @@ export function TeacherModuleBuilderModal({ classInstanceId, schoolId, editModul
         <div className="fixed inset-0 z-[150] flex items-center justify-center bg-slate-950/65 p-3 backdrop-blur-sm sm:p-6" role="dialog" aria-modal="true" aria-labelledby="teacher-module-title">
           <div className="drift-builder-shell flex h-[min(790px,calc(100dvh-40px))] w-full max-w-[1120px] flex-col overflow-hidden rounded-[28px] border border-white/80 bg-white shadow-[0_34px_110px_rgba(57,38,110,.30)]">
             <header className="drift-builder-header relative flex min-h-[104px] shrink-0 items-center justify-between gap-4 overflow-hidden border-b border-violet-100 px-6 py-4 sm:px-8">
-              <div>
+              <div className="relative z-10 flex items-center gap-4">
+                <div className="drift-builder-mark"><Wand2 className="h-6 w-6"/></div>
+                <div>
                 <p className="text-[10px] font-extrabold uppercase tracking-[.22em] text-violet-700">DR1FT · DEIN CONTENT-STUDIO</p>
                 <h2 id="teacher-module-title" className="mt-1 text-[23px] font-extrabold tracking-tight text-slate-950">{moduleId ? "Modul bearbeiten" : "Modul erstellen"}</h2>
                 <p className="mt-1 text-sm text-slate-500">Gestalte ein Lernmodul, das deine Klasse gerne entdeckt.</p>
