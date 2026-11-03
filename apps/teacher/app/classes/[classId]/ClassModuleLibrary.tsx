@@ -6,7 +6,7 @@ import { BookOpen, CalendarClock, Check, Image as ImageIcon, Plus, Search, Trash
 import { toggleScenarioAssignment } from "../actions";
 import { ScenarioToggle } from "./ScenarioToggle";
 import { TeacherModuleBuilderModal } from "./TeacherModuleBuilderModal";
-import { archiveTeacherModuleAssignment, setTeacherModuleAssignmentActive } from "./teacherModuleActions";
+import { archiveTeacherModuleAssignment, setTeacherModuleAssignmentActive, updateTeacherModuleSchedule } from "./teacherModuleActions";
 
 type Scenario = {
   id: string;
@@ -16,7 +16,7 @@ type Scenario = {
   age_rating: string;
 };
 
-type TeacherModule = { id: string; module_id: string; school_id: string; assigned_by: string; is_active: boolean; title: string; description: string | null; cover_image_url: string | null };
+type TeacherModule = { id: string; module_id: string; school_id: string; assigned_by: string; is_active: boolean; title: string; description: string | null; cover_image_url: string | null; scheduled_start_at: string | null; scheduled_end_at: string | null };
 
 type Assignment = {
   scenario_id: string;
@@ -193,7 +193,23 @@ function TeacherModuleCard({ classId, module, onError }: {
 }) {
   const [active, setActive] = useState(module.is_active);
   const [pending, startTransition] = useTransition();
+  const [scheduleOpen, setScheduleOpen] = useState(false);
+  const [startAt, setStartAt] = useState(module.scheduled_start_at ? new Date(module.scheduled_start_at).toISOString().slice(0,16) : "");
+  const [endAt, setEndAt] = useState(module.scheduled_end_at ? new Date(module.scheduled_end_at).toISOString().slice(0,16) : "");
+  const [scheduleMessage, setScheduleMessage] = useState("");
   const router = useRouter();
+
+  function saveSchedule() {
+    setScheduleMessage("");
+    if (startAt && endAt && new Date(endAt) <= new Date(startAt)) { setScheduleMessage("Das Ende muss nach dem Start liegen."); return; }
+    startTransition(async () => {
+      try {
+        await updateTeacherModuleSchedule(classId, module.id, startAt ? new Date(startAt).toISOString() : null, endAt ? new Date(endAt).toISOString() : null);
+        setScheduleMessage("Zeitplan gespeichert.");
+        router.refresh();
+      } catch (cause) { setScheduleMessage(cause instanceof Error ? cause.message : "Zeitplan konnte nicht gespeichert werden."); }
+    });
+  }
 
   function setStatus(next: boolean) {
     if (pending || next === active) return;
@@ -243,7 +259,18 @@ function TeacherModuleCard({ classId, module, onError }: {
           <button type="button" onClick={archive} disabled={pending} aria-label="Modul aus Klasse entfernen" title="Modul aus dieser Klasse entfernen" className="mt-1 inline-flex h-8 w-8 items-center justify-center rounded-xl border border-white/80 bg-white/65 text-slate-500 shadow-[0_4px_14px_rgba(30,41,59,.10)] backdrop-blur-xl transition hover:border-rose-200 hover:bg-rose-50 hover:text-rose-600 disabled:opacity-50"><Trash2 className="h-3.5 w-3.5" /></button>
         </div>
       </div>
-      {active && <div className="border-t border-violet-100 px-3 py-2 sm:px-4"><span className="inline-flex items-center gap-1.5 text-[11px] font-medium text-violet-700"><CalendarClock className="h-3.5 w-3.5" />Für diese Klasse bereitgestellt</span></div>}
+      {active && <div className="border-t border-violet-100 px-3 py-2 sm:px-4">
+        <button type="button" onClick={() => setScheduleOpen(value => !value)} className="inline-flex items-center gap-1.5 text-[11px] font-medium text-violet-700 hover:text-violet-900"><CalendarClock className="h-3.5 w-3.5" />{scheduleOpen ? "Zeitplan schließen" : (module.scheduled_start_at || module.scheduled_end_at) ? "Zeitplan bearbeiten" : "Zeitplan festlegen"}</button>
+        {(module.scheduled_start_at || module.scheduled_end_at) && !scheduleOpen && <p className="mt-1 text-[10px] text-slate-500">{module.scheduled_start_at ? new Date(module.scheduled_start_at).toLocaleString("de-DE") : "Sofort"}{module.scheduled_end_at ? " – " + new Date(module.scheduled_end_at).toLocaleString("de-DE") : ""}</p>}
+        {scheduleOpen && <div className="mt-3 rounded-lg bg-violet-50/70 p-3">
+          <p className="text-xs text-slate-600">Lege fest, wann das Modul für diese Klasse verfügbar ist. Ohne Zeitangabe bleibt es dauerhaft verfügbar.</p>
+          <div className="mt-3 grid gap-3 sm:grid-cols-2">
+            <label className="block text-xs font-medium text-slate-700">Live ab<input type="datetime-local" value={startAt} onChange={event => setStartAt(event.target.value)} disabled={pending} className="mt-1 w-full rounded-lg border border-slate-200 bg-white px-2 py-2 text-xs"/></label>
+            <label className="block text-xs font-medium text-slate-700">Live bis<input type="datetime-local" value={endAt} onChange={event => setEndAt(event.target.value)} disabled={pending} className="mt-1 w-full rounded-lg border border-slate-200 bg-white px-2 py-2 text-xs"/></label>
+          </div>
+          <div className="mt-3 flex flex-wrap items-center gap-3"><button type="button" onClick={saveSchedule} disabled={pending} className="rounded-lg bg-violet-600 px-3 py-2 text-xs font-semibold text-white hover:bg-violet-700 disabled:opacity-50">{pending ? "Speichert …" : "Zeitplan speichern"}</button>{scheduleMessage && <p role="status" className="text-xs text-slate-600">{scheduleMessage}</p>}</div>
+        </div>}
+      </div>}
     </article>
   );
 }
