@@ -88,7 +88,7 @@ export default async function ClassDetailPage({
       .is("archived_at", null)),
     timed("teacher-module-assignments", supabase
       .from("teacher_module_class_assignments")
-      .select("id,module_id,school_id,assigned_by,is_active,scheduled_start_at,scheduled_end_at,archived_at,teacher_modules(id,title,description,intro_title,intro_text,visibility_scope,status)")
+      .select("id,module_id,school_id,assigned_by,is_active,scheduled_start_at,scheduled_end_at,archived_at,teacher_modules(id,title,description,intro_title,intro_text,visibility_scope,status,created_by)")
       .eq("class_instance_id", classId)
       .is("archived_at", null)),
     timed("available-teacher-modules", supabase
@@ -199,6 +199,7 @@ const teacherModulesData = (teacherModuleAssignments ?? [])
     introTitle: row.teacher_modules.intro_title,
     introText: row.teacher_modules.intro_text,
     visibility_scope: row.teacher_modules.visibility_scope,
+    canManage: Boolean(user?.id && row.teacher_modules.created_by === user.id),
     cover_image_url: null,
     posts: [],
   }));
