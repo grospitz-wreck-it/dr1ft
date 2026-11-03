@@ -51,6 +51,7 @@ export default async function ClassDetailPage({
     { data: scenarios },
     { data: assignments },
     { data: teacherModuleAssignments },
+    { data: availableTeacherModules },
     { data: school },
     { data: userResult },
   ] = await Promise.all([
@@ -77,6 +78,13 @@ export default async function ClassDetailPage({
       .from("teacher_module_class_assignments")
       .select("id,module_id,school_id,assigned_by,is_active,scheduled_start_at,scheduled_end_at,teacher_modules(id,title,description,intro_title,intro_text,status,teacher_module_posts(id,post_type,title,body,image_path,embed_provider,embed_url,sort_order,status))")
       .eq("class_instance_id", classId),
+
+    supabase
+      .from("teacher_modules")
+      .select("id,title,description,visibility_scope,created_by,teacher_module_posts(id,post_type,title,body,image_path,embed_provider,embed_url,sort_order,status)")
+      .eq("school_id", instance.school_id)
+      .eq("status", "published")
+      .order("updated_at", { ascending: false }),
 
     instance.school_id
       ? supabase
@@ -315,6 +323,13 @@ export default async function ClassDetailPage({
             description: scenario.description ?? null,
             cover_image_url: scenario.cover_image_url ?? null,
             age_rating: scenario.age_rating ?? "Alle Altersgruppen",
+          }))}
+          availableTeacherModules={await Promise.all((availableTeacherModules ?? []).map(async (module: any) => {
+            const posts = await Promise.all([...(module.teacher_module_posts ?? [])].filter((post: any) => post.status === "published").sort((a: any, b: any) => Number(a.sort_order ?? 0) - Number(b.sort_order ?? 0)).map(async (post: any) => {
+              const { data: imageData } = post.image_path ? await supabase.storage.from("teacher-module-assets").createSignedUrl(post.image_path, 60 * 60) : { data: null };
+              return { id: post.id, postType: post.post_type, title: post.title ?? "", body: post.body ?? "", embedUrl: post.embed_url ?? "", imageUrl: imageData?.signedUrl ?? null };
+            }));
+            return { id: module.id, module_id: module.id, title: module.title, description: module.description ?? "", visibility_scope: module.visibility_scope, posts };
           }))}
           teacherModules={await Promise.all((teacherModuleAssignments ?? []).filter((row: any) => row.teacher_modules?.status === "published").map(async (row: any) => {
             const posts = await Promise.all([...(row.teacher_modules.teacher_module_posts ?? [])].filter((post: any) => post.status === "published").sort((a: any, b: any) => Number(a.sort_order ?? 0) - Number(b.sort_order ?? 0)).map(async (post: any) => {
