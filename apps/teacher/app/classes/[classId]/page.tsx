@@ -76,8 +76,7 @@ export default async function ClassDetailPage({
     supabase
       .from("teacher_module_class_assignments")
       .select("id,module_id,school_id,assigned_by,is_active,scheduled_start_at,scheduled_end_at,teacher_modules(id,title,description,status,teacher_module_posts(image_path,sort_order))")
-      .eq("class_instance_id", classId)
-      .eq("is_active", true),
+      .eq("class_instance_id", classId),
 
     instance.school_id
       ? supabase
