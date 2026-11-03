@@ -134,7 +134,7 @@ export default async function ClassDetailPage({
     const { data } = await withTimeout(
       supabase.storage.from("class-images").createSignedUrl(instance.class_image_path, 60 * 60),
       7000,
-      { data: null },
+      { data: null, error: null } as any,
     );
     classImageUrl = data?.signedUrl ?? null;
   }
