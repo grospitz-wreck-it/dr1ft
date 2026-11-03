@@ -93,7 +93,12 @@ export function TeacherModuleBuilderModal({ classInstanceId, schoolId, editModul
   function updatePost(id: string, patch: Partial<DraftPost>) {
     setPosts((items) => items.map((post) => post.id === id ? { ...post, ...patch } : post));
   }
-  function duplicatePost(post: DraftPost) {\n    const copy = { ...post, id: crypto.randomUUID(), imageFile: post.imageFile, imageSettings: { ...post.imageSettings }, interactionData: { ...post.interactionData, options: [...post.interactionData.options] as [string,string] } };\n    setPosts(items => { const index = items.findIndex(item => item.id === post.id); const next = [...items]; next.splice(index + 1, 0, copy); return next; });\n    setSelectedId(copy.id);\n  }\n  function movePost(id: string, targetId: string) {
+  function duplicatePost(post: DraftPost) {
+    const copy = { ...post, id: crypto.randomUUID(), imageFile: post.imageFile, imageSettings: { ...post.imageSettings }, interactionData: { ...post.interactionData, options: [...post.interactionData.options] as [string, string] } };
+    setPosts(items => { const index = items.findIndex(item => item.id === post.id); const next = [...items]; next.splice(index + 1, 0, copy); return next; });
+    setSelectedId(copy.id);
+  }
+  function movePost(id: string, targetId: string) {
     if (id === targetId) return;
     setPosts((items) => {
       const from = items.findIndex((post) => post.id === id);
