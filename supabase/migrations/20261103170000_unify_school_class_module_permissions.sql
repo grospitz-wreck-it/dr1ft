@@ -3,7 +3,9 @@
 -- A directly assigned class manager can create a module even when no
 -- school_memberships row exists (legacy/imported class memberships).
 
-create or replace function public.upsert_class_instance_scenario_assignment(
+drop function if exists public.upsert_class_instance_scenario_assignment(uuid, uuid, text);
+
+create function public.upsert_class_instance_scenario_assignment(
   p_instance_id uuid,
   p_scenario_id uuid,
   p_pacing_mode text default 'compact'
