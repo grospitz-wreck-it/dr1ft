@@ -44,29 +44,47 @@ export async function saveTeacherCreatedModule(formData: FormData) {
   if (!classInstanceId || !schoolId) throw new Error("Klassen- oder Schulzuordnung fehlt.");
   if (!title || title.length > 120) throw new Error("Bitte einen Modultitel mit maximal 120 Zeichen angeben.");
 
-  const { data: membership, error: membershipError } = await supabase
-    .from("class_instance_memberships")
-    .select("id,role,class_instances!inner(school_id)")
-    .eq("class_instance_id", classInstanceId)
-    .eq("user_id", user.id)
-    .is("left_at", null)
+  // Resolve the target class first. A school administrator is not required to
+  // have a separate class_instance_memberships row: their authority is scoped
+  // to their own school via the canonical is_school_admin_of() helper.
+  const { data: classInstance, error: classError } = await supabase
+    .from("class_instances")
+    .select("id,school_id")
+    .eq("id", classInstanceId)
     .maybeSingle();
 
-  if (membershipError || !membership || !["teacher", "school_admin"].includes(membership.role)) {
-    throw new Error("Du hast keine Berechtigung, Inhalte für diese Klasse zu erstellen.");
+  if (classError || !classInstance) {
+    throw new Error("Die ausgewählte Klasse wurde nicht gefunden.");
   }
-  const membershipSchoolId = (membership as any).class_instances?.school_id;
-  if (!membershipSchoolId || membershipSchoolId !== schoolId) {
+  if (classInstance.school_id !== schoolId) {
     throw new Error("Die Klasse gehört nicht zu dieser Schule.");
   }
+
   const { data: schoolMembership } = await supabase
     .from("school_memberships")
-    .select("school_id")
+    .select("school_id,role")
     .eq("school_id", schoolId)
     .eq("user_id", user.id)
     .eq("active", true)
     .maybeSingle();
-  if (!schoolMembership) throw new Error("Keine aktive Mitgliedschaft an dieser Schule.");
+
+  const isSchoolAdmin = schoolMembership?.role === "school_admin";
+  let isClassTeacher = false;
+  if (!isSchoolAdmin) {
+    const { data: membership, error: membershipError } = await supabase
+      .from("class_instance_memberships")
+      .select("id,role")
+      .eq("class_instance_id", classInstanceId)
+      .eq("user_id", user.id)
+      .eq("role", "teacher")
+      .is("left_at", null)
+      .maybeSingle();
+    isClassTeacher = !membershipError && Boolean(membership);
+  }
+
+  if (!schoolMembership || (!isSchoolAdmin && !isClassTeacher)) {
+    throw new Error("Du hast keine Berechtigung, Inhalte für diese Klasse zu erstellen.");
+  }
 
   let posts: PostInput[];
   try { posts = JSON.parse(postsRaw); } catch { throw new Error("Die Beitragsdaten sind ungültig."); }
