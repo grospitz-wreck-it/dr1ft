@@ -27,7 +27,7 @@ export default async function FeedPage() {
   // content_items. Load only active assignments for this learner's class.
   const { data: teacherModuleAssignments } = await supabase
     .from("teacher_module_class_assignments")
-    .select("id,module_id,scheduled_start_at,scheduled_end_at,teacher_modules(id,title,description,intro_title,intro_text,status,teacher_module_posts(id,post_type,title,body,image_path,embed_provider,embed_url,sort_order,status))")
+    .select("id,module_id,scheduled_start_at,scheduled_end_at,teacher_modules(id,title,description,title_card_enabled,status,teacher_module_posts(id,post_type,title,body,image_path,embed_provider,embed_url,interaction_data,sort_order,status))")
     .eq("class_instance_id", classInstanceId)
     .eq("is_active", true);
   const availableTeacherModules = await Promise.all((teacherModuleAssignments ?? [])
@@ -54,6 +54,7 @@ export default async function FeedPage() {
             embedProvider: post.embed_provider ?? null,
             embedUrl: post.embed_url ?? null,
             sortOrder: post.sort_order ?? 0,
+            interactionData: post.interaction_data ?? {},
           };
         }));
       return {
@@ -61,6 +62,7 @@ export default async function FeedPage() {
         assignmentId: assignment.id,
         title: assignment.teacher_modules.title,
         description: assignment.teacher_modules.description ?? "",
+        titleCardEnabled: assignment.teacher_modules.title_card_enabled !== false,
         posts,
       };
     }));
