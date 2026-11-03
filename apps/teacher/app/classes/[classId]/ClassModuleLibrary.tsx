@@ -211,6 +211,7 @@ function TeacherModuleEditButton({ classId, schoolId, module, onError }: {
   onError: (message: string) => void;
 }) {
   const [loading, setLoading] = useState(false);
+  const [editError, setEditError] = useState("");
   const [editModule, setEditModule] = useState<null | {
     id: string;
     title: string;
@@ -224,6 +225,7 @@ function TeacherModuleEditButton({ classId, schoolId, module, onError }: {
   async function openEditor() {
     if (loading) return;
     setLoading(true);
+    setEditError("");
     try {
       const posts = await getTeacherModulePosts(classId, module.module_id);
       setEditModule({
@@ -236,7 +238,7 @@ function TeacherModuleEditButton({ classId, schoolId, module, onError }: {
         posts,
       });
     } catch (cause) {
-      onError(cause instanceof Error ? cause.message : "Modulbeiträge konnten nicht geladen werden.");
+      setEditError(cause instanceof Error ? cause.message : "Modulbeiträge konnten nicht geladen werden.");
     } finally {
       setLoading(false);
     }
@@ -247,6 +249,7 @@ function TeacherModuleEditButton({ classId, schoolId, module, onError }: {
       <button type="button" onClick={openEditor} disabled={loading} aria-label="Modul bearbeiten" className="inline-flex h-9 w-9 items-center justify-center rounded-xl border border-slate-200 bg-white text-slate-700 transition hover:border-violet-200 hover:bg-violet-50 hover:text-violet-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-violet-400 focus-visible:ring-offset-2 disabled:cursor-wait disabled:opacity-60">
         <Pencil className="h-4 w-4" />
       </button>
+      {editError && <p role="alert" className="absolute z-20 mt-10 max-w-xs rounded-lg bg-rose-50 px-3 py-2 text-xs text-rose-700 shadow">{editError}</p>}
       {editModule && (
         <TeacherModuleBuilderModal
           classInstanceId={classId}
@@ -272,6 +275,7 @@ function TeacherModuleCard({ classId, schoolId, module, onError }: {
   const [startAt, setStartAt] = useState(module.scheduled_start_at ? new Date(module.scheduled_start_at).toISOString().slice(0,16) : "");
   const [endAt, setEndAt] = useState(module.scheduled_end_at ? new Date(module.scheduled_end_at).toISOString().slice(0,16) : "");
   const [scheduleMessage, setScheduleMessage] = useState("");
+  const [actionError, setActionError] = useState("");
   const router = useRouter();
 
   function saveSchedule() {
@@ -295,7 +299,7 @@ function TeacherModuleCard({ classId, schoolId, module, onError }: {
         router.refresh();
       } catch (cause) {
         setActive(!next);
-        onError(cause instanceof Error ? cause.message : "Modulstatus konnte nicht geändert werden.");
+        setActionError(cause instanceof Error ? cause.message : "Modulstatus konnte nicht geändert werden.");
       }
     });
   }
@@ -304,7 +308,7 @@ function TeacherModuleCard({ classId, schoolId, module, onError }: {
     if (pending || !window.confirm("Dieses Modul archivieren? Inhalte und Lernstände bleiben erhalten.")) return;
     startTransition(async () => {
       try { await archiveTeacherModuleAssignment(classId, module.id); router.refresh(); }
-      catch (cause) { onError(cause instanceof Error ? cause.message : "Modul konnte nicht archiviert werden."); }
+      catch (cause) { setActionError(cause instanceof Error ? cause.message : "Modul konnte nicht archiviert werden."); }
     });
   }
 
@@ -312,7 +316,7 @@ function TeacherModuleCard({ classId, schoolId, module, onError }: {
     if (pending || !window.confirm("Dieses selbst erstellte Modul einschließlich aller Beiträge und Medien endgültig löschen?")) return;
     startTransition(async () => {
       try { await deleteTeacherCreatedModule(classId, module.module_id); router.refresh(); }
-      catch (cause) { onError(cause instanceof Error ? cause.message : "Modul konnte nicht gelöscht werden."); }
+      catch (cause) { setActionError(cause instanceof Error ? cause.message : "Modul konnte nicht gelöscht werden."); }
     });
   }
 
@@ -349,6 +353,7 @@ function TeacherModuleCard({ classId, schoolId, module, onError }: {
           </div>
           {(module.scheduled_start_at || module.scheduled_end_at) && !scheduleOpen && <p className="ml-auto text-right text-[10px] text-slate-500">{module.scheduled_start_at ? new Date(module.scheduled_start_at).toLocaleString("de-DE") : "Sofort"}{module.scheduled_end_at ? " – " + new Date(module.scheduled_end_at).toLocaleString("de-DE") : ""}</p>}
         </div>
+        {actionError && <p role="alert" className="mt-2 rounded-lg bg-rose-50 px-3 py-2 text-xs text-rose-700">{actionError}</p>}
         {scheduleOpen && <div className="mt-3 rounded-lg bg-violet-50/70 p-3">
           <p className="text-xs text-slate-600">Lege fest, wann das Modul für diese Klasse verfügbar ist. Ohne Zeitangabe bleibt es dauerhaft verfügbar.</p>
           <div className="mt-3 grid gap-3 sm:grid-cols-2">
