@@ -167,15 +167,13 @@ export default async function ClassDetailPage({
     ["school_admin", "school_lead"].includes(schoolMembership?.role),
   );
 
-  let classImageUrl: string | null = null;
-
-  if (canEditClassImage && instance.class_image_path) {
-    const { data } = await supabase.storage
-      .from("class-images")
-      .createSignedUrl(instance.class_image_path, 60 * 60);
-
-    classImageUrl = data?.signedUrl ?? null;
-  }
+  const classImageUrlPromise: Promise<string | null> =
+    canEditClassImage && instance.class_image_path
+      ? supabase.storage
+          .from("class-images")
+          .createSignedUrl(instance.class_image_path, 60 * 60)
+          .then(({ data }) => data?.signedUrl ?? null)
+      : Promise.resolve(null);
 
   const students = (roster ?? [])
     .filter((row: any) => row.role === "student")
@@ -278,6 +276,51 @@ export default async function ClassDetailPage({
     ? `${completed} von ${total} Mission-Abschlüssen über alle Schüler:innen · ${studentsWithCompletedModule} von ${studentsWithMissionData.length} Schüler:innen haben alle Missionen abgeschlossen`
     : "Noch keine auswertbaren Missionsfortschritte vorhanden.";
 
+  // Sign module assets for both module collections concurrently. Previously
+  // the available-library collection was fully awaited before assigned modules
+  // started signing their images, extending the page's critical path.
+  const availableTeacherModulesPromise = Promise.all(
+    (availableTeacherModules ?? []).map(async (module: any) => {
+      const posts = await Promise.all(
+        [...(module.teacher_module_posts ?? [])]
+          .filter((post: any) => post.status === "published")
+          .sort((a: any, b: any) => Number(a.sort_order ?? 0) - Number(b.sort_order ?? 0))
+          .map(async (post: any) => {
+            const { data: imageData } = post.image_path
+              ? await supabase.storage.from("teacher-module-assets").createSignedUrl(post.image_path, 60 * 60)
+              : { data: null };
+            return { id: post.id, postType: post.post_type, title: post.title ?? "", body: post.body ?? "", embedUrl: post.embed_url ?? "", imageUrl: imageData?.signedUrl ?? null };
+          }),
+      );
+      return { id: module.id, module_id: module.id, title: module.title, description: module.description ?? "", visibility_scope: module.visibility_scope, posts };
+    }),
+  );
+
+  const teacherModulesPromise = Promise.all(
+    (teacherModuleAssignments ?? [])
+      .filter((row: any) => row.teacher_modules?.status === "published")
+      .map(async (row: any) => {
+        const posts = await Promise.all(
+          [...(row.teacher_modules.teacher_module_posts ?? [])]
+            .filter((post: any) => post.status === "published")
+            .sort((a: any, b: any) => Number(a.sort_order ?? 0) - Number(b.sort_order ?? 0))
+            .map(async (post: any) => {
+              const { data: imageData } = post.image_path
+                ? await supabase.storage.from("teacher-module-assets").createSignedUrl(post.image_path, 60 * 60)
+                : { data: null };
+              return { id: post.id, postType: post.post_type, title: post.title ?? "", body: post.body ?? "", embedUrl: post.embed_url ?? "", imageUrl: imageData?.signedUrl ?? null };
+            }),
+        );
+        return { id: row.id, module_id: row.module_id, school_id: row.school_id, assigned_by: row.assigned_by, is_active: row.is_active, scheduled_start_at: row.scheduled_start_at, scheduled_end_at: row.scheduled_end_at, title: row.teacher_modules.title, description: row.teacher_modules.description, introTitle: row.teacher_modules.intro_title, introText: row.teacher_modules.intro_text, visibility_scope: row.teacher_modules.visibility_scope, cover_image_url: posts.find((post: any) => post.imageUrl)?.imageUrl ?? null, posts };
+      }),
+  );
+
+  const [classImageUrl, availableTeacherModulesData, teacherModulesData] = await Promise.all([
+    classImageUrlPromise,
+    availableTeacherModulesPromise,
+    teacherModulesPromise,
+  ]);
+
   const schoolImageUrl = school?.school_image_path
     ? `${process.env.NEXT_PUBLIC_SUPABASE_URL}/storage/v1/object/public/school-images/${school.school_image_path}`
     : null;
@@ -358,20 +401,8 @@ export default async function ClassDetailPage({
             cover_image_url: scenario.cover_image_url ?? null,
             age_rating: scenario.age_rating ?? "Alle Altersgruppen",
           }))}
-          availableTeacherModules={await Promise.all((availableTeacherModules ?? []).map(async (module: any) => {
-            const posts = await Promise.all([...(module.teacher_module_posts ?? [])].filter((post: any) => post.status === "published").sort((a: any, b: any) => Number(a.sort_order ?? 0) - Number(b.sort_order ?? 0)).map(async (post: any) => {
-              const { data: imageData } = post.image_path ? await supabase.storage.from("teacher-module-assets").createSignedUrl(post.image_path, 60 * 60) : { data: null };
-              return { id: post.id, postType: post.post_type, title: post.title ?? "", body: post.body ?? "", embedUrl: post.embed_url ?? "", imageUrl: imageData?.signedUrl ?? null };
-            }));
-            return { id: module.id, module_id: module.id, title: module.title, description: module.description ?? "", visibility_scope: module.visibility_scope, posts };
-          }))}
-          teacherModules={await Promise.all((teacherModuleAssignments ?? []).filter((row: any) => row.teacher_modules?.status === "published").map(async (row: any) => {
-            const posts = await Promise.all([...(row.teacher_modules.teacher_module_posts ?? [])].filter((post: any) => post.status === "published").sort((a: any, b: any) => Number(a.sort_order ?? 0) - Number(b.sort_order ?? 0)).map(async (post: any) => {
-              const { data: imageData } = post.image_path ? await supabase.storage.from("teacher-module-assets").createSignedUrl(post.image_path, 60 * 60) : { data: null };
-              return { id: post.id, postType: post.post_type, title: post.title ?? "", body: post.body ?? "", embedUrl: post.embed_url ?? "", imageUrl: imageData?.signedUrl ?? null };
-            }));
-            return { id: row.id, module_id: row.module_id, school_id: row.school_id, assigned_by: row.assigned_by, is_active: row.is_active, scheduled_start_at: row.scheduled_start_at, scheduled_end_at: row.scheduled_end_at, title: row.teacher_modules.title, description: row.teacher_modules.description, introTitle: row.teacher_modules.intro_title, introText: row.teacher_modules.intro_text, visibility_scope: row.teacher_modules.visibility_scope, cover_image_url: posts.find((post: any) => post.imageUrl)?.imageUrl ?? null, posts };
-          }))}
+          availableTeacherModules={availableTeacherModulesData}
+          teacherModules={teacherModulesData}
           assignments={activeAssignments.map((item: any) => ({
             scenario_id: item.scenario_id,
             is_active: item.is_active !== false,
