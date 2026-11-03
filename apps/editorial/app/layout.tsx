@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { headers } from "next/headers";
+import { cookies, headers } from "next/headers";
 import { EditorialSidebar } from "./EditorialSidebar";
 import "./globals.css";
 
@@ -37,11 +37,12 @@ export default async function RootLayout({
   const normalizedPathname =
     pathname.split("?")[0].replace(/\/+$/, "") || "/";
 
-  const isSchoolArea =
-    normalizedPathname === "/schools" ||
+  const routeCookies = cookies();
+  const isSchoolDetailPage =
+    routeCookies.get("dr1ft-school-detail")?.value === "1" ||
     normalizedPathname.startsWith("/schools/");
 
-  if (isPublicAuthPage || hostname === schoolHost || isSchoolArea) {
+  if (isPublicAuthPage || hostname === schoolHost || isSchoolDetailPage) {
     return (
       <html lang="de">
         <body className="font-sans">{children}</body>
