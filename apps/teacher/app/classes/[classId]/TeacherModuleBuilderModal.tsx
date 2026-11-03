@@ -235,7 +235,27 @@ export function TeacherModuleBuilderModal({ classInstanceId, schoolId, editModul
                     </div>
                   </div>
                 </section>
-                {selected ? (
+                {previewMode ? (
+                  <section className="drift-builder-canvas flex min-h-0 min-w-0 flex-col overflow-y-auto px-5 py-5 sm:px-6 lg:min-h-0">
+                    <div className="mb-5 flex flex-wrap items-center justify-between gap-3">
+                      <div><button type="button" onClick={()=>setPreviewMode(false)} className="text-xs font-bold text-violet-700">← Zurück zum Editor</button><h3 className="mt-2 text-xl font-extrabold text-slate-950">Schüler:innen-Vorschau</h3></div>
+                      <div className="flex items-center gap-1 rounded-xl border border-violet-100 bg-white p-1">
+                        <button type="button" onClick={()=>setPreviewDevice("mobile")} aria-label="Mobilansicht" className={"rounded-lg p-2 "+(previewDevice==="mobile"?"bg-violet-100 text-violet-700":"text-slate-500")}><Smartphone className="h-4 w-4"/></button>
+                        <button type="button" onClick={()=>setPreviewDevice("desktop")} aria-label="Desktopansicht" className={"rounded-lg p-2 "+(previewDevice==="desktop"?"bg-violet-100 text-violet-700":"text-slate-500")}><Monitor className="h-4 w-4"/></button>
+                      </div>
+                    </div>
+                    <div className={"mx-auto w-full space-y-4 "+(previewDevice==="mobile"?"max-w-[390px]":"max-w-[900px]")}>
+                      {titleCardEnabled && <div className="drift-builder-preview rounded-[22px] p-5"><span className="drift-builder-type-badge">DEIN LERNMODUL</span><h2 className="mt-3 text-2xl font-extrabold text-slate-950">{title||"Dein Modultitel"}</h2><p className="mt-2 text-sm leading-6 text-slate-600">{description||"Deine Modulbeschreibung erscheint hier."}</p></div>}
+                      {posts.map((post,index)=><article key={post.id} className="overflow-hidden rounded-[22px] border border-violet-100 bg-white shadow-sm">
+                        {(post.imageFile||post.existingImageUrl)&&<img src={post.imageFile?URL.createObjectURL(post.imageFile):post.existingImageUrl!} alt="" className="max-h-[280px] w-full object-cover"/>}
+                        <div className="p-5"><span className="drift-builder-type-badge">{post.postType==="poll"?"UMFRAGE":post.postType==="true_false"?"RICHTIG / FALSCH":post.postType==="embed"?"VIDEO / EMBED":"TEXT / BILD"}</span><h4 className="mt-3 text-lg font-extrabold text-slate-950">{post.title||"Dein Beitrag"}</h4><p className="mt-2 whitespace-pre-wrap text-sm leading-6 text-slate-700">{post.body}</p>
+                          {post.postType==="poll"&&<div className="mt-4 grid gap-2">{post.interactionData.options.map((option,i)=><div key={i} className="rounded-xl border border-violet-200 bg-violet-50 px-4 py-3 text-sm font-bold text-violet-800">{option||"Antwortmöglichkeit"}</div>)}</div>}
+                          {post.postType==="true_false"&&<div className="mt-4 grid grid-cols-2 gap-2"><div className="rounded-xl border border-emerald-200 bg-emerald-50 p-3 text-center text-sm font-bold text-emerald-800">Richtig</div><div className="rounded-xl border border-rose-200 bg-rose-50 p-3 text-center text-sm font-bold text-rose-800">Falsch</div></div>}
+                        </div>
+                      </article>)}
+                    </div>
+                  </section>
+                ) : selected ? (
                   <section className="drift-builder-canvas flex min-h-0 min-w-0 flex-col overflow-y-auto px-5 py-5 sm:px-6 lg:min-h-0">
                     <div className="mb-3 flex items-center justify-between"><button type="button" onClick={()=>setSelectedId(null)} className="text-xs font-bold text-violet-700">← Zurück zu allen Beiträgen</button><span className="text-[10px] font-bold uppercase tracking-widest text-violet-600">Beitrag bearbeiten</span></div>
                                       <div className="flex shrink-0 items-center justify-between gap-2"><div><p className="text-[9px] font-extrabold uppercase tracking-[.2em] text-violet-600">DEINE CONTENT-KARTE</p><h3 className="mt-1 text-sm font-extrabold text-slate-900">Beitrag gestalten</h3></div>{selected && <button type="button" onClick={() => { setPosts((items) => items.filter((item) => item.id !== selected.id)); setSelectedId(null); }} className="text-xs font-semibold text-rose-600 hover:text-rose-700">Beitrag entfernen</button>}</div>
