@@ -95,13 +95,17 @@ export default async function ClassDetailPage({
       .order("updated_at", { ascending: false }), 8000, { data: [] }),
 
     instance.school_id
-      ? supabase
-          .from("schools")
-          .select(
-            "id,name,region,school_image_path,school_image_position_x,school_image_position_y,school_image_zoom",
-          )
-          .eq("id", instance.school_id)
-          .maybeSingle(), 8000, { data: null })
+      ? withTimeout(
+          supabase
+            .from("schools")
+            .select(
+              "id,name,region,school_image_path,school_image_position_x,school_image_position_y,school_image_zoom",
+            )
+            .eq("id", instance.school_id)
+            .maybeSingle(),
+          8000,
+          { data: null },
+        )
       : Promise.resolve({ data: null }),
 
     withTimeout(supabase.auth.getUser(), 8000, { data: { user: null } }),
