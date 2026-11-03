@@ -70,8 +70,8 @@ export default function ClassImageEditor({
       return;
     }
 
-    if (selected.size > 8 * 1024 * 1024) {
-      setMessage("Das Bild darf maximal 8 MB groß sein.");
+    if (selected.size > 20 * 1024 * 1024) {
+      setMessage("Das Originalbild darf maximal 20 MB groß sein.");
       return;
     }
 
@@ -92,6 +92,7 @@ export default function ClassImageEditor({
 
       if (file) {
         const optimizedFile = await convertToWebP(file);
+        if (optimizedFile.size > 8 * 1024 * 1024) throw new Error("Das optimierte WebP-Bild ist noch größer als 8 MB. Bitte ein kleineres Bild verwenden.");
         const path = `${classId}/class-${Date.now()}.webp`;
 
         const { error: uploadError } = await supabase.storage
