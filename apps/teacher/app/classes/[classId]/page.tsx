@@ -293,7 +293,6 @@ const teacherModulesPromise = Promise.all(
   );
 
   const [availableTeacherModulesData, teacherModulesData] = await Promise.all([availableTeacherModulesPromise, teacherModulesPromise]);
-  const classImageUrl: string | null = await classImagePromise;
 
   const schoolImageUrl = school?.school_image_path
     ? `${process.env.NEXT_PUBLIC_SUPABASE_URL}/storage/v1/object/public/school-images/${school.school_image_path}`
