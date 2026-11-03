@@ -40,8 +40,10 @@ export async function saveTeacherCreatedModule(formData: FormData) {
   const schoolId = String(formData.get("schoolId") ?? "");
   const title = String(formData.get("title") ?? "").trim();
   const description = String(formData.get("description") ?? "").trim();
-  const introTitle = String(formData.get("introTitle") ?? "").trim().slice(0, 120);
+  const visibilityScope = ["private", "school", "class"].includes(String(formData.get("visibilityScope"))) ? String(formData.get("visibilityScope")) : "class";
+    const introTitle = String(formData.get("introTitle") ?? "").trim().slice(0, 120);
   const introText = String(formData.get("introText") ?? "").trim().slice(0, 1200);
+  const visibilityScope = ["private", "school", "class"].includes(String(formData.get("visibilityScope"))) ? String(formData.get("visibilityScope")) : "class";
   const postsRaw = String(formData.get("posts") ?? "[]");
   if (!classInstanceId || !schoolId) throw new Error("Klassen- oder Schulzuordnung fehlt.");
   if (!title || title.length > 120) throw new Error("Bitte einen Modultitel mit maximal 120 Zeichen angeben.");
@@ -97,7 +99,7 @@ export async function saveTeacherCreatedModule(formData: FormData) {
 
   const { data: module, error: moduleError } = await supabase
     .from("teacher_modules")
-    .insert({ school_id: schoolId, created_by: user.id, title, description, intro_title: introTitle || null, intro_text: introText || null, status: "draft" })
+    .insert({ school_id: schoolId, created_by: user.id, title, description, intro_title: introTitle || null, intro_text: introText || null, visibility_scope: visibilityScope, status: "draft" })
     .select("id")
     .single();
   if (moduleError || !module) throw new Error(moduleError?.message ?? "Modul konnte nicht angelegt werden.");
@@ -213,7 +215,7 @@ export async function updateTeacherCreatedModule(formData: FormData) {
   }
   const introTitle = String(formData.get("introTitle") ?? "").trim().slice(0, 120);
   const introText = String(formData.get("introText") ?? "").trim().slice(0, 1200);
-  const { error: updateModuleError } = await supabase.from("teacher_modules").update({ title, description, intro_title: introTitle || null, intro_text: introText || null }).eq("id", moduleId);
+  const { error: updateModuleError } = await supabase.from("teacher_modules").update({ title, description, intro_title: introTitle || null, intro_text: introText || null, visibility_scope: visibilityScope }).eq("id", moduleId);
   if (updateModuleError) throw new Error(updateModuleError.message);
   const removedIds = (currentPosts ?? []).filter((post: any) => !keepIds.has(post.id)).map((post: any) => post.id);
   if (removedIds.length) {
@@ -316,6 +318,26 @@ export async function updateTeacherModuleSchedule(classInstanceId: string, assig
     .update({ scheduled_start_at: startAt, scheduled_end_at: endAt })
     .eq("id", assignmentId)
     .eq("class_instance_id", classInstanceId);
+  if (error) throw new Error(error.message);
+  revalidatePath(`/classes/${classInstanceId}`);
+}
+
+
+export async function assignExistingTeacherModule(classInstanceId: string, moduleId: string) {
+  const supabase = supabaseServerClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) throw new Error("Nicht authentifiziert.");
+  const { data: targetClass, error: classError } = await supabase.from("class_instances").select("id,school_id").eq("id", classInstanceId).maybeSingle();
+  if (classError || !targetClass?.school_id) throw new Error("Klasse nicht gefunden.");
+  const { data: module, error: moduleError } = await supabase.from("teacher_modules").select("id,school_id,created_by,visibility_scope,status").eq("id", moduleId).maybeSingle();
+  if (moduleError || !module || module.school_id !== targetClass.school_id || module.status !== "published") throw new Error("Dieses Modul ist nicht verfügbar.");
+  const { data: schoolMember } = await supabase.from("school_memberships").select("role").eq("school_id", targetClass.school_id).eq("user_id", user.id).eq("active", true).maybeSingle();
+  const { data: classMember } = await supabase.from("class_instance_memberships").select("role").eq("class_instance_id", classInstanceId).eq("user_id", user.id).eq("left_at", null).maybeSingle();
+  const authorized = schoolMember?.role === "school_admin" || classMember?.role === "teacher" || (module.created_by === user.id && module.visibility_scope !== "school");
+  if (!authorized) throw new Error("Du darfst dieses Modul dieser Klasse nicht zuweisen.");
+  const { error } = await supabase.from("teacher_module_class_assignments").upsert({
+    module_id: moduleId, school_id: targetClass.school_id, class_instance_id: classInstanceId, assigned_by: user.id, is_active: true,
+  }, { onConflict: "module_id,class_instance_id" });
   if (error) throw new Error(error.message);
   revalidatePath(`/classes/${classInstanceId}`);
 }
