@@ -59,6 +59,7 @@ export default async function ClassDetailPage({
   // Start the dashboard request before the remaining page queries so its
   // latency overlaps with the class data loading instead of adding to it.
   const { data: session } = await supabase.auth.getSession();
+  const user = session.session?.user ?? null;
   const dashboardPromise = (async () => {
     if (!session.session?.access_token) return {};
     const dashboardRes = await withTimeout(
