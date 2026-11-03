@@ -38,24 +38,29 @@ export async function getTeacherModulePosts(classInstanceId: string, moduleId: s
 
   // The assignment lookup is class-scoped and subject to the existing RLS
   // policies. Never return posts for a module not assigned to this class.
-  const { data: assignment, error: assignmentError } = await supabase
-    .from("teacher_module_class_assignments")
-    .select("id")
-    .eq("class_instance_id", classInstanceId)
-    .eq("module_id", moduleId)
-    .maybeSingle();
+  // Run the independent, class-scoped assignment check and post query in
+  // parallel. RLS still protects the post table; the assignment check remains
+  // mandatory before any post data is returned to the client.
+  const [assignmentResult, postsResult] = await Promise.all([
+    supabase
+      .from("teacher_module_class_assignments")
+      .select("id")
+      .eq("class_instance_id", classInstanceId)
+      .eq("module_id", moduleId)
+      .maybeSingle(),
+    supabase
+      .from("teacher_module_posts")
+      .select("id,post_type,title,body,image_path,embed_url,sort_order,status")
+      .eq("module_id", moduleId)
+      .eq("status", "published")
+      .order("sort_order", { ascending: true }),
+  ]);
+  const { data: assignment, error: assignmentError } = assignmentResult;
+  const { data: posts, error: postsError } = postsResult;
 
   if (assignmentError || !assignment) {
     throw new Error("Du hast keinen Zugriff auf dieses Modul.");
   }
-
-  const { data: posts, error: postsError } = await supabase
-    .from("teacher_module_posts")
-    .select("id,post_type,title,body,image_path,embed_url,sort_order,status")
-    .eq("module_id", moduleId)
-    .eq("status", "published")
-    .order("sort_order", { ascending: true });
-
   if (postsError) throw new Error("Modulbeiträge konnten nicht geladen werden.");
 
   return await Promise.all((posts ?? []).map(async (post: any) => {
