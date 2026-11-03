@@ -2,7 +2,7 @@
 
 import { useMemo, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { ArrowDown, ArrowUp, Check, GripVertical, ImagePlus, Link2, Plus, Save, Type, X } from "lucide-react";
+import { ArrowDown, ArrowUp, Check, GripVertical, ImagePlus, Link2, Plus, Save, Type, X, Wand2, RotateCcw, SlidersHorizontal } from "lucide-react";
 import { saveTeacherCreatedModule } from "./teacherModuleActions";
 
 type DraftPost = {
@@ -20,7 +20,7 @@ export function TeacherModuleBuilderModal({ classInstanceId, schoolId }: { class
   const [description, setDescription] = useState("");
   const [posts, setPosts] = useState<DraftPost[]>([]);
   const [selectedId, setSelectedId] = useState<string | null>(null);
-  const [dragId, setDragId] = useState<string | null>(null);
+  const [dragId, setDragId] = useState<string | null>(null);\n  const [imageEditorOpen, setImageEditorOpen] = useState(false);
   const [error, setError] = useState("");
   const [pending, startTransition] = useTransition();
   const router = useRouter();
@@ -58,7 +58,7 @@ export function TeacherModuleBuilderModal({ classInstanceId, schoolId }: { class
       return next;
     });
   }
-  function publish() {
+  async function processEditedImage(file: File, settings: DraftPost["imageSettings"]) {\n    const source = URL.createObjectURL(file);\n    try {\n      const image = new Image();\n      image.src = source;\n      await new Promise<void>((resolve, reject) => { image.onload = () => resolve(); image.onerror = () => reject(new Error("Bild konnte nicht geladen werden.")); });\n      const canvas = document.createElement("canvas");\n      canvas.width = image.naturalWidth; canvas.height = image.naturalHeight;\n      const context = canvas.getContext("2d");\n      if (!context) throw new Error("Bildbearbeitung wird in diesem Browser nicht unterstützt.");\n      context.filter = `brightness(${settings.brightness}%) contrast(${settings.contrast}%) saturate(${settings.saturation}%) grayscale(${settings.grayscale}%)`;\n      const width = canvas.width / settings.zoom, height = canvas.height / settings.zoom;\n      const sx = (canvas.width - width) * settings.x / 100, sy = (canvas.height - height) * settings.y / 100;\n      context.drawImage(image, sx, sy, width, height, 0, 0, canvas.width, canvas.height);\n      const blob = await new Promise<Blob>((resolve, reject) => canvas.toBlob(value => value ? resolve(value) : reject(new Error("Bearbeitetes Bild konnte nicht exportiert werden.")), "image/jpeg", 0.92));\n      return new File([blob], file.name.replace(/\\.[^.]+$/, "") + "-dr1ft.jpg", { type: "image/jpeg" });\n    } finally { URL.revokeObjectURL(source); }\n  }\n\n  async function publish() {
     setError("");
     if (!title.trim()) { setError("Bitte gib deinem Modul einen Titel."); return; }
     if (!posts.length) { setError("Füge mindestens einen Beitrag hinzu."); return; }
@@ -66,16 +66,16 @@ export function TeacherModuleBuilderModal({ classInstanceId, schoolId }: { class
       setError("Jeder Beitrag benötigt mindestens einen Inhalt.");
       return;
     }
-    const form = new FormData();
+    const editedFiles = await Promise.all(posts.map(async post => post.imageFile ? [post.id, await processEditedImage(post.imageFile, post.imageSettings)] as const : null));\n    const imageFiles = new Map(editedFiles.filter((item): item is readonly [string, File] => item !== null));\n    const form = new FormData();
     form.set("classInstanceId", classInstanceId);
     form.set("schoolId", schoolId);
     form.set("title", title);
     form.set("description", description);
     form.set("posts", JSON.stringify(posts.map((post, index) => ({
       id: post.id, postType: post.postType, title: post.title, body: post.body,
-      embedUrl: post.embedUrl, sortOrder: index, imageField: post.imageFile ? "image_" + post.id : undefined,
+      embedUrl: post.embedUrl, sortOrder: index, imageField: imageFiles.has(post.id) ? "image_" + post.id : undefined,
     }))));
-    posts.forEach((post) => { if (post.imageFile) form.set("image_" + post.id, post.imageFile); });
+    posts.forEach((post) => { const file = imageFiles.get(post.id); if (file) form.set("image_" + post.id, file); });
     startTransition(async () => {
       try {
         await saveTeacherCreatedModule(form);
@@ -156,9 +156,21 @@ export function TeacherModuleBuilderModal({ classInstanceId, schoolId }: { class
                       <label className="block text-xs font-semibold text-slate-700">Text
                         <textarea value={selected.body} onChange={(event) => updatePost(selected.id, { body: event.target.value })} rows={6} maxLength={12000} placeholder="Schreibe deinen Beitrag …" className="mt-1.5 w-full resize-y rounded-lg border border-slate-200 px-3 py-2 text-sm" />
                       </label>
-                      {(selected.postType === "image" || selected.postType === "mixed") && <label className="block text-xs font-semibold text-slate-700">Bild hochladen<input type="file" accept="image/jpeg,image/png,image/webp,image/gif" onChange={(event) => updatePost(selected.id, { imageFile: event.target.files?.[0] ?? null })} className="mt-1.5 block w-full text-xs text-slate-600" /></label>}
+                      {(selected.postType === "image" || selected.postType === "mixed") && <>
+                        <label className="block text-xs font-semibold text-slate-700">Bild hochladen<input type="file" accept="image/jpeg,image/png,image/webp,image/gif" onChange={(event) => { updatePost(selected.id, { imageFile: event.target.files?.[0] ?? null }); setImageEditorOpen(false); }} className="mt-1.5 block w-full text-xs text-slate-600" /></label>
+                        {selected.imageFile && <div className="overflow-hidden rounded-xl border border-slate-200 bg-slate-950">
+                          <div className="relative aspect-video overflow-hidden"><img src={URL.createObjectURL(selected.imageFile)} alt="Bildvorschau" className="h-full w-full object-cover" style={{ objectPosition: selected.imageSettings.x + "% " + selected.imageSettings.y + "%", transform: "scale(" + selected.imageSettings.zoom + ")", filter: `brightness(${selected.imageSettings.brightness}%) contrast(${selected.imageSettings.contrast}%) saturate(${selected.imageSettings.saturation}%) grayscale(${selected.imageSettings.grayscale}%)` }} /></div>
+                          <div className="flex items-center justify-between bg-slate-900 px-3 py-2"><span className="truncate text-[10px] text-white/70">{selected.imageFile.name}</span><button type="button" onClick={() => setImageEditorOpen(value => !value)} className="inline-flex shrink-0 items-center gap-1.5 rounded-lg bg-violet-600 px-2.5 py-1.5 text-[10px] font-bold text-white"><Wand2 className="h-3 w-3"/>Bild bearbeiten</button></div>
+                          {imageEditorOpen && <div className="space-y-3 bg-white p-3">
+                            <div className="flex items-center justify-between"><span className="text-xs font-bold text-slate-900"><SlidersHorizontal className="mr-1 inline h-3.5 w-3.5"/>Schnell bearbeiten</span><button type="button" onClick={() => updatePost(selected.id,{imageSettings:{brightness:100,contrast:100,saturation:100,grayscale:0,zoom:1,x:50,y:50}})} className="text-[10px] font-semibold text-slate-500"><RotateCcw className="mr-1 inline h-3 w-3"/>Zurücksetzen</button></div>
+                            {([["brightness","Helligkeit",50,150],["contrast","Kontrast",50,150],["saturation","Sättigung",0,200],["grayscale","Schwarz-Weiß",0,100],["zoom","Zoom",1,2]] as const).map(([key,label,min,max])=><label key={key} className="block"><span className="mb-1 flex justify-between text-[10px] font-semibold text-slate-600"><span>{label}</span><span>{key==="zoom"?(selected.imageSettings.zoom*100).toFixed(0)+"%":selected.imageSettings[key]+"%"}</span></span><input type="range" min={min} max={max} step={key==="zoom"?0.01:1} value={selected.imageSettings[key]} onChange={event=>updatePost(selected.id,{imageSettings:{...selected.imageSettings,[key]:Number(event.target.value)}})} className="w-full accent-violet-600"/></label>)}
+                            <div className="grid grid-cols-2 gap-3">{(["x","y"] as const).map(key=><label key={key} className="block text-[10px] font-semibold text-slate-600">{key==="x"?"Horizontal":"Vertikal"}<input type="range" min="0" max="100" value={selected.imageSettings[key]} onChange={event=>updatePost(selected.id,{imageSettings:{...selected.imageSettings,[key]:Number(event.target.value)}})} className="mt-1 w-full accent-violet-600"/></label>)}</div>
+                            <p className="text-[10px] text-slate-500">Die Bearbeitung wird beim Veröffentlichen direkt in die Bilddatei übernommen.</p>
+                          </div>}
+                        </div>}
+                      </>}
                       {(selected.postType === "embed" || selected.postType === "mixed") && <label className="block text-xs font-semibold text-slate-700">YouTube- oder Vimeo-URL<input value={selected.embedUrl} onChange={(event) => updatePost(selected.id, { embedUrl: event.target.value })} placeholder="https://…" className="mt-1.5 w-full rounded-lg border border-slate-200 px-3 py-2 text-sm" /></label>}
-                      <div className="rounded-xl bg-slate-50 p-3"><p className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Vorschau</p><h4 className="mt-2 text-sm font-bold text-slate-900">{selected.title || "Dein Beitrag"}</h4><p className="mt-1 whitespace-pre-wrap text-xs leading-5 text-slate-600">{selected.body || "Dein Text erscheint hier in der Vorschau."}</p>{selected.embedUrl && <p className="mt-2 truncate text-xs text-violet-600">{selected.embedUrl}</p>}{selected.imageFile && <p className="mt-2 text-xs text-slate-500">Bild: {selected.imageFile.name}</p>}</div>
+                      <div className="rounded-xl bg-slate-50 p-3"><p className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Vorschau</p><h4 className="mt-2 text-sm font-bold text-slate-900">{selected.title || "Dein Beitrag"}</h4><p className="mt-1 whitespace-pre-wrap text-xs leading-5 text-slate-600">{selected.body || "Dein Text erscheint hier in der Vorschau."}</p>{selected.embedUrl && <p className="mt-2 truncate text-xs text-violet-600">{selected.embedUrl}</p>}</div>
                     </div>
                   ) : <div className="flex min-h-64 items-center justify-center text-center text-xs text-slate-500">Wähle ein Thumbnail aus oder erstelle einen neuen Beitrag.</div>}
                 </section>
