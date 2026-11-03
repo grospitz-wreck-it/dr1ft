@@ -21,7 +21,7 @@ using (
       where sm.school_id = teacher_module_class_assignments.school_id
         and sm.user_id = auth.uid()
         and sm.active = true
-        and sm.role in ('school_admin', 'school_lead')
+        and sm.role in ('school_admin')
     )
     or exists (
       select 1
@@ -48,7 +48,7 @@ with check (
       where sm.school_id = teacher_module_class_assignments.school_id
         and sm.user_id = auth.uid()
         and sm.active = true
-        and sm.role in ('school_admin', 'school_lead')
+        and sm.role in ('school_admin')
     )
     or exists (
       select 1
