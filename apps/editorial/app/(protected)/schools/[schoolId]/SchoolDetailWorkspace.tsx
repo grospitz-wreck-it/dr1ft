@@ -936,7 +936,7 @@ export function SchoolDetailWorkspace({ school: initialSchool, initialMembers, i
     {tab === "sso" && (
       <div className="px-6 py-6 lg:px-8">
         <div className="mb-5"><p className="text-xs font-semibold uppercase tracking-[0.14em] text-accent">Zugang & Identität</p><h1 className="mt-1 text-2xl font-semibold text-slate-950">Anmeldesysteme</h1><p className="mt-1 text-sm text-slate-500">Verwalte externe Schulanmeldungen für diese Schule.</p></div>
-        <SchoolSsoSettings schoolId={school.id} initialIssuerUrl={school.website?.startsWith("https://") ? school.website : null} />
+        <SchoolSsoSettings schoolId={school.id} />
       </div>
     )}
 
