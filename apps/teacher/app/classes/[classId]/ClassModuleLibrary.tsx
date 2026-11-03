@@ -93,7 +93,9 @@ export function ClassModuleLibrary({
       <div className="bg-slate-50/60 p-3 sm:p-4">
         {teacherModules.length > 0 && (
           <div className="mb-3 space-y-2">
-            {teacherModules.map((module) => (\n              <TeacherModuleCard key={module.id} classId={classId} module={module} onError={setError} />\n            ))}
+            {teacherModules.map((module) => (
+              <TeacherModuleCard key={module.id} classId={classId} module={module} onError={setError} />
+            ))}
           </div>
         )}
         {assignments.length > 0 ? (
@@ -180,5 +182,68 @@ export function ClassModuleLibrary({
         </div>
       )}
     </section>
+  );
+}
+
+
+function TeacherModuleCard({ classId, module, onError }: {
+  classId: string;
+  module: TeacherModule;
+  onError: (message: string) => void;
+}) {
+  const [active, setActive] = useState(module.is_active);
+  const [pending, startTransition] = useTransition();
+  const router = useRouter();
+
+  function setStatus(next: boolean) {
+    if (pending || next === active) return;
+    setActive(next);
+    startTransition(async () => {
+      try {
+        await setTeacherModuleAssignmentActive(classId, module.id, next);
+        router.refresh();
+      } catch (cause) {
+        setActive(!next);
+        onError(cause instanceof Error ? cause.message : "Modulstatus konnte nicht geändert werden.");
+      }
+    });
+  }
+
+  function archive() {
+    if (pending || !window.confirm("Dieses Modul aus der Klasse entfernen? Das veröffentlichte Modul und die Inhalte bleiben erhalten.")) return;
+    startTransition(async () => {
+      try {
+        await archiveTeacherModuleAssignment(classId, module.id);
+        router.refresh();
+      } catch (cause) {
+        onError(cause instanceof Error ? cause.message : "Modul konnte nicht entfernt werden.");
+      }
+    });
+  }
+
+  return (
+    <article className={"overflow-hidden rounded-xl border bg-white transition-colors " + (active ? "border-violet-300 bg-violet-50/30" : "border-slate-200 bg-slate-50/50 hover:border-slate-300")}>
+      <div className="flex items-center gap-3 p-3 sm:gap-4 sm:p-4">
+        <div className="relative h-[76px] w-[112px] shrink-0 overflow-hidden rounded-lg bg-gradient-to-br from-violet-100 to-sky-100 sm:h-[88px] sm:w-[132px]">
+          {module.cover_image_url ? <img src={module.cover_image_url} alt="" className="h-full w-full object-cover" loading="lazy" /> : <div className="flex h-full items-center justify-center text-violet-300"><ImageIcon className="h-6 w-6" /></div>}
+          <span className="absolute left-1.5 top-1.5 rounded-full bg-white/95 px-1.5 py-0.5 text-[9px] font-semibold text-slate-700">Eigenes Modul</span>
+        </div>
+        <div className="min-w-0 flex-1">
+          <div className="flex flex-wrap items-center gap-2">
+            <h3 className="text-sm font-semibold leading-snug text-slate-900">{module.title}</h3>
+            {active ? <span className="inline-flex items-center gap-1 rounded-full bg-violet-100 px-2 py-0.5 text-[10px] font-semibold text-violet-700"><Check className="h-3 w-3" />Aktiv</span> : <span className="rounded-full bg-slate-100 px-2 py-0.5 text-[10px] font-medium text-slate-500">Inaktiv</span>}
+          </div>
+          <p className="mt-1 line-clamp-2 text-xs leading-4 text-slate-600">{module.description?.trim() || "Für dieses Modul liegt noch keine Kurzbeschreibung vor."}</p>
+        </div>
+        <div className="flex shrink-0 flex-col items-center gap-1.5">
+          <button type="button" role="switch" aria-checked={active} aria-label={active ? module.title + " deaktivieren" : module.title + " aktivieren"} onClick={() => setStatus(!active)} disabled={pending} className={"relative inline-flex h-6 w-11 items-center rounded-full transition-colors disabled:opacity-50 " + (active ? "bg-violet-600" : "bg-slate-300")}>
+            <span className={"inline-block h-4 w-4 rounded-full bg-white shadow transition-transform " + (active ? "translate-x-6" : "translate-x-1")} />
+          </button>
+          <span className="text-[9px] text-slate-400">{pending ? "…" : active ? "Aktiv" : "Inaktiv"}</span>
+          <button type="button" onClick={archive} disabled={pending} aria-label="Modul aus Klasse entfernen" title="Modul aus dieser Klasse entfernen" className="mt-1 inline-flex h-8 w-8 items-center justify-center rounded-xl border border-white/80 bg-white/65 text-slate-500 shadow-[0_4px_14px_rgba(30,41,59,.10)] backdrop-blur-xl transition hover:border-rose-200 hover:bg-rose-50 hover:text-rose-600 disabled:opacity-50"><Trash2 className="h-3.5 w-3.5" /></button>
+        </div>
+      </div>
+      {active && <div className="border-t border-violet-100 px-3 py-2 sm:px-4"><span className="inline-flex items-center gap-1.5 text-[11px] font-medium text-violet-700"><CalendarClock className="h-3.5 w-3.5" />Für diese Klasse bereitgestellt</span></div>}
+    </article>
   );
 }
