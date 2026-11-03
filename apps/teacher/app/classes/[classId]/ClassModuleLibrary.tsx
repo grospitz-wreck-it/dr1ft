@@ -16,7 +16,7 @@ type Scenario = {
   age_rating: string;
 };
 
-type TeacherModule = { id: string; module_id: string; school_id: string; assigned_by: string; is_active: boolean; title: string; description: string | null; introTitle?: string | null; introText?: string | null; visibility_scope?: "private" | "school" | "class"; cover_image_url: string | null; scheduled_start_at: string | null; scheduled_end_at: string | null; posts: Array<{ id: string; postType: "text" | "image" | "embed" | "mixed"; title: string; body: string; embedUrl: string; imageUrl: string | null }> };
+type TeacherModule = { id: string; module_id: string; school_id: string; assigned_by: string; is_active: boolean; title: string; description: string | null; introTitle?: string | null; introText?: string | null; visibility_scope?: "private" | "school" | "class"; canManage: boolean; cover_image_url: string | null; scheduled_start_at: string | null; scheduled_end_at: string | null; posts: Array<{ id: string; postType: "text" | "image" | "embed" | "mixed"; title: string; body: string; embedUrl: string; imageUrl: string | null }> };
 
 type Assignment = {
   scenario_id: string;
@@ -343,9 +343,9 @@ function TeacherModuleCard({ classId, schoolId, module, onError }: {
           <div className="flex flex-wrap items-center gap-2">
             <button type="button" onClick={() => setScheduleOpen(value => !value)} className="inline-flex items-center gap-1.5 text-[11px] font-medium text-violet-700 hover:text-violet-900"><CalendarClock className="h-3.5 w-3.5" />{scheduleOpen ? "Zeitplan schließen" : (module.scheduled_start_at || module.scheduled_end_at) ? "Zeitplan bearbeiten" : "Zeitplan festlegen"}</button>
             <span className="mx-1 h-5 w-px bg-slate-200" aria-hidden="true" />
-            <button type="button" onClick={removePermanently} disabled={pending} title="Modul endgültig löschen" aria-label="Modul endgültig löschen" className="inline-flex h-9 w-9 items-center justify-center rounded-xl border border-rose-300 bg-white text-rose-700 shadow-sm transition hover:border-rose-400 hover:bg-rose-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-rose-400 focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"><Trash2 className="h-4 w-4" /></button>
+            {module.canManage && <button type="button" onClick={removePermanently} disabled={pending} title="Modul endgültig löschen" aria-label="Modul endgültig löschen" className="inline-flex h-9 w-9 items-center justify-center rounded-xl border border-rose-300 bg-white text-rose-700 shadow-sm transition hover:border-rose-400 hover:bg-rose-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-rose-400 focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50" ><Trash2 className="h-4 w-4" /></button>}
             <button type="button" onClick={archive} disabled={pending} title="Modul archivieren" aria-label="Modul archivieren" className="inline-flex h-9 w-9 items-center justify-center rounded-xl border border-violet-200 bg-white text-violet-700 shadow-sm transition hover:border-violet-300 hover:bg-violet-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-violet-400 focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"><Archive className="h-4 w-4" /></button>
-            <TeacherModuleEditButton classId={classId} schoolId={schoolId} module={module} onError={onError} />
+            {module.canManage && <TeacherModuleEditButton classId={classId} schoolId={schoolId} module={module} onError={onError} />}
           </div>
           {(module.scheduled_start_at || module.scheduled_end_at) && !scheduleOpen && <p className="ml-auto text-right text-[10px] text-slate-500">{module.scheduled_start_at ? new Date(module.scheduled_start_at).toLocaleString("de-DE") : "Sofort"}{module.scheduled_end_at ? " – " + new Date(module.scheduled_end_at).toLocaleString("de-DE") : ""}</p>}
         </div>
