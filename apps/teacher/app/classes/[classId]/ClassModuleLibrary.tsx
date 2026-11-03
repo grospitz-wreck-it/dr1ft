@@ -253,8 +253,7 @@ function TeacherModuleEditButton({ classId, schoolId, module, onError }: {
           schoolId={schoolId}
           editModule={editModule}
           triggerLabel="Bearbeiten"
-          openImmediately
-          onClose={() => setEditModule(null)}
+          autoOpen
         />
       )}
     </>
