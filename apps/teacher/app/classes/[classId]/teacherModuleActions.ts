@@ -152,3 +152,52 @@ export async function saveTeacherCreatedModule(formData: FormData) {
   revalidatePath(`/classes/${classInstanceId}`);
   return { moduleId: module.id };
 }
+
+
+export async function setTeacherModuleAssignmentActive(classInstanceId: string, assignmentId: string, active: boolean) {
+  const supabase = supabaseServerClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) throw new Error("Nicht authentifiziert.");
+
+  const { data: assignment, error: assignmentError } = await supabase
+    .from("teacher_module_class_assignments")
+    .select("id,school_id,class_instance_id,assigned_by")
+    .eq("id", assignmentId)
+    .eq("class_instance_id", classInstanceId)
+    .maybeSingle();
+  if (assignmentError || !assignment) throw new Error("Modulzuordnung nicht gefunden.");
+
+  const { data: schoolMembership } = await supabase
+    .from("school_memberships")
+    .select("role")
+    .eq("school_id", assignment.school_id)
+    .eq("user_id", user.id)
+    .eq("active", true)
+    .maybeSingle();
+  const isSchoolAdmin = schoolMembership?.role === "school_admin";
+  let isClassTeacher = false;
+  if (!isSchoolAdmin) {
+    const { data: membership } = await supabase
+      .from("class_instance_memberships")
+      .select("id")
+      .eq("class_instance_id", classInstanceId)
+      .eq("user_id", user.id)
+      .eq("role", "teacher")
+      .is("left_at", null)
+      .maybeSingle();
+    isClassTeacher = Boolean(membership);
+  }
+  if (!isSchoolAdmin && !isClassTeacher) throw new Error("Du darfst dieses Modul nicht verwalten.");
+
+  const { error } = await supabase
+    .from("teacher_module_class_assignments")
+    .update({ is_active: active })
+    .eq("id", assignmentId)
+    .eq("class_instance_id", classInstanceId);
+  if (error) throw new Error(error.message);
+  revalidatePath(`/classes/${classInstanceId}`);
+}
+
+export async function archiveTeacherModuleAssignment(classInstanceId: string, assignmentId: string) {
+  return setTeacherModuleAssignmentActive(classInstanceId, assignmentId, false);
+}
