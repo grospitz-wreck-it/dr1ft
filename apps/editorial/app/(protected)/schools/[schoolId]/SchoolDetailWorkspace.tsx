@@ -1,8 +1,9 @@
 "use client";
 
 import { useState } from "react";
-import { ArrowLeft, Building2, ChevronDown, LogOut, MoreHorizontal, Pencil, Plus, Save, Settings, UserRound, Users, School as SchoolIcon, BarChart3, LayoutDashboard, X } from "lucide-react";
+import { ArrowLeft, Building2, ChevronDown, LogOut, MoreHorizontal, Pencil, Plus, Save, Settings, UserRound, Users, School as SchoolIcon, BarChart3, LayoutDashboard, X, ShieldCheck } from "lucide-react";
 import { createBrowserClient } from "@supabase/ssr";
+import { SchoolSsoSettings } from "./SchoolSsoSettings";
 
 type School = { id: string; name: string; region: string | null; email_domain: string | null; school_type: string | null; street: string | null; house_number: string | null; postal_code: string | null; city: string | null; phone: string | null; website: string | null; student_count: number | null; status: string; plan: string; funding_type: string; internal_notes: string | null; school_image_path: string | null; school_image_position_x: number; school_image_position_y: number; school_image_zoom: number; created_at: string; updated_at: string };
 type Member = { id: string; user_id: string; email: string | null; display_name: string | null; role: string; active: boolean; created_at: string };
@@ -62,7 +63,7 @@ function regionLabel(value: string | null) {
 export function SchoolDetailWorkspace({ school: initialSchool, initialMembers, initialClasses, stats, isPlatformAdmin }: { school: School; initialMembers: Member[]; initialClasses: SchoolClass[]; stats: Stats; isPlatformAdmin: boolean }) {
   const [school, setSchool] = useState(initialSchool);
   const [members, setMembers] = useState(initialMembers);
-  const [tab, setTab] = useState<"overview" | "classes" | "people" | "insights" | "settings">("overview");
+  const [tab, setTab] = useState<"overview" | "classes" | "people" | "insights" | "settings" | "sso">("overview");
   const [accountOpen, setAccountOpen] = useState(false);
   const [editing, setEditing] = useState(false);
   const [form, setForm] = useState(initialSchool);
@@ -330,6 +331,7 @@ export function SchoolDetailWorkspace({ school: initialSchool, initialMembers, i
               { id: "people", label: "Personen", icon: Users },
               { id: "insights", label: "Insights", icon: BarChart3 },
               { id: "settings", label: "Schulprofil", icon: Settings },
+              { id: "sso", label: "Anmeldesysteme", icon: ShieldCheck },
             ] as const).map((item) => {
               const Icon = item.icon;
               const active = tab === item.id;
@@ -929,6 +931,13 @@ export function SchoolDetailWorkspace({ school: initialSchool, initialMembers, i
           </div>
         </form>
       </section>
+    )}
+
+    {tab === "sso" && (
+      <div className="px-6 py-6 lg:px-8">
+        <div className="mb-5"><p className="text-xs font-semibold uppercase tracking-[0.14em] text-accent">Zugang & Identität</p><h1 className="mt-1 text-2xl font-semibold text-slate-950">Anmeldesysteme</h1><p className="mt-1 text-sm text-slate-500">Verwalte externe Schulanmeldungen für diese Schule.</p></div>
+        <SchoolSsoSettings schoolId={school.id} initialIssuerUrl={school.website?.startsWith("https://") ? school.website : null} />
+      </div>
     )}
 
     {tab === "overview" && (
