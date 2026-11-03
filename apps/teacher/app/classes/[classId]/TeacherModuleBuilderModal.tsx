@@ -25,8 +25,6 @@ export function TeacherModuleBuilderModal({ classInstanceId, schoolId, editModul
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
   const [titleCardEnabled, setTitleCardEnabled] = useState(true);
-  const [introTitle, setIntroTitle] = useState("");
-  const [introText, setIntroText] = useState("");
   const [visibilityScope, setVisibilityScope] = useState<"private" | "school" | "class">("class");
   const [posts, setPosts] = useState<DraftPost[]>([]);
   const [selectedId, setSelectedId] = useState<string | null>(null);
@@ -53,7 +51,7 @@ export function TeacherModuleBuilderModal({ classInstanceId, schoolId, editModul
   }
   function reset() {
     setModuleId(null);
-    setTitle(""); setDescription(""); setTitleCardEnabled(true); setIntroTitle(""); setIntroText(""); setVisibilityScope("class");
+    setTitle(""); setDescription(""); setTitleCardEnabled(true); setVisibilityScope("class");
     setPosts([]); setSelectedId(null); setError(""); setImageEditorOpen(false);
   }
   function openEditor() {
@@ -64,8 +62,6 @@ export function TeacherModuleBuilderModal({ classInstanceId, schoolId, editModul
       setTitle(editModule.title);
       setDescription(editModule.description);
       setTitleCardEnabled(editModule.titleCardEnabled ?? true);
-      setIntroTitle(editModule.introTitle ?? "");
-      setIntroText(editModule.introText ?? "");
       setVisibilityScope(editModule.visibilityScope ?? "class");
       const loadedPosts: DraftPost[] = editModule.posts.map((post) => ({
         id: post.id,
@@ -159,8 +155,6 @@ export function TeacherModuleBuilderModal({ classInstanceId, schoolId, editModul
     form.set("title", title);
     form.set("description", description);
     form.set("titleCardEnabled", String(titleCardEnabled));
-    form.set("introTitle", introTitle);
-    form.set("introText", introText);
     form.set("visibilityScope", visibilityScope);
     form.set("posts", JSON.stringify(posts.map((post, index) => ({
       id: post.id, postType: post.postType, title: post.title, body: post.body,
@@ -207,6 +201,10 @@ export function TeacherModuleBuilderModal({ classInstanceId, schoolId, editModul
                   <label className="block text-xs font-semibold text-slate-700">Kurzbeschreibung
                     <textarea value={description} onChange={(event) => setDescription(event.target.value)} rows={3} maxLength={500} placeholder="Worum geht es in diesem Modul?" className="mt-1.5 w-full resize-y rounded-xl border border-slate-200 px-3 py-2.5 text-sm outline-none focus:border-violet-400 focus:ring-4 focus:ring-violet-100" />
                   </label>
+                  <label className="flex items-center justify-between gap-3 rounded-2xl border border-violet-200 bg-violet-50/70 p-3">
+                    <span><span className="block text-xs font-bold text-violet-900">Titelcard im Schüler-Feed</span><span className="mt-1 block text-[11px] font-normal text-violet-700">Zeigt Modultitel und Beschreibung vor dem Start.</span></span>
+                    <input type="checkbox" checked={titleCardEnabled} onChange={event=>setTitleCardEnabled(event.target.checked)} className="h-5 w-9 accent-violet-600"/>
+                  </label>
                   <label className="block rounded-2xl border border-slate-200 p-3 text-xs font-semibold text-slate-700">Wer darf dieses Modul im Lehrkraftbereich sehen?
                     <select value={visibilityScope} onChange={event => setVisibilityScope(event.target.value as "private" | "school" | "class")} className="mt-2 w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm font-medium">
                       <option value="private">Nur für mich</option>
@@ -214,10 +212,6 @@ export function TeacherModuleBuilderModal({ classInstanceId, schoolId, editModul
                       <option value="class">Nur diese Klasse</option>
                     </select>
                     <span className="mt-1 block font-normal text-slate-500">Aktivierte Module bleiben für die Schüler:innen der jeweiligen Klasse sichtbar.</span>
-                  </label>
-                  <label className="flex items-center justify-between gap-3 rounded-2xl border border-violet-200 bg-violet-50/70 p-3">
-                    <span><span className="block text-xs font-bold text-violet-900">Titelcard im Schüler-Feed</span><span className="mt-1 block text-[11px] font-normal text-violet-700">Zeigt Modultitel und Beschreibung vor dem Start.</span></span>
-                    <input type="checkbox" checked={titleCardEnabled} onChange={event=>setTitleCardEnabled(event.target.checked)} className="h-5 w-9 accent-violet-600"/>
                   </label>
                   <div className="rounded-2xl border border-slate-200 bg-slate-50/70 p-3">
                     <div className="flex items-center justify-between gap-2">
