@@ -34,6 +34,7 @@ export default async function SchoolDetailPage({ params }: { params: { schoolId:
     : { data: [] };
 
   const teachersByClass = new Map<string, string[]>();
+  const teacherUserIdsByClass = new Map<string, string[]>();
   const studentsByClass = new Map<string, number>();
   const scenarioById = new Map((scenarios ?? []).map((scenario) => [scenario.id, scenario]));
   const assignmentByClass = new Map<string, { id: string; title: string; description: string | null; age_rating: string; is_active: boolean; assigned_at: string }>();
@@ -55,9 +56,12 @@ export default async function SchoolDetailPage({ params }: { params: { schoolId:
   for (const membership of instanceMembers ?? []) {
     if (membership.role === "teacher" || membership.role === "school_admin" || membership.role === "school_lead") {
       const names = teachersByClass.get(membership.class_instance_id) ?? [];
+      const teacherIds = teacherUserIdsByClass.get(membership.class_instance_id) ?? [];
       const profile = membership.user_profiles as { display_name?: string | null } | null;
       if (profile?.display_name) names.push(profile.display_name);
+      teacherIds.push(membership.user_id);
       teachersByClass.set(membership.class_instance_id, names);
+      teacherUserIdsByClass.set(membership.class_instance_id, teacherIds);
     }
     if (membership.role === "student") {
       studentsByClass.set(membership.class_instance_id, (studentsByClass.get(membership.class_instance_id) ?? 0) + 1);
@@ -67,6 +71,7 @@ export default async function SchoolDetailPage({ params }: { params: { schoolId:
   const schoolClasses = (instances ?? []).map((item) => ({
     ...item,
     teachers: teachersByClass.get(item.id) ?? [],
+    teacherUserIds: teacherUserIdsByClass.get(item.id) ?? [],
     student_count: studentsByClass.get(item.id) ?? 0,
     scenario: assignmentByClass.get(item.id) ?? null,
   }));
