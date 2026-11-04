@@ -35,7 +35,9 @@ export function TeacherModuleBuilderModal({ classInstanceId, schoolId, editModul
   const [error, setError] = useState("");
   const [textResponses, setTextResponses] = useState<Array<{student:string;answer:string;submittedAt:string}>>([]);
   const [responsesOpen, setResponsesOpen] = useState(false);
-  const [responsesLoading, setResponsesLoading] = useState(false);\n  const [pollResults, setPollResults] = useState<{title:string;total:number;counts:Array<{label:string;count:number}>;resultDisplay:"bar"|"pie"}|null>(null);\n  const [pollResultsLoading, setPollResultsLoading] = useState(false);
+  const [responsesLoading, setResponsesLoading] = useState(false);
+  const [pollResults, setPollResults] = useState<{title:string;total:number;counts:Array<{label:string;count:number}>;resultDisplay:"bar"|"pie"}|null>(null);
+  const [pollResultsLoading, setPollResultsLoading] = useState(false);
   const [pending, startTransition] = useTransition();
   const router = useRouter();
   const selected = posts.find((post) => post.id === selectedId) ?? null;
@@ -111,7 +113,14 @@ export function TeacherModuleBuilderModal({ classInstanceId, schoolId, editModul
       setResponsesLoading(false);
     }
   }
-  async function loadPollResults(postId: string) {\n    if (!moduleId) return;\n    setPollResultsLoading(true); setError("");\n    try { setPollResults(await getTeacherModulePollResults(classInstanceId,moduleId,postId)); }\n    catch(cause) { setError(cause instanceof Error?cause.message:"Umfrageergebnisse konnten nicht geladen werden."); }\n    finally { setPollResultsLoading(false); }\n  }\n  function updatePost(id: string, patch: Partial<DraftPost>) {
+  async function loadPollResults(postId: string) {
+    if (!moduleId) return;
+    setPollResultsLoading(true); setError("");
+    try { setPollResults(await getTeacherModulePollResults(classInstanceId,moduleId,postId)); }
+    catch(cause) { setError(cause instanceof Error?cause.message:"Umfrageergebnisse konnten nicht geladen werden."); }
+    finally { setPollResultsLoading(false); }
+  }
+  function updatePost(id: string, patch: Partial<DraftPost>) {
     setPosts((items) => items.map((post) => post.id === id ? { ...post, ...patch } : post));
   }
   function duplicatePost(post: DraftPost) {
