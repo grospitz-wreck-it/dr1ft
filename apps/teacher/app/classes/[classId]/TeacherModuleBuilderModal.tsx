@@ -173,10 +173,11 @@ export function TeacherModuleBuilderModal({ classInstanceId, schoolId, editModul
   }
 
   async function publish() {
+    console.info("[teacher-module-builder] publish clicked", { moduleId, titleLength: title.trim().length, posts: posts.length });
     if (isPublishing) return;
     setError("");
-    if (!title.trim()) { setError("Bitte gib deinem Modul einen Titel."); return; }
-    if (!posts.length) { setError("Füge mindestens einen Beitrag hinzu."); return; }
+    if (!title.trim()) { setError("Bitte gib deinem Modul einen Titel."); console.warn("[teacher-module-builder] validation: missing module title"); return; }
+    if (!posts.length) { setError("Füge mindestens einen Beitrag hinzu."); console.warn("[teacher-module-builder] validation: no posts"); return; }
     const invalidPost = posts.some((post) => {
       const hasContent = Boolean(post.title.trim() || post.body.trim() || post.imageFile || post.existingImageUrl || post.embedUrl.trim());
       const hasValidPollOptions = post.postType === "poll" && post.interactionData.options.filter(option => option.trim()).length >= 2;
@@ -184,6 +185,7 @@ export function TeacherModuleBuilderModal({ classInstanceId, schoolId, editModul
     });
     if (invalidPost) {
       setError("Jeder Beitrag benötigt Inhalt. Bei Umfragen müssen mindestens zwei Antwortmöglichkeiten ausgefüllt sein.");
+      console.warn("[teacher-module-builder] validation: empty post");
       return;
     }
 
@@ -209,16 +211,19 @@ export function TeacherModuleBuilderModal({ classInstanceId, schoolId, editModul
         const file = imageFiles.get(post.id);
         if (file) form.set("image_" + post.id, file);
       });
+      console.info("[teacher-module-builder] calling server action", { mode: moduleId ? "update" : "create", posts: posts.length, imageCount: imageFiles.size });
       if (moduleId) {
         form.set("moduleId", moduleId);
         await updateTeacherCreatedModule(form);
       } else {
         await saveTeacherCreatedModule(form);
       }
+      console.info("[teacher-module-builder] server action succeeded");
       setOpen(false);
       reset();
       router.refresh();
     } catch (cause) {
+      console.error("[teacher-module-builder] publish failed", cause);
       setError(cause instanceof Error ? cause.message : "Das Modul konnte nicht veröffentlicht werden.");
     } finally {
       setIsPublishing(false);
@@ -383,11 +388,12 @@ export function TeacherModuleBuilderModal({ classInstanceId, schoolId, editModul
                   </div>
                 )}
               </div>
-              {error && <p role="alert" className="mt-4 rounded-xl bg-rose-50 px-4 py-3 text-xs text-rose-700">{error}</p>}
+              
             </div>
-            <footer className="drift-builder-footer flex min-h-[64px] shrink-0 flex-wrap items-center justify-between gap-3 border-t border-violet-100 px-5 py-3 sm:px-8">
+            <footer className="drift-builder-footer relative z-30 flex min-h-[64px] shrink-0 flex-wrap items-center justify-between gap-3 border-t border-violet-100 bg-white px-5 py-3 sm:px-8">
+              {error && <p role="alert" aria-live="assertive" className="w-full rounded-xl border border-rose-200 bg-rose-50 px-4 py-3 text-xs font-semibold text-rose-800">{error}</p>}
               <p className="text-[11px] text-slate-500">Veröffentlichung nur für diese Klasseninstanz.</p>
-              <div className="flex gap-2"><button type="button" onClick={() => setOpen(false)} className="rounded-xl border border-slate-200 px-4 py-2 text-sm font-semibold text-slate-600 hover:bg-slate-50">Abbrechen</button><button type="button" onClick={publish} disabled={isPublishing} className="inline-flex items-center gap-2 rounded-xl bg-violet-600 px-4 py-2 text-sm font-semibold text-white hover:bg-violet-700 disabled:opacity-50">{isPublishing ? "Wird veröffentlicht …" : <><Save className="h-4 w-4" /> {moduleId ? "Änderungen speichern" : "Veröffentlichen"}</>}</button></div>
+              <div className="flex gap-2"><button type="button" onClick={() => setOpen(false)} className="rounded-xl border border-slate-200 px-4 py-2 text-sm font-semibold text-slate-600 hover:bg-slate-50">Abbrechen</button><button type="button" onClick={() => { void publish(); }} disabled={isPublishing} className="inline-flex items-center gap-2 rounded-xl bg-violet-600 px-4 py-2 text-sm font-semibold text-white hover:bg-violet-700 disabled:opacity-50">{isPublishing ? "Wird veröffentlicht …" : <><Save className="h-4 w-4" /> {moduleId ? "Änderungen speichern" : "Veröffentlichen"}</>}</button></div>
             </footer>
           </div>
         </div>
