@@ -322,6 +322,61 @@ export async function getTeacherModulePollResults(classInstanceId: string, modul
   return { title: post.title ?? "Umfrage", total: (votes ?? []).length, counts, resultDisplay: config.resultDisplay ?? "bar" };
 }
 
+export async function getTeacherModuleFreeTextReport(classInstanceId: string, moduleId: string) {
+  const supabase = supabaseServerClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) throw new Error("Nicht authentifiziert.");
+
+  const { data: assignment, error: assignmentError } = await supabase
+    .from("teacher_module_class_assignments")
+    .select("id,school_id,teacher_modules(title)")
+    .eq("class_instance_id", classInstanceId)
+    .eq("module_id", moduleId)
+    .maybeSingle();
+  if (assignmentError || !assignment) throw new Error("Modulzuordnung nicht gefunden.");
+
+  const { data: admin } = await supabase.from("school_memberships").select("role")
+    .eq("school_id", assignment.school_id).eq("user_id", user.id).eq("active", true).maybeSingle();
+  const { data: teacher } = await supabase.from("class_instance_memberships").select("id")
+    .eq("class_instance_id", classInstanceId).eq("user_id", user.id).eq("role", "teacher").is("left_at", null).maybeSingle();
+  if (admin?.role !== "school_admin" && !teacher) throw new Error("Nur die Lehrkraft dieser Klasse kann Antworten einsehen.");
+
+  const [{ data: posts, error: postsError }, { data: members, error: membersError }, { data: votes, error: votesError }] = await Promise.all([
+    supabase.from("teacher_module_posts").select("id,title,interaction_data,post_type")
+      .eq("module_id", moduleId).eq("post_type", "poll").order("sort_order", { ascending: true }),
+    supabase.from("class_instance_memberships").select("user_id,user_profiles(display_name,username)")
+      .eq("class_instance_id", classInstanceId).eq("role", "student").is("left_at", null),
+    supabase.from("teacher_module_post_votes").select("post_id,user_id,text_answer,created_at")
+      .eq("module_id", moduleId).eq("class_instance_id", classInstanceId).not("text_answer", "is", null),
+  ]);
+  if (postsError || membersError || votesError) throw new Error("Die Antwortübersicht konnte nicht geladen werden.");
+
+  const freeTextPosts = (posts ?? []).filter((post: any) => (post.interaction_data as { responseMode?: string } | null)?.responseMode === "free_text");
+  const profiles = new Map((members ?? []).map((member: any) => [member.user_id, member.user_profiles]));
+  const rows = freeTextPosts.flatMap((post: any) => {
+    const byStudent = new Map((votes ?? []).filter((vote: any) => vote.post_id === post.id).map((vote: any) => [vote.user_id, vote]));
+    return (members ?? []).map((member: any) => {
+      const vote: any = byStudent.get(member.user_id);
+      const profile: any = profiles.get(member.user_id);
+      return {
+        postId: post.id,
+        question: post.title?.trim() || "Freitextfrage ohne Titel",
+        student: profile?.display_name || profile?.username || "Schüler:in",
+        username: profile?.username ? "@" + profile.username : "",
+        answer: vote?.text_answer ?? "",
+        submittedAt: vote?.created_at ?? null,
+      };
+    });
+  });
+  return {
+    moduleTitle: (assignment as any).teacher_modules?.title ?? "Lernmodul",
+    generatedAt: new Date().toISOString(),
+    rows,
+    questionCount: freeTextPosts.length,
+    studentCount: members?.length ?? 0,
+  };
+}
+
 export async function getTeacherModuleFreeTextResponses(classInstanceId: string, moduleId: string, postId: string) {
   const supabase = supabaseServerClient();
   const { data: { user } } = await supabase.auth.getUser();
