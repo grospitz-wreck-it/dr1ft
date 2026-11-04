@@ -6,7 +6,7 @@ import { supabaseServerClient } from "../../../lib/supabaseServerClient";
 type PostInput = {
   id: string;
   postType: "text" | "image" | "embed" | "mixed" | "poll" | "true_false";
-  interactionData?: { options?: string[]; responseMode?: "single" | "multiple" | "free_text"; correctAnswer?: "true" | "false"; explanation?: string };
+  interactionData?: { options?: string[]; responseMode?: "single" | "multiple" | "free_text"; resultDisplay?: "bar" | "pie"; correctAnswer?: "true" | "false"; explanation?: string };
   title: string;
   body: string;
   embedUrl?: string;
