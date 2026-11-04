@@ -253,3 +253,6 @@ export type DomainEvent =
   | { type: "MissionCompleted"; userId: string; missionId: string; classInstanceId?: string }
   | { type: "CompetencyUpdated"; userId: string; competencyId: string; level: number; classInstanceId?: string }
   | { type: "FeedRefreshed"; userId: string };
+
+export * from "./learning-design";
+export * from "./subject-modules";
