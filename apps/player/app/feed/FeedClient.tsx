@@ -18,7 +18,7 @@ export function FeedClient({ initialItems, userId, classInstanceId, likedContent
   scenarioMissionCount?: number;
   completedScenarioMissionCount?: number;
   learningCards?: PlayerLearningCard[];
-  teacherModules?: Array<{ id: string; assignmentId: string; title: string; description: string; titleCardEnabled: boolean; posts: Array<{ id: string; postType: string; title: string; body: string; imageUrl: string | null; embedProvider: string | null; embedUrl: string | null; interactionData: { options?: string[] }; sortOrder: number }> }>;
+  teacherModules?: Array<{ id: string; assignmentId: string; title: string; description: string; titleCardEnabled: boolean; posts: Array<{ id: string; postType: string; title: string; body: string; imageUrl: string | null; embedProvider: string | null; embedUrl: string | null; interactionData: { options?: string[]; responseMode?: "single" | "multiple" | "free_text"; correctAnswer?: "true" | "false"; explanation?: string }; sortOrder: number }> }>;
 }) {
   const supabase = supabaseBrowserClient();
   const [reflection, setReflection] = useState<{ missionId: string; contentItemId: string } | null>(null);
