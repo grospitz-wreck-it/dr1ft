@@ -36,7 +36,7 @@ export function TeacherModuleBuilderModal({ classInstanceId, schoolId, editModul
   const [textResponses, setTextResponses] = useState<Array<{student:string;answer:string;submittedAt:string}>>([]);
   const [responsesOpen, setResponsesOpen] = useState(false);
   const [responsesLoading, setResponsesLoading] = useState(false);
-  const [pollResults, setPollResults] = useState<{title:string;total:number;counts:Array<{label:string;count:number}>;resultDisplay:"bar"|"pie"|"highlight";correctOption?:string|"highlight";correctOption?:string}|null>(null);
+  const [pollResults, setPollResults] = useState<{title:string;total:number;counts:Array<{label:string;count:number}>;resultDisplay:"bar"|"pie"|"highlight";correctOption?:string|null}|null>(null);
   const [pollResultsLoading, setPollResultsLoading] = useState(false);
   const [pending, startTransition] = useTransition();
   const router = useRouter();
