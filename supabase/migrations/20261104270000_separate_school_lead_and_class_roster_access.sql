@@ -55,5 +55,26 @@ create policy "assigned teachers view class instance memberships"
   to authenticated
   using (public.is_teacher_of_class_instance(class_instance_id));
 
+-- is_school_admin_of() intentionally includes school_lead for school
+-- portal navigation. Do not reuse it for student membership visibility.
+drop policy if exists "school admins view their school class memberships"
+  on public.class_instance_memberships;
+
+create policy "school admins view their school class memberships"
+  on public.class_instance_memberships
+  for select
+  to authenticated
+  using (
+    exists (
+      select 1
+      from public.class_instances ci
+      join public.school_memberships sm on sm.school_id = ci.school_id
+      where ci.id = class_instance_memberships.class_instance_id
+        and sm.user_id = (select auth.uid())
+        and sm.active = true
+        and sm.role = 'school_admin'
+    )
+  );
+
 comment on function public.is_teacher_of_class_instance(uuid) is
   'Returns true only for an active teacher or school_admin membership in the specified class instance. School-lead access is handled by separate school-scoped policies and aggregate RPCs.';
