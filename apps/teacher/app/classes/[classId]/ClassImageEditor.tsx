@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { useRef, useState } from "react";\nimport { ImagePlus } from "lucide-react";
 import { createBrowserClient } from "@supabase/ssr";
 import { useRouter } from "next/navigation";
 
@@ -212,13 +212,14 @@ export default function ClassImageEditor({
         </div>
 
         <div className="flex flex-wrap gap-2">
-          <label className="inline-flex cursor-pointer items-center gap-2 rounded-lg border border-border px-3 py-2 text-sm font-medium text-slate-700 transition hover:bg-canvas">
-            Bild ändern
+          <label className="group inline-flex min-w-[230px] cursor-pointer items-center gap-3 rounded-2xl border border-dashed border-violet-300 bg-gradient-to-r from-violet-50 to-cyan-50 px-4 py-3 text-left transition hover:border-violet-500 hover:from-violet-100 hover:to-cyan-100">
+            <span className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-white text-violet-600 shadow-sm ring-1 ring-violet-100"><ImagePlus className="h-5 w-5"/></span>
+            <span><span className="block text-xs font-bold text-slate-800">{file?.name ?? "Bild auswählen"}</span><span className="mt-0.5 block text-[10px] text-slate-500">JPG, PNG oder WebP · max. 20 MB</span></span>
             <input
               ref={inputRef}
               type="file"
               accept="image/jpeg,image/png,image/webp"
-              className="hidden"
+              className="sr-only"
               disabled={saving}
               onChange={(event) => {
                 const selected = event.target.files?.[0];
