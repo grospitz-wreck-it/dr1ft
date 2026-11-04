@@ -43,6 +43,8 @@ drop policy if exists "members view instance memberships"
 drop policy if exists "authenticated members view instance memberships"
   on public.class_instance_memberships;
 
+drop policy if exists "users view own class instance memberships"
+  on public.class_instance_memberships;
 create policy "users view own class instance memberships"
   on public.class_instance_memberships
   for select
