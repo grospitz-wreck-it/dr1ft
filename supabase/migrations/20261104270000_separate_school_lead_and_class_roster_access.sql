@@ -51,6 +51,8 @@ create policy "users view own class instance memberships"
   to authenticated
   using (user_id = (select auth.uid()));
 
+drop policy if exists "assigned teachers view class instance memberships"
+  on public.class_instance_memberships;
 create policy "assigned teachers view class instance memberships"
   on public.class_instance_memberships
   for select
