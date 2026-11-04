@@ -123,7 +123,77 @@ Für eine schulische Lösung sind mindestens getrennte Vorgänge erforderlich:
 
 Die konkrete Aufbewahrungsdauer muss mit Schule/Schulträger und Datenschutzverantwortlichen abgestimmt werden; sie wird hier nicht erfunden oder vorweggenommen.
 
-## 6. Grenzen dieses Zwischenstands
+## 7. Vertiefte Prüfung: Lernverlauf, Nutzungszeit und Nachrichten
+
+### Lernverlauf und Schülerreport
+
+Geprüfte Dateien:
+- `supabase/migrations/20261102140000_teacher_student_learning_journey.sql`
+- `supabase/migrations/20261102160000_teacher_student_scenario_report_detail.sql`
+- `supabase/functions/generate-teacher-report/index.ts`
+- `apps/teacher/app/classes/[classId]/reports/[studentId]/page.tsx`
+
+Feststellungen:
+- Der Lernverlauf ist ausdrücklich auf eine aktive Schülerzugehörigkeit in einer konkreten Klasseninstanz begrenzt.
+- Er enthält öffentliche Feed-Interaktionen, Lernkartenantworten, validierte Assessment-Ereignisse und abgeschlossene Missionen.
+- Bei `learning_task_response` wird der gespeicherte Antworttext bis zu 280 Zeichen in der Beschreibung des Lernverlaufs ausgegeben. Das ist keine bloße Statistik, sondern kann freie Schüleräußerungen enthalten.
+- Die Detailansicht für Lernkarten zeigt die gewählte Antwort und redaktionell hinterlegtes Feedback.
+- Der Lehrerreport speichert einen Snapshot mit Schüler-UUID, Anzeigename, Username, Lernfortschritt und Kompetenzständen.
+- Private Direktnachrichteninhalte werden in der Learning-Journey-Funktion ausdrücklich nicht ausgegeben.
+- Die gesonderte Social-Pulse-Funktion zählt jedoch Likes, Kommentare, Shares und gesendete Direktnachrichten pro Woche. Sie liefert keine DM-Texte oder Empfänger-/Konversationsinhalte.
+
+Bewertung:
+- Die Datenverarbeitung ist im Kern klassen- und zweckbezogen, aber die Detailtiefe ist erheblich. Für Schulen muss klar beschrieben sein, dass Lehrkräfte Lernantworten, Lernfortschritt und bestimmte Interaktions-/Nutzungsmetriken einsehen können.
+- Die Anzeige von Antworttexten sollte auf pädagogisch erforderliche Aufgaben begrenzt bleiben. Freitext sollte nicht pauschal in Reports erscheinen, wenn eine Ergebnis-/Statusanzeige ausreicht.
+- Die Report-Snapshots brauchen eine definierte Aufbewahrungs- und Löschregel. Das Löschen des Accounts allein ist nicht als vollständiger Löschprozess nachgewiesen.
+
+### Aktive Nutzungszeit
+
+Geprüfte Datei:
+- `supabase/migrations/20261102180000_student_active_time_tracking.sql`
+
+Feststellungen:
+- DR1FT speichert aktive Zeitabschnitte von 1 bis 60 Sekunden, jeweils mit Schüler-UUID, Klasseninstanz, optionalem Szenario und Aktivitätstyp (`feed`, `other`, `learning_cards`).
+- Es werden laut Tabellenkommentar keine Seiteninhalte oder Nachrichtentexte gespeichert.
+- Lehrkräfte können Summen nach Aktivitätstyp und Szenario für einen Schüler abrufen.
+- Die Funktion prüft die aktive Schülerzugehörigkeit und die Berechtigung der Lehrkraft über `is_teacher_of_class_instance`.
+
+Bewertung:
+- Auch aggregierte Nutzungszeit ist personenbezogen, wenn sie einem Schülerkonto zugeordnet bleibt.
+- Die Erfassung muss in Datenschutzhinweisen und schulischer Information verständlich erklärt werden. Sie darf nicht als lückenlose Anwesenheits- oder Aufmerksamkeitserfassung dargestellt werden.
+- Fachlich muss geklärt werden, ob die Metrik für den pädagogischen Zweck wirklich benötigt wird und ob die Aufbewahrung begrenzt werden kann.
+
+### Schüler-Direktnachrichten
+
+Geprüfte Dateien:
+- `apps/player/app/api/messages/direct/route.ts`
+- `supabase/migrations/20261015091500_secure_student_direct_messages.sql`
+- `supabase/migrations/20261028120000_repair_student_direct_message_security.sql`
+- `supabase/migrations/20261102170000_teacher_student_social_pulse.sql`
+
+Feststellungen:
+- Direktnachrichten werden mit Sender, Empfänger, Klasseninstanz, Text und Zeitstempeln in Supabase gespeichert.
+- Lesen und Senden sind auf aktive Schüler:innen derselben Klasseninstanz begrenzt; die RLS-Policies prüfen Sender und Empfänger.
+- Die geprüften Lehrer-Lernverlauf- und Social-Pulse-RPCs liefern keine Nachrichtentexte. Die Social-Pulse-Funktion liefert nur Wochenzählungen gesendeter Nachrichten.
+- Eine separate Meldungsfunktion speichert gemeldete Nachrichten in `student_message_reports`. Die konkrete RLS-/Bearbeitungs- und Aufbewahrungslogik dieses Meldesystems ist noch gesondert zu prüfen.
+
+Bewertung:
+- „Lehrkräfte sehen keine privaten Nachrichten“ ist anhand der geprüften Report-RPCs plausibel, aber noch keine vollständige Aussage über sämtliche Admin-, Moderations-, Support- oder Datenbankzugriffe.
+- Vor Schuleinsatz braucht es einen klaren, dokumentierten Melde- und Schutzprozess für problematische Nachrichten sowie eine eindeutige Regel, wer gemeldete Inhalte sehen darf und wie lange sie aufbewahrt werden.
+
+## 8. Rollenbefund präzisiert
+
+Die Rolle `school_lead` liegt in `school_memberships`, während die zentrale Funktion `is_teacher_of_class_instance` in Migration 0023 ausschließlich eine aktive Klassenmitgliedschaft mit Rolle `teacher` oder `school_admin` verlangt.
+
+Konsequenz:
+- Schulweite RLS-Policies erlauben `school_lead` bereits das Lesen von Klassen und Klassenmitgliedschaften der eigenen Schule.
+- Lernverlauf-, Lernkarten-, Social-Pulse- und aktive-Zeit-RPCs rufen dagegen `is_teacher_of_class_instance` auf. Eine Person, die nur `school_lead` in `school_memberships` ist, scheitert daher an diesen RPC-Berechtigungen.
+- `generate-teacher-report` prüft ebenfalls eine Klassenmitgliedschaft des Aufrufers. Obwohl es `school_lead` in der Rollenliste nennt, hilft das einer rein schulweiten Schulleitungsrolle ohne Klassenmitgliedschaft nicht.
+- `manage-student-account` akzeptiert nur `teacher` und `school_admin`.
+
+Das ist nicht nur eine fehlende Rollenfreigabe, sondern ein Architekturthema: Schulweite Sonderbefugnisse müssen bewusst von klassenbezogenen Lehrkraftrechten getrennt werden. Eine Schulleitung darf nicht versehentlich dadurch Zugriff bekommen, dass sie künstlich als Lehrkraft in jede Klasse eingetragen wird. Erforderlich ist ein expliziter, schulgebundener Admin-Pfad, der vor jedem Datenzugriff die Zugehörigkeit zur gleichen Schule und den aktiven Status prüft.
+
+## 9. Grenzen dieses Zwischenstands
 
 - Es wurde kein Zugriff auf die produktive Supabase-Datenbank, deren tatsächliche RLS-Policies, Secrets oder Migration-Historie ausgeführt.
 - Es wurde kein IONOS- oder Supabase-Deployment geprüft.
