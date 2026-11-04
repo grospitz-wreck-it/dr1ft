@@ -2,10 +2,10 @@
 
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { BookOpen, Archive, CalendarClock, Check, Image as ImageIcon, Pencil, Plus, Search, Trash2, X } from "lucide-react";
+import { BookOpen, Archive, CalendarClock, Check, FileText, Image as ImageIcon, Pencil, Plus, Search, Trash2, X } from "lucide-react";
 import { toggleScenarioAssignment } from "../actions";
 import { ScenarioToggle } from "./ScenarioToggle";
-import { TeacherModuleBuilderModal } from "./TeacherModuleBuilderModal";
+import { TeacherModuleBuilderModal } from "./TeacherModuleBuilderModal";\nimport { TeacherModuleResponses } from "./TeacherModuleResponses";
 import { archiveTeacherModuleAssignment, assignExistingTeacherModule, deleteTeacherCreatedModule, getTeacherModulePosts, setTeacherModuleAssignmentActive, updateTeacherModuleSchedule } from "./teacherModuleActions";
 
 type Scenario = {
@@ -351,7 +351,7 @@ function TeacherModuleCard({ classId, schoolId, module }: {
             {(module.scheduled_start_at || module.scheduled_end_at) && !scheduleOpen && <p className="text-right text-[10px] text-slate-500">{module.scheduled_start_at ? new Date(module.scheduled_start_at).toLocaleString("de-DE") : "Sofort"}{module.scheduled_end_at ? " – " + new Date(module.scheduled_end_at).toLocaleString("de-DE") : ""}</p>}
           </div>
           <div className="ml-auto flex items-center justify-end gap-2">
-            {module.canManage && <button type="button" onClick={removePermanently} disabled={pending} title="Modul endgültig löschen" aria-label="Modul endgültig löschen" className="inline-flex h-9 w-9 items-center justify-center rounded-xl border border-rose-300 bg-white text-rose-700 shadow-sm transition hover:border-rose-400 hover:bg-rose-50 disabled:opacity-50"><Trash2 className="h-4 w-4" /></button>}
+            <TeacherModuleResponses classId={classId} moduleId={module.module_id} />\n            {module.canManage && <button type="button" onClick={removePermanently} disabled={pending} title="Modul endgültig löschen" aria-label="Modul endgültig löschen" className="inline-flex h-9 w-9 items-center justify-center rounded-xl border border-rose-300 bg-white text-rose-700 shadow-sm transition hover:border-rose-400 hover:bg-rose-50 disabled:opacity-50"><Trash2 className="h-4 w-4" /></button>}
             <button type="button" onClick={archive} disabled={pending} title="Modul archivieren" aria-label="Modul archivieren" className="inline-flex h-9 w-9 items-center justify-center rounded-xl border border-violet-200 bg-white text-violet-700 shadow-sm transition hover:border-violet-300 hover:bg-violet-50 disabled:opacity-50"><Archive className="h-4 w-4" /></button>
             {module.canManage && <TeacherModuleEditButton classId={classId} schoolId={schoolId} module={module} onError={setActionError} />}
           </div>
