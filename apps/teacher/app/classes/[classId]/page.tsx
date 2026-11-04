@@ -1,4 +1,5 @@
-import { Suspense } from "react";\nimport { supabaseServerClient } from "../../../lib/supabaseServerClient";
+import { Suspense } from "react";
+import { supabaseServerClient } from "../../../lib/supabaseServerClient";
 import { ClassModuleLibrary } from "./ClassModuleLibrary";
 import { StudentRoster } from "./StudentRoster";
 import { ClassDashboardInsights } from "./ClassDashboardInsights";
@@ -186,7 +187,8 @@ console.info("[class-page-timing] module-metadata", Date.now() - moduleAssetsSta
   const activeAssignment = activeAssignments[0] ?? null;
   const reportingUnlocked = !activeAssignment?.show_reports_at_end || Boolean(activeAssignment?.scheduled_end_at && new Date(activeAssignment.scheduled_end_at).getTime() <= Date.now());
 
-  const classImageUrl = await classImagePromise;\n  const schoolImageUrl = school?.school_image_path
+  const classImageUrl = await classImagePromise;
+  const schoolImageUrl = school?.school_image_path
     ? `${process.env.NEXT_PUBLIC_SUPABASE_URL}/storage/v1/object/public/school-images/${school.school_image_path}`
     : null;
 
