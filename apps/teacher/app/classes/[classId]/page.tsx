@@ -302,6 +302,9 @@ export default async function ClassDetailPage({
 
         <ClassModuleLibrary
           classId={classId}
+          schoolId={instance.school_id ?? null}
+          teacherModules={[]}
+          availableTeacherModules={[]}
           scenarios={(scenarios ?? []).map((scenario: any) => ({
             id: scenario.id,
             title: scenario.title,
