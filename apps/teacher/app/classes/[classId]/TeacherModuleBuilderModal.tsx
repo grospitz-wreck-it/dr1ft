@@ -32,7 +32,10 @@ export function TeacherModuleBuilderModal({ classInstanceId, schoolId, editModul
   const [previewDevice, setPreviewDevice] = useState<"mobile" | "desktop">("desktop");
   const [dragId, setDragId] = useState<string | null>(null);
   const [imageEditorOpen, setImageEditorOpen] = useState(false);
-  const [error, setError] = useState("");\n  const [textResponses, setTextResponses] = useState<Array<{student:string;answer:string;submittedAt:string}>>([]);\n  const [responsesOpen, setResponsesOpen] = useState(false);\n  const [responsesLoading, setResponsesLoading] = useState(false);
+  const [error, setError] = useState("");
+  const [textResponses, setTextResponses] = useState<Array<{student:string;answer:string;submittedAt:string}>>([]);
+  const [responsesOpen, setResponsesOpen] = useState(false);
+  const [responsesLoading, setResponsesLoading] = useState(false);
   const [pending, startTransition] = useTransition();
   const router = useRouter();
   const selected = posts.find((post) => post.id === selectedId) ?? null;
