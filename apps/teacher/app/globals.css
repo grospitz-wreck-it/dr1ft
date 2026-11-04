@@ -276,3 +276,12 @@ body:has(.dr1ft-login-screen) .editorial-content > * {
 .drift-builder-preview-dot{width:8px;height:8px;border-radius:50%;background:#8b5cf6;box-shadow:0 0 0 4px #eee8ff}
 .drift-builder-footer{background:rgba(255,255,255,.96)}
 @media(max-width:900px){.drift-builder-shell{height:calc(100dvh - 20px);max-height:none}.drift-builder-left{border-right:0;border-bottom:1px solid #e8e1fa}.drift-builder-cover{height:118px}.drift-builder-post-row{flex-wrap:wrap}.drift-builder-post-thumb{width:100px;height:68px}.drift-builder-icon-btn{width:38px;height:38px}}
+
+
+/* Delayed helper tooltips for compact editor controls */
+[data-tooltip]{position:relative}
+[data-tooltip]::after{content:attr(data-tooltip);position:absolute;z-index:80;left:50%;bottom:calc(100% + 10px);width:max-content;max-width:230px;transform:translate(-50%,4px);border:1px solid rgba(196,181,253,.55);border-radius:9px;background:#211b3a;color:#fff;padding:7px 10px;font-size:11px;font-weight:650;line-height:1.35;letter-spacing:0;white-space:normal;box-shadow:0 8px 24px rgba(30,20,60,.2);opacity:0;visibility:hidden;pointer-events:none;transition:opacity .14s ease 2s,transform .14s ease 2s,visibility 0s linear 2s}
+[data-tooltip]:hover::after,[data-tooltip]:focus-visible::after{opacity:1;visibility:visible;transform:translate(-50%,0);transition-delay:2s}
+.drift-builder-drawer{animation:drift-builder-drawer-in .24s cubic-bezier(.2,.75,.25,1) both}
+@keyframes drift-builder-drawer-in{from{transform:translateX(28px);opacity:0}to{transform:translateX(0);opacity:1}}
+@media(max-width:900px){.drift-builder-drawer{width:100%;border-left:0;border-top:1px solid #e5ddff}.drift-builder-drawer{inset:0}}
