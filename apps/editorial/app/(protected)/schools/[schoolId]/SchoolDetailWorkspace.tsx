@@ -8,7 +8,7 @@ import { SchoolSsoSettings } from "./SchoolSsoSettings";
 type School = { id: string; name: string; region: string | null; email_domain: string | null; school_type: string | null; street: string | null; house_number: string | null; postal_code: string | null; city: string | null; phone: string | null; website: string | null; student_count: number | null; status: string; plan: string; funding_type: string; internal_notes: string | null; school_image_path: string | null; school_image_position_x: number; school_image_position_y: number; school_image_zoom: number; created_at: string; updated_at: string };
 type Member = { id: string; user_id: string; email: string | null; display_name: string | null; role: string; active: boolean; created_at: string };
 type Stats = { total: number; teachers: number; admins: number; leads: number; classes: number };
-type SchoolClass = { id: string; name: string; grade_level: number | null; school_year: string; access_code: string | null; is_active: boolean; created_at: string; teachers: string[]; student_count?: number; scenario: { id: string; title: string; description: string | null; age_rating: string; is_active: boolean; assigned_at: string } | null };
+type SchoolClass = { id: string; name: string; grade_level: number | null; school_year: string; access_code: string | null; is_active: boolean; created_at: string; teachers: string[]; teacherUserIds: string[]; student_count?: number; scenario: { id: string; title: string; description: string | null; age_rating: string; is_active: boolean; assigned_at: string } | null };
 
 function client() { return createBrowserClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!); }
 const ROLE_LABELS: Record<string, string> = { teacher: "Lehrkraft", school_lead: "Schulleitung", school_admin: "Schuladmin" };
@@ -63,6 +63,8 @@ function regionLabel(value: string | null) {
 export function SchoolDetailWorkspace({ school: initialSchool, initialMembers, initialClasses, stats, isPlatformAdmin }: { school: School; initialMembers: Member[]; initialClasses: SchoolClass[]; stats: Stats; isPlatformAdmin: boolean }) {
   const [school, setSchool] = useState(initialSchool);
   const [members, setMembers] = useState(initialMembers);
+  const [classes, setClasses] = useState(initialClasses);
+  const [assignmentOpenId, setAssignmentOpenId] = useState<string | null>(null);
   const [tab, setTab] = useState<"overview" | "classes" | "people" | "insights" | "settings" | "sso">("overview");
   const [accountOpen, setAccountOpen] = useState(false);
   const [editing, setEditing] = useState(false);
@@ -280,6 +282,33 @@ export function SchoolDetailWorkspace({ school: initialSchool, initialMembers, i
   async function changeRole(member: Member, nextRole: string) { if (nextRole === member.role) return; setPendingId(member.id); setMessage(null); const { error } = await client().from("school_memberships").update({ role: nextRole }).eq("id", member.id); if (error) setMessage(error.message); else { setMembers((c) => c.map((m) => m.id === member.id ? { ...m, role: nextRole } : m)); setMessage(`${member.display_name || member.email || "Person"} ist jetzt ${ROLE_LABELS[nextRole]}.`); } setPendingId(null); }
   async function setActive(member: Member, active: boolean) { setPendingId(member.id); const { error } = await client().from("school_memberships").update({ active }).eq("id", member.id); if (error) setMessage(error.message); else { setMembers((c) => c.map((m) => m.id === member.id ? { ...m, active } : m)); setMessage(active ? "Person wieder aktiviert." : "Person deaktiviert."); } setPendingId(null); }
   async function remove(member: Member) { if (!window.confirm(`${member.display_name || member.email || "Diese Person"} wirklich aus der Schule entfernen?`)) return; setPendingId(member.id); const { error } = await client().from("school_memberships").delete().eq("id", member.id); if (error) setMessage(error.message); else { setMembers((c) => c.filter((m) => m.id !== member.id)); setMessage("Person aus der Schule entfernt."); } setPendingId(null); }
+
+  async function toggleTeacherClassAssignment(member: Member, classId: string, assigned: boolean) {
+    const operationId = "assignment:" + member.id + ":" + classId;
+    setPendingId(operationId);
+    setMessage(null);
+    const { error } = await client().rpc(
+      assigned ? "assign_teacher_to_class_instance" : "unassign_teacher_from_class_instance",
+      { p_class_instance_id: classId, p_teacher_user_id: member.user_id },
+    );
+    if (error) {
+      setMessage(error.message);
+    } else {
+      setClasses((current) => current.map((item) => {
+        if (item.id !== classId) return item;
+        const teacherUserIds = assigned
+          ? Array.from(new Set([...item.teacherUserIds, member.user_id]))
+          : item.teacherUserIds.filter((id) => id !== member.user_id);
+        const teacherName = member.display_name || member.email || "Lehrkraft";
+        const teachers = assigned
+          ? Array.from(new Set([...item.teachers, teacherName]))
+          : item.teachers.filter((name) => name !== teacherName);
+        return { ...item, teacherUserIds, teachers };
+      }));
+      setMessage(assigned ? "Lehrkraft der Klasse zugeordnet." : "Lehrkraft aus der Klasse entfernt.");
+    }
+    setPendingId(null);
+  }
 
   async function saveMemberName(member: Member) {
     const name = editingMemberName.trim();
@@ -959,7 +988,7 @@ export function SchoolDetailWorkspace({ school: initialSchool, initialMembers, i
             ["Schüler:innen", school.student_count?.toLocaleString("de-DE") ?? "—"],
             ["Lehrkräfte", String(stats.teachers)],
             ["Klassen", String(stats.classes)],
-            ["Aktive Klassen", String(initialClasses.filter((c) => c.is_active).length)],
+            ["Aktive Klassen", String(classes.filter((c) => c.is_active).length)],
           ].map(([label, value]) => (
             <div
               key={label}
@@ -1117,26 +1146,26 @@ export function SchoolDetailWorkspace({ school: initialSchool, initialMembers, i
           <div>
             <span className="text-xs text-slate-400">Klassen gesamt</span>
             <span className="ml-2 text-sm font-semibold text-slate-900">
-              {initialClasses.length}
+              {classes.length}
             </span>
           </div>
           <div>
             <span className="text-xs text-slate-400">Aktiv</span>
             <span className="ml-2 text-sm font-semibold text-slate-900">
-              {initialClasses.filter((c) => c.is_active).length}
+              {classes.filter((c) => c.is_active).length}
             </span>
           </div>
           <div>
             <span className="text-xs text-slate-400">Mit Szenario</span>
             <span className="ml-2 text-sm font-semibold text-slate-900">
-              {initialClasses.filter((c) => c.scenario).length}
+              {classes.filter((c) => c.scenario).length}
             </span>
           </div>
         </div>
 
-        {initialClasses.length > 0 ? (
+        {classes.length > 0 ? (
           <div className="grid gap-4 lg:grid-cols-2">
-            {initialClasses.map((c) => (
+            {classes.map((c) => (
               <article
                 key={c.id}
                 className="overflow-hidden rounded-2xl border border-border bg-panel transition hover:border-slate-300 hover:shadow-sm"
@@ -1291,13 +1320,13 @@ export function SchoolDetailWorkspace({ school: initialSchool, initialMembers, i
         </div>
 
         {(() => {
-          const activeClasses = initialClasses.filter((c) => c.is_active);
-          const scenarioClasses = initialClasses.filter((c) => c.scenario);
-          const activeRate = initialClasses.length
-            ? Math.round((activeClasses.length / initialClasses.length) * 100)
+          const activeClasses = classes.filter((c) => c.is_active);
+          const scenarioClasses = classes.filter((c) => c.scenario);
+          const activeRate = classes.length
+            ? Math.round((activeClasses.length / classes.length) * 100)
             : 0;
-          const scenarioRate = initialClasses.length
-            ? Math.round((scenarioClasses.length / initialClasses.length) * 100)
+          const scenarioRate = classes.length
+            ? Math.round((scenarioClasses.length / classes.length) * 100)
             : 0;
           const averageClassSize =
             stats.classes > 0 && school.student_count
@@ -1317,7 +1346,7 @@ export function SchoolDetailWorkspace({ school: initialSchool, initialMembers, i
                     {scenarioRate} %
                   </p>
                   <p className="mt-1 text-xs text-slate-400">
-                    {scenarioClasses.length} von {initialClasses.length} Klassen
+                    {scenarioClasses.length} von {classes.length} Klassen
                   </p>
                 </div>
 
@@ -1327,7 +1356,7 @@ export function SchoolDetailWorkspace({ school: initialSchool, initialMembers, i
                     {activeRate} %
                   </p>
                   <p className="mt-1 text-xs text-slate-400">
-                    {activeClasses.length} von {initialClasses.length} Klassen
+                    {activeClasses.length} von {classes.length} Klassen
                   </p>
                 </div>
 
@@ -1381,7 +1410,7 @@ export function SchoolDetailWorkspace({ school: initialSchool, initialMembers, i
 
                   <div className="mt-3 flex items-center justify-between text-xs text-slate-400">
                     <span>{scenarioClasses.length} Klassen mit Szenario</span>
-                    <span>{initialClasses.length - scenarioClasses.length} ohne Szenario</span>
+                    <span>{classes.length - scenarioClasses.length} ohne Szenario</span>
                   </div>
                 </section>
 
@@ -1398,7 +1427,7 @@ export function SchoolDetailWorkspace({ school: initialSchool, initialMembers, i
                       <div className="flex items-center justify-between text-sm">
                         <span className="text-slate-500">Aktive Klassen</span>
                         <strong className="text-slate-900">
-                          {activeClasses.length} / {initialClasses.length}
+                          {activeClasses.length} / {classes.length}
                         </strong>
                       </div>
                       <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-canvas">
@@ -1429,12 +1458,12 @@ export function SchoolDetailWorkspace({ school: initialSchool, initialMembers, i
                       Einordnung
                     </p>
                     <p className="mt-1 text-sm text-slate-600">
-                      {initialClasses.length === 0
+                      {classes.length === 0
                         ? "Für diese Schule wurden noch keine Klasseninstanzen angelegt."
                         : scenarioRate === 100
                           ? "Alle Klassen verfügen bereits über ein aktives DR1FT-Szenario."
                           : scenarioRate > 0
-                            ? `${scenarioClasses.length} von ${initialClasses.length} Klassen arbeiten bereits mit einem DR1FT-Szenario.`
+                            ? `${scenarioClasses.length} von ${classes.length} Klassen arbeiten bereits mit einem DR1FT-Szenario.`
                             : "Noch keine Klasse arbeitet mit einem DR1FT-Szenario."}
                     </p>
                   </div>
@@ -1656,6 +1685,42 @@ export function SchoolDetailWorkspace({ school: initialSchool, initialMembers, i
                     </button>
                   </div>
                 </div>
+                {member.role === "teacher" && member.active && (
+                  <div className="mt-4 border-t border-border pt-3">
+                    <button
+                      type="button"
+                      onClick={() => setAssignmentOpenId((current) => current === member.id ? null : member.id)}
+                      className="text-xs font-semibold text-violet-700 hover:text-violet-900"
+                    >
+                      {assignmentOpenId === member.id ? "Klassen-Zuordnung schließen" : "Klassen zuordnen"}
+                    </button>
+                    {assignmentOpenId === member.id && (
+                      <div className="mt-3 grid gap-2 sm:grid-cols-2">
+                        {classes.map((schoolClass) => {
+                          const checked = schoolClass.teacherUserIds.includes(member.user_id);
+                          const operationId = "assignment:" + member.id + ":" + schoolClass.id;
+                          return (
+                            <label key={schoolClass.id} className="flex items-center gap-2 rounded-xl border border-border bg-white px-3 py-2 text-xs text-slate-700">
+                              <input
+                                type="checkbox"
+                                checked={checked}
+                                disabled={pendingId === operationId || !schoolClass.is_active}
+                                onChange={(event) => void toggleTeacherClassAssignment(member, schoolClass.id, event.target.checked)}
+                                className="h-4 w-4 rounded border-slate-300 text-violet-600 focus:ring-violet-500"
+                              />
+                              <span className="min-w-0 flex-1">
+                                <span className="block truncate font-semibold">{schoolClass.name}</span>
+                                <span className="block text-[10px] text-slate-400">Jahrgang {schoolClass.grade_level ?? "—"} · {schoolClass.school_year}</span>
+                              </span>
+                              {!schoolClass.is_active && <span className="text-[10px] text-slate-400">Inaktiv</span>}
+                            </label>
+                          );
+                        })}
+                        {classes.length === 0 && <p className="text-xs text-slate-400">Noch keine Klassen vorhanden.</p>}
+                      </div>
+                    )}
+                  </div>
+                )}
               </article>
             );
           })}
