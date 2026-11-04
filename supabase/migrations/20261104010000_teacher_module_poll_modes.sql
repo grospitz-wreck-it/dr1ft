@@ -78,7 +78,7 @@ begin
         or split_part(selected.value,'_',2)::integer < 1
         or split_part(selected.value,'_',2)::integer > v_option_count
     ) then raise exception 'Ungültige Antwortoption.'; end if;
-    if (select count(distinct value) from unnest(p_choices) value) <> cardinality(p_choices) then
+    if (select count(distinct selected.value) from unnest(p_choices) as selected(value)) <> cardinality(p_choices) then
       raise exception 'Antwortoptionen dürfen nicht doppelt vorkommen.';
     end if;
     v_choice := p_choices[1];
