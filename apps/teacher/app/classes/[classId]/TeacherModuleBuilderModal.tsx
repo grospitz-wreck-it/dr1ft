@@ -276,7 +276,7 @@ export function TeacherModuleBuilderModal({ classInstanceId, schoolId, editModul
                   </section>
                 ) : (
                   <div className="relative flex min-h-0 min-w-0 flex-1 overflow-hidden">
-                                  <section className={"drift-builder-canvas flex min-h-0 min-w-0 flex-col overflow-y-auto px-5 py-5 sm:px-6 lg:min-h-0 transition-[width] duration-200 "+(selected?"w-[42%] flex-none":"w-full flex-1")}>
+                                  <section className={"drift-builder-canvas flex min-h-0 min-w-0 flex-col overflow-y-auto px-5 py-5 sm:px-6 lg:min-h-0 transition-[width] duration-200 "+(selected?"w-[42%] flex-none max-[900px]:hidden":"w-full flex-1")}>
                   <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
                     <div><div className="flex items-center gap-2"><span className="drift-builder-step">03</span><h3 className="text-[21px] font-extrabold tracking-tight text-slate-950">Beiträge ({posts.length})</h3></div><p className="mt-1 text-xs text-slate-600">Ziehe die Karten per Drag & Drop in die gewünschte Reihenfolge.</p></div>
                     <div className="flex items-center gap-2"><span className="rounded-xl border border-violet-100 bg-white px-3 py-2 text-[10px] font-bold text-violet-700">{posts.length} / 40 Karten</span><button type="button" onClick={()=>setPreviewMode(true)} disabled={!posts.length} data-tooltip="So sehen Schüler:innen das Modul" className="inline-flex items-center gap-2 rounded-xl border border-violet-200 bg-violet-50 px-4 py-2.5 text-xs font-extrabold text-violet-700 disabled:opacity-40"><Play className="h-3.5 w-3.5"/> Vorschau</button></div>
