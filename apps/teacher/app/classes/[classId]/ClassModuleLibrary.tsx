@@ -2,7 +2,7 @@
 
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { BookOpen, Archive, CalendarClock, Check, FileText, Image as ImageIcon, Pencil, Plus, Search, Trash2, X } from "lucide-react";
+import { BookOpen, Archive, CalendarClock, Check, Image as ImageIcon, Pencil, Plus, Search, Trash2, X } from "lucide-react";
 import { toggleScenarioAssignment } from "../actions";
 import { ScenarioToggle } from "./ScenarioToggle";
 import { TeacherModuleBuilderModal } from "./TeacherModuleBuilderModal";\nimport { TeacherModuleResponses } from "./TeacherModuleResponses";
