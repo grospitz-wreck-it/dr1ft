@@ -89,8 +89,8 @@ export function TeacherModuleBuilderModal({ classInstanceId, schoolId, editModul
     if (autoOpen && editModule) openEditor();
   }, [autoOpen, editModule]);
 
-  function addPost(type: DraftPost["postType"]) {
-    const post: DraftPost = { id: crypto.randomUUID(), postType: type, title: "", body: "", embedUrl: "", interactionData: { options: ["Echt", "Fake"], correctAnswer: "true", explanation: "" }, imageFile: null, imageSettings: { brightness: 100, contrast: 100, saturation: 100, grayscale: 0, zoom: 1, x: 50, y: 50 } };
+  function addPost(type: "mixed" | "poll") {
+    const post: DraftPost = { id: crypto.randomUUID(), postType: type, title: "", body: "", embedUrl: "", interactionData: { options: ["Antwort 1", "Antwort 2"], responseMode: "single", correctAnswer: "true", explanation: "" }, imageFile: null, imageSettings: { brightness: 100, contrast: 100, saturation: 100, grayscale: 0, zoom: 1, x: 50, y: 50 } };
     setPosts((items) => [...items, post]);
     setSelectedId(post.id);
   }
