@@ -54,7 +54,7 @@ export default async function FeedPage() {
             embedProvider: post.embed_provider ?? null,
             embedUrl: post.embed_url ?? null,
             sortOrder: post.sort_order ?? 0,
-            interactionData: { options: Array.isArray(post.interaction_data?.options) ? post.interaction_data.options : ["Echt", "Fake"] },
+            interactionData: { options: Array.isArray(post.interaction_data?.options) ? post.interaction_data.options : ["Echt", "Fake"], responseMode: post.interaction_data?.responseMode ?? "single", correctAnswer: post.interaction_data?.correctAnswer, explanation: post.interaction_data?.explanation },
           };
         }));
       return {
