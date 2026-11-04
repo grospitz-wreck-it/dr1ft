@@ -37,32 +37,47 @@ export async function getTeacherModulePosts(classInstanceId: string, moduleId: s
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) throw new Error("Nicht authentifiziert");
 
-  // The assignment lookup is class-scoped and subject to the existing RLS
-  // policies. Never return posts for a module not assigned to this class.
-  // Run the independent, class-scoped assignment check and post query in
-  // parallel. RLS still protects the post table; the assignment check remains
-  // mandatory before any post data is returned to the client.
-  const [assignmentResult, postsResult] = await Promise.all([
-    supabase
-      .from("teacher_module_class_assignments")
-      .select("id")
-      .eq("class_instance_id", classInstanceId)
-      .eq("module_id", moduleId)
-      .maybeSingle(),
-    supabase
-      .from("teacher_module_posts")
-      .select("id,post_type,title,body,image_path,embed_url,interaction_data,sort_order,status")
-      .eq("module_id", moduleId)
-      .eq("status", "published")
-      .order("sort_order", { ascending: true }),
-  ]);
-  const { data: assignment, error: assignmentError } = assignmentResult;
-  const { data: posts, error: postsError } = postsResult;
+  // Check the class assignment first. This prevents a post query from running
+  // for a module that is not assigned to the requested class.
+  const { data: assignment, error: assignmentError } = await supabase
+    .from("teacher_module_class_assignments")
+    .select("id")
+    .eq("class_instance_id", classInstanceId)
+    .eq("module_id", moduleId)
+    .maybeSingle();
 
   if (assignmentError || !assignment) {
+    console.error("[teacher-module-posts] assignment check failed", {
+      classInstanceId,
+      moduleId,
+      userId: user.id,
+      code: assignmentError?.code ?? null,
+      message: assignmentError?.message ?? null,
+      details: assignmentError?.details ?? null,
+      hint: assignmentError?.hint ?? null,
+    });
     throw new Error("Du hast keinen Zugriff auf dieses Modul.");
   }
-  if (postsError) throw new Error("Modulbeiträge konnten nicht geladen werden.");
+
+  const { data: posts, error: postsError } = await supabase
+    .from("teacher_module_posts")
+    .select("id,post_type,title,body,image_path,embed_url,interaction_data,sort_order,status")
+    .eq("module_id", moduleId)
+    .eq("status", "published")
+    .order("sort_order", { ascending: true });
+
+  if (postsError) {
+    console.error("[teacher-module-posts] posts query failed", {
+      classInstanceId,
+      moduleId,
+      userId: user.id,
+      code: postsError.code,
+      message: postsError.message,
+      details: postsError.details,
+      hint: postsError.hint,
+    });
+    throw new Error("Modulbeiträge konnten nicht geladen werden.");
+  }
 
   return await Promise.all((posts ?? []).map(async (post: any) => {
     const { data: imageData, error: imageError } = post.image_path
