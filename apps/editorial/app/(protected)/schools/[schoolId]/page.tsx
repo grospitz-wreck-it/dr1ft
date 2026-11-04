@@ -20,9 +20,12 @@ export default async function SchoolDetailPage({ params }: { params: { schoolId:
   ]);
 
   const classIds = (instances ?? []).map((item) => item.id);
-  const { data: instanceMembers } = classIds.length
-    ? await supabase.from("class_instance_memberships").select("class_instance_id, user_id, role, left_at, user_profiles(display_name)").in("class_instance_id", classIds).is("left_at", null)
-    : { data: [] };
+  const [{ data: instanceMembers }, { data: studentCounts }] = await Promise.all([
+    classIds.length
+      ? supabase.from("class_instance_memberships").select("class_instance_id, user_id, role, left_at, user_profiles(display_name)").in("class_instance_id", classIds).is("left_at", null)
+      : Promise.resolve({ data: [] }),
+    supabase.rpc("get_school_class_student_counts", { p_school_id: params.schoolId }),
+  ]);
 
   const { data: scenarioAssignments } = classIds.length
     ? await supabase.from("class_instance_scenario_assignments").select("class_instance_id, scenario_id, assigned_at").in("class_instance_id", classIds)
@@ -35,7 +38,9 @@ export default async function SchoolDetailPage({ params }: { params: { schoolId:
 
   const teachersByClass = new Map<string, string[]>();
   const teacherUserIdsByClass = new Map<string, string[]>();
-  const studentsByClass = new Map<string, number>();
+  const studentsByClass = new Map<string, number>(
+    (studentCounts ?? []).map((row) => [row.class_instance_id, Number(row.student_count ?? 0)]),
+  );
   const scenarioById = new Map((scenarios ?? []).map((scenario) => [scenario.id, scenario]));
   const assignmentByClass = new Map<string, { id: string; title: string; description: string | null; age_rating: string; is_active: boolean; assigned_at: string }>();
 
@@ -62,9 +67,6 @@ export default async function SchoolDetailPage({ params }: { params: { schoolId:
       teacherIds.push(membership.user_id);
       teachersByClass.set(membership.class_instance_id, names);
       teacherUserIdsByClass.set(membership.class_instance_id, teacherIds);
-    }
-    if (membership.role === "student") {
-      studentsByClass.set(membership.class_instance_id, (studentsByClass.get(membership.class_instance_id) ?? 0) + 1);
     }
   }
 
