@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { ArrowDown, ArrowUp, Check, GripVertical, ImagePlus, Link2, Plus, Save, Type, X, Wand2, RotateCcw, SlidersHorizontal, BarChart3, CircleCheck, Copy, Play, Monitor, Smartphone } from "lucide-react";
-import { saveTeacherCreatedModule, updateTeacherCreatedModule } from "./teacherModuleActions";
+import { getTeacherModuleFreeTextResponses, saveTeacherCreatedModule, updateTeacherCreatedModule } from "./teacherModuleActions";
 
 type DraftPost = {
   id: string;
@@ -32,7 +32,7 @@ export function TeacherModuleBuilderModal({ classInstanceId, schoolId, editModul
   const [previewDevice, setPreviewDevice] = useState<"mobile" | "desktop">("desktop");
   const [dragId, setDragId] = useState<string | null>(null);
   const [imageEditorOpen, setImageEditorOpen] = useState(false);
-  const [error, setError] = useState("");
+  const [error, setError] = useState("");\n  const [textResponses, setTextResponses] = useState<Array<{student:string;answer:string;submittedAt:string}>>([]);\n  const [responsesOpen, setResponsesOpen] = useState(false);\n  const [responsesLoading, setResponsesLoading] = useState(false);
   const [pending, startTransition] = useTransition();
   const router = useRouter();
   const selected = posts.find((post) => post.id === selectedId) ?? null;
@@ -54,7 +54,7 @@ export function TeacherModuleBuilderModal({ classInstanceId, schoolId, editModul
   function reset() {
     setModuleId(null);
     setTitle(""); setDescription(""); setTitleCardEnabled(true); setVisibilityScope("class");
-    setPosts([]); setSelectedId(null); setPreviewMode(false); setPreviewDevice("desktop"); setError(""); setImageEditorOpen(false);
+    setPosts([]); setSelectedId(null); setPreviewMode(false); setPreviewDevice("desktop"); setError(""); setImageEditorOpen(false); setTextResponses([]); setResponsesOpen(false);
   }
   function openEditor() {
     setError("");
@@ -93,6 +93,20 @@ export function TeacherModuleBuilderModal({ classInstanceId, schoolId, editModul
     const post: DraftPost = { id: crypto.randomUUID(), postType: type, title: "", body: "", embedUrl: "", interactionData: { options: ["Antwort 1", "Antwort 2"], responseMode: "single", correctAnswer: "true", explanation: "" }, imageFile: null, imageSettings: { brightness: 100, contrast: 100, saturation: 100, grayscale: 0, zoom: 1, x: 50, y: 50 } };
     setPosts((items) => [...items, post]);
     setSelectedId(post.id);
+  }
+  async function loadTextResponses(postId: string) {
+    if (!moduleId) return;
+    setResponsesLoading(true);
+    setError("");
+    try {
+      const rows = await getTeacherModuleFreeTextResponses(classInstanceId, moduleId, postId);
+      setTextResponses(rows);
+      setResponsesOpen(true);
+    } catch (cause) {
+      setError(cause instanceof Error ? cause.message : "Antworten konnten nicht geladen werden.");
+    } finally {
+      setResponsesLoading(false);
+    }
   }
   function updatePost(id: string, patch: Partial<DraftPost>) {
     setPosts((items) => items.map((post) => post.id === id ? { ...post, ...patch } : post));
@@ -308,6 +322,7 @@ export function TeacherModuleBuilderModal({ classInstanceId, schoolId, editModul
                           {selected.interactionData.options.map((option,index)=><div key={index} className="flex items-center gap-2"><input value={option} onChange={event=>updatePost(selected.id,{interactionData:{...selected.interactionData,options:selected.interactionData.options.map((value,i)=>i===index?event.target.value:value)}})} maxLength={100} placeholder={"Antwort "+(index+1)} className="min-w-0 flex-1 rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm"/>{selected.interactionData.options.length>2&&<button type="button" onClick={()=>updatePost(selected.id,{interactionData:{...selected.interactionData,options:selected.interactionData.options.filter((_,i)=>i!==index)}})} aria-label="Antwort entfernen" data-tooltip="Antwort entfernen" className="grid h-9 w-9 shrink-0 place-items-center rounded-lg border border-rose-100 bg-white text-rose-600"><X className="h-4 w-4"/></button>}</div>)}
                         </div> : <div className="rounded-xl border border-dashed border-violet-300 bg-white p-3 text-xs leading-5 text-violet-800">Die vorgegebenen Antwortoptionen werden ausgeblendet. Schüler:innen formulieren stattdessen eine eigene Antwort.</div>}
                         <p className="text-[10px] text-slate-500">Die Ergebnisse werden nach Antwortmodus ausgewertet. Freitextantworten bleiben für die Lehrkraft sichtbar.</p>
+                        {moduleId && (selected.interactionData.responseMode??"single")==="free_text" && <div className="space-y-2"><button type="button" onClick={()=>loadTextResponses(selected.id)} disabled={responsesLoading} className="inline-flex items-center gap-2 rounded-xl border border-violet-200 bg-white px-3 py-2 text-xs font-bold text-violet-700 hover:bg-violet-50">{responsesLoading?"Antworten werden geladen …":"Schülerantworten ansehen"}</button>{responsesOpen&&<div className="max-h-64 space-y-2 overflow-y-auto rounded-xl border border-violet-100 bg-white p-3"><div className="flex items-center justify-between"><p className="text-xs font-bold text-slate-900">{textResponses.length} Antworten</p><button type="button" onClick={()=>setResponsesOpen(false)} className="text-xs text-slate-500">Schließen</button></div>{textResponses.length?textResponses.map((response,index)=><article key={index} className="rounded-lg bg-violet-50/70 p-3"><p className="text-[10px] font-bold text-violet-800">{response.student}</p><p className="mt-1 whitespace-pre-wrap text-xs leading-5 text-slate-700">{response.answer}</p></article>):<p className="text-xs text-slate-500">Noch keine Antworten eingegangen.</p>}</div>}</div>}
                       </div>}
                       {selected.postType === "true_false" && <div className="rounded-xl border border-violet-200 bg-violet-50/60 p-3 space-y-3"><p className="text-xs font-bold text-violet-900">Richtige Antwort</p><div className="flex gap-2"><button type="button" onClick={()=>updatePost(selected.id,{interactionData:{...selected.interactionData,correctAnswer:"true"}})} className={"flex-1 rounded-lg border px-3 py-2 text-xs font-semibold "+(selected.interactionData.correctAnswer==="true"?"border-violet-500 bg-violet-100 text-violet-800":"border-slate-200 bg-white")}>Richtig</button><button type="button" onClick={()=>updatePost(selected.id,{interactionData:{...selected.interactionData,correctAnswer:"false"}})} className={"flex-1 rounded-lg border px-3 py-2 text-xs font-semibold "+(selected.interactionData.correctAnswer==="false"?"border-violet-500 bg-violet-100 text-violet-800":"border-slate-200 bg-white")}>Falsch</button></div><label className="block text-xs font-semibold text-slate-700">Erklärung nach der Antwort<textarea value={selected.interactionData.explanation??""} onChange={event=>updatePost(selected.id,{interactionData:{...selected.interactionData,explanation:event.target.value}})} rows={3} maxLength={1200} className="mt-1 w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm"/></label></div>}
                       {(selected.postType === "embed" || selected.postType === "mixed") && <label className="block text-xs font-semibold text-slate-700">YouTube- oder Vimeo-URL<input value={selected.embedUrl} onChange={(event) => updatePost(selected.id, { embedUrl: event.target.value })} placeholder="https://…" className="mt-1.5 w-full rounded-lg border border-slate-200 px-3 py-2 text-sm" /></label>}
