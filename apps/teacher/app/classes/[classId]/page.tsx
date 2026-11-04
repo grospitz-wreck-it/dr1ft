@@ -268,7 +268,7 @@ export default async function ClassDetailPage({
             students={students}
             activeAssignmentTitle={activeAssignment?.scenarios?.title ?? null}
           />
-        </CollapsiblePanel>lePanel>
+        </CollapsiblePanel>
 
       </div>
     </main>
