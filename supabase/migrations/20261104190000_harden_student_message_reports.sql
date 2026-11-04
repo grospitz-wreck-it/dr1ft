@@ -40,6 +40,12 @@ create policy "students create reports for their own conversations"
     )
   );
 
+-- The Player route treats a repeated report of the same message by the same
+-- student as an idempotent success (HTTP 200 on SQLSTATE 23505).
+-- Read-only preflight found no existing duplicate reporter/message pairs.
+create unique index if not exists student_message_reports_message_reporter_unique
+  on public.student_message_reports (reported_message_id, reporter_id);
+
 -- The Player route only inserts reports. No client role should read,
 -- modify, delete, or truncate reports through the Data API.
 revoke all privileges on table public.student_message_reports
