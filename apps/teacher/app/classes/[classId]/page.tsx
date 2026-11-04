@@ -18,14 +18,28 @@ export default async function ClassDetailPage({
 
   // Auth and class metadata do not depend on each other; resolve them together
   // to remove one serial network round-trip from the initial render.
+  const initialQuery = async <T,>(label: string, run: () => PromiseLike<T>): Promise<T | null> => {
+    try {
+      const result = await run();
+      console.info("[class-page-initial-query]", label, Date.now() - instanceStartedAt, "ms");
+      return result;
+    } catch (error) {
+      console.error("[class-page-initial-query] failed", {
+        query: label,
+        durationMs: Date.now() - instanceStartedAt,
+        error,
+      });
+      return null;
+    }
+  };
   const [instanceResult, initialAuthResult] = await Promise.all([
-    supabase.from("class_instances")
+    initialQuery("class-instance", () => supabase.from("class_instances")
       .select("id,name,access_code,is_active,status,grade_level,school_year,school_id,class_image_path,class_image_position_x,class_image_position_y,class_image_zoom")
-      .eq("id", classId).maybeSingle(),
-    supabase.auth.getUser(),
+      .eq("id", classId).maybeSingle()),
+    initialQuery("auth-user", () => supabase.auth.getUser()),
   ]);
-  const instance = instanceResult.data;
-  const user = initialAuthResult.data.user;
+  const instance = instanceResult && "data" in instanceResult ? instanceResult.data : null;
+  const user = initialAuthResult && "data" in initialAuthResult ? initialAuthResult.data.user : null;
 
   console.info("[class-page-timing] instance-and-auth", Date.now() - instanceStartedAt, "ms");
 
@@ -149,7 +163,14 @@ export default async function ClassDetailPage({
   const classImagePromise = canEditClassImage && instance.class_image_path
     ? supabase.storage.from("class-images")
         .createSignedUrl(instance.class_image_path, 60 * 60)
-        .then(({ data }) => data?.signedUrl ?? null)
+        .then(({ data, error }) => {
+          if (error) console.warn("[class-page-image] signed URL failed", error);
+          return data?.signedUrl ?? null;
+        })
+        .catch((error) => {
+          console.warn("[class-page-image] signed URL threw", error);
+          return null;
+        })
     : Promise.resolve(null);
 
 const moduleAssetsStartedAt = Date.now();
