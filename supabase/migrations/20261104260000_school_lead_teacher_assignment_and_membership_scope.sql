@@ -268,3 +268,51 @@ comment on function public.assign_teacher_to_class_instance(uuid, uuid) is
 
 comment on function public.unassign_teacher_from_class_instance(uuid, uuid) is
   'Ends a teacher assignment in a class instance without deleting its history. Only active school_lead or school_admin members of that school may call it.';
+
+
+-- Return only per-class student counts for the school workspace. This avoids
+-- granting school_lead direct visibility of student membership identifiers.
+create or replace function public.get_school_class_student_counts(p_school_id uuid)
+returns table (
+  class_instance_id uuid,
+  student_count bigint
+)
+language plpgsql
+stable
+security definer
+set search_path = public, pg_temp
+as $$
+begin
+  if auth.uid() is null or not (
+    public.is_platform_admin()
+    or exists (
+      select 1
+      from public.school_memberships sm
+      where sm.school_id = p_school_id
+        and sm.user_id = auth.uid()
+        and sm.active = true
+        and sm.role in ('school_admin', 'school_lead')
+    )
+  ) then
+    raise exception 'Nicht berechtigt, Klassenstatistiken dieser Schule einzusehen'
+      using errcode = '42501';
+  end if;
+
+  return query
+  select
+    ci.id,
+    count(cim.user_id)::bigint
+  from public.class_instances ci
+  left join public.class_instance_memberships cim
+    on cim.class_instance_id = ci.id
+   and cim.role = 'student'
+   and cim.left_at is null
+  where ci.school_id = p_school_id
+  group by ci.id;
+end;
+$$;
+
+revoke all privileges on function public.get_school_class_student_counts(uuid)
+  from public, anon;
+grant execute on function public.get_school_class_student_counts(uuid)
+  to authenticated, service_role;
