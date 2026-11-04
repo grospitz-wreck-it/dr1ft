@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { ArrowDown, ArrowUp, Check, GripVertical, ImagePlus, Link2, Plus, Save, Type, X, Wand2, RotateCcw, SlidersHorizontal, BarChart3, CircleCheck, Copy, Play, Monitor, Smartphone } from "lucide-react";
+import { ArrowDown, ArrowUp, Check, GripVertical, ImagePlus, Link2, Plus, Save, Type, X, Wand2, RotateCcw, SlidersHorizontal, BarChart3, CircleCheck, Copy, Play, Monitor, Smartphone, LockKeyhole, School, Users } from "lucide-react";
 import { getTeacherModuleFreeTextResponses, getTeacherModulePollResults, saveTeacherCreatedModule, updateTeacherCreatedModule } from "./teacherModuleActions";
 
 type DraftPost = {
@@ -218,14 +218,14 @@ export function TeacherModuleBuilderModal({ classInstanceId, schoolId, editModul
       </button>
       {open && (
         <div className="fixed inset-0 z-[150] flex items-center justify-center bg-slate-950/65 p-3 backdrop-blur-sm sm:p-6" role="dialog" aria-modal="true" aria-labelledby="teacher-module-title">
-          <div className="drift-builder-shell flex h-[calc(100dvh-44px)] w-full max-w-[1456px] flex-col overflow-hidden rounded-[28px] border border-white/80 bg-white shadow-[0_34px_110px_rgba(57,38,110,.30)]">
-            <header className="drift-builder-header relative flex min-h-[130px] shrink-0 items-center justify-between gap-4 overflow-hidden border-b border-violet-100 px-6 py-4 sm:px-8">
+          <div className="drift-builder-shell flex h-[calc(100dvh-24px)] w-full max-w-[1456px] flex-col overflow-hidden rounded-[24px] border border-white/80 bg-white shadow-[0_34px_110px_rgba(57,38,110,.30)]">
+            <header className="drift-builder-header relative flex min-h-[66px] shrink-0 items-center justify-between gap-3 overflow-hidden border-b border-violet-100 px-5 py-2 sm:px-6">
               <div className="relative z-10 flex items-center gap-4">
-                <div className="drift-builder-mark"><Wand2 className="h-6 w-6"/></div>
+                <div className="drift-builder-mark !h-9 !w-9 !rounded-xl"><Wand2 className="h-4 w-4"/></div>
                 <div>
                 <p className="text-[10px] font-extrabold uppercase tracking-[.22em] text-violet-700">DR1FT · DEIN CONTENT-STUDIO</p>
-                <h2 id="teacher-module-title" className="mt-1 text-[23px] font-extrabold tracking-tight text-slate-950">{moduleId ? "Modul bearbeiten" : "Modul erstellen"}</h2>
-                <p className="mt-1 text-sm text-slate-500">Erstelle und strukturiere Inhalte für deine Klasse.</p>
+                <h2 id="teacher-module-title" className="mt-0.5 text-[18px] font-extrabold tracking-tight text-slate-950">{moduleId ? "Modul bearbeiten" : "Modul erstellen"}</h2>
+                
                 </div>
               </div>
               <button type="button" onClick={() => setOpen(false)} aria-label="Schließen" data-tooltip="Editor schließen" className="rounded-xl p-2 text-slate-500 hover:bg-slate-100"><X className="h-5 w-5" /></button>
@@ -245,11 +245,20 @@ export function TeacherModuleBuilderModal({ classInstanceId, schoolId, editModul
                     <label className="block text-xs font-bold text-slate-700">Kurzbeschreibung
                       <textarea value={description} onChange={event=>setDescription(event.target.value)} rows={2} maxLength={500} placeholder="Worum geht es in diesem Modul?" className="drift-builder-input mt-1.5 w-full resize-y"/>
                     </label>
-                    <label className="block text-xs font-bold text-slate-700">Sichtbarkeit
-                      <select value={visibilityScope} onChange={event=>setVisibilityScope(event.target.value as "private"|"school"|"class")} className="drift-builder-input mt-1.5 w-full">
-                        <option value="private">Nur für mich</option><option value="school">Alle Lehrkräfte meiner Schule</option><option value="class">Nur diese Klasse</option>
-                      </select>
-                    </label>
+                    <div>
+                      <span className="mb-1.5 block text-xs font-bold text-slate-700">Wer kann dieses Modul sehen?</span>
+                      <div className="grid grid-cols-3 gap-1.5">
+                        {([
+                          {value:"class",label:"Diese Klasse",hint:"Nur hier",Icon:Users},
+                          {value:"school",label:"Meine Schule",hint:"Lehrkräfte",Icon:School},
+                          {value:"private",label:"Nur ich",hint:"Privat",Icon:LockKeyhole},
+                        ] as const).map(option=><button key={option.value} type="button" aria-pressed={visibilityScope===option.value} onClick={()=>setVisibilityScope(option.value)} className={"flex min-w-0 flex-col items-center gap-1 rounded-xl border px-2 py-2 text-center transition "+(visibilityScope===option.value?"border-violet-400 bg-violet-50 text-violet-800 shadow-sm ring-1 ring-violet-200":"border-slate-200 bg-white text-slate-600 hover:border-violet-200 hover:bg-violet-50/50")}>
+                          <option.Icon className="h-4 w-4"/>
+                          <span className="text-[10px] font-extrabold leading-tight">{option.label}</span>
+                          <span className="text-[9px] leading-tight opacity-70">{option.hint}</span>
+                        </button>)}
+                      </div>
+                    </div>
                     <label className="drift-builder-toggle flex items-center justify-between gap-3 rounded-xl p-3">
                       <span><span className="block text-xs font-extrabold text-violet-950">Titelcard im Schüler-Feed</span><span className="mt-1 block text-[10px] text-violet-700">Titel und Beschreibung vor dem Start anzeigen</span></span>
                       <input type="checkbox" checked={titleCardEnabled} onChange={event=>setTitleCardEnabled(event.target.checked)} className="h-5 w-9 accent-violet-600"/>
