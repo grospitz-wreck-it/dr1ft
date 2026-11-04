@@ -37,37 +37,16 @@ export async function getTeacherModulePosts(classInstanceId: string, moduleId: s
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) throw new Error("Nicht authentifiziert");
 
-  // Check the class assignment first. This prevents a post query from running
-  // for a module that is not assigned to the requested class.
-  const { data: assignment, error: assignmentError } = await supabase
-    .from("teacher_module_class_assignments")
-    .select("id")
-    .eq("class_instance_id", classInstanceId)
-    .eq("module_id", moduleId)
-    .maybeSingle();
-
-  if (assignmentError || !assignment) {
-    console.error("[teacher-module-posts] assignment check failed", {
-      classInstanceId,
-      moduleId,
-      userId: user.id,
-      code: assignmentError?.code ?? null,
-      message: assignmentError?.message ?? null,
-      details: assignmentError?.details ?? null,
-      hint: assignmentError?.hint ?? null,
-    });
-    throw new Error("Du hast keinen Zugriff auf dieses Modul.");
-  }
-
-  const { data: posts, error: postsError } = await supabase
-    .from("teacher_module_posts")
-    .select("id,post_type,title,body,image_path,embed_url,interaction_data,sort_order,status")
-    .eq("module_id", moduleId)
-    .eq("status", "published")
-    .order("sort_order", { ascending: true });
+  // A narrowly scoped SECURITY DEFINER RPC verifies module ownership and
+  // teacher/admin access to this exact class before returning editor content.
+  // This avoids the recursive RLS policy chain on teacher_module_posts.
+  const { data: posts, error: postsError } = await supabase.rpc(
+    "get_teacher_module_editor_posts",
+    { p_class_instance_id: classInstanceId, p_module_id: moduleId },
+  );
 
   if (postsError) {
-    console.error("[teacher-module-posts] posts query failed", {
+    console.error("[teacher-module-posts] editor RPC failed", {
       classInstanceId,
       moduleId,
       userId: user.id,
