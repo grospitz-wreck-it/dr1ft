@@ -318,23 +318,6 @@ grant execute on function public.get_school_class_student_counts(uuid)
   to authenticated, service_role;
 
 
--- Assigned teachers need the active roster of their own class. This is
--- intentionally narrower than school-lead visibility: school leads see
--- staff assignments and aggregate student counts, not student identities.
-drop policy if exists "assigned teachers view class memberships"
-  on public.class_instance_memberships;
-
-create policy "assigned teachers view class memberships"
-  on public.class_instance_memberships
-  for select
-  to authenticated
-  using (
-    exists (
-      select 1
-      from public.class_instance_memberships actor
-      where actor.class_instance_id = class_instance_memberships.class_instance_id
-        and actor.user_id = (select auth.uid())
-        and actor.left_at is null
-        and actor.role in ('teacher'::public.user_role, 'school_admin'::public.user_role)
-    )
-  );
+-- The helper-based roster policy is created by the following
+-- 20261104270000 migration. Do not add a self-referential RLS policy here:
+-- querying class_instance_memberships from its own policy can recurse.
