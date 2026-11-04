@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState, useTransition } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { ArrowDown, ArrowUp, Check, GripVertical, ImagePlus, Link2, Plus, Save, Type, X, Wand2, RotateCcw, SlidersHorizontal, BarChart3, CircleCheck, Copy, Play, Monitor, Smartphone, LockKeyhole, School, Users } from "lucide-react";
 import { getTeacherModuleFreeTextResponses, getTeacherModulePollResults, saveTeacherCreatedModule, updateTeacherCreatedModule } from "./teacherModuleActions";
@@ -38,7 +38,7 @@ export function TeacherModuleBuilderModal({ classInstanceId, schoolId, editModul
   const [responsesLoading, setResponsesLoading] = useState(false);
   const [pollResults, setPollResults] = useState<{title:string;total:number;counts:Array<{label:string;count:number}>;resultDisplay:"bar"|"pie"|"highlight";correctOption?:string|null}|null>(null);
   const [pollResultsLoading, setPollResultsLoading] = useState(false);
-  const [pending, startTransition] = useTransition();
+  const [isPublishing, setIsPublishing] = useState(false);
   const router = useRouter();
   const selected = posts.find((post) => post.id === selectedId) ?? null;
   function getEmbedPreviewUrl(raw: string) {
@@ -173,40 +173,56 @@ export function TeacherModuleBuilderModal({ classInstanceId, schoolId, editModul
   }
 
   async function publish() {
+    if (isPublishing) return;
     setError("");
     if (!title.trim()) { setError("Bitte gib deinem Modul einen Titel."); return; }
     if (!posts.length) { setError("Füge mindestens einen Beitrag hinzu."); return; }
-    if (posts.some((post) => !post.title.trim() && !post.body.trim() && !post.imageFile && !post.embedUrl.trim())) {
-      setError("Jeder Beitrag benötigt mindestens einen Inhalt.");
+    const invalidPost = posts.some((post) => {
+      const hasContent = Boolean(post.title.trim() || post.body.trim() || post.imageFile || post.existingImageUrl || post.embedUrl.trim());
+      const hasValidPollOptions = post.postType === "poll" && post.interactionData.options.filter(option => option.trim()).length >= 2;
+      return !hasContent && !hasValidPollOptions;
+    });
+    if (invalidPost) {
+      setError("Jeder Beitrag benötigt Inhalt. Bei Umfragen müssen mindestens zwei Antwortmöglichkeiten ausgefüllt sein.");
       return;
     }
-    let editedFiles: (readonly [string, File] | null)[];
-    try { editedFiles = await Promise.all(posts.map(async post => post.imageFile ? [post.id, await processEditedImage(post.imageFile, post.imageSettings)] as const : null)); }
-    catch (cause) { setError(cause instanceof Error ? cause.message : "Bildbearbeitung fehlgeschlagen."); return; }
-    const imageFiles = new Map(editedFiles.filter((item): item is readonly [string, File] => item !== null));
-    const form = new FormData();
-    form.set("classInstanceId", classInstanceId);
-    form.set("schoolId", schoolId);
-    form.set("title", title);
-    form.set("description", description);
-    form.set("titleCardEnabled", String(titleCardEnabled));
-    form.set("visibilityScope", visibilityScope);
-    form.set("posts", JSON.stringify(posts.map((post, index) => ({
-      id: post.id, postType: post.postType, title: post.title, body: post.body,
-      embedUrl: post.embedUrl, interactionData: post.interactionData, sortOrder: index, imageField: imageFiles.has(post.id) ? "image_" + post.id : undefined,
-    }))));
-    posts.forEach((post) => { const file = imageFiles.get(post.id); if (file) form.set("image_" + post.id, file); });
-    startTransition(async () => {
-      try {
-        if (moduleId) form.set("moduleId", moduleId);
-        if (moduleId) await updateTeacherCreatedModule(form); else await saveTeacherCreatedModule(form);
-        setOpen(false);
-        reset();
-        router.refresh();
-      } catch (cause) {
-        setError(cause instanceof Error ? cause.message : "Das Modul konnte nicht veröffentlicht werden.");
+
+    setIsPublishing(true);
+    try {
+      const editedFiles = await Promise.all(posts.map(async post =>
+        post.imageFile ? [post.id, await processEditedImage(post.imageFile, post.imageSettings)] as const : null
+      ));
+      const imageFiles = new Map(editedFiles.filter((item): item is readonly [string, File] => item !== null));
+      const form = new FormData();
+      form.set("classInstanceId", classInstanceId);
+      form.set("schoolId", schoolId);
+      form.set("title", title.trim());
+      form.set("description", description);
+      form.set("titleCardEnabled", String(titleCardEnabled));
+      form.set("visibilityScope", visibilityScope);
+      form.set("posts", JSON.stringify(posts.map((post, index) => ({
+        id: post.id, postType: post.postType, title: post.title, body: post.body,
+        embedUrl: post.embedUrl, interactionData: post.interactionData, sortOrder: index,
+        imageField: imageFiles.has(post.id) ? "image_" + post.id : undefined,
+      }))));
+      posts.forEach((post) => {
+        const file = imageFiles.get(post.id);
+        if (file) form.set("image_" + post.id, file);
+      });
+      if (moduleId) {
+        form.set("moduleId", moduleId);
+        await updateTeacherCreatedModule(form);
+      } else {
+        await saveTeacherCreatedModule(form);
       }
-    });
+      setOpen(false);
+      reset();
+      router.refresh();
+    } catch (cause) {
+      setError(cause instanceof Error ? cause.message : "Das Modul konnte nicht veröffentlicht werden.");
+    } finally {
+      setIsPublishing(false);
+    }
   }
 
   const thumbnails = useMemo(() => posts.map((post, index) => ({ ...post, index })), [posts]);
@@ -304,14 +320,14 @@ export function TeacherModuleBuilderModal({ classInstanceId, schoolId, editModul
                       <span className="grid h-10 w-6 shrink-0 place-items-center text-slate-500"><GripVertical className="h-5 w-5"/></span><span className="grid h-10 w-10 shrink-0 place-items-center rounded-xl border border-violet-100 bg-white text-sm font-extrabold text-slate-900">{post.index+1}</span>
                       <div className="drift-builder-post-thumb grid h-[64px] w-[108px] shrink-0 place-items-center overflow-hidden rounded-xl">{post.imageFile?<img src={URL.createObjectURL(post.imageFile)} alt="" className="h-full w-full object-cover"/>:post.existingImageUrl?<img src={post.existingImageUrl} alt="" className="h-full w-full object-cover"/>:post.postType==="poll"?<BarChart3 className="h-8 w-8 text-violet-600"/>:post.postType==="true_false"?<CircleCheck className="h-8 w-8 text-violet-600"/>:post.postType==="embed"?<Link2 className="h-8 w-8 text-violet-600"/>:<Type className="h-8 w-8 text-violet-600"/>}</div>
                       <div className="min-w-0 flex-1"><span className="drift-builder-type-badge">{post.postType==="poll"?"▥  Umfrage":"T  Post"}</span><h4 className="mt-2 truncate text-[15px] font-extrabold text-slate-950">{post.title||"Neuer Beitrag"}</h4><p className="mt-1 line-clamp-1 text-xs text-slate-600">{post.body||"Noch keine Beschreibung hinzugefügt."}</p></div>
-                      <div className="flex shrink-0 items-center gap-1.5"><button type="button" onClick={()=>setSelectedId(post.id)} aria-label="Beitrag bearbeiten" data-tooltip="Beitrag bearbeiten" className="drift-builder-icon-btn !h-9 !w-9"><Wand2 className="h-4 w-4"/></button><button type="button" onClick={()=>duplicatePost(post)} aria-label="Beitrag duplizieren" data-tooltip="Beitrag duplizieren" className="drift-builder-icon-btn !h-9 !w-9"><Copy className="h-4 w-4"/></button><button type="button" onClick={()=>{setPosts(items=>items.filter(item=>item.id!==post.id));if(selectedId===post.id)setSelectedId(null);}} aria-label="Beitrag löschen" data-tooltip="Beitrag löschen" className="drift-builder-icon-btn drift-builder-delete !h-9 !w-9"><X className="h-4 w-4"/></button></div>
+                      {!selectedId && <div className="flex shrink-0 items-center gap-1 rounded-xl border border-violet-100 bg-white/90 p-1 shadow-sm"><button type="button" onClick={()=>setSelectedId(post.id)} aria-label="Beitrag bearbeiten" title="Beitrag bearbeiten" className="grid h-7 w-7 place-items-center rounded-lg text-slate-500 transition hover:bg-violet-50 hover:text-violet-700"><Wand2 className="h-3.5 w-3.5"/></button><button type="button" onClick={()=>duplicatePost(post)} aria-label="Beitrag duplizieren" title="Beitrag duplizieren" className="grid h-7 w-7 place-items-center rounded-lg text-slate-500 transition hover:bg-violet-50 hover:text-violet-700"><Copy className="h-3.5 w-3.5"/></button><button type="button" onClick={()=>{setPosts(items=>items.filter(item=>item.id!==post.id));if(selectedId===post.id)setSelectedId(null);}} aria-label="Beitrag löschen" title="Beitrag löschen" className="grid h-7 w-7 place-items-center rounded-lg text-slate-400 transition hover:bg-rose-50 hover:text-rose-600"><X className="h-3.5 w-3.5"/></button></div>}
                     </article>)}
                     {!posts.length&&<div className="drift-builder-empty rounded-[20px] px-6 py-16 text-center"><div className="mx-auto mb-3 grid h-14 w-14 place-items-center rounded-2xl bg-violet-100 text-violet-600"><Wand2 className="h-7 w-7"/></div><h4 className="text-sm font-extrabold text-slate-900">Dein Modul wartet auf Inhalte</h4><p className="mt-1 text-xs text-slate-500">Wähle links einen Kartentyp und leg los.</p></div>}
                   </div>
                 </section>
 
                     {selected && (
-                  <aside className="drift-builder-drawer relative z-10 flex w-[52%] max-w-[600px] min-w-0 shrink-0 flex-col overflow-y-auto border-l border-violet-200 bg-white/95 px-5 py-5 shadow-[-10px_0_28px_rgba(54,37,110,.07)] sm:px-6">
+                  <aside className="drift-builder-drawer relative z-10 flex w-full min-w-0 flex-col overflow-y-auto border-l border-violet-200 bg-white/95 px-5 py-5 shadow-[-10px_0_28px_rgba(54,37,110,.07)] sm:px-6">
                     <div className="mb-3 flex items-center justify-between"><button type="button" onClick={()=>setSelectedId(null)} className="text-xs font-bold text-violet-700">← Übersicht</button><span className="text-[10px] font-bold uppercase tracking-widest text-violet-600">Beitrag bearbeiten</span></div>
                                       <div className="flex shrink-0 items-center justify-between gap-2"><div><p className="text-[9px] font-extrabold uppercase tracking-[.2em] text-violet-600">DEINE CONTENT-KARTE</p><h3 className="mt-1 text-sm font-extrabold text-slate-900">Beitrag gestalten</h3></div>{selected && <button type="button" onClick={() => { setPosts((items) => items.filter((item) => item.id !== selected.id)); setSelectedId(null); }} className="text-xs font-semibold text-rose-600 hover:text-rose-700">Beitrag entfernen</button>}</div>
                   {selected ? (
@@ -343,7 +359,7 @@ export function TeacherModuleBuilderModal({ classInstanceId, schoolId, editModul
                           {selected.interactionData.options.map((option,index)=><div key={index} className="flex items-center gap-2"><input value={option} onChange={event=>updatePost(selected.id,{interactionData:{...selected.interactionData,options:selected.interactionData.options.map((value,i)=>i===index?event.target.value:value)}})} maxLength={100} placeholder={"Antwort "+(index+1)} className="min-w-0 flex-1 rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm"/>{selected.interactionData.options.length>2&&<button type="button" onClick={()=>updatePost(selected.id,{interactionData:{...selected.interactionData,options:selected.interactionData.options.filter((_,i)=>i!==index)}})} aria-label="Antwort entfernen" data-tooltip="Antwort entfernen" className="grid h-9 w-9 shrink-0 place-items-center rounded-lg border border-rose-100 bg-white text-rose-600"><X className="h-4 w-4"/></button>}</div>)}
                         </div> : <div className="rounded-xl border border-dashed border-violet-300 bg-white p-3 text-xs leading-5 text-violet-800">Die vorgegebenen Antwortoptionen werden ausgeblendet. Schüler:innen formulieren stattdessen eine eigene Antwort.</div>}
                         {(selected.interactionData.responseMode??"single")!=="free_text" && <div className="rounded-xl border border-violet-100 bg-white p-3">
-                          <div className="flex items-center justify-between gap-2"><span className="text-xs font-bold text-slate-800">Ergebnisdarstellung</span><div className="flex flex-wrap rounded-lg bg-violet-50 p-1"><button type="button" onClick={()=>updatePost(selected.id,{interactionData:{...selected.interactionData,resultDisplay:"bar"}})} className={"rounded-md px-2.5 py-1.5 text-[10px] font-bold "+((selected.interactionData.resultDisplay??"bar")==="bar"?"bg-violet-600 text-white":"text-slate-600")}>Balken</button><button type="button" onClick={()=>updatePost(selected.id,{interactionData:{...selected.interactionData,resultDisplay:"pie"}})} className={"rounded-md px-2.5 py-1.5 text-[10px] font-bold "+(selected.interactionData.resultDisplay==="pie"?"bg-violet-600 text-white":"text-slate-600")}>Kreis</button><button type="button" onClick={()=>updatePost(selected.id,{interactionData:{...selected.interactionData,resultDisplay:"highlight"}})} className={"rounded-md px-2.5 py-1.5 text-[10px] font-bold "+(selected.interactionData.resultDisplay==="highlight"?"bg-violet-600 text-white":"text-slate-600")}>Antwort hervorheben</button></div></div>
+                          <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between"><span className="text-xs font-bold text-slate-800">Ergebnisdarstellung</span><select aria-label="Ergebnisdarstellung auswählen" value={selected.interactionData.resultDisplay??"bar"} onChange={event=>updatePost(selected.id,{interactionData:{...selected.interactionData,resultDisplay:event.target.value as "bar"|"pie"|"highlight"}})} className="w-full appearance-none rounded-xl border border-violet-200 bg-white px-3 py-2.5 pr-9 text-xs font-bold text-violet-800 shadow-sm outline-none transition focus:border-violet-400 focus:ring-2 focus:ring-violet-100 sm:max-w-[240px]"><option value="bar">Balkendiagramm</option><option value="pie">Kreisdiagramm</option><option value="highlight">Richtige Antwort hervorheben</option></select></div>
                           <p className="mt-1 text-[10px] leading-4 text-slate-500">Legt fest, wie die Antworten in der Lehrkraft-Auswertung erscheinen.</p>{selected.interactionData.resultDisplay==="highlight" && <label className="mt-3 block text-[10px] font-semibold text-slate-700">Welche Antwort ist richtig?<select value={selected.interactionData.correctOption??""} onChange={event=>updatePost(selected.id,{interactionData:{...selected.interactionData,correctOption:event.target.value}})} className="mt-1 w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs"><option value="">Richtige Antwort auswählen …</option>{selected.interactionData.options.map((option,index)=><option key={index} value={"option_"+(index+1)}>{option||"Antwort "+(index+1)}</option>)}</select></label>}
                           {moduleId && <button type="button" onClick={()=>loadPollResults(selected.id)} disabled={pollResultsLoading} className="mt-2 inline-flex items-center gap-2 rounded-lg border border-violet-200 bg-violet-50 px-3 py-2 text-[10px] font-bold text-violet-700 disabled:opacity-50">{pollResultsLoading?"Ergebnisse werden geladen …":"Ergebnisse ansehen"}</button>}
                           {pollResults && <div className="mt-3 border-t border-violet-100 pt-3">
@@ -371,7 +387,7 @@ export function TeacherModuleBuilderModal({ classInstanceId, schoolId, editModul
             </div>
             <footer className="drift-builder-footer flex min-h-[64px] shrink-0 flex-wrap items-center justify-between gap-3 border-t border-violet-100 px-5 py-3 sm:px-8">
               <p className="text-[11px] text-slate-500">Veröffentlichung nur für diese Klasseninstanz.</p>
-              <div className="flex gap-2"><button type="button" onClick={() => setOpen(false)} className="rounded-xl border border-slate-200 px-4 py-2 text-sm font-semibold text-slate-600 hover:bg-slate-50">Abbrechen</button><button type="button" onClick={publish} disabled={pending} className="inline-flex items-center gap-2 rounded-xl bg-violet-600 px-4 py-2 text-sm font-semibold text-white hover:bg-violet-700 disabled:opacity-50">{pending ? "Speichert …" : <><Save className="h-4 w-4" /> {moduleId ? "Änderungen speichern" : "Veröffentlichen"}</>}</button></div>
+              <div className="flex gap-2"><button type="button" onClick={() => setOpen(false)} className="rounded-xl border border-slate-200 px-4 py-2 text-sm font-semibold text-slate-600 hover:bg-slate-50">Abbrechen</button><button type="button" onClick={publish} disabled={isPublishing} className="inline-flex items-center gap-2 rounded-xl bg-violet-600 px-4 py-2 text-sm font-semibold text-white hover:bg-violet-700 disabled:opacity-50">{isPublishing ? "Wird veröffentlicht …" : <><Save className="h-4 w-4" /> {moduleId ? "Änderungen speichern" : "Veröffentlichen"}</>}</button></div>
             </footer>
           </div>
         </div>
