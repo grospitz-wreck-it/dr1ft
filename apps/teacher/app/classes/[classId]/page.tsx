@@ -72,6 +72,8 @@ export default async function ClassDetailPage({
     { data: teacherModuleAssignments },
     { data: availableTeacherModules },
     { data: school },
+    teacherMembershipResult,
+    schoolMembershipResult,
   ] = await Promise.all([
     timed("roster", supabase
       .from("class_instance_memberships")
@@ -104,22 +106,20 @@ export default async function ClassDetailPage({
           .eq("id", instance.school_id)
           .maybeSingle()
       : Promise.resolve({ data: null })),
-  ] as const);
-  console.info("[class-page-timing] parallel-queries", Date.now() - parallelQueriesStartedAt, "ms");
-  const membershipStartedAt = Date.now();
-  const [teacherMembership, schoolMembership] = await Promise.all([
-    user
+    timed("class-teacher-membership", user
       ? supabase.from("class_instance_memberships").select("id")
           .eq("class_instance_id", classId).eq("user_id", user.id)
           .eq("role", "teacher").is("left_at", null).maybeSingle()
-      : Promise.resolve({ data: null }),
-    user && instance.school_id
+      : Promise.resolve({ data: null })),
+    timed("school-membership", user && instance.school_id
       ? supabase.from("school_memberships").select("role")
           .eq("school_id", instance.school_id).eq("user_id", user.id)
           .eq("active", true).maybeSingle()
-      : Promise.resolve({ data: null }),
-  ]);
-  console.info("[class-page-timing] memberships", Date.now() - membershipStartedAt, "ms");
+      : Promise.resolve({ data: null })),
+  ] as const);
+  console.info("[class-page-timing] parallel-queries", Date.now() - parallelQueriesStartedAt, "ms");
+  const teacherMembership = teacherMembershipResult.data;
+  const schoolMembership = schoolMembershipResult.data;
 
   const canEditClassImage = Boolean(
     teacherMembership.data ||
