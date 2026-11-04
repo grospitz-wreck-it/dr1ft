@@ -82,3 +82,58 @@ Wichtig: Eine Berechtigung auf Klassenebene wirkt nur in dieser Klasse. Schulwei
 - Ungültige oder mehrdeutige historische Schuljahreswerte werden vor Migration sichtbar gemacht.
 - Fortschreibung überschreibt keine historischen Klassen, Lernstände oder Social-Daten.
 - Zusatzfunktionen erweitern nur den explizit vergebenen Scope.
+
+
+## Schulform, Bundesland und Jahrgangsstruktur
+
+Die Anzahl der Jahrgangsstufen darf nicht als globale Konstante oder starre Obergrenze implementiert werden. Schulformen und Bildungsgänge unterscheiden sich zwischen Bundesländern und teilweise innerhalb einer Schulform (z. B. unterschiedliche Bildungsgangvarianten).
+
+Daher gilt:
+
+- Bundesland und Schulform liefern nur sinnvolle Einrichtungsvorschläge und Standardwerte.
+- Die konkrete Jahrgangsstruktur wird pro Schule bzw. Bildungsgang konfigurierbar hinterlegt.
+- Jahrgangsstufen werden als geordnete Stufen mit optionaler Folgestufe modelliert; eine lineare Fortschreibung um exakt +1 ist nur der Standardfall.
+- Eine Stufe kann einen Abschluss-/Austrittspunkt haben, in einen anderen Bildungsgang übergehen oder in eine andere Klassen-/Kursstruktur münden.
+- G8/G9, Grundschulzeit, Förderschulstrukturen, Berufskolleg/Bildungsgänge und schulindividuelle Abweichungen dürfen nicht durch eine einzige Zahl wie `max_grade_level` abgebildet werden.
+- Die Schulverwaltung kann Vorschläge anpassen. Die konkrete Schulstruktur der Schule ist maßgeblich.
+
+Beispiele, die die Konfiguration begründen: Die KMK beschreibt für Berlin und Brandenburg eine sechsjährige Grundschule, während sie in den übrigen Ländern grundsätzlich vier Jahre umfasst. In NRW umfasst die Grundschule die Klassen 1 bis 4; das Gymnasium kann in der Sekundarstufe I bis Klasse 9 oder 10 geführt werden. (Quellen: KMK, Sekundarstufe I: https://www.kmk.org/bildungsministerkonferenz/vertiefende-bildungsinhalte/bildungswege-und-schulabschluesse/sekundarstufe-i.html ; Schulgesetz NRW, §§ 7, 10 und 11: https://recht.nrw.de/lrgv/gesetz/01082025-schulgesetz-fuer-das-land-nordrhein-westfalen-schulgesetz-nrw-schulg/ ; NRW-Äquivalenzliste G8/G9: https://www.schulministerium.nrw/system/files/media/document/file/Anlage1.pdf)
+
+## Verbindlicher Lehrer-Check zum Schuljahreswechsel
+
+Der Schuljahreswechsel erzeugt im Teacher-Dashboard eine sichtbare Aufgabe. Sie wird nicht als flüchtige Info-Meldung umgesetzt, sondern als persistenter Workflow mit Status und Audit-Historie.
+
+### Ablauf
+
+1. Die Schulleitung/der Schuladmin legt das Folge-Schuljahr an und startet die vorbereitete Klassenfortschreibung.
+2. DR1FT erstellt neue Klasseninstanzen und schlägt Schüler- und Lehrkraftzuordnungen vor. Die Schule bestätigt die tatsächliche Klassenstruktur und die Schülerübernahmen.
+3. Sobald eine Lehrkraft einer aktiven Klasse im neuen Schuljahr zugewiesen ist, erscheint für sie im Teacher-Dashboard die Aufgabe **„Schülerliste für das neue Schuljahr prüfen“**.
+4. Die Lehrkraft öffnet die neue Klassenliste, kontrolliert die Schülerzugänge und Klassenzugehörigkeiten und veranlasst notwendige Korrekturen über die dafür vorgesehenen Verwaltungsfunktionen bzw. meldet fehlende Rechte an die Schulverwaltung.
+5. Erst danach kann sie für diese Klasse **„Schülerliste geprüft“** bestätigen.
+6. Die Bestätigung wird mit User-ID, Klasseninstanz, Schuljahr, Zeitstempel und geprüfter Listen-Version gespeichert.
+7. Schulleitung/Schuladmin sieht schulweit, welche Klassen bzw. Lehrkräfte noch offen sind. Offene Aufgaben bleiben im Dashboard sichtbar und können erneut erinnert werden.
+
+### Daten- und Statusmodell
+
+Vorgeschlagene Entität `class_roster_review` (oder gleichwertig):
+
+- `id`
+- `school_year_id`
+- `class_instance_id`
+- `teacher_user_id`
+- `status` (pending, confirmed, needs_support)
+- `confirmed_at`
+- `roster_version` bzw. Fingerprint der relevanten Schülerzuordnungen zum Bestätigungszeitpunkt
+- `created_at`, `updated_at`
+
+Mehrere Lehrkräfte in derselben Klasse bestätigen jeweils ihre eigene Prüfung. Eine Lehrkraft mit mehreren Klassen bekommt je Klasse eine eigene Aufgabe. Die Schulverwaltung kann den Gesamtstatus sehen.
+
+### Wichtige Regeln
+
+- Eine Bestätigung ist eine dokumentierte Prüfung durch die Lehrkraft, keine automatische Garantie für die inhaltliche Richtigkeit der Liste.
+- Ändert sich die Schülerzuordnung nach der Bestätigung wesentlich, wird die Prüfung für diese Klassenliste erneut erforderlich (Versionsvergleich statt blindem Vertrauen in einen alten Haken).
+- Wird eine Lehrkraft aus einer Klasse entfernt, wird ihre offene Aufgabe beendet; andere Lehrkräfte und deren Bestätigungen bleiben unberührt.
+- Eine neue oder geänderte Lehrkraftzuweisung erzeugt die passende Prüfaufgabe.
+- Lehrkräfte dürfen nur Listen der ihnen zugewiesenen Klassen sehen und bestätigen.
+- Nur Schulleitung/Schuladmin darf den schulweiten Schuljahreswechsel vorbereiten und die Klassen-/Schülerübernahmen finalisieren.
+- Die Bestätigung darf nicht als Anwesenheits-, Leistungs- oder Aufmerksamkeitsmessung interpretiert werden. Sie ist ausschließlich ein organisatorischer Prüfvermerk.
