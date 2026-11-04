@@ -281,6 +281,47 @@ export async function updateTeacherCreatedModule(formData: FormData) {
 
 
 
+export async function getTeacherModulePollResults(classInstanceId: string, moduleId: string, postId: string) {
+  const supabase = supabaseServerClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) throw new Error("Nicht authentifiziert.");
+
+  const { data: assignment, error: assignmentError } = await supabase
+    .from("teacher_module_class_assignments")
+    .select("id,school_id")
+    .eq("class_instance_id", classInstanceId)
+    .eq("module_id", moduleId)
+    .maybeSingle();
+  if (assignmentError || !assignment) throw new Error("Du hast keinen Zugriff auf diese Klasse.");
+
+  const { data: admin } = await supabase.from("school_memberships").select("role")
+    .eq("school_id", assignment.school_id).eq("user_id", user.id).eq("active", true).maybeSingle();
+  const { data: teacher } = await supabase.from("class_instance_memberships").select("id")
+    .eq("class_instance_id", classInstanceId).eq("user_id", user.id).eq("role", "teacher").is("left_at", null).maybeSingle();
+  if (admin?.role !== "school_admin" && !teacher) throw new Error("Nur die Lehrkraft dieser Klasse kann Ergebnisse einsehen.");
+
+  const { data: post, error: postError } = await supabase.from("teacher_module_posts")
+    .select("id,post_type,title,interaction_data").eq("id", postId).eq("module_id", moduleId).maybeSingle();
+  if (postError || !post || post.post_type !== "poll") throw new Error("Für diesen Beitrag gibt es keine Umfrageergebnisse.");
+  const config = (post.interaction_data ?? {}) as { options?: string[]; responseMode?: string; resultDisplay?: "bar" | "pie" };
+  if (config.responseMode === "free_text") throw new Error("Freitextantworten werden separat angezeigt.");
+
+  const { data: votes, error } = await supabase.from("teacher_module_post_votes")
+    .select("choice,selected_choices").eq("post_id", postId).eq("class_instance_id", classInstanceId);
+  if (error) throw new Error("Umfrageergebnisse konnten nicht geladen werden.");
+
+  const counts = (config.options ?? []).map((label, index) => {
+    const key = "option_" + (index + 1);
+    const count = (votes ?? []).filter((vote: any) => {
+      const choices = Array.isArray(vote.selected_choices) && vote.selected_choices.length
+        ? vote.selected_choices : [vote.choice];
+      return choices.includes(key);
+    }).length;
+    return { label, count };
+  });
+  return { title: post.title ?? "Umfrage", total: (votes ?? []).length, counts, resultDisplay: config.resultDisplay ?? "bar" };
+}
+
 export async function getTeacherModuleFreeTextResponses(classInstanceId: string, moduleId: string, postId: string) {
   const supabase = supabaseServerClient();
   const { data: { user } } = await supabase.auth.getUser();
