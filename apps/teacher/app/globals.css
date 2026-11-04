@@ -241,7 +241,7 @@ body:has(.dr1ft-login-screen) .editorial-content > * {
 
 /* DR1FT content studio — expressive, playful, compact authoring surface */
 .drift-builder-shell{background:radial-gradient(ellipse at 12% 0%,rgba(235,225,255,.78),transparent 36%),radial-gradient(ellipse at 92% 10%,rgba(222,246,255,.62),transparent 30%),#fff}
-.drift-builder-header{background:linear-gradient(105deg,rgba(255,255,255,.96),rgba(246,241,255,.94) 52%,rgba(241,249,255,.96))}
+.drift-builder-header{background:linear-gradient(105deg,rgba(255,255,255,.96),rgba(246,241,255,.94) 52%,rgba(241,249,255,.96))}\n.drift-builder-header:after{display:none}
 .drift-builder-header:after{content:"✦　✧　✦";position:absolute;right:90px;top:20px;color:rgba(124,58,237,.14);font-size:42px;letter-spacing:18px;pointer-events:none}
 .drift-builder-mark{display:grid;width:48px;height:48px;flex:0 0 auto;place-items:center;border:1px solid rgba(255,255,255,.95);border-radius:17px;background:linear-gradient(145deg,#9b5cff,#6636ed 62%,#4f46e5);color:white;box-shadow:0 8px 20px rgba(109,40,217,.24)}
 .drift-builder-details,.drift-builder-add{border:1px solid #e5ddff;background:linear-gradient(145deg,rgba(255,255,255,.96),rgba(249,246,255,.92));box-shadow:0 5px 18px rgba(88,65,160,.045)}
