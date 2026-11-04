@@ -15,52 +15,94 @@ import { supabaseServerClient } from "../lib/supabaseServerClient";
 
 export default async function TeacherHomePage() {
   const supabase = supabaseServerClient();
+  const pageStartedAt = Date.now();
+  const timed = async <T,>(label: string, query: PromiseLike<T>): Promise<T> => {
+    const startedAt = Date.now();
+    try {
+      const result = await query;
+      console.info("[teacher-home-query]", label, Date.now() - startedAt, "ms");
+      return result;
+    } catch (error) {
+      console.error("[teacher-home-query]", label, "failed", Date.now() - startedAt, "ms", error);
+      throw error;
+    }
+  };
 
+  const authStartedAt = Date.now();
   const { data: { user } } = await supabase.auth.getUser();
+  console.info("[teacher-home-timing] auth", Date.now() - authStartedAt, "ms");
   if (!user) redirect("/login");
 
-  const { data: memberships } = await supabase
-    .from("class_instance_memberships")
-    .select("class_instance_id, role, class_instances(id,name,is_active,grade_level,school_year,school_id,class_image_path,class_image_position_x,class_image_position_y,class_image_zoom)")
-    .eq("role", "teacher")
-    .is("left_at", null);
+  // These two lookups are independent. Do not wait for teacher classes before
+  // resolving school memberships.
+  const membershipsStartedAt = Date.now();
+  const [{ data: memberships }, { data: schoolMemberships }] = await Promise.all([
+    timed("teacher-classes", supabase
+      .from("class_instance_memberships")
+      .select("class_instance_id, role, class_instances(id,name,is_active,grade_level,school_year,school_id,class_image_path,class_image_position_x,class_image_position_y,class_image_zoom)")
+      .eq("user_id", user.id)
+      .eq("role", "teacher")
+      .is("left_at", null)),
+    timed("school-memberships", supabase
+      .from("school_memberships")
+      .select("school_id, active")
+      .eq("user_id", user.id)
+      .eq("active", true)),
+  ]);
+  console.info("[teacher-home-timing] memberships", Date.now() - membershipsStartedAt, "ms");
 
   const classes = (memberships ?? [])
     .map((row: any) => row.class_instances)
     .filter(Boolean);
-
   const classIds = classes.map((item: any) => item.id);
-  const { data: schoolMemberships } = await supabase
-    .from("school_memberships")
-    .select("school_id, active")
-    .eq("user_id", user.id)
-    .eq("active", true);
   const schoolIds = Array.from(new Set([
     ...classes.map((item: any) => item.school_id),
     ...(schoolMemberships ?? []).map((membership: any) => membership.school_id),
   ].filter(Boolean)));
-  const { data: schoolRows } = schoolIds.length
-    ? await supabase.from("schools").select("id, name, region, school_image_path, school_image_position_x, school_image_position_y, school_image_zoom").in("id", schoolIds)
-    : { data: [] as any[] };
+
+  // School metadata, student totals, per-class student counts and assigned
+  // scenarios all feed the same overview and can be loaded concurrently.
+  const overviewDataStartedAt = Date.now();
+  const [
+    { data: schoolRows },
+    { count: studentCountResult },
+    { data: studentMemberships },
+    { data: scenarioAssignments },
+  ] = await Promise.all([
+    timed("schools", schoolIds.length
+      ? supabase.from("schools")
+          .select("id,name,region,school_image_path,school_image_position_x,school_image_position_y,school_image_zoom")
+          .in("id", schoolIds)
+      : Promise.resolve({ data: [] as any[] })),
+    timed("student-total", classIds.length
+      ? supabase.from("class_instance_memberships")
+          .select("user_id", { count: "exact", head: true })
+          .in("class_instance_id", classIds)
+          .eq("role", "student")
+          .is("left_at", null)
+      : Promise.resolve({ count: 0 })),
+    timed("students-by-class", classIds.length
+      ? supabase.from("class_instance_memberships")
+          .select("class_instance_id")
+          .in("class_instance_id", classIds)
+          .eq("role", "student")
+          .is("left_at", null)
+      : Promise.resolve({ data: [] as any[] })),
+    timed("active-scenarios", classIds.length
+      ? supabase.from("class_instance_scenario_assignments")
+          .select("class_instance_id,scenario_id,is_active,archived_at,scenarios(id,title,cover_image_url)")
+          .in("class_instance_id", classIds)
+          .is("archived_at", null)
+          .eq("is_active", true)
+      : Promise.resolve({ data: [] as any[] })),
+  ]);
+  console.info("[teacher-home-timing] overview-data", Date.now() - overviewDataStartedAt, "ms");
+
   const schoolsById = new Map((schoolRows ?? []).map((school: any) => [school.id, school]));
   const linkedSchools = Array.from(schoolsById.values());
-
-  let studentCount = 0;
-  if (classIds.length) {
-    const { count } = await supabase
-      .from("class_instance_memberships")
-      .select("user_id", { count: "exact", head: true })
-      .in("class_instance_id", classIds)
-      .eq("role", "student")
-      .is("left_at", null);
-    studentCount = count ?? 0;
-  }
-
+  const totalStudents = studentCountResult ?? 0;
   const activeClasses = classes.filter((item: any) => item.is_active);
-  const [{ data: studentMemberships }, { data: scenarioAssignments }] = await Promise.all([
-    classIds.length ? supabase.from("class_instance_memberships").select("class_instance_id").in("class_instance_id", classIds).eq("role", "student").is("left_at", null) : Promise.resolve({ data: [] as any[] }),
-    classIds.length ? supabase.from("class_instance_scenario_assignments").select("class_instance_id,scenario_id,is_active,archived_at,scenarios(id,title,cover_image_url)").in("class_instance_id", classIds).is("archived_at", null).eq("is_active", true) : Promise.resolve({ data: [] as any[] }),
-  ]);
+
   const studentsByClass = new Map<string, number>();
   (studentMemberships ?? []).forEach((row: any) => studentsByClass.set(row.class_instance_id, (studentsByClass.get(row.class_instance_id) ?? 0) + 1));
   const assignmentsByClass = new Map<string, any[]>();
@@ -69,16 +111,17 @@ export default async function TeacherHomePage() {
     if (row.scenarios) current.push(row.scenarios);
     assignmentsByClass.set(row.class_instance_id, current);
   });
+
+  const imageStartedAt = Date.now();
   const overviewClasses = await Promise.all(classes.map(async (item: any) => {
     const school = schoolsById.get(item.school_id) as any;
-    let thumbnailUrl: string | null = null;
     const hasClassImage = Boolean(item.class_image_path);
+    let thumbnailUrl: string | null = null;
     if (hasClassImage) {
-      const { data } = await supabase.storage.from("class-images").createSignedUrl(item.class_image_path, 60 * 60);
+      const { data, error } = await supabase.storage.from("class-images").createSignedUrl(item.class_image_path, 60 * 60);
+      if (error) console.warn("[teacher-home-image] signed URL failed", item.id, error.message);
       thumbnailUrl = data?.signedUrl ?? null;
     }
-    // Match the class detail header: use the school image when no class
-    // image is set, and carry over the crop belonging to the chosen image.
     if (!thumbnailUrl && school?.school_image_path) {
       thumbnailUrl = `${process.env.NEXT_PUBLIC_SUPABASE_URL}/storage/v1/object/public/school-images/${school.school_image_path}`;
     }
@@ -92,6 +135,8 @@ export default async function TeacherHomePage() {
       missions: assignmentsByClass.get(item.id) ?? [],
     };
   }));
+  console.info("[teacher-home-timing] class-images", Date.now() - imageStartedAt, "ms");
+  console.info("[teacher-home-timing] total-server-render", Date.now() - pageStartedAt, "ms");
 
 
   return (
@@ -145,7 +190,7 @@ export default async function TeacherHomePage() {
         </div>
         <div className="relative mt-5 grid gap-3 md:grid-cols-3">
           <Metric label="Aktive Klassen" value={activeClasses.length} detail="bereit für den Unterricht" icon={<Users />} tone="violet" href="#deine-klassen" />
-          <Metric label="Schüler:innen" value={studentCount} detail="aktiv in deinen Klassen" icon={<GraduationCap />} tone="cyan" href="/students" />
+          <Metric label="Schüler:innen" value={totalStudents} detail="aktiv in deinen Klassen" icon={<GraduationCap />} tone="cyan" href="/students" />
           <Metric label="Aktive Missionen" value={scenarioAssignments?.length ?? 0} detail="in deinen Klassen zugewiesen" icon={<BookOpen />} tone="pink" href="#deine-klassen" />
         </div>
       </section>
