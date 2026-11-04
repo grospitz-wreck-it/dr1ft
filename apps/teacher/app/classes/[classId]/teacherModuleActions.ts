@@ -265,9 +265,11 @@ export async function updateTeacherCreatedModule(formData: FormData) {
   const { data: teacher } = await supabase.from("class_instance_memberships").select("id").eq("class_instance_id", classInstanceId).eq("user_id", user.id).eq("role", "teacher").is("left_at", null).maybeSingle();
   if (admin?.role !== "school_admin" && !teacher) throw new Error("Du darfst dieses Modul nicht bearbeiten.");
 
-  const { data: currentPosts, error: currentError } = await supabase.from("teacher_module_posts")
-    .select("id,image_path").eq("module_id", moduleId);
-  if (currentError) throw new Error(currentError.message);
+  const { data: currentPosts, error: currentError } = await supabase.rpc(
+    "get_teacher_module_editor_posts",
+    { p_class_instance_id: classInstanceId, p_module_id: moduleId },
+  );
+  if (currentError) throw new Error("Bestehende Modulbeiträge konnten nicht geladen werden: " + currentError.message);
   const currentById = new Map((currentPosts ?? []).map((post: any) => [post.id, post]));
   const keepIds = new Set<string>();
   const rows = [];
@@ -289,15 +291,24 @@ export async function updateTeacherCreatedModule(formData: FormData) {
     rows.push({ id: postId, module_id: moduleId, post_type: post.postType, title: String(post.title ?? "").slice(0,180), body: String(post.body ?? "").slice(0,12000), image_path: imagePath, interaction_data: post.interactionData ?? {}, embed_provider: embed?.provider ?? null, embed_url: embed?.url ?? null, sort_order: index, status: "published" });
   }
   const visibilityScope = ["private", "school", "class"].includes(String(formData.get("visibilityScope"))) ? String(formData.get("visibilityScope")) : "class";
-  const { error: updateModuleError } = await supabase.from("teacher_modules").update({ title, description, title_card_enabled: titleCardEnabled, visibility_scope: visibilityScope }).eq("id", moduleId);
-  if (updateModuleError) throw new Error(updateModuleError.message);
-  const removedIds = (currentPosts ?? []).filter((post: any) => !keepIds.has(post.id)).map((post: any) => post.id);
-  if (removedIds.length) {
-    const { error } = await supabase.from("teacher_module_posts").delete().in("id", removedIds).eq("module_id", moduleId);
-    if (error) throw new Error(error.message);
+  const { error: saveError } = await supabase.rpc("save_teacher_module_editor", {
+    p_class_instance_id: classInstanceId,
+    p_module_id: moduleId,
+    p_school_id: schoolId,
+    p_title: title,
+    p_description: description,
+    p_title_card_enabled: titleCardEnabled,
+    p_visibility_scope: visibilityScope,
+    p_posts: rows,
+  });
+  if (saveError) {
+    console.error("[teacher-module-save] RPC failed", {
+      moduleId, classInstanceId, userId: user.id,
+      code: saveError.code, message: saveError.message,
+      details: saveError.details, hint: saveError.hint,
+    });
+    throw new Error("Modul konnte nicht gespeichert werden: " + saveError.message);
   }
-  const { error: postsError } = await supabase.from("teacher_module_posts").upsert(rows, { onConflict: "id" });
-  if (postsError) throw new Error(postsError.message);
   revalidatePath(`/classes/${classInstanceId}`);
   return { moduleId };
 }
