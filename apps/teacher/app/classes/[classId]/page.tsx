@@ -1,7 +1,7 @@
 import { supabaseServerClient } from "../../../lib/supabaseServerClient";
 import { ClassModuleLibrary } from "./ClassModuleLibrary";
 import { StudentRoster } from "./StudentRoster";
-import { ClassLearningInsights } from "./ClassLearningInsights";
+import { ClassDashboardInsights } from "./ClassDashboardInsights";
 import { CollapsiblePanel } from "./CollapsiblePanel";
 import ClassImageWorkspace from "./ClassImageWorkspace";
 
@@ -173,113 +173,6 @@ export default async function ClassDetailPage({
   const activeAssignment = activeAssignments[0] ?? null;
   const reportingUnlocked = !activeAssignment?.show_reports_at_end || Boolean(activeAssignment?.scheduled_end_at && new Date(activeAssignment.scheduled_end_at).getTime() <= Date.now());
 
-  const { data: session } = await supabase.auth.getSession();
-
-  let dashboard: any = {};
-
-  if (session.session?.access_token) {
-    const dashboardRes = await fetch(
-      `${process.env.NEXT_PUBLIC_SUPABASE_URL}/functions/v1/teacher-dashboard`,
-      {
-        method: "POST",
-        headers: {
-          Authorization: `Bearer ${session.session.access_token}`,
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({ classId }),
-        cache: "no-store",
-      },
-    );
-
-    dashboard = await dashboardRes.json().catch(() => ({}));
-  }
-
-  const competencyRows = dashboard.studentCompetencyProgress ?? [];
-  const missionRows = dashboard.studentMissionProgress ?? [];
-  const learningEvidenceRows = dashboard.studentLearningEvidence ?? [];
-  const scenarioLearningCardInsights = dashboard.scenarioLearningCardInsights ?? [];
-  const learningEvidenceTotals = learningEvidenceRows.reduce((totals: { responses: number; assessed: number; successful: number; notYet: number }, row: any) => ({ responses: totals.responses + Number(row.challenge_responses_submitted ?? 0), assessed: totals.assessed + Number(row.assessed_requirements ?? 0), successful: totals.successful + Number(row.successful_requirements ?? 0), notYet: totals.notYet + Number(row.not_yet_requirements ?? 0) }), { responses: 0, assessed: 0, successful: 0, notYet: 0 });
-
-  const studentRows = new Map<string, { name: string; competencies: Record<string, number>; completed: number; total: number }>();
-  for (const row of competencyRows) {
-    if (!row.user_id) continue;
-    if (!studentRows.has(row.user_id)) {
-      studentRows.set(row.user_id, {
-        name: row.display_name ?? row.username ?? "Schüler:in",
-        competencies: {},
-        completed: 0,
-        total: 0,
-      });
-    }
-    if (row.competency_title && row.level != null) {
-      studentRows.get(row.user_id)!.competencies[row.competency_title] = Number(row.level);
-    }
-  }
-  for (const row of missionRows) {
-    if (!row.user_id) continue;
-    if (!studentRows.has(row.user_id)) {
-      studentRows.set(row.user_id, {
-        name: row.display_name ?? row.username ?? "Schüler:in",
-        competencies: {},
-        completed: 0,
-        total: 0,
-      });
-    }
-    const student = studentRows.get(row.user_id)!;
-    student.completed += Number(row.missions_completed ?? 0);
-    student.total += Number(row.missions_total ?? 0);
-  }
-  const allCompetencyTitles: string[] = Array.from(
-    new Set<string>(
-      competencyRows
-        .map((row: any) => row.competency_title)
-        .filter((title: unknown): title is string => typeof title === "string" && title.trim().length > 0),
-    ),
-  );
-  const missionBottlenecks = (dashboard.missionBottlenecks ?? []).slice(0, 5);
-  const competencyOverview = (dashboard.competencyOverview ?? []).filter(
-    (row: any) => row.competency_id != null && Number(row.student_count ?? 0) > 0,
-  );
-
-  const levels = competencyRows
-    .map((row: any) => Number(row.level ?? 0))
-    .filter((level: number) => level > 0);
-
-  const average = levels.length
-    ? levels.reduce((a: number, b: number) => a + b, 0) / levels.length
-    : null;
-
-  const completed = missionRows.reduce(
-    (sum: number, row: any) => sum + Number(row.missions_completed ?? 0),
-    0,
-  );
-
-  const total = missionRows.reduce(
-    (sum: number, row: any) => sum + Number(row.missions_total ?? 0),
-    0,
-  );
-
-  // The existing, class-scoped dashboard RPC reports mission progress for
-  // the currently assigned module. Do not infer historical progress for
-  // modules that are not assigned.
-  const studentsWithMissionData = missionRows.filter(
-    (row: any) => Number(row.missions_total ?? 0) > 0,
-  );
-  const studentsWithCompletedModule = studentsWithMissionData.filter(
-    (row: any) => Number(row.missions_completed ?? 0) >= Number(row.missions_total ?? 0),
-  ).length;
-  const activeModuleStatus =
-    !activeAssignment || total === 0
-      ? "Noch nicht begonnen"
-      : completed >= total
-        ? "Abgeschlossen"
-        : completed > 0
-          ? "In Bearbeitung"
-          : "Noch nicht begonnen";
-  const activeModuleReport = total > 0
-    ? `${completed} von ${total} Mission-Abschlüssen über alle Schüler:innen · ${studentsWithCompletedModule} von ${studentsWithMissionData.length} Schüler:innen haben alle Missionen abgeschlossen`
-    : "Noch keine auswertbaren Missionsfortschritte vorhanden.";
-
   const schoolImageUrl = school?.school_image_path
     ? `${process.env.NEXT_PUBLIC_SUPABASE_URL}/storage/v1/object/public/school-images/${school.school_image_path}`
     : null;
@@ -328,26 +221,9 @@ export default async function ClassDetailPage({
           canEditClassImage={canEditClassImage}
         />
 
-        <section className="mt-5 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-            <Metric label="Schüler:innen" value={students.length} icon="users" tone="blue" />
-            <Metric
-              label="Aktives Modul"
-              value={activeAssignment?.scenarios?.title ?? "Keines"}
-              icon="target"
-              tone="violet"
-            />
-            <Metric
-              label="Ø Kompetenz"
-              value={average === null ? "—" : `${average.toFixed(1)} / 5`}
-              icon="chart"
-              tone="cyan"
-            />
-            <Metric
-              label="Missionen"
-              value={total ? `${completed}/${total}` : "—"}
-              icon="check"
-              tone="purple"
-            />
+        <section className="mt-5 grid gap-3 sm:grid-cols-2">
+          <Metric label="Schüler:innen" value={students.length} icon="users" tone="blue" />
+          <Metric label="Aktives Szenario" value={activeAssignment?.scenarios?.title ?? "Keines"} icon="target" tone="violet" />
         </section>
 
         <CollapsiblePanel title="1. Module & Szenarien" description="Lernmodule auswählen, eigene Inhalte erstellen und den Unterricht planen.">
@@ -371,8 +247,8 @@ export default async function ClassDetailPage({
             show_reports_at_end: Boolean(item.show_reports_at_end),
             title: item.scenarios?.title ?? null,
           }))}
-          moduleStatus={activeModuleStatus as "Abgeschlossen" | "In Bearbeitung" | "Noch nicht begonnen"}
-          moduleReport={activeModuleReport}
+          moduleStatus="Noch nicht begonnen"
+          moduleReport=""
         />
         </CollapsiblePanel>
 
@@ -386,32 +262,13 @@ export default async function ClassDetailPage({
         </div>
         </CollapsiblePanel>
 
-        <CollapsiblePanel title="3. Insights & Lernreporting" description="Kompetenzentwicklung, Missionsfortschritt und Lernhürden.">
-        <ClassLearningInsights
-          students={students}
-          studentRows={Object.fromEntries(studentRows.entries())}
-          competencyTitles={allCompetencyTitles}
-          evidence={learningEvidenceTotals}
-          scenarioLearningCards={scenarioLearningCardInsights}
-          competencies={competencyOverview.map((row: any) => ({
-            competency_id: String(row.competency_id),
-            competency_title: String(row.competency_title ?? "Kompetenz"),
-            avg_level: Number(row.avg_level ?? 0),
-            student_count: Number(row.student_count ?? 0),
-          }))}
-          bottlenecks={missionBottlenecks.map((row: any) => ({
-            mission_id: String(row.mission_id),
-            mission_title: String(row.mission_title ?? "Mission"),
-            completion_rate: Number(row.completion_rate ?? 0),
-            completed_count: Number(row.completed_count ?? 0),
-            student_count: Number(row.student_count ?? 0),
-          }))}
-          average={average}
-          completed={completed}
-          total={total}
-          classId={classId}
-        />
-        </CollapsiblePanel>
+        <CollapsiblePanel title="3. Insights & Lernreporting" description="Kompetenzentwicklung, Missionsfortschritt und Lernhürden – erst auf ausdrücklichen Abruf.">
+          <ClassDashboardInsights
+            classId={classId}
+            students={students}
+            activeAssignmentTitle={activeAssignment?.scenarios?.title ?? null}
+          />
+        </CollapsiblePanel>lePanel>
 
       </div>
     </main>
