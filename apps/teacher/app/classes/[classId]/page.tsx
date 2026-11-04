@@ -2,6 +2,7 @@ import { supabaseServerClient } from "../../../lib/supabaseServerClient";
 import { ClassModuleLibrary } from "./ClassModuleLibrary";
 import { StudentRoster } from "./StudentRoster";
 import { ClassLearningInsights } from "./ClassLearningInsights";
+import { CollapsiblePanel } from "./CollapsiblePanel";
 import ClassImageWorkspace from "./ClassImageWorkspace";
 
 export default async function ClassDetailPage({
@@ -86,6 +87,53 @@ export default async function ClassDetailPage({
   ]);
 
   const user = userResult.user;
+
+
+  const [teacherModuleAssignmentsResult, availableTeacherModulesResult, schoolMembershipResult] = await Promise.all([
+    user
+      ? supabase.from("teacher_module_class_assignments")
+          .select("id,module_id,school_id,assigned_by,is_active,scheduled_start_at,scheduled_end_at,archived_at,teacher_modules(id,title,description,intro_title,intro_text,visibility_scope,status,created_by,title_card_enabled)")
+          .eq("class_instance_id", classId).is("archived_at", null)
+      : Promise.resolve({ data: [], error: null }),
+    instance.school_id
+      ? supabase.from("teacher_modules").select("id,title,description,visibility_scope,created_by,status")
+          .eq("school_id", instance.school_id).eq("status", "published").order("updated_at", { ascending: false })
+      : Promise.resolve({ data: [], error: null }),
+    user && instance.school_id
+      ? supabase.from("school_memberships").select("role").eq("school_id", instance.school_id)
+          .eq("user_id", user.id).eq("active", true).maybeSingle()
+      : Promise.resolve({ data: null, error: null }),
+  ]);
+
+  const activeSchoolRole = schoolMembershipResult.data?.role ?? null;
+  const isSchoolAdmin = activeSchoolRole === "school_admin";
+  const assignedTeacher = Boolean(user && (await supabase.from("class_instance_memberships").select("id")
+    .eq("class_instance_id", classId).eq("user_id", user.id).eq("role", "teacher")
+    .is("left_at", null).maybeSingle()).data);
+  const mayUseTeacherModules = assignedTeacher || isSchoolAdmin;
+
+  const availableTeacherModules = mayUseTeacherModules
+    ? (availableTeacherModulesResult.data ?? [])
+        .filter((module: any) => module.visibility_scope === "school" ||
+          (module.visibility_scope === "private" && module.created_by === user?.id))
+        .map((module: any) => ({ id: module.id, module_id: module.id, title: module.title,
+          description: module.description ?? "", visibility_scope: module.visibility_scope, posts: [] }))
+    : [];
+
+  const teacherModules = mayUseTeacherModules
+    ? (teacherModuleAssignmentsResult.data ?? [])
+        .filter((row: any) => row.teacher_modules?.status === "published")
+        .map((row: any) => ({
+          id: row.id, module_id: row.module_id, school_id: row.school_id, assigned_by: row.assigned_by,
+          is_active: row.is_active, scheduled_start_at: row.scheduled_start_at, scheduled_end_at: row.scheduled_end_at,
+          title: row.teacher_modules.title, description: row.teacher_modules.description ?? "",
+          introTitle: row.teacher_modules.intro_title, introText: row.teacher_modules.intro_text,
+          visibility_scope: row.teacher_modules.visibility_scope,
+          canManage: Boolean(assignedTeacher || (isSchoolAdmin && row.teacher_modules.created_by === user?.id)),
+          title_card_enabled: row.teacher_modules.title_card_enabled !== false,
+          cover_image_url: null, posts: [],
+        }))
+    : [];
 
   const teacherMembership = user
     ? await supabase
@@ -300,11 +348,12 @@ export default async function ClassDetailPage({
             />
         </section>
 
+        <CollapsiblePanel title="1. Module & Szenarien" description="Lernmodule auswählen, eigene Inhalte erstellen und den Unterricht planen.">
         <ClassModuleLibrary
           classId={classId}
           schoolId={instance.school_id ?? null}
-          teacherModules={[]}
-          availableTeacherModules={[]}
+          teacherModules={teacherModules}
+          availableTeacherModules={availableTeacherModules}
           scenarios={(scenarios ?? []).map((scenario: any) => ({
             id: scenario.id,
             title: scenario.title,
@@ -323,15 +372,19 @@ export default async function ClassDetailPage({
           moduleStatus={activeModuleStatus as "Abgeschlossen" | "In Bearbeitung" | "Noch nicht begonnen"}
           moduleReport={activeModuleReport}
         />
+        </CollapsiblePanel>
 
-        <div className="mt-6">
+        <CollapsiblePanel title="2. Schüler:innen" description={students.length + " aktive Schüler:innen in dieser Klasse."}>
+        <div className="mt-0">
           <StudentRoster
             classId={classId}
             initialStudents={students}
             reportingUnlocked={reportingUnlocked}
           />
         </div>
+        </CollapsiblePanel>
 
+        <CollapsiblePanel title="3. Insights & Lernreporting" description="Kompetenzentwicklung, Missionsfortschritt und Lernhürden.">
         <ClassLearningInsights
           students={students}
           studentRows={Object.fromEntries(studentRows.entries())}
@@ -356,7 +409,7 @@ export default async function ClassDetailPage({
           total={total}
           classId={classId}
         />
-
+        </CollapsiblePanel>
 
       </div>
     </main>
