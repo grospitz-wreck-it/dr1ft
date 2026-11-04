@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo, useState, useTransition } from "react";
-import { ArrowRight, BookOpen, GraduationCap, Plus, Search, Users, X, Sparkles, Pencil } from "lucide-react";
+import { BookOpen, GraduationCap, Plus, Search, Users, X, Sparkles, Pencil } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { createClass, setClassActive } from "./classes/actions";
 
@@ -98,7 +98,7 @@ export function OverviewClasses({ classes }: { classes: ClassItem[] }) {
                   <span className={"h-[18px] w-[18px] rounded-full bg-white shadow transition-transform "+(item.isActive?"translate-x-[19px]":"translate-x-1")}/>
                 </button>
                 <a href={"/classes/"+item.id} aria-label={item.name+" verwalten"} title="Klasse verwalten" className="grid h-9 w-9 place-items-center rounded-xl border border-slate-200 bg-white text-slate-600 transition hover:border-violet-200 hover:bg-violet-50 hover:text-violet-700"><Pencil className="h-4 w-4"/></a>
-                <a href={"/classes/"+item.id} className="inline-flex h-9 items-center gap-1 rounded-xl bg-violet-600 px-3 text-[11px] font-bold text-white transition hover:bg-violet-700">Öffnen <ArrowRight className="h-3.5 w-3.5"/></a>
+                
               </div>
             </article>
           ))}
