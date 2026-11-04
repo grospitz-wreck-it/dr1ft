@@ -76,9 +76,10 @@ Dateien:
 Feststellungen:
 - Das Schema kennt `teacher`, `school_admin` und `school_lead`.
 - `is_school_admin_of(school_id)` umfasst `school_admin` und `school_lead`.
-- Die in Migration 0029 definierte Hilfsfunktion `is_teacher_or_admin_of_class_instance` umfasst dagegen nur `teacher` und `school_admin`.
-- Die Account-Verwaltungsfunktion und die Report-Funktion haben unterschiedliche Rollenlisten.
-- Vor Produktivbetrieb muss jede aktuelle RLS-Policy, RPC und Edge Function gegen eine einheitliche Berechtigungsmatrix getestet werden. Die hier geprüften Ausschnitte beweisen nicht, dass spätere Migrationen alle Abweichungen korrigiert haben.
+- Die zentrale Funktion `is_teacher_of_class_instance` aus Migration 0023 umfasst nur Klassenmitgliedschaften mit `teacher` oder `school_admin`; `school_lead` ist nicht enthalten.
+- Mehrere aktuelle Lern-/Report-RPCs prüfen genau diese Funktion. Eine Schulleitung, die nur als `school_lead` in `school_memberships` geführt wird und keine Klassenmitgliedschaft besitzt, erhält dadurch voraussichtlich keinen Zugriff auf diese Klassenreports – obwohl die Schuladmin-RLS-Policies ihr die schulweite Einsicht in Klassen und Mitgliedschaften erlauben.
+- `manage-student-account` akzeptiert `teacher` und `school_admin`, aber nicht `school_lead`. `generate-teacher-report` akzeptiert zwar `school_lead`, verlangt aber weiterhin eine aktive Klassenmitgliedschaft. Das ist eine echte Inkonsistenz zwischen den Rollenpfaden.
+- Vor Produktivbetrieb muss jede aktuelle RLS-Policy, RPC und Edge Function gegen eine einheitliche Berechtigungsmatrix getestet werden. Die geprüften Definitionen belegen die Abweichung in den genannten Pfaden; weitere spätere Änderungen sind noch vollständig gegenzuprüfen.
 
 ## 3. Priorisierte Maßnahmen
 
