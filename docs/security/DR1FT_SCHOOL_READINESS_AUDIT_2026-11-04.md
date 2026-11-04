@@ -89,6 +89,7 @@ Feststellungen:
 | P0 | Einheitliche Rollenmatrix für teacher, school_admin und school_lead definieren und alle Edge Functions/RLS/RPCs dagegen prüfen | Offen |
 | P1 | Temporäre Schülerpasswörter mit kryptografisch sicherem Zufall erzeugen | Im Arbeitszweig umgesetzt; Tests/Deployment offen |
 | P0 | Löschkonzept implementieren: Klasse verlassen, Account deaktivieren/löschen, Lern-/Interaktionsdaten löschen oder rechtssicher anonymisieren, Reports/Snapshots und Backups berücksichtigen | Offen |
+| P0 | Schema, RLS und Moderationsablauf für `student_message_reports` klären; im Repository fehlt eine passende Migration, obwohl die Player-API die Tabelle beschreibt | Offen |
 | P1 | Vollständige Datenflussinventur aller Player-/Teacher-/Editorial-Routen und Supabase Edge Functions durchführen | In Arbeit |
 | P1 | Externe KI-Aufrufe systematisch auf personenbezogene Daten und Prompt-Inhalte prüfen; technische Trennung erzwingen | In Arbeit |
 | P1 | Exportprozess für Schule/Betroffene festlegen und technisch testen | Offen |
@@ -197,11 +198,12 @@ Feststellungen:
 - Direktnachrichten werden mit Sender, Empfänger, Klasseninstanz, Text und Zeitstempeln in Supabase gespeichert.
 - Lesen und Senden sind auf aktive Schüler:innen derselben Klasseninstanz begrenzt; die RLS-Policies prüfen Sender und Empfänger.
 - Die geprüften Lehrer-Lernverlauf- und Social-Pulse-RPCs liefern keine Nachrichtentexte. Die Social-Pulse-Funktion liefert nur Wochenzählungen gesendeter Nachrichten.
-- Eine separate Meldungsfunktion speichert gemeldete Nachrichten in `student_message_reports`. Die konkrete RLS-/Bearbeitungs- und Aufbewahrungslogik dieses Meldesystems ist noch gesondert zu prüfen.
+- Eine separate Meldungsfunktion versucht, Meldungen in `student_message_reports` zu speichern. In sämtlichen 100+ SQL-Migrationen des aktuellen Repository-Baums wurde jedoch keine Definition dieser Tabelle gefunden. Die Migration `0047_student_comments_and_reports.sql` definiert stattdessen `content_reports` für Feed-Inhalte. Ob `student_message_reports` manuell in der produktiven Datenbank angelegt wurde, ist ohne Remote-DB-Zugriff nicht feststellbar.
 
 Bewertung:
 - „Lehrkräfte sehen keine privaten Nachrichten“ ist anhand der geprüften Report-RPCs plausibel, aber noch keine vollständige Aussage über sämtliche Admin-, Moderations-, Support- oder Datenbankzugriffe.
-- Vor Schuleinsatz braucht es einen klaren, dokumentierten Melde- und Schutzprozess für problematische Nachrichten sowie eine eindeutige Regel, wer gemeldete Inhalte sehen darf und wie lange sie aufbewahrt werden.
+- **P0 vor Schuleinsatz:** Die Schema-Lücke für `student_message_reports` muss geklärt werden. Falls die Tabelle nur remote/manuell existiert, muss sie als versionierte Migration mit RLS, Rollen-/Moderationszugriff, Duplikatregel und Aufbewahrung in das Repository aufgenommen werden. Falls sie nicht existiert, schlägt die Meldung im frischen Setup fehl.
+- Zusätzlich braucht es einen dokumentierten Melde- und Schutzprozess für problematische Nachrichten sowie eine eindeutige Regel, wer gemeldete Inhalte sehen darf und wie lange sie aufbewahrt werden.
 
 ## 8. Rollenbefund präzisiert
 
