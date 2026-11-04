@@ -17,10 +17,11 @@ function json(data: unknown, status = 200) {
 }
 function cleanPart(value: string) { return value.toLowerCase().replace(/[^a-z0-9]/g, ""); }
 function generateTempPassword() {
+  // The alphabet has exactly 32 characters, so the lower 5 bits of each
+  // cryptographically random byte map uniformly to one character.
   const alphabet = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
-  let pw = "";
-  for (let i = 0; i < 10; i++) pw += alphabet[Math.floor(Math.random() * alphabet.length)];
-  return pw;
+  const random = crypto.getRandomValues(new Uint8Array(10));
+  return Array.from(random, (value) => alphabet[value & 31]).join("");
 }
 
 Deno.serve(async (req) => {
