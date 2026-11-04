@@ -285,7 +285,8 @@ body:has(.dr1ft-login-screen) .editorial-content > * {
 .drift-builder-drawer{animation:drift-builder-drawer-in .24s cubic-bezier(.2,.75,.25,1) both}
 @keyframes drift-builder-drawer-in{from{transform:translateX(28px);opacity:0}to{transform:translateX(0);opacity:1}}
 @media(max-width:900px){.drift-builder-drawer{width:100%;border-left:0;border-top:1px solid #e5ddff}.drift-builder-drawer{inset:0}}
-\n
+
+
 /* Docked content editor: split the card list and editor instead of floating over it. */
 .drift-builder-drawer{inset:auto;min-height:0}
 @media(max-width:900px){.drift-builder-drawer{width:100%;max-width:none;inset:auto;box-shadow:none}.drift-builder-canvas{width:100%}}
