@@ -122,8 +122,8 @@ export default async function ClassDetailPage({
   const schoolMembership = schoolMembershipResult.data;
 
   const canEditClassImage = Boolean(
-    teacherMembership.data ||
-    ["school_admin", "school_lead"].includes(schoolMembership.data?.role),
+    teacherMembership ||
+    ["school_admin", "school_lead"].includes(schoolMembership?.role),
   );
 
   const classImagePromise = canEditClassImage && instance.class_image_path
