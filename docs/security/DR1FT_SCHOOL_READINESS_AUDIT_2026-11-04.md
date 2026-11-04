@@ -17,7 +17,7 @@ DR1FT erhebt und speichert für Schüler:innen keine vollständigen Vor- und Nac
 - Lehrkräfte benötigen keine vollständigen Namen.
 - Auch „Max M.“ kann im schulischen Kontext personenbezogen sein und bleibt daher geschützt.
 
-Die aktuelle technische Struktur enthält bereits kein separates Nachnamenfeld in der untersuchten Schüleranlage. Die Eingabefelder `display_name` und `username` sind jedoch noch nicht ausreichend eingeschränkt.
+Die aktuelle technische Struktur enthält bereits kein separates Nachnamenfeld in der untersuchten Schüleranlage. Die Eingabefelder `display_name` und `username` sind jedoch noch nicht ausreichend eingeschränkt. Für den nächsten Produktivschritt ist deshalb eine klare pseudonyme Namenskonvention festzulegen; es gibt keine belastbare automatische Erkennung vollständiger Klarnamen anhand des Textfelds allein.
 
 ## 2. Geprüfte Implementierung
 
@@ -87,6 +87,7 @@ Feststellungen:
 |---|---|---|
 | P0 | Anzeigenamen verbindlich auf pseudonyme Kurzform begrenzen (z. B. „Max“ oder „Max M.“) – in Lehrkraft-UI, Player-Profil, Edge Functions und Datenbank-Schreibpfaden | Offen |
 | P0 | Einheitliche Rollenmatrix für teacher, school_admin und school_lead definieren und alle Edge Functions/RLS/RPCs dagegen prüfen | Offen |
+| P1 | Temporäre Schülerpasswörter mit kryptografisch sicherem Zufall erzeugen | Im Arbeitszweig umgesetzt; Tests/Deployment offen |
 | P0 | Löschkonzept implementieren: Klasse verlassen, Account deaktivieren/löschen, Lern-/Interaktionsdaten löschen oder rechtssicher anonymisieren, Reports/Snapshots und Backups berücksichtigen | Offen |
 | P1 | Vollständige Datenflussinventur aller Player-/Teacher-/Editorial-Routen und Supabase Edge Functions durchführen | In Arbeit |
 | P1 | Externe KI-Aufrufe systematisch auf personenbezogene Daten und Prompt-Inhalte prüfen; technische Trennung erzwingen | In Arbeit |
