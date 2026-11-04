@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo, useState, useTransition } from "react";
-import { ArrowRight, BookOpen, GraduationCap, Plus, Search, Users, X, Sparkles } from "lucide-react";
+import { BookOpen, GraduationCap, Plus, Search, Users, X, Sparkles, Pencil } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { createClass, setClassActive } from "./classes/actions";
 
@@ -13,6 +13,9 @@ type ClassItem = {
   schoolYear: string;
   isActive: boolean;
   thumbnailUrl: string | null;
+  imagePositionX: number;
+  imagePositionY: number;
+  imageZoom: number;
   studentCount: number;
   missions: Mission[];
 };
@@ -71,49 +74,31 @@ export function OverviewClasses({ classes }: { classes: ClassItem[] }) {
       </div>
 
       {visible.length ? (
-        <div className="mt-4 grid gap-4 xl:grid-cols-2">
-          {visible.map((item, index) => (
-            <article key={item.id} className="group overflow-hidden rounded-2xl border border-slate-200/90 bg-white shadow-sm transition hover:-translate-y-0.5 hover:border-violet-200 hover:shadow-lg">
-              <div className="flex gap-4 p-4 sm:p-5">
-                <div className="relative h-24 w-28 shrink-0 overflow-hidden rounded-xl bg-gradient-to-br from-violet-100 via-fuchsia-50 to-cyan-100 sm:h-28 sm:w-36">
-                  {item.thumbnailUrl ? <img src={item.thumbnailUrl} alt="" className="h-full w-full object-cover" /> : <div className="grid h-full place-items-center text-violet-400"><Users className="h-8 w-8" /></div>}
-                  <span className="absolute left-2 top-2 rounded-full border border-white/70 bg-white/90 px-2 py-1 text-[9px] font-extrabold uppercase tracking-wide text-violet-700">DR1FT</span>
+        <div className="mt-3 overflow-hidden rounded-2xl border border-slate-200/90 bg-white shadow-sm divide-y divide-slate-100">
+          {visible.map((item) => (
+            <article key={item.id} className="group flex min-w-0 items-center gap-3 px-3 py-2.5 transition hover:bg-violet-50/40 sm:gap-4 sm:px-4">
+              <div className="relative h-11 w-11 shrink-0 overflow-hidden rounded-xl bg-gradient-to-br from-violet-100 via-fuchsia-50 to-cyan-100 sm:h-12 sm:w-12">
+                {item.thumbnailUrl ? <img src={item.thumbnailUrl} alt="" className="h-full w-full object-cover" style={{ objectPosition: `${item.imagePositionX}% ${item.imagePositionY}%`, transform: `scale(${item.imageZoom})` }} /> : <div className="grid h-full place-items-center text-violet-400"><Users className="h-5 w-5"/></div>}
+              </div>
+              <div className="min-w-0 flex-1">
+                <div className="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-0.5">
+                  <h3 className="truncate text-sm font-extrabold text-slate-950">{item.name}</h3>
+                  <span className={"rounded-full px-2 py-0.5 text-[9px] font-bold "+(item.isActive?"bg-emerald-50 text-emerald-700":"bg-slate-100 text-slate-500")}>{item.isActive?"Aktiv":"Inaktiv"}</span>
+                  <span className="hidden text-[10px] text-slate-400 sm:inline">Jahrgang {item.gradeLevel ?? "—"} · {item.schoolYear}</span>
                 </div>
-                <div className="min-w-0 flex-1">
-                  <div className="flex flex-wrap items-center gap-2">
-                    <h3 className="truncate text-base font-extrabold text-slate-950">{item.name}</h3>
-                    <span className={"rounded-full px-2 py-1 text-[10px] font-bold " + (item.isActive ? "bg-emerald-50 text-emerald-700" : "bg-slate-100 text-slate-500")}>{item.isActive ? "Aktiv" : "Inaktiv"}</span>
-                  </div>
-                  <p className="mt-1 text-xs text-slate-500">Jahrgang {item.gradeLevel ?? "—"} · Schuljahr {item.schoolYear}</p>
-                  <div className="mt-3 flex flex-wrap items-center gap-x-4 gap-y-2 text-xs font-semibold text-slate-600">
-                    <span className="inline-flex items-center gap-1.5"><GraduationCap className="h-4 w-4 text-cyan-600" />{item.studentCount} Schüler:innen</span>
-                    <span className="inline-flex items-center gap-1.5"><BookOpen className="h-4 w-4 text-violet-600" />{item.missions.length} aktive {item.missions.length === 1 ? "Mission" : "Missionen"}</span>
-                  </div>
-                </div>
-                <div className="hidden shrink-0 sm:block">
-                  <button type="button" role="switch" aria-checked={item.isActive} aria-label={item.isActive ? item.name + " deaktivieren" : item.name + " aktivieren"} disabled={pendingId === item.id || isPending} onClick={() => toggleClass(item)} className={"relative inline-flex h-7 w-12 items-center rounded-full transition-colors disabled:opacity-50 " + (item.isActive ? "bg-violet-600" : "bg-slate-300")}>
-                    <span className={"h-5 w-5 rounded-full bg-white shadow transition-transform " + (item.isActive ? "translate-x-6" : "translate-x-1")} />
-                  </button>
+                <div className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-0.5 text-[10px] font-semibold text-slate-500">
+                  <span className="inline-flex items-center gap-1"><GraduationCap className="h-3.5 w-3.5 text-cyan-600"/>{item.studentCount} Schüler:innen</span>
+                  <span className="inline-flex items-center gap-1"><BookOpen className="h-3.5 w-3.5 text-violet-600"/>{item.missions.length} Missionen</span>
+                  <span className="sm:hidden">Jg. {item.gradeLevel ?? "—"} · {item.schoolYear}</span>
+                  {item.missions.length>0&&<span className="hidden max-w-[210px] truncate text-slate-400 lg:inline" title={item.missions.map(m=>m.title).join(", ")}>{item.missions[0].title}{item.missions.length>1?" +"+(item.missions.length-1):""}</span>}
                 </div>
               </div>
-              <div className="border-t border-slate-100 bg-slate-50/65 px-4 py-3 sm:px-5">
-                <div className="flex flex-wrap items-center justify-between gap-3">
-                  <div className="flex min-w-0 flex-1 flex-wrap gap-2">
-                    {item.missions.length ? item.missions.slice(0, 3).map((mission) => (
-                      <span key={mission.id} title={mission.title} className="inline-flex max-w-[190px] items-center gap-2 rounded-full border border-violet-100 bg-white px-2.5 py-1.5 text-[10px] font-semibold text-slate-600">
-                        {mission.cover_image_url ? <img src={mission.cover_image_url} alt="" className="h-5 w-5 rounded-full object-cover" /> : <Sparkles className="h-3.5 w-3.5 text-violet-500" />}
-                        <span className="truncate">{mission.title}</span>
-                      </span>
-                    )) : <span className="text-[10px] text-slate-400">Noch keine aktive Mission zugewiesen</span>}
-                    {item.missions.length > 3 && <span className="self-center text-[10px] font-bold text-violet-600">+{item.missions.length - 3}</span>}
-                  </div>
-                  <div className="flex items-center gap-3">
-                    <button type="button" role="switch" aria-checked={item.isActive} aria-label={item.isActive ? item.name + " deaktivieren" : item.name + " aktivieren"} disabled={pendingId === item.id || isPending} onClick={() => toggleClass(item)} className={"relative inline-flex h-7 w-12 items-center rounded-full transition-colors disabled:opacity-50 sm:hidden " + (item.isActive ? "bg-violet-600" : "bg-slate-300")}>
-                      <span className={"h-5 w-5 rounded-full bg-white shadow transition-transform " + (item.isActive ? "translate-x-6" : "translate-x-1")} />
-                    </button>
-                    <a href={"/classes/" + item.id} className="inline-flex items-center gap-1.5 rounded-lg bg-violet-600 px-3 py-2 text-xs font-bold text-white transition hover:bg-violet-700">Öffnen <ArrowRight className="h-3.5 w-3.5" /></a>
-                  </div>
-                </div>
+              <div className="flex shrink-0 items-center gap-1.5 sm:gap-2">
+                <button type="button" role="switch" aria-checked={item.isActive} aria-label={item.isActive?item.name+" deaktivieren":item.name+" aktivieren"} title={item.isActive?"Klasse deaktivieren":"Klasse aktivieren"} disabled={pendingId===item.id||isPending} onClick={()=>toggleClass(item)} className={"relative inline-flex h-6 w-10 items-center rounded-full transition-colors disabled:opacity-50 "+(item.isActive?"bg-violet-600":"bg-slate-300")}>
+                  <span className={"h-[18px] w-[18px] rounded-full bg-white shadow transition-transform "+(item.isActive?"translate-x-[19px]":"translate-x-1")}/>
+                </button>
+                <a href={"/classes/"+item.id} aria-label={item.name+" verwalten"} title="Klasse verwalten" className="grid h-9 w-9 place-items-center rounded-xl border border-slate-200 bg-white text-slate-600 transition hover:border-violet-200 hover:bg-violet-50 hover:text-violet-700"><Pencil className="h-4 w-4"/></a>
+                
               </div>
             </article>
           ))}
