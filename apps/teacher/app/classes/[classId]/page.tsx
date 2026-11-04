@@ -16,17 +16,18 @@ export default async function ClassDetailPage({
   const pageStartedAt = Date.now();
   const instanceStartedAt = Date.now();
 
-  const {
-    data: instance,
-  } = await supabase
-    .from("class_instances")
-    .select(
-      "id,name,access_code,is_active,status,grade_level,school_year,school_id,class_image_path,class_image_position_x,class_image_position_y,class_image_zoom",
-    )
-    .eq("id", classId)
-    .maybeSingle();
+  // Auth and class metadata do not depend on each other; resolve them together
+  // to remove one serial network round-trip from the initial render.
+  const [instanceResult, initialAuthResult] = await Promise.all([
+    supabase.from("class_instances")
+      .select("id,name,access_code,is_active,status,grade_level,school_year,school_id,class_image_path,class_image_position_x,class_image_position_y,class_image_zoom")
+      .eq("id", classId).maybeSingle(),
+    supabase.auth.getUser(),
+  ]);
+  const instance = instanceResult.data;
+  const user = initialAuthResult.data.user;
 
-  console.info("[class-page-timing] instance", Date.now() - instanceStartedAt, "ms");
+  console.info("[class-page-timing] instance-and-auth", Date.now() - instanceStartedAt, "ms");
 
   if (!instance) {
     return (
@@ -71,7 +72,6 @@ export default async function ClassDetailPage({
     { data: teacherModuleAssignments },
     { data: availableTeacherModules },
     { data: school },
-    { data: userResult },
   ] = await Promise.all([
     timed("roster", supabase
       .from("class_instance_memberships")
@@ -104,11 +104,8 @@ export default async function ClassDetailPage({
           .eq("id", instance.school_id)
           .maybeSingle()
       : Promise.resolve({ data: null })),
-    timed("auth-user", supabase.auth.getUser()),
   ] as const);
   console.info("[class-page-timing] parallel-queries", Date.now() - parallelQueriesStartedAt, "ms");
-  const user = userResult.user;
-
   const membershipStartedAt = Date.now();
   const [teacherMembership, schoolMembership] = await Promise.all([
     user
