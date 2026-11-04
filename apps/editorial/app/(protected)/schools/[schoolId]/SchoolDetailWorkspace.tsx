@@ -60,7 +60,7 @@ function regionLabel(value: string | null) {
 
 
 
-export function SchoolDetailWorkspace({ school: initialSchool, initialMembers, initialClasses, stats, isPlatformAdmin }: { school: School; initialMembers: Member[]; initialClasses: SchoolClass[]; stats: Stats; isPlatformAdmin: boolean }) {
+export function SchoolDetailWorkspace({ school: initialSchool, initialMembers, initialClasses, stats, isPlatformAdmin, canManageTeacherAssignments }: { school: School; initialMembers: Member[]; initialClasses: SchoolClass[]; stats: Stats; isPlatformAdmin: boolean; canManageTeacherAssignments: boolean }) {
   const [school, setSchool] = useState(initialSchool);
   const [members, setMembers] = useState(initialMembers);
   const [classes, setClasses] = useState(initialClasses);
@@ -1685,7 +1685,7 @@ export function SchoolDetailWorkspace({ school: initialSchool, initialMembers, i
                     </button>
                   </div>
                 </div>
-                {member.role === "teacher" && member.active && (
+                {canManageTeacherAssignments && member.role === "teacher" && member.active && (
                   <div className="mt-4 border-t border-border pt-3">
                     <button
                       type="button"
@@ -1704,7 +1704,7 @@ export function SchoolDetailWorkspace({ school: initialSchool, initialMembers, i
                               <input
                                 type="checkbox"
                                 checked={checked}
-                                disabled={pendingId === operationId || !schoolClass.is_active}
+                                disabled={pendingId === operationId || (!schoolClass.is_active && !checked)}
                                 onChange={(event) => void toggleTeacherClassAssignment(member, schoolClass.id, event.target.checked)}
                                 className="h-4 w-4 rounded border-slate-300 text-violet-600 focus:ring-violet-500"
                               />
