@@ -23,7 +23,7 @@ export async function loadClassDashboardReport(classId: string) {
     supabase.from("class_instance_memberships").select("id").eq("class_instance_id", classId).eq("user_id", user.id).eq("role", "teacher").is("left_at", null).maybeSingle(),
   ]);
 
-  if (schoolMembership?.role !== "school_admin" && schoolMembership?.role !== "school_lead" && !teacherMembership) {
+  if (schoolMembership?.role !== "school_admin" && !teacherMembership) {
     throw new Error("Du darfst das Lernreporting dieser Klasse nicht einsehen.");
   }
 
