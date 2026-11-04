@@ -79,7 +79,7 @@ export function ClassModuleLibrary({
   }
 
   return (
-    <section className="mt-6 overflow-hidden rounded-2xl border border-border bg-white">
+    <section className="overflow-hidden rounded-none border-0 bg-white">
       <div className="flex flex-wrap items-center justify-between gap-4 border-b border-border px-6 py-5">
         <div>
           <p className="text-xs font-semibold uppercase tracking-[0.14em] text-accent">Lerninhalt</p>
