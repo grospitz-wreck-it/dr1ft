@@ -71,7 +71,6 @@ export default async function ClassDetailPage({
     { data: availableTeacherModules },
     { data: school },
     { data: userResult },
-    { data: session },
   ] = await Promise.all([
     timed("roster", supabase
       .from("class_instance_memberships")
@@ -105,11 +104,9 @@ export default async function ClassDetailPage({
           .maybeSingle()
       : Promise.resolve({ data: null })),
     timed("auth-user", supabase.auth.getUser()),
-    timed("auth-session", supabase.auth.getSession()),
   ] as const);
   console.info("[class-page-timing] parallel-queries", Date.now() - parallelQueriesStartedAt, "ms");
   const user = userResult.user;
-  const accessToken = session.session?.access_token;
 
   const membershipStartedAt = Date.now();
   const [teacherMembership, schoolMembership] = await Promise.all([
@@ -266,8 +263,8 @@ console.info("[class-page-timing] module-metadata", Date.now() - moduleAssetsSta
             show_reports_at_end: Boolean(item.show_reports_at_end),
             title: item.scenarios?.title ?? null,
           }))}
-          moduleStatus={activeModuleStatus as "Abgeschlossen" | "In Bearbeitung" | "Noch nicht begonnen"}
-          moduleReport={activeModuleReport}
+          moduleStatus="Noch nicht begonnen"
+          moduleReport=""
         />
 
         <div className="mt-6">
@@ -285,32 +282,3 @@ console.info("[class-page-timing] module-metadata", Date.now() - moduleAssetsSta
   );
 }
 
-
-function Metric({
-  label,
-  value,
-  icon,
-  tone,
-}: {
-  label: string;
-  value: string | number;
-  icon: "users" | "target" | "chart" | "check";
-  tone: "blue" | "violet" | "cyan" | "purple";
-}) {
-  const tones = {
-    blue: "bg-sky-100 text-sky-600",
-    violet: "bg-violet-100 text-violet-600",
-    cyan: "bg-cyan-100 text-cyan-600",
-    purple: "bg-fuchsia-100 text-fuchsia-600",
-  };
-  const glyphs = { users: "♟", target: "◎", chart: "▥", check: "✓" };
-  return (
-    <div className="flex min-w-0 items-center gap-3 rounded-2xl border border-slate-200/80 bg-white px-4 py-3 shadow-sm">
-      <span className={"flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-xl font-semibold " + tones[tone]}>{glyphs[icon]}</span>
-      <div className="min-w-0">
-        <p className="text-xs text-slate-400">{label}</p>
-        <p className="mt-0.5 truncate text-lg font-semibold tracking-tight text-slate-950">{value}</p>
-      </div>
-    </div>
-  );
-}
