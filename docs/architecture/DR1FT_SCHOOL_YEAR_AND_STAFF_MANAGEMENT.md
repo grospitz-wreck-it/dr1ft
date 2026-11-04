@@ -137,3 +137,109 @@ Mehrere Lehrkräfte in derselben Klasse bestätigen jeweils ihre eigene Prüfung
 - Lehrkräfte dürfen nur Listen der ihnen zugewiesenen Klassen sehen und bestätigen.
 - Nur Schulleitung/Schuladmin darf den schulweiten Schuljahreswechsel vorbereiten und die Klassen-/Schülerübernahmen finalisieren.
 - Die Bestätigung darf nicht als Anwesenheits-, Leistungs- oder Aufmerksamkeitsmessung interpretiert werden. Sie ist ausschließlich ein organisatorischer Prüfvermerk.
+
+
+## Unterrichtsgruppen und Fachunterricht (Ergänzung)
+
+Die organisatorische Klassenmitgliedschaft und die Teilnahme an Unterricht müssen als zwei getrennte Beziehungen modelliert werden. Nicht jede Lehrkraft, die Schüler einer Klasse unterrichtet, ist Klassenleitung oder Mitglied des vollständigen Klassen-Teams.
+
+### Begriffe und Abgrenzung
+
+- **Klasseninstanz (`class_instance`):** organisatorische Zuordnung der Schüler zu einer Klasse in einem konkreten Schuljahr, z. B. 7a.
+- **Klassenverantwortung / Klassenteam:** Lehrkräfte mit einer ausdrücklich zugewiesenen organisatorischen Verantwortung für die gesamte Klasse. Diese Zuweisung kann mehrere Lehrkräfte umfassen.
+- **Unterrichtsgruppe (`teaching_group`):** fachlich bzw. organisatorisch abgegrenzte Lerngruppe innerhalb eines Schuljahres, z. B. Medienkunde 7a+7b, Wahlpflichtkurs oder Fördergruppe.
+- **Unterrichtszuweisung:** Zuordnung einer Lehrkraft zu einer Unterrichtsgruppe mit expliziten Rechten.
+- **Teilnahme (`teaching_group_membership`):** Zuordnung eines Schülers zu einer Unterrichtsgruppe. Sie kann aus einer ganzen Klasse abgeleitet oder für Teilgruppen individuell gepflegt werden.
+
+### Typische Fälle
+
+- Eine Klassenleitung ist für die organisatorische Klasse zuständig.
+- Eine Fachlehrkraft unterrichtet mehrere vollständige Klassen.
+- Eine Unterrichtsgruppe besteht aus Schülern mehrerer Klassen (z. B. Medienkunde 7a und 7b).
+- Eine Unterrichtsgruppe enthält nur einen Teil einer Klasse (z. B. Wahlpflicht, Förderangebot oder Projektgruppe).
+- Eine Lehrkraft unterrichtet mehrere Unterrichtsgruppen und kann in einer anderen Klasse zusätzlich Klassenleitung sein.
+- Mehrere Lehrkräfte können gemeinsam eine Unterrichtsgruppe betreuen.
+
+### Vorgeschlagenes Datenmodell
+
+Die folgenden Namen beschreiben ein Zielmodell; sie sind keine Behauptung, dass diese Tabellen bereits existieren.
+
+**`teaching_groups`**
+- `id`
+- `school_id`
+- `school_year_id`
+- `name` (z. B. „Medienkunde 7a/7b“)
+- `subject_key` oder `subject_label` (optional, konfigurierbar)
+- `group_type` (z. B. class_course, cross_class_course, elective, support, project)
+- `status` (planned, active, archived)
+- `created_at`, `updated_at`
+
+**`teaching_group_class_sources`** (optional, wenn eine Gruppe ganze Klassen umfasst)
+- `teaching_group_id`
+- `class_instance_id`
+- `participation_mode` (all_students oder selected_students)
+
+**`teaching_group_memberships`**
+- `teaching_group_id`
+- `student_user_id`
+- `source_class_instance_id`
+- `joined_at`, optional `left_at`
+- eindeutige bzw. zeitlich passende Constraints gegen doppelte aktive Zuordnungen
+
+**`teaching_group_teachers`**
+- `teaching_group_id`
+- `teacher_user_id`
+- `assignment_type` (lead, co_teacher, substitute oder vergleichbar)
+- `granted_by`
+- `created_at`, optional `revoked_at`
+
+Eine Gruppe kann ganze Klassen referenzieren oder eine explizite Schülerliste enthalten. Bei `all_students` muss die effektive Teilnehmerliste nachvollziehbar aus der Klassenmitgliedschaft und dem Gültigkeitszeitraum abgeleitet werden. Für Teilgruppen werden explizite Schülerzuordnungen gepflegt. Änderungen an Quellklassen dürfen nicht unbemerkt historische Kurszuordnungen verändern.
+
+### Berechtigungsprinzip
+
+Die Zuweisung zu einer Unterrichtsgruppe gewährt **keinen pauschalen Zugriff auf die vollständigen Klassenakten** der beteiligten Klassen.
+
+Eine Fachlehrkraft darf standardmäßig nur:
+- die Teilnehmer ihrer zugewiesenen Unterrichtsgruppen sehen,
+- die für diese Gruppe erforderlichen Lernaktivitäten durchführen,
+- die für diese Gruppe zulässigen Lernstände bzw. Evidenzen einsehen,
+- gruppenbezogene Aufgaben und Ergebnisse verwalten, soweit ihr diese Funktion ausdrücklich zugewiesen wurde.
+
+Sie darf nicht allein aufgrund der Unterrichtsgruppe:
+- alle Schülerdaten der Quellklassen öffnen,
+- schulweite oder klassenweite Verwaltungsaufgaben ausführen,
+- Schülerkonten oder Klassenlisten administrieren,
+- Berichte außerhalb ihres Unterrichts-Scopes abrufen.
+
+Rechte wie `view_group_progress`, `manage_group_activities` oder `create_group_report` werden als additive Berechtigungen an die konkrete Unterrichtsgruppe gebunden. Erweiterte Einsicht in klassenweite oder schulweite Daten benötigt eine separate, ausdrücklich erteilte Berechtigung.
+
+Alle Prüfungen erfolgen serverseitig und berücksichtigen Schule, Schuljahr, Unterrichtsgruppe, Lehrkraftzuweisung, Schülerteilnahme und Gültigkeitszeitraum. RLS-Policies und Server Actions müssen denselben Scope abbilden.
+
+### Verwaltung und Zuweisung
+
+- Schulleitung und Schuladmin dürfen Unterrichtsgruppen anlegen und Lehrkräfte zuweisen.
+- Die konkrete Berechtigung, ob Lehrkräfte selbst Unterrichtsgruppen verwalten dürfen, bleibt eine konfigurierbare additive Funktion und ist standardmäßig nicht vorausgesetzt.
+- Zuweisungen werden im Bereich **Menschen & Zugänge** am Lehrkraftprofil sichtbar gemacht; zusätzlich braucht es eine schulische Übersicht für Unterrichtsgruppen.
+- Eine Lehrkraft kann in einer Gruppe Hauptverantwortliche, mitunterrichtende oder vertretende Lehrkraft sein.
+- Vertretungen erhalten nur befristete Zugriffe; Ende bzw. Widerruf muss technisch wirksam werden.
+- Unterrichtsgruppen sind einem Schuljahr zugeordnet. Beim Schuljahreswechsel werden neue Gruppen vorgeschlagen oder angelegt; historische Gruppen bleiben erhalten.
+
+### Abgrenzung zum Klassenlisten-Check
+
+Der bereits definierte verpflichtende Check **„Schülerliste für das neue Schuljahr prüfen“** betrifft die organisatorische Klassenliste und wird von den für die Klasse verantwortlichen Lehrkräften bestätigt.
+
+Fachlehrkräfte müssen nicht automatisch die vollständige Klassenliste bestätigen. Für Unterrichtsgruppen kann ein eigener, engerer Check vorgesehen werden, etwa **„Teilnehmerliste der Unterrichtsgruppe prüfen“**, wenn die Schule dies für den konkreten Kursprozess benötigt.
+
+Bei einer Unterrichtsgruppe mit ganzen Klassen wird die Teilnehmerliste aus den freigegebenen Klassenmitgliedschaften abgeleitet. Bei Teilgruppen oder klassenübergreifenden Gruppen muss die konkrete Teilnehmerliste vor Unterrichtsbeginn bestätigt werden. Die Bestätigung einer Unterrichtsgruppe ersetzt niemals den organisatorischen Klassenlisten-Check.
+
+### Abnahmekriterien
+
+- Eine Fachlehrkraft kann Medienkunde in 7a, 7b und 8a unterrichten, ohne automatisch Klassenmitglied aller drei Klassen zu werden.
+- Eine Unterrichtsgruppe kann Schüler aus mehreren Klassen enthalten.
+- Eine Unterrichtsgruppe kann auch nur ausgewählte Schüler einer Klasse enthalten.
+- Mehrere Lehrkräfte können derselben Unterrichtsgruppe zugewiesen sein.
+- Eine Fachlehrkraft sieht standardmäßig nur die Teilnehmer und Lerninformationen ihres Unterrichts-Scopes.
+- Die Entfernung aus einer Unterrichtsgruppe entzieht nur diesen Zugriff und lässt andere Zuweisungen unberührt.
+- Die Klassenleitung behält ihre organisatorische Verantwortung und den dafür vorgesehenen Zugriff.
+- Historische Unterrichtsgruppen und Teilnehmerzuordnungen bleiben nachvollziehbar.
+- Der Klassenlisten-Check und ein optionaler Unterrichtsgruppen-Check sind getrennte Workflows.
