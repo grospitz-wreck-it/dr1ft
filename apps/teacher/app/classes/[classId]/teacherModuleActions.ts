@@ -313,7 +313,7 @@ export async function getTeacherModuleFreeTextResponses(classInstanceId: string,
     .not("text_answer", "is", null).order("created_at", { ascending: false });
   if (error) throw new Error("Antworten konnten nicht geladen werden.");
 
-  const userIds = [...new Set((responses ?? []).map(row => row.user_id))];
+  const userIds = Array.from(new Set((responses ?? []).map(row => row.user_id)));
   const { data: profiles } = userIds.length
     ? await supabase.from("user_profiles").select("id,display_name,username").in("id", userIds)
     : { data: [] as { id: string; display_name: string | null; username: string | null }[] };
