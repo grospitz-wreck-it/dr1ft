@@ -303,7 +303,7 @@ export async function getTeacherModulePollResults(classInstanceId: string, modul
   const { data: post, error: postError } = await supabase.from("teacher_module_posts")
     .select("id,post_type,title,interaction_data").eq("id", postId).eq("module_id", moduleId).maybeSingle();
   if (postError || !post || post.post_type !== "poll") throw new Error("Für diesen Beitrag gibt es keine Umfrageergebnisse.");
-  const config = (post.interaction_data ?? {}) as { options?: string[]; responseMode?: string; resultDisplay?: "bar" | "pie" };
+  const config = (post.interaction_data ?? {}) as { options?: string[]; responseMode?: string; resultDisplay?: "bar" | "pie" | "highlight"; correctOption?: string };
   if (config.responseMode === "free_text") throw new Error("Freitextantworten werden separat angezeigt.");
 
   const { data: votes, error } = await supabase.from("teacher_module_post_votes")
@@ -319,7 +319,7 @@ export async function getTeacherModulePollResults(classInstanceId: string, modul
     }).length;
     return { label, count };
   });
-  return { title: post.title ?? "Umfrage", total: (votes ?? []).length, counts, resultDisplay: config.resultDisplay ?? "bar" };
+  return { title: post.title ?? "Umfrage", total: (votes ?? []).length, counts, resultDisplay: config.resultDisplay ?? "bar", correctOption: config.correctOption ?? null };
 }
 
 export async function getTeacherModuleFreeTextReport(classInstanceId: string, moduleId: string) {
