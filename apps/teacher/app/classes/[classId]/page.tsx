@@ -5,6 +5,14 @@ import { ClassLearningInsights } from "./ClassLearningInsights";
 import { CollapsiblePanel } from "./CollapsiblePanel";
 import ClassImageWorkspace from "./ClassImageWorkspace";
 
+async function timed<T>(name: string, task: PromiseLike<T>): Promise<T> {
+  const start = Date.now();
+  const result = await task;
+  const error = (result as any)?.error;
+  console.info("[class-overview-timing]", { name, ms: Date.now() - start, code: error?.code ?? null, message: error?.message ?? null });
+  return result;
+}
+
 export default async function ClassDetailPage({
   params,
 }: {
@@ -15,13 +23,13 @@ export default async function ClassDetailPage({
 
   const {
     data: instance,
-  } = await supabase
+  } = await timed("class-instance", supabase
     .from("class_instances")
     .select(
       "id,name,access_code,is_active,status,grade_level,school_year,school_id,class_image_path,class_image_position_x,class_image_position_y,class_image_zoom",
     )
     .eq("id", classId)
-    .maybeSingle();
+    .maybeSingle());
 
   if (!instance) {
     return (
