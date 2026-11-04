@@ -36,6 +36,3 @@ begin
   end loop;
 end;
 $$;
-
-comment on schema public is
-  'Public-schema SECURITY DEFINER RPCs are not executable by anon; authenticated access is granted explicitly by the security hardening policy.';
