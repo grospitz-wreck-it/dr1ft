@@ -3,6 +3,7 @@ import { supabaseServerClient } from "../../../lib/supabaseServerClient";
 import { ClassModuleLibrary } from "./ClassModuleLibrary";
 import { StudentRoster } from "./StudentRoster";
 import { ClassDashboardInsights } from "./ClassDashboardInsights";
+import { CollapsiblePanel } from "./CollapsiblePanel";
 import ClassImageWorkspace from "./ClassImageWorkspace";
 
 export default async function ClassDetailPage({
@@ -235,45 +236,60 @@ console.info("[class-page-timing] module-metadata", Date.now() - moduleAssetsSta
           canEditClassImage={canEditClassImage}
         />
 
-        <Suspense fallback={<div className="mt-5 grid gap-3 sm:grid-cols-2 lg:grid-cols-4"><div className="col-span-full rounded-2xl border border-slate-200 bg-white px-4 py-5 text-sm text-slate-500">Lernfortschritt und Klassen-Insights werden geladen …</div></div>}>
-          <ClassDashboardInsights
+        <CollapsiblePanel
+          title="1. Module & Szenarien"
+          description="Lernmodule auswählen, eigene Inhalte erstellen und den Unterricht planen."
+        >
+          <ClassModuleLibrary
             classId={classId}
-            students={students}
-            activeAssignmentTitle={activeAssignment?.scenarios?.title ?? null}
+            schoolId={instance.school_id}
+            teacherModules={teacherModulesData}
+            availableTeacherModules={availableTeacherModulesData}
+            scenarios={(scenarios ?? []).map((scenario: any) => ({
+              id: scenario.id,
+              title: scenario.title,
+              description: scenario.description ?? null,
+              cover_image_url: scenario.cover_image_url ?? null,
+              age_rating: scenario.age_rating ?? "Alle Altersgruppen",
+            }))}
+            assignments={activeAssignments.map((item: any) => ({
+              scenario_id: item.scenario_id,
+              is_active: item.is_active !== false,
+              scheduled_start_at: item.scheduled_start_at,
+              scheduled_end_at: item.scheduled_end_at,
+              show_reports_at_end: Boolean(item.show_reports_at_end),
+              title: item.scenarios?.title ?? null,
+            }))}
+            moduleStatus="Noch nicht begonnen"
+            moduleReport=""
           />
-        </Suspense>
+        </CollapsiblePanel>
 
-        <ClassModuleLibrary
-          classId={classId}
-          schoolId={instance.school_id}
-          teacherModules={teacherModulesData}
-          availableTeacherModules={availableTeacherModulesData}
-          scenarios={(scenarios ?? []).map((scenario: any) => ({
-            id: scenario.id,
-            title: scenario.title,
-            description: scenario.description ?? null,
-            cover_image_url: scenario.cover_image_url ?? null,
-            age_rating: scenario.age_rating ?? "Alle Altersgruppen",
-          }))}
-          assignments={activeAssignments.map((item: any) => ({
-            scenario_id: item.scenario_id,
-            is_active: item.is_active !== false,
-            scheduled_start_at: item.scheduled_start_at,
-            scheduled_end_at: item.scheduled_end_at,
-            show_reports_at_end: Boolean(item.show_reports_at_end),
-            title: item.scenarios?.title ?? null,
-          }))}
-          moduleStatus="Noch nicht begonnen"
-          moduleReport=""
-        />
+        <CollapsiblePanel
+          title="2. Schüler:innen"
+          description={students.length + " aktive Schüler:innen in dieser Klasse."}
+        >
+          <div className="p-4 sm:p-5">
+            <StudentRoster
+              classId={classId}
+              initialStudents={students}
+              reportingUnlocked={reportingUnlocked}
+            />
+          </div>
+        </CollapsiblePanel>
 
-        <div className="mt-6">
-          <StudentRoster
-            classId={classId}
-            initialStudents={students}
-            reportingUnlocked={reportingUnlocked}
-          />
-        </div>
+        <CollapsiblePanel
+          title="3. Insights & Lernreporting"
+          description="Kompetenzentwicklung, Missionsfortschritt und Lernhürden."
+        >
+          <Suspense fallback={<div className="px-5 py-6 text-sm text-slate-500">Lernfortschritt und Klassen-Insights werden geladen …</div>}>
+            <ClassDashboardInsights
+              classId={classId}
+              students={students}
+              activeAssignmentTitle={activeAssignment?.scenarios?.title ?? null}
+            />
+          </Suspense>
+        </CollapsiblePanel>
 
 
 
