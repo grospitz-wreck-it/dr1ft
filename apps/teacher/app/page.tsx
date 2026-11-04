@@ -40,7 +40,8 @@ export default async function TeacherHomePage() {
     timed("teacher-classes", supabase
       .from("class_instance_memberships")
       .select("class_instance_id, role, class_instances(id,name,is_active,grade_level,school_year,school_id,class_image_path,class_image_position_x,class_image_position_y,class_image_zoom)")
-      .eq("user_id", user.id)
+      // Preserve the original RLS-scoped membership behavior. The extra
+      // user_id predicate hid classes for this project's membership setup.
       .eq("role", "teacher")
       .is("left_at", null)),
     timed("school-memberships", supabase
