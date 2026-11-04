@@ -129,7 +129,7 @@ export default async function ClassDetailPage({
           title: row.teacher_modules.title, description: row.teacher_modules.description ?? "",
           introTitle: row.teacher_modules.intro_title, introText: row.teacher_modules.intro_text,
           visibility_scope: row.teacher_modules.visibility_scope,
-          canManage: Boolean(assignedTeacher || (isSchoolAdmin && row.teacher_modules.created_by === user?.id)),
+          canManage: Boolean(row.teacher_modules.created_by === user?.id && (assignedTeacher || isSchoolAdmin)),
           title_card_enabled: row.teacher_modules.title_card_enabled !== false,
           cover_image_url: null, posts: [],
         }))
