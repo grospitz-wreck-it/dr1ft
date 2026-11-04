@@ -280,6 +280,50 @@ export async function updateTeacherCreatedModule(formData: FormData) {
 }
 
 
+
+export async function getTeacherModuleFreeTextResponses(classInstanceId: string, moduleId: string, postId: string) {
+  const supabase = supabaseServerClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) throw new Error("Nicht authentifiziert.");
+
+  const { data: assignment, error: assignmentError } = await supabase
+    .from("teacher_module_class_assignments")
+    .select("id,school_id")
+    .eq("class_instance_id", classInstanceId)
+    .eq("module_id", moduleId)
+    .maybeSingle();
+  if (assignmentError || !assignment) throw new Error("Du hast keinen Zugriff auf diese Klasse.");
+
+  const { data: admin } = await supabase.from("school_memberships").select("role")
+    .eq("school_id", assignment.school_id).eq("user_id", user.id).eq("active", true).maybeSingle();
+  const { data: teacher } = await supabase.from("class_instance_memberships").select("id")
+    .eq("class_instance_id", classInstanceId).eq("user_id", user.id).eq("role", "teacher").is("left_at", null).maybeSingle();
+  if (admin?.role !== "school_admin" && !teacher) throw new Error("Nur die Lehrkraft dieser Klasse kann Antworten einsehen.");
+
+  const { data: post, error: postError } = await supabase.from("teacher_module_posts")
+    .select("id,interaction_data,post_type").eq("id", postId).eq("module_id", moduleId).maybeSingle();
+  if (postError || !post || post.post_type !== "poll" || post.interaction_data?.responseMode !== "free_text") {
+    throw new Error("Für diesen Beitrag gibt es keine Freitextantworten.");
+  }
+
+  const { data: responses, error } = await supabase.from("teacher_module_post_votes")
+    .select("user_id,text_answer,created_at")
+    .eq("post_id", postId).eq("class_instance_id", classInstanceId)
+    .not("text_answer", "is", null).order("created_at", { ascending: false });
+  if (error) throw new Error("Antworten konnten nicht geladen werden.");
+
+  const userIds = [...new Set((responses ?? []).map(row => row.user_id))];
+  const { data: profiles } = userIds.length
+    ? await supabase.from("user_profiles").select("id,display_name,username").in("id", userIds)
+    : { data: [] as { id: string; display_name: string | null; username: string | null }[] };
+  const profileById = new Map((profiles ?? []).map(profile => [profile.id, profile]));
+  return (responses ?? []).map(row => ({
+    answer: row.text_answer ?? "",
+    submittedAt: row.created_at,
+    student: profileById.get(row.user_id)?.display_name || profileById.get(row.user_id)?.username || "Schüler:in",
+  }));
+}
+
 export async function setTeacherModuleAssignmentActive(classInstanceId: string, assignmentId: string, active: boolean) {
   const supabase = supabaseServerClient();
   const { data: { user } } = await supabase.auth.getUser();
