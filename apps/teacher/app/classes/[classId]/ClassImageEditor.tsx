@@ -1,6 +1,7 @@
 "use client";
 
-import { useRef, useState } from "react";\nimport { ImagePlus } from "lucide-react";
+import { useRef, useState } from "react";
+import { ImagePlus } from "lucide-react";
 import { createBrowserClient } from "@supabase/ssr";
 import { useRouter } from "next/navigation";
 
