@@ -124,6 +124,27 @@ Für eine schulische Lösung sind mindestens getrennte Vorgänge erforderlich:
 
 Die konkrete Aufbewahrungsdauer muss mit Schule/Schulträger und Datenschutzverantwortlichen abgestimmt werden; sie wird hier nicht erfunden oder vorweggenommen.
 
+## 6. KI- und Drittanbieter-Datenfluss: bisher geprüft
+
+Geprüfte Dateien:
+- `apps/editorial/app/(protected)/ambient-content/actions.ts`
+- `apps/editorial/app/ambient-content/actions.ts`
+- `apps/editorial/app/npc-dialogs/actions.ts`
+- `apps/editorial/app/scenarios/actions.ts`
+- `cloudflare/ambient-image-worker/src/index.ts`
+
+Feststellungen:
+- Die untersuchten KI-Funktionen liegen im Editorial-Bereich und generieren redaktionelle Ambient-Beiträge, NPC-Personas, Szenarioentwürfe und Bildmaterial.
+- Die geprüften Prompts verwenden redaktionelle Parameter, Themen, Creator-Personas, Altersbänder, Interessen-Kataloge und Szenario-/Lerninhaltsentwürfe.
+- In den untersuchten Pfaden wird keine Schülerliste, kein Schülerprofil, keine Schüler-UUID, kein privater Nachrichteninhalt und kein individueller Lernreport abgefragt oder in den Prompt eingesetzt.
+- Textgenerierung erfolgt über Gemini oder Anthropic. Bildgenerierung erfolgt über Cloudflare Workers AI (FLUX), mit Gemini-Bild-Fallback; Gemini wird auch für Bild-QA eingesetzt.
+- Der Cloudflare-Worker verlangt einen API-Key. Seine OPTIONS-Antwort erlaubt derzeit CORS-Origin `*`; die tatsächliche Nutzung erfolgt im geprüften Aufruf serverseitig mit Bearer-Key.
+
+Bewertung:
+- Im geprüften redaktionellen KI-Pfad ist keine Übermittlung individueller Schülerdaten an die externen KI-Anbieter erkennbar.
+- Das ist kein Beweis für alle möglichen KI-Funktionen. Player-Runtime, weitere API-Routen, mögliche spätere Chat-/Feedback-Funktionen und alle Datenbank-/Storage-Trigger müssen noch vollständig inventarisiert werden.
+- Schülerantworten, Lernprofile, Anzeigenamen, User-IDs, Login-Kennungen und Klassenlisten bleiben von externen KI-Prompts ausgeschlossen, sofern keine gesonderte, dokumentierte und rechtlich geprüfte Freigabe besteht.
+
 ## 7. Vertiefte Prüfung: Lernverlauf, Nutzungszeit und Nachrichten
 
 ### Lernverlauf und Schülerreport
@@ -203,7 +224,36 @@ Das ist nicht nur eine fehlende Rollenfreigabe, sondern ein Architekturthema: Sc
 - Die bloße Existenz einer Migration im Repository beweist nicht, dass sie remote angewendet wurde.
 - Es wurden in diesem Audit-Zwischenstand keine produktiven Daten verändert und keine Migration ausgeführt.
 
-## 7. Verbindliche technische Arbeitsregeln
+## 10. Betriebs- und Release-Reife: erste Prüfung
+
+Geprüfte Dateien und Repository-Struktur:
+- Root- und App-`package.json`
+- `apps/player/package.json`, `apps/teacher/package.json`, `apps/editorial/package.json`
+- `apps/editorial/app/api/schools/[schoolId]/sso/route.ts`
+- `supabase/functions/provision-school-user/index.ts`
+
+Feststellungen:
+- Im Root-Paket sind nur lokale Dev- und Supabase-DB-Befehle definiert (`db:push`, `db:reset`). Ein zentraler Build-/Test-/Lint-Befehl ist dort nicht vorhanden.
+- Player und Teacher definieren `build`, `dev` und `start`, aber keine Test- oder Lint-Skripte.
+- Editorial führt beim Build `tsc --noEmit` aus; ein automatisierter Testlauf ist im Paket nicht definiert.
+- Im aktuellen Repository-Baum ist keine `supabase/config.toml` sichtbar. Lokale Edge-Function-Konfigurationen und JWT-Ausnahmen sind damit aus dem Repository nicht nachvollziehbar.
+- Die SSO-Verschlüsselung nutzt AES-GCM mit 12-Byte-IV und einem 32-Byte-Schlüssel aus `DR1FT_SSO_ENCRYPTION_KEY`. Das Secret wird nicht im Klartext zurückgegeben. Die Fehlermeldung nennt noch Vercel als Ablageort; das muss bei der IONOS-Migration aktualisiert und die Secret-Verwaltung dokumentiert werden.
+- Die Schulbenutzer-Provisionierung erlaubt aktiven `school_admin`- und `school_lead`-Mitgliedern, Mitarbeitende einzuladen. Die Rollenvergabe umfasst `teacher`, `school_admin` und `school_lead`; die Berechtigung ist schulgebunden geprüft.
+
+Bewertung:
+- Vor Schulbetrieb braucht es automatisierte Buildprüfungen aller Apps, SQL-/RLS-Tests und Edge-Function-Tests als Release-Gates.
+- IONOS-Hosting ist noch nicht als deploybare Betriebsarchitektur im Repository nachgewiesen. Supabase- und Vercel-bezogene Umgebungsvariablen sowie Deployment-Abläufe müssen in einem Migrationsplan erfasst werden.
+- Die tatsächliche Konfiguration in Cloud-Dashboards ist nicht aus dem Repository ablesbar und muss separat geprüft werden.
+
+## 11. Passworterzeugung: erste Codekorrektur
+
+In diesem Arbeitszweig wurden die Funktionen `create-student-account` und `reset-student-password` geändert:
+- Vorher: 10 Zeichen aus dem Passwortalphabet über `Math.random()`.
+- Jetzt: 10 Zeichen über `crypto.getRandomValues()`. Das Alphabet hat genau 32 Zeichen; die unteren 5 Bit jedes Zufallsbytes werden gleichverteilt auf ein Zeichen abgebildet.
+- Die Änderung betrifft nur die Erzeugung automatisch generierter temporärer Passwörter. Login-Format und Accountstruktur bleiben unverändert.
+- Noch offen: Deno-Tests, Review und Deployment der Edge Functions. Die Änderung wirkt erst nach dem Deployment.
+
+## 12. Verbindliche technische Arbeitsregeln
 
 - Keine bereits angewendeten Migrationen ändern.
 - Vor einer neuen Migration zuerst die Remote-Migrationshistorie prüfen.
@@ -212,6 +262,6 @@ Das ist nicht nur eine fehlende Rollenfreigabe, sondern ein Architekturthema: Sc
 - Jede Berechtigungsänderung mit Positiv- und Negativtests absichern.
 - Keine Schülernamen, Antworten oder Lernprofile in externe KI-Prompts aufnehmen, sofern dafür nicht eine gesonderte, dokumentierte und rechtlich geprüfte Notwendigkeit besteht.
 
-## 8. Nächster Arbeitsschritt
+## 13. Nächster Arbeitsschritt
 
 Als Nächstes wird die vollständige Datenfluss- und Berechtigungsprüfung der restlichen Player-, Teacher-, Editorial- und Supabase-Funktionen abgeschlossen. Danach folgen eng begrenzte Codeänderungen für die Anzeigenamenregel, die Rollenmatrix sowie Export- und Löschprozesse. Erst nach Abgleich mit der Remote-Migrationshistorie werden dafür neue Migrationen vorbereitet.
