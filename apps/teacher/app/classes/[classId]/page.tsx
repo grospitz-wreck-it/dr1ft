@@ -107,9 +107,14 @@ export default async function ClassDetailPage({
 
   const activeSchoolRole = schoolMembershipResult.data?.role ?? null;
   const isSchoolAdmin = activeSchoolRole === "school_admin";
-  const assignedTeacher = Boolean(user && (await supabase.from("class_instance_memberships").select("id")
-    .eq("class_instance_id", classId).eq("user_id", user.id).eq("role", "teacher")
-    .is("left_at", null).maybeSingle()).data);
+  // Fetch the current teacher membership once and reuse it for module access
+  // and class-image permissions. The former implementation queried this row twice.
+  const teacherMembershipResult = user
+    ? await supabase.from("class_instance_memberships").select("id")
+        .eq("class_instance_id", classId).eq("user_id", user.id).eq("role", "teacher")
+        .is("left_at", null).maybeSingle()
+    : { data: null, error: null };
+  const assignedTeacher = Boolean(teacherMembershipResult.data);
   const mayUseTeacherModules = assignedTeacher || isSchoolAdmin;
 
   const availableTeacherModules = mayUseTeacherModules
@@ -135,18 +140,7 @@ export default async function ClassDetailPage({
         }))
     : [];
 
-  const teacherMembership = user
-    ? await supabase
-        .from("class_instance_memberships")
-        .select("id")
-        .eq("class_instance_id", classId)
-        .eq("user_id", user.id)
-        .eq("role", "teacher")
-        .is("left_at", null)
-        .maybeSingle()
-    : { data: null };
-
-  const canEditClassImage = Boolean(teacherMembership.data);
+  const canEditClassImage = Boolean(teacherMembershipResult.data);
 
   let classImageUrl: string | null = null;
 
