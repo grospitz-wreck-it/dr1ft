@@ -54,15 +54,35 @@ export default async function ClassDetailPage({
   }
 
   const parallelQueriesStartedAt = Date.now();
-  const timed = async <T,>(label: string, query: PromiseLike<T>): Promise<T> => {
+  // A slow optional query must not take down the entire class page.
+  // Keep the failing query name and Supabase error in the logs, then render
+  // the page with an empty fallback for that section.
+  const timed = async (
+    label: string,
+    query: PromiseLike<any>,
+    fallbackData: any,
+  ): Promise<any> => {
     const startedAt = Date.now();
     try {
       const result = await query;
-      console.info("[class-page-query]", label, Date.now() - startedAt, "ms");
+      const duration = Date.now() - startedAt;
+      if (result?.error) {
+        console.error("[class-page-query] failed", {
+          query: label,
+          durationMs: duration,
+          error: result.error,
+        });
+        return { ...result, data: fallbackData };
+      }
+      console.info("[class-page-query]", label, duration, "ms");
       return result;
     } catch (error) {
-      console.error("[class-page-query]", label, "failed", Date.now() - startedAt, "ms", error);
-      throw error;
+      console.error("[class-page-query] threw", {
+        query: label,
+        durationMs: Date.now() - startedAt,
+        error,
+      });
+      return { data: fallbackData, error };
     }
   };
   const [
@@ -79,43 +99,43 @@ export default async function ClassDetailPage({
       .from("class_instance_memberships")
       .select("user_id,role,left_at,user_profiles(display_name,username,avatar_seed)")
       .eq("class_instance_id", classId)
-      .is("left_at", null)),
+      .is("left_at", null), []),
     timed("scenarios", supabase
       .from("scenarios")
       .select("id,title,description,cover_image_url,age_rating")
-      .order("title")),
+      .order("title"), []),
     timed("scenario-assignments", supabase
       .from("class_instance_scenario_assignments")
       .select("scenario_id,pacing_mode,scheduled_start_at,scheduled_end_at,show_reports_at_end,archived_at,is_active,scenarios(title)")
       .eq("class_instance_id", classId)
-      .is("archived_at", null)),
+      .is("archived_at", null), []),
     timed("teacher-module-assignments", supabase
       .from("teacher_module_class_assignments")
       .select("id,module_id,school_id,assigned_by,is_active,scheduled_start_at,scheduled_end_at,archived_at,teacher_modules(id,title,description,intro_title,intro_text,visibility_scope,status,created_by,title_card_enabled)")
       .eq("class_instance_id", classId)
-      .is("archived_at", null)),
+      .is("archived_at", null), []),
     timed("available-teacher-modules", supabase
       .from("teacher_modules")
       .select("id,title,description,visibility_scope,created_by")
       .eq("school_id", instance.school_id)
       .eq("status", "published")
-      .order("updated_at", { ascending: false })),
+      .order("updated_at", { ascending: false }), []),
     timed("school", instance.school_id
       ? supabase.from("schools")
           .select("id,name,region,school_image_path,school_image_position_x,school_image_position_y,school_image_zoom")
           .eq("id", instance.school_id)
           .maybeSingle()
-      : Promise.resolve({ data: null })),
+      : Promise.resolve({ data: null }), null),
     timed("class-teacher-membership", user
       ? supabase.from("class_instance_memberships").select("id")
           .eq("class_instance_id", classId).eq("user_id", user.id)
           .eq("role", "teacher").is("left_at", null).maybeSingle()
-      : Promise.resolve({ data: null })),
+      : Promise.resolve({ data: null }), null),
     timed("school-membership", user && instance.school_id
       ? supabase.from("school_memberships").select("role")
           .eq("school_id", instance.school_id).eq("user_id", user.id)
           .eq("active", true).maybeSingle()
-      : Promise.resolve({ data: null })),
+      : Promise.resolve({ data: null }), null),
   ] as const);
   console.info("[class-page-timing] parallel-queries", Date.now() - parallelQueriesStartedAt, "ms");
   const teacherMembership = teacherMembershipResult.data;
