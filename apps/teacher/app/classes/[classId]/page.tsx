@@ -1,7 +1,9 @@
+import { Suspense } from "react";
 import { supabaseServerClient } from "../../../lib/supabaseServerClient";
 import { ClassModuleLibrary } from "./ClassModuleLibrary";
 import { StudentRoster } from "./StudentRoster";
-import { ClassLearningInsights } from "./ClassLearningInsights";
+import { ClassDashboardInsights } from "./ClassDashboardInsights";
+import { CollapsiblePanel } from "./CollapsiblePanel";
 import ClassImageWorkspace from "./ClassImageWorkspace";
 
 export default async function ClassDetailPage({
@@ -11,16 +13,35 @@ export default async function ClassDetailPage({
 }) {
   const supabase = supabaseServerClient();
   const { classId } = params;
+  const pageStartedAt = Date.now();
+  const instanceStartedAt = Date.now();
 
-  const {
-    data: instance,
-  } = await supabase
-    .from("class_instances")
-    .select(
-      "id,name,access_code,is_active,status,grade_level,school_year,school_id,class_image_path,class_image_position_x,class_image_position_y,class_image_zoom",
-    )
-    .eq("id", classId)
-    .maybeSingle();
+  // Auth and class metadata do not depend on each other; resolve them together
+  // to remove one serial network round-trip from the initial render.
+  const initialQuery = async <T,>(label: string, run: () => PromiseLike<T>): Promise<T | null> => {
+    try {
+      const result = await run();
+      console.info("[class-page-initial-query]", label, Date.now() - instanceStartedAt, "ms");
+      return result;
+    } catch (error) {
+      console.error("[class-page-initial-query] failed", {
+        query: label,
+        durationMs: Date.now() - instanceStartedAt,
+        error,
+      });
+      return null;
+    }
+  };
+  const [instanceResult, initialAuthResult] = await Promise.all([
+    initialQuery("class-instance", () => supabase.from("class_instances")
+      .select("id,name,access_code,is_active,status,grade_level,school_year,school_id,class_image_path,class_image_position_x,class_image_position_y,class_image_zoom")
+      .eq("id", classId).maybeSingle()),
+    initialQuery("auth-user", () => supabase.auth.getUser()),
+  ]);
+  const instance = instanceResult && "data" in instanceResult ? instanceResult.data : null;
+  const user = initialAuthResult && "data" in initialAuthResult ? initialAuthResult.data.user : null;
+
+  console.info("[class-page-timing] instance-and-auth", Date.now() - instanceStartedAt, "ms");
 
   if (!instance) {
     return (
@@ -46,69 +67,148 @@ export default async function ClassDetailPage({
     );
   }
 
+  const parallelQueriesStartedAt = Date.now();
+  // A slow optional query must not take down the entire class page.
+  // Keep the failing query name and Supabase error in the logs, then render
+  // the page with an empty fallback for that section.
+  const timed = async (
+    label: string,
+    query: PromiseLike<any>,
+    fallbackData: any,
+  ): Promise<any> => {
+    const startedAt = Date.now();
+    try {
+      const result = await query;
+      const duration = Date.now() - startedAt;
+      if (result?.error) {
+        console.error("[class-page-query] failed", {
+          query: label,
+          durationMs: duration,
+          error: result.error,
+        });
+        return { ...result, data: fallbackData };
+      }
+      console.info("[class-page-query]", label, duration, "ms");
+      return result;
+    } catch (error) {
+      console.error("[class-page-query] threw", {
+        query: label,
+        durationMs: Date.now() - startedAt,
+        error,
+      });
+      return { data: fallbackData, error };
+    }
+  };
   const [
     { data: roster },
     { data: scenarios },
     { data: assignments },
+    { data: teacherModuleAssignments },
+    { data: availableTeacherModules },
     { data: school },
-    { data: userResult },
+    teacherMembershipResult,
+    schoolMembershipResult,
   ] = await Promise.all([
-    supabase
+    timed("roster", supabase
       .from("class_instance_memberships")
-      .select(
-        "user_id,role,left_at,user_profiles(display_name,username,avatar_seed)",
-      )
+      .select("user_id,role,left_at,user_profiles(display_name,username,avatar_seed)")
       .eq("class_instance_id", classId)
-      .is("left_at", null),
-
-    supabase
+      .is("left_at", null), []),
+    timed("scenarios", supabase
       .from("scenarios")
       .select("id,title,description,cover_image_url,age_rating")
-      .order("title"),
-
-    supabase
+      .order("title"), []),
+    timed("scenario-assignments", supabase
       .from("class_instance_scenario_assignments")
       .select("scenario_id,pacing_mode,scheduled_start_at,scheduled_end_at,show_reports_at_end,archived_at,is_active,scenarios(title)")
       .eq("class_instance_id", classId)
-      .is("archived_at", null),
-
-    instance.school_id
-      ? supabase
-          .from("schools")
-          .select(
-            "id,name,region,school_image_path,school_image_position_x,school_image_position_y,school_image_zoom",
-          )
+      .is("archived_at", null), []),
+    timed("teacher-module-assignments", supabase
+      .from("teacher_module_class_assignments")
+      .select("id,module_id,school_id,assigned_by,is_active,scheduled_start_at,scheduled_end_at,archived_at,teacher_modules(id,title,description,intro_title,intro_text,visibility_scope,status,created_by,title_card_enabled)")
+      .eq("class_instance_id", classId)
+      .is("archived_at", null), []),
+    timed("available-teacher-modules", supabase
+      .from("teacher_modules")
+      .select("id,title,description,visibility_scope,created_by")
+      .eq("school_id", instance.school_id)
+      .eq("status", "published")
+      .order("updated_at", { ascending: false }), []),
+    timed("school", instance.school_id
+      ? supabase.from("schools")
+          .select("id,name,region,school_image_path,school_image_position_x,school_image_position_y,school_image_zoom")
           .eq("id", instance.school_id)
           .maybeSingle()
-      : Promise.resolve({ data: null }),
+      : Promise.resolve({ data: null }), null),
+    timed("class-teacher-membership", user
+      ? supabase.from("class_instance_memberships").select("id")
+          .eq("class_instance_id", classId).eq("user_id", user.id)
+          .eq("role", "teacher").is("left_at", null).maybeSingle()
+      : Promise.resolve({ data: null }), null),
+    timed("school-membership", user && instance.school_id
+      ? supabase.from("school_memberships").select("role")
+          .eq("school_id", instance.school_id).eq("user_id", user.id)
+          .eq("active", true).maybeSingle()
+      : Promise.resolve({ data: null }), null),
+  ] as const);
+  console.info("[class-page-timing] parallel-queries", Date.now() - parallelQueriesStartedAt, "ms");
+  const teacherMembership = teacherMembershipResult.data;
+  const schoolMembership = schoolMembershipResult.data;
 
-    supabase.auth.getUser(),
-  ]);
+  const canEditClassImage = Boolean(
+    teacherMembership ||
+    ["school_admin", "school_lead"].includes(schoolMembership?.role),
+  );
 
-  const user = userResult.user;
+  const classImagePromise = canEditClassImage && instance.class_image_path
+    ? supabase.storage.from("class-images")
+        .createSignedUrl(instance.class_image_path, 60 * 60)
+        .then(({ data, error }) => {
+          if (error) console.warn("[class-page-image] signed URL failed", error);
+          return data?.signedUrl ?? null;
+        })
+        .catch((error) => {
+          console.warn("[class-page-image] signed URL threw", error);
+          return null;
+        })
+    : Promise.resolve(null);
 
-  const teacherMembership = user
-    ? await supabase
-        .from("class_instance_memberships")
-        .select("id")
-        .eq("class_instance_id", classId)
-        .eq("user_id", user.id)
-        .eq("role", "teacher")
-        .is("left_at", null)
-        .maybeSingle()
-    : { data: null };
+const moduleAssetsStartedAt = Date.now();
 
-  const canEditClassImage = Boolean(teacherMembership.data);
+// Keep the class page lightweight: module metadata is enough for the initial
+// view. Full posts and signed image URLs are loaded only when a teacher edits
+// a module (see getTeacherModulePosts in teacherModuleActions.ts).
+const availableTeacherModulesData = (availableTeacherModules ?? []).map((module: any) => ({
+  id: module.id,
+  module_id: module.id,
+  title: module.title,
+  description: module.description ?? "",
+  visibility_scope: module.visibility_scope,
+  posts: [],
+}));
 
-  let classImageUrl: string | null = null;
+const teacherModulesData = (teacherModuleAssignments ?? [])
+  .filter((row: any) => row.teacher_modules?.status === "published")
+  .map((row: any) => ({
+    id: row.id,
+    module_id: row.module_id,
+    school_id: row.school_id,
+    assigned_by: row.assigned_by,
+    is_active: row.is_active,
+    scheduled_start_at: row.scheduled_start_at,
+    scheduled_end_at: row.scheduled_end_at,
+    title: row.teacher_modules.title,
+    description: row.teacher_modules.description,
+    introTitle: row.teacher_modules.intro_title,
+    introText: row.teacher_modules.intro_text,
+    visibility_scope: row.teacher_modules.visibility_scope,
+    canManage: Boolean(user?.id && row.teacher_modules.created_by === user.id),
+    title_card_enabled: row.teacher_modules.title_card_enabled !== false,
+    cover_image_url: null,
+    posts: [],
+  }));
 
-  if (canEditClassImage && instance.class_image_path) {
-    const { data } = await supabase.storage
-      .from("class-images")
-      .createSignedUrl(instance.class_image_path, 60 * 60);
-
-    classImageUrl = data?.signedUrl ?? null;
-  }
+console.info("[class-page-timing] module-metadata", Date.now() - moduleAssetsStartedAt, "ms");
 
   const students = (roster ?? [])
     .filter((row: any) => row.role === "student")
@@ -123,113 +223,7 @@ export default async function ClassDetailPage({
   const activeAssignment = activeAssignments[0] ?? null;
   const reportingUnlocked = !activeAssignment?.show_reports_at_end || Boolean(activeAssignment?.scheduled_end_at && new Date(activeAssignment.scheduled_end_at).getTime() <= Date.now());
 
-  const { data: session } = await supabase.auth.getSession();
-
-  let dashboard: any = {};
-
-  if (session.session?.access_token) {
-    const dashboardRes = await fetch(
-      `${process.env.NEXT_PUBLIC_SUPABASE_URL}/functions/v1/teacher-dashboard`,
-      {
-        method: "POST",
-        headers: {
-          Authorization: `Bearer ${session.session.access_token}`,
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({ classId }),
-        cache: "no-store",
-      },
-    );
-
-    dashboard = await dashboardRes.json().catch(() => ({}));
-  }
-
-  const competencyRows = dashboard.studentCompetencyProgress ?? [];
-  const missionRows = dashboard.studentMissionProgress ?? [];
-  const learningEvidenceRows = dashboard.studentLearningEvidence ?? [];
-  const scenarioLearningCardInsights = dashboard.scenarioLearningCardInsights ?? [];
-  const learningEvidenceTotals = learningEvidenceRows.reduce((totals: { responses: number; assessed: number; successful: number; notYet: number }, row: any) => ({ responses: totals.responses + Number(row.challenge_responses_submitted ?? 0), assessed: totals.assessed + Number(row.assessed_requirements ?? 0), successful: totals.successful + Number(row.successful_requirements ?? 0), notYet: totals.notYet + Number(row.not_yet_requirements ?? 0) }), { responses: 0, assessed: 0, successful: 0, notYet: 0 });
-
-  const studentRows = new Map<string, { name: string; competencies: Record<string, number>; completed: number; total: number }>();
-  for (const row of competencyRows) {
-    if (!row.user_id) continue;
-    if (!studentRows.has(row.user_id)) {
-      studentRows.set(row.user_id, {
-        name: row.display_name ?? row.username ?? "Schüler:in",
-        competencies: {},
-        completed: 0,
-        total: 0,
-      });
-    }
-    if (row.competency_title && row.level != null) {
-      studentRows.get(row.user_id)!.competencies[row.competency_title] = Number(row.level);
-    }
-  }
-  for (const row of missionRows) {
-    if (!row.user_id) continue;
-    if (!studentRows.has(row.user_id)) {
-      studentRows.set(row.user_id, {
-        name: row.display_name ?? row.username ?? "Schüler:in",
-        competencies: {},
-        completed: 0,
-        total: 0,
-      });
-    }
-    const student = studentRows.get(row.user_id)!;
-    student.completed += Number(row.missions_completed ?? 0);
-    student.total += Number(row.missions_total ?? 0);
-  }
-  const allCompetencyTitles: string[] = Array.from(
-    new Set<string>(
-      competencyRows
-        .map((row: any) => row.competency_title)
-        .filter((title: unknown): title is string => typeof title === "string" && title.trim().length > 0),
-    ),
-  );
-  const missionBottlenecks = (dashboard.missionBottlenecks ?? []).slice(0, 5);
-  const competencyOverview = (dashboard.competencyOverview ?? []).filter(
-    (row: any) => row.competency_id != null && Number(row.student_count ?? 0) > 0,
-  );
-
-  const levels = competencyRows
-    .map((row: any) => Number(row.level ?? 0))
-    .filter((level: number) => level > 0);
-
-  const average = levels.length
-    ? levels.reduce((a: number, b: number) => a + b, 0) / levels.length
-    : null;
-
-  const completed = missionRows.reduce(
-    (sum: number, row: any) => sum + Number(row.missions_completed ?? 0),
-    0,
-  );
-
-  const total = missionRows.reduce(
-    (sum: number, row: any) => sum + Number(row.missions_total ?? 0),
-    0,
-  );
-
-  // The existing, class-scoped dashboard RPC reports mission progress for
-  // the currently assigned module. Do not infer historical progress for
-  // modules that are not assigned.
-  const studentsWithMissionData = missionRows.filter(
-    (row: any) => Number(row.missions_total ?? 0) > 0,
-  );
-  const studentsWithCompletedModule = studentsWithMissionData.filter(
-    (row: any) => Number(row.missions_completed ?? 0) >= Number(row.missions_total ?? 0),
-  ).length;
-  const activeModuleStatus =
-    !activeAssignment || total === 0
-      ? "Noch nicht begonnen"
-      : completed >= total
-        ? "Abgeschlossen"
-        : completed > 0
-          ? "In Bearbeitung"
-          : "Noch nicht begonnen";
-  const activeModuleReport = total > 0
-    ? `${completed} von ${total} Mission-Abschlüssen über alle Schüler:innen · ${studentsWithCompletedModule} von ${studentsWithMissionData.length} Schüler:innen haben alle Missionen abgeschlossen`
-    : "Noch keine auswertbaren Missionsfortschritte vorhanden.";
-
+  const classImageUrl = await classImagePromise;
   const schoolImageUrl = school?.school_image_path
     ? `${process.env.NEXT_PUBLIC_SUPABASE_URL}/storage/v1/object/public/school-images/${school.school_image_path}`
     : null;
@@ -250,6 +244,8 @@ export default async function ClassDetailPage({
     classImageUrl
       ? instance.class_image_zoom ?? 1
       : school?.school_image_zoom ?? 1;
+
+  console.info("[class-page-timing] total-server-render", Date.now() - pageStartedAt, "ms");
 
   return (
     <main className="min-h-screen bg-canvas">
@@ -278,81 +274,61 @@ export default async function ClassDetailPage({
           canEditClassImage={canEditClassImage}
         />
 
-        <section className="mt-5 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-            <Metric label="Schüler:innen" value={students.length} icon="users" tone="blue" />
-            <Metric
-              label="Aktives Modul"
-              value={activeAssignment?.scenarios?.title ?? "Keines"}
-              icon="target"
-              tone="violet"
-            />
-            <Metric
-              label="Ø Kompetenz"
-              value={average === null ? "—" : `${average.toFixed(1)} / 5`}
-              icon="chart"
-              tone="cyan"
-            />
-            <Metric
-              label="Missionen"
-              value={total ? `${completed}/${total}` : "—"}
-              icon="check"
-              tone="purple"
-            />
-        </section>
-
-        <ClassModuleLibrary
-          classId={classId}
-          scenarios={(scenarios ?? []).map((scenario: any) => ({
-            id: scenario.id,
-            title: scenario.title,
-            description: scenario.description ?? null,
-            cover_image_url: scenario.cover_image_url ?? null,
-            age_rating: scenario.age_rating ?? "Alle Altersgruppen",
-          }))}
-          assignments={activeAssignments.map((item: any) => ({
-            scenario_id: item.scenario_id,
-            is_active: item.is_active !== false,
-            scheduled_start_at: item.scheduled_start_at,
-            scheduled_end_at: item.scheduled_end_at,
-            show_reports_at_end: Boolean(item.show_reports_at_end),
-            title: item.scenarios?.title ?? null,
-          }))}
-          moduleStatus={activeModuleStatus as "Abgeschlossen" | "In Bearbeitung" | "Noch nicht begonnen"}
-          moduleReport={activeModuleReport}
-        />
-
-        <div className="mt-6">
-          <StudentRoster
+        <CollapsiblePanel
+          title="1. Module & Szenarien"
+          description="Lernmodule auswählen, eigene Inhalte erstellen und den Unterricht planen."
+        >
+          <ClassModuleLibrary
             classId={classId}
-            initialStudents={students}
-            reportingUnlocked={reportingUnlocked}
+            schoolId={instance.school_id}
+            teacherModules={teacherModulesData}
+            availableTeacherModules={availableTeacherModulesData}
+            scenarios={(scenarios ?? []).map((scenario: any) => ({
+              id: scenario.id,
+              title: scenario.title,
+              description: scenario.description ?? null,
+              cover_image_url: scenario.cover_image_url ?? null,
+              age_rating: scenario.age_rating ?? "Alle Altersgruppen",
+            }))}
+            assignments={activeAssignments.map((item: any) => ({
+              scenario_id: item.scenario_id,
+              is_active: item.is_active !== false,
+              scheduled_start_at: item.scheduled_start_at,
+              scheduled_end_at: item.scheduled_end_at,
+              show_reports_at_end: Boolean(item.show_reports_at_end),
+              title: item.scenarios?.title ?? null,
+            }))}
+            moduleStatus="Noch nicht begonnen"
+            moduleReport=""
           />
-        </div>
+        </CollapsiblePanel>
 
-        <ClassLearningInsights
-          students={students}
-          studentRows={Object.fromEntries(studentRows.entries())}
-          competencyTitles={allCompetencyTitles}
-          evidence={learningEvidenceTotals}
-          scenarioLearningCards={scenarioLearningCardInsights}
-          competencies={competencyOverview.map((row: any) => ({
-            competency_id: String(row.competency_id),
-            competency_title: String(row.competency_title ?? "Kompetenz"),
-            avg_level: Number(row.avg_level ?? 0),
-            student_count: Number(row.student_count ?? 0),
-          }))}
-          bottlenecks={missionBottlenecks.map((row: any) => ({
-            mission_id: String(row.mission_id),
-            mission_title: String(row.mission_title ?? "Mission"),
-            completion_rate: Number(row.completion_rate ?? 0),
-            completed_count: Number(row.completed_count ?? 0),
-            student_count: Number(row.student_count ?? 0),
-          }))}
-          average={average}
-          completed={completed}
-          total={total}
-          classId={classId}
-        />
+        <CollapsiblePanel
+          title="2. Schüler:innen"
+          description={students.length + " aktive Schüler:innen in dieser Klasse."}
+        >
+          <div className="p-4 sm:p-5">
+            <StudentRoster
+              classId={classId}
+              initialStudents={students}
+              reportingUnlocked={reportingUnlocked}
+            />
+          </div>
+        </CollapsiblePanel>
+
+        <CollapsiblePanel
+          title="3. Insights & Lernreporting"
+          description="Kompetenzentwicklung, Missionsfortschritt und Lernhürden."
+        >
+          <Suspense fallback={<div className="px-5 py-6 text-sm text-slate-500">Lernfortschritt und Klassen-Insights werden geladen …</div>}>
+            <ClassDashboardInsights
+              classId={classId}
+              students={students}
+              activeAssignmentTitle={activeAssignment?.scenarios?.title ?? null}
+            />
+          </Suspense>
+        </CollapsiblePanel>
+
 
 
       </div>
@@ -360,32 +336,3 @@ export default async function ClassDetailPage({
   );
 }
 
-
-function Metric({
-  label,
-  value,
-  icon,
-  tone,
-}: {
-  label: string;
-  value: string | number;
-  icon: "users" | "target" | "chart" | "check";
-  tone: "blue" | "violet" | "cyan" | "purple";
-}) {
-  const tones = {
-    blue: "bg-sky-100 text-sky-600",
-    violet: "bg-violet-100 text-violet-600",
-    cyan: "bg-cyan-100 text-cyan-600",
-    purple: "bg-fuchsia-100 text-fuchsia-600",
-  };
-  const glyphs = { users: "♟", target: "◎", chart: "▥", check: "✓" };
-  return (
-    <div className="flex min-w-0 items-center gap-3 rounded-2xl border border-slate-200/80 bg-white px-4 py-3 shadow-sm">
-      <span className={"flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-xl font-semibold " + tones[tone]}>{glyphs[icon]}</span>
-      <div className="min-w-0">
-        <p className="text-xs text-slate-400">{label}</p>
-        <p className="mt-0.5 truncate text-lg font-semibold tracking-tight text-slate-950">{value}</p>
-      </div>
-    </div>
-  );
-}

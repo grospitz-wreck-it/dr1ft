@@ -22,6 +22,50 @@ export default async function FeedPage() {
     const endsAt = assignment.scheduled_end_at ? new Date(assignment.scheduled_end_at).getTime() : null;
     return (startsAt === null || startsAt <= now) && (endsAt === null || endsAt > now);
   });
+
+  // Teacher-created modules are a separate content source from editorial
+  // content_items. Load only active assignments for this learner's class.
+  const { data: teacherModuleAssignments } = await supabase
+    .from("teacher_module_class_assignments")
+    .select("id,module_id,scheduled_start_at,scheduled_end_at,teacher_modules(id,title,description,title_card_enabled,status,teacher_module_posts(id,post_type,title,body,image_path,embed_provider,embed_url,interaction_data,sort_order,status))")
+    .eq("class_instance_id", classInstanceId)
+    .eq("is_active", true);
+  const availableTeacherModules = await Promise.all((teacherModuleAssignments ?? [])
+    .filter((assignment: any) => {
+      const startsAt = assignment.scheduled_start_at ? new Date(assignment.scheduled_start_at).getTime() : null;
+      const endsAt = assignment.scheduled_end_at ? new Date(assignment.scheduled_end_at).getTime() : null;
+      return (startsAt === null || startsAt <= now) && (endsAt === null || endsAt > now)
+        && assignment.teacher_modules?.status === "published";
+    })
+    .map(async (assignment: any) => {
+      const posts = await Promise.all([...(assignment.teacher_modules.teacher_module_posts ?? [])]
+        .filter((post: any) => post.status === "published")
+        .sort((a: any, b: any) => Number(a.sort_order ?? 0) - Number(b.sort_order ?? 0))
+        .map(async (post: any) => {
+          const { data: image } = post.image_path
+            ? await supabase.storage.from("teacher-module-assets").createSignedUrl(post.image_path, 60 * 60)
+            : { data: null };
+          return {
+            id: post.id,
+            postType: post.post_type,
+            title: post.title ?? "",
+            body: post.body ?? "",
+            imageUrl: image?.signedUrl ?? null,
+            embedProvider: post.embed_provider ?? null,
+            embedUrl: post.embed_url ?? null,
+            sortOrder: post.sort_order ?? 0,
+            interactionData: { options: Array.isArray(post.interaction_data?.options) ? post.interaction_data.options : ["Echt", "Fake"], responseMode: post.interaction_data?.responseMode ?? "single", correctAnswer: post.interaction_data?.correctAnswer, explanation: post.interaction_data?.explanation },
+          };
+        }));
+      return {
+        id: assignment.module_id,
+        assignmentId: assignment.id,
+        title: assignment.teacher_modules.title,
+        description: assignment.teacher_modules.description ?? "",
+        titleCardEnabled: assignment.teacher_modules.title_card_enabled !== false,
+        posts,
+      };
+    }));
   const assignedScenarioIds: string[] = Array.from(new Set<string>(availableAssignments.map((a: any) => a.scenario_id)));
   const { data: assignedScenarios } = assignedScenarioIds.length
     ? await supabase.from("scenarios").select("id, title, description, ambient_density, cover_image_url").in("id", assignedScenarioIds).order("created_at", { ascending: true })
@@ -277,5 +321,5 @@ export default async function FeedPage() {
   }));
   const likedContentIds = new Set((recentInteractions ?? []).filter((i) => i.interaction_type === "like").map((i) => i.content_item_id));
 
-  return <FeedClient learningCards={scenarioLearningCards} scenarioSummaries={scenarioIntros.map((scenario) => ({ id: scenario.id, title: scenario.title, description: scenario.description, coverImageUrl: scenario.cover_image_url ?? null }))} initialItems={items} userId={user.id} classInstanceId={classInstanceId} likedContentIds={likedContentIds} scenarioIntro={scenarioIntro ? { ...scenarioIntro, title: scenarioIntroTitle ?? scenarioIntro.title, description: scenarioIntroDescription } : null} scenarioIds={assignedScenarioIds} scenarioMissionCount={scenarioMissionIds.length} completedScenarioMissionCount={new Set((completedScenarioMissions ?? []).map((mission) => mission.mission_id)).size} profile={{ displayName: currentProfile?.display_name ?? "DR1FT User", username: currentProfile?.username ?? "user", avatarSeed: currentProfile?.avatar_seed ?? user.id }} />;
+  return <FeedClient teacherModules={availableTeacherModules} learningCards={scenarioLearningCards} scenarioSummaries={scenarioIntros.map((scenario) => ({ id: scenario.id, title: scenario.title, description: scenario.description, coverImageUrl: scenario.cover_image_url ?? null }))} initialItems={items} userId={user.id} classInstanceId={classInstanceId} likedContentIds={likedContentIds} scenarioIntro={scenarioIntro ? { ...scenarioIntro, title: scenarioIntroTitle ?? scenarioIntro.title, description: scenarioIntroDescription } : null} scenarioIds={assignedScenarioIds} scenarioMissionCount={scenarioMissionIds.length} completedScenarioMissionCount={new Set((completedScenarioMissions ?? []).map((mission) => mission.mission_id)).size} profile={{ displayName: currentProfile?.display_name ?? "DR1FT User", username: currentProfile?.username ?? "user", avatarSeed: currentProfile?.avatar_seed ?? user.id }} />;
 }

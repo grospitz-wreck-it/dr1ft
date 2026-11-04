@@ -1,8 +1,8 @@
 "use client";
 
 import { useEffect, useState, useTransition } from "react";
-import { CalendarClock, Check, Clock3, Image as ImageIcon, Trash2 } from "lucide-react";
-import { archiveScenarioAssignment, setScenarioAssignmentActive, updateScenarioSchedule } from "../actions";
+import { Archive, CalendarClock, Check, Clock3, Image as ImageIcon, RotateCcw } from "lucide-react";
+import { archiveScenarioAssignment, resetScenarioAssignment, setScenarioAssignmentActive, updateScenarioSchedule } from "../actions";
 import { useRouter } from "next/navigation";
 
 type ModuleStatus = "Abgeschlossen" | "In Bearbeitung" | "Noch nicht begonnen" | "Nicht zugewiesen";
@@ -133,20 +133,28 @@ export function ScenarioToggle({
           </button>
           <span className="text-[9px] text-slate-400">{pending ? "…" : selected ? "Aktiv" : "Inaktiv"}</span>
           {archiveMessage && <span role="alert" className="max-w-28 text-center text-[9px] text-rose-600">{archiveMessage}</span>}
-          <button type="button" onClick={() => {
-            if (pending || !window.confirm("Dieses Modul archivieren? Alle Lernfortschritte und Antworten bleiben erhalten.")) return;
-            setArchiveMessage("");
-            startTransition(async () => {
-              try {
-                await archiveScenarioAssignment(classId, scenarioId);
-                router.refresh();
-              } catch (error) {
-                setArchiveMessage(error instanceof Error ? error.message : "Modul konnte nicht archiviert werden.");
-              }
-            });
-          }} disabled={pending} aria-label="Modul archivieren" title="Modul archivieren – Lernstände bleiben erhalten" className="mt-1 inline-flex h-8 w-8 items-center justify-center rounded-xl border border-white/80 bg-white/65 text-slate-500 shadow-[0_4px_14px_rgba(30,41,59,.10)] backdrop-blur-xl transition hover:border-rose-200 hover:bg-rose-50 hover:text-rose-600 disabled:opacity-50">
-            <Trash2 className="h-3.5 w-3.5" />
-          </button>
+          <div className="mt-1 flex items-center gap-1.5">
+            <button type="button" onClick={() => {
+              if (pending || !window.confirm("Dieses DR1FT-Modul aus der Klasse entfernen und die Zuweisung zurücksetzen? Der zentrale DR1FT-Inhalt bleibt erhalten.")) return;
+              setArchiveMessage("");
+              startTransition(async () => {
+                try { await resetScenarioAssignment(classId, scenarioId); router.refresh(); }
+                catch (error) { setArchiveMessage(error instanceof Error ? error.message : "Modul konnte nicht zurückgesetzt werden."); }
+              });
+            }} disabled={pending} aria-label="DR1FT-Modul zurücksetzen" title="DR1FT-Modul-Zuweisung zurücksetzen" className="inline-flex h-8 w-8 items-center justify-center rounded-xl border border-rose-200 bg-white text-rose-600 transition hover:bg-rose-50 disabled:opacity-50">
+              <RotateCcw className="h-3.5 w-3.5" />
+            </button>
+            <button type="button" onClick={() => {
+              if (pending || !window.confirm("Dieses Modul archivieren? Alle Lernfortschritte und Antworten bleiben erhalten.")) return;
+              setArchiveMessage("");
+              startTransition(async () => {
+                try { await archiveScenarioAssignment(classId, scenarioId); router.refresh(); }
+                catch (error) { setArchiveMessage(error instanceof Error ? error.message : "Modul konnte nicht archiviert werden."); }
+              });
+            }} disabled={pending} aria-label="Modul archivieren" title="Modul archivieren – Lernstände bleiben erhalten" className="inline-flex h-8 w-8 items-center justify-center rounded-xl border border-violet-200 bg-white text-violet-700 transition hover:bg-violet-50 disabled:opacity-50">
+              <Archive className="h-3.5 w-3.5" />
+            </button>
+          </div>
         </div>
       </div>
 

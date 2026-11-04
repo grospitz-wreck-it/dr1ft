@@ -5,6 +5,41 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { supabaseServerClient } from "../../lib/supabaseServerClient";
 
+
+async function assertCanManageClass(supabase: ReturnType<typeof supabaseServerClient>, userId: string, classId: string) {
+  const { data: classInstance, error: classError } = await supabase
+    .from("class_instances")
+    .select("id,school_id")
+    .eq("id", classId)
+    .maybeSingle();
+  if (classError || !classInstance) throw new Error("Klasse nicht gefunden oder kein Zugriff.");
+
+  const { data: schoolMembership, error: schoolError } = await supabase
+    .from("school_memberships")
+    .select("role")
+    .eq("school_id", classInstance.school_id)
+    .eq("user_id", userId)
+    .eq("active", true)
+    .maybeSingle();
+  if (schoolError) throw new Error(schoolError.message);
+  if (schoolMembership && ["school_admin", "school_lead"].includes(schoolMembership.role)) return;
+
+  const { data: classMembership, error: membershipError } = await supabase
+    .from("class_instance_memberships")
+    .select("role")
+    .eq("class_instance_id", classId)
+    .eq("user_id", userId)
+    .eq("role", "teacher")
+    .is("left_at", null)
+    .maybeSingle();
+  if (membershipError) throw new Error(membershipError.message);
+  if (classMembership?.role === "teacher") return;
+
+  const { data: isPlatformAdmin, error: platformError } = await supabase.rpc("is_platform_admin");
+  if (!platformError && isPlatformAdmin === true) return;
+  throw new Error("Keine Berechtigung, diese Klasse zu verwalten.");
+}
+
 function generateAccessCode(): string {
   const alphabet = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
   let code = "";
@@ -78,17 +113,7 @@ export async function toggleScenarioAssignment(
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) throw new Error("Nicht authentifiziert");
 
-  const { data: membership, error: membershipError } = await supabase
-    .from("class_instance_memberships")
-    .select("id,role")
-    .eq("class_instance_id", classId)
-    .eq("user_id", user.id)
-    .is("left_at", null)
-    .maybeSingle();
-
-  if (membershipError || !membership || !["teacher", "school_admin", "school_lead"].includes(membership.role)) {
-    throw new Error("Keine Berechtigung, die Lernmodule dieser Klasse zu ändern");
-  }
+  await assertCanManageClass(supabase, user.id, classId);
 
   if (shouldBeAssigned) {
     const { error } = await supabase.rpc("upsert_class_instance_scenario_assignment", {
@@ -124,17 +149,7 @@ export async function setScenarioAssignmentActive(classId: string, scenarioId: s
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) throw new Error("Nicht authentifiziert");
 
-  const { data: membership, error: membershipError } = await supabase
-    .from("class_instance_memberships")
-    .select("id,role")
-    .eq("class_instance_id", classId)
-    .eq("user_id", user.id)
-    .is("left_at", null)
-    .maybeSingle();
-
-  if (membershipError || !membership || !["teacher", "school_admin", "school_lead"].includes(membership.role)) {
-    throw new Error("Keine Berechtigung, den Modulstatus dieser Klasse zu ändern");
-  }
+  await assertCanManageClass(supabase, user.id, classId);
 
   const { error } = await supabase
     .from("class_instance_scenario_assignments")
@@ -152,17 +167,7 @@ export async function archiveScenarioAssignment(classId: string, scenarioId: str
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) throw new Error("Nicht authentifiziert");
 
-  const { data: membership, error: membershipError } = await supabase
-    .from("class_instance_memberships")
-    .select("id,role")
-    .eq("class_instance_id", classId)
-    .eq("user_id", user.id)
-    .is("left_at", null)
-    .maybeSingle();
-
-  if (membershipError || !membership || !["teacher", "school_admin", "school_lead"].includes(membership.role)) {
-    throw new Error("Keine Berechtigung, Module dieser Klasse zu archivieren");
-  }
+  await assertCanManageClass(supabase, user.id, classId);
 
   const { error } = await supabase
     .from("class_instance_scenario_assignments")
@@ -176,12 +181,25 @@ export async function archiveScenarioAssignment(classId: string, scenarioId: str
   revalidatePath("/classes");
 }
 
+export async function resetScenarioAssignment(classId: string, scenarioId: string) {
+  const supabase = supabaseServerClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) throw new Error("Nicht authentifiziert");
+  await assertCanManageClass(supabase, user.id, classId);
+  const { error } = await supabase.from("class_instance_scenario_assignments")
+    .delete().eq("class_instance_id", classId).eq("scenario_id", scenarioId);
+  if (error) throw new Error(error.message);
+  revalidatePath("/classes/" + classId);
+}
 export async function updateScenarioPacing(
   classId: string,
   scenarioId: string,
   pacingMode: "compact" | "as_designed"
 ) {
   const supabase = supabaseServerClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) throw new Error("Nicht authentifiziert");
+  await assertCanManageClass(supabase, user.id, classId);
   const { error } = await supabase.rpc("update_class_instance_scenario_pacing", {
     p_instance_id: classId,
     p_scenario_id: scenarioId,
@@ -203,17 +221,7 @@ export async function updateScenarioSchedule(
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) throw new Error("Nicht authentifiziert");
 
-  const { data: membership, error: membershipError } = await supabase
-    .from("class_instance_memberships")
-    .select("id,role")
-    .eq("class_instance_id", classId)
-    .eq("user_id", user.id)
-    .is("left_at", null)
-    .maybeSingle();
-
-  if (membershipError || !membership || !["teacher", "school_admin", "school_lead"].includes(membership.role)) {
-    throw new Error("Keine Berechtigung, den Zeitplan dieser Klasse zu ändern");
-  }
+  await assertCanManageClass(supabase, user.id, classId);
 
   const start = scheduledStartAt ? new Date(scheduledStartAt) : null;
   const end = scheduledEndAt ? new Date(scheduledEndAt) : null;

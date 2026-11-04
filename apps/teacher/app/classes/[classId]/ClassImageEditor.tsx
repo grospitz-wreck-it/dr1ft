@@ -1,8 +1,28 @@
 "use client";
 
 import { useRef, useState } from "react";
+import { ImagePlus } from "lucide-react";
 import { createBrowserClient } from "@supabase/ssr";
 import { useRouter } from "next/navigation";
+
+async function convertToWebP(source: File, maxDimension = 1920, quality = 0.82): Promise<File> {
+  const objectUrl = URL.createObjectURL(source);
+  try {
+    const image = new Image(); image.src = objectUrl;
+    await new Promise<void>((resolve, reject) => { image.onload = () => resolve(); image.onerror = () => reject(new Error("Bild konnte nicht gelesen werden.")); });
+    const factor = Math.min(1, maxDimension / Math.max(image.naturalWidth, image.naturalHeight));
+    const canvas = document.createElement("canvas");
+    canvas.width = Math.max(1, Math.round(image.naturalWidth * factor));
+    canvas.height = Math.max(1, Math.round(image.naturalHeight * factor));
+    const context = canvas.getContext("2d");
+    if (!context) throw new Error("Bildoptimierung wird in diesem Browser nicht unterstützt.");
+    context.drawImage(image, 0, 0, canvas.width, canvas.height);
+    const blob = await new Promise<Blob>((resolve, reject) => canvas.toBlob(value => value ? resolve(value) : reject(new Error("WebP-Konvertierung fehlgeschlagen.")), "image/webp", quality));
+    if (blob.type !== "image/webp") throw new Error("Dieser Browser unterstützt keine WebP-Konvertierung.");
+    const baseName = source.name.replace(/\.[^.]+$/, "") || "dr1ft-image";
+    return new File([blob], baseName + ".webp", { type: "image/webp", lastModified: Date.now() });
+  } finally { URL.revokeObjectURL(objectUrl); }
+}
 
 type Props = {
   classId: string;
@@ -51,8 +71,8 @@ export default function ClassImageEditor({
       return;
     }
 
-    if (selected.size > 8 * 1024 * 1024) {
-      setMessage("Das Bild darf maximal 8 MB groß sein.");
+    if (selected.size > 20 * 1024 * 1024) {
+      setMessage("Das Originalbild darf maximal 20 MB groß sein.");
       return;
     }
 
@@ -72,16 +92,15 @@ export default function ClassImageEditor({
       let nextPath = imagePath;
 
       if (file) {
-        const extension =
-          file.name.split(".").pop()?.toLowerCase() || "jpg";
-
-        const path = `${classId}/class-${Date.now()}.${extension}`;
+        const optimizedFile = await convertToWebP(file);
+        if (optimizedFile.size > 8 * 1024 * 1024) throw new Error("Das optimierte WebP-Bild ist noch größer als 8 MB. Bitte ein kleineres Bild verwenden.");
+        const path = `${classId}/class-${Date.now()}.webp`;
 
         const { error: uploadError } = await supabase.storage
           .from("class-images")
-          .upload(path, file, {
+          .upload(path, optimizedFile, {
             upsert: false,
-            contentType: file.type,
+            contentType: "image/webp",
           });
 
         if (uploadError) {
@@ -194,13 +213,14 @@ export default function ClassImageEditor({
         </div>
 
         <div className="flex flex-wrap gap-2">
-          <label className="inline-flex cursor-pointer items-center gap-2 rounded-lg border border-border px-3 py-2 text-sm font-medium text-slate-700 transition hover:bg-canvas">
-            Bild ändern
+          <label className="group inline-flex min-w-[230px] cursor-pointer items-center gap-3 rounded-2xl border border-dashed border-violet-300 bg-gradient-to-r from-violet-50 to-cyan-50 px-4 py-3 text-left transition hover:border-violet-500 hover:from-violet-100 hover:to-cyan-100">
+            <span className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-white text-violet-600 shadow-sm ring-1 ring-violet-100"><ImagePlus className="h-5 w-5"/></span>
+            <span><span className="block text-xs font-bold text-slate-800">{file?.name ?? "Bild auswählen"}</span><span className="mt-0.5 block text-[10px] text-slate-500">JPG, PNG oder WebP · max. 20 MB</span></span>
             <input
               ref={inputRef}
               type="file"
               accept="image/jpeg,image/png,image/webp"
-              className="hidden"
+              className="sr-only"
               disabled={saving}
               onChange={(event) => {
                 const selected = event.target.files?.[0];
