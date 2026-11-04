@@ -302,7 +302,8 @@ export async function getTeacherModuleFreeTextResponses(classInstanceId: string,
 
   const { data: post, error: postError } = await supabase.from("teacher_module_posts")
     .select("id,interaction_data,post_type").eq("id", postId).eq("module_id", moduleId).maybeSingle();
-  if (postError || !post || post.post_type !== "poll" || post.interaction_data?.responseMode !== "free_text") {
+  const interactionConfig = post?.interaction_data as { responseMode?: string } | null;
+  if (postError || !post || post.post_type !== "poll" || interactionConfig?.responseMode !== "free_text") {
     throw new Error("Für diesen Beitrag gibt es keine Freitextantworten.");
   }
 
