@@ -88,8 +88,10 @@ export async function getTeacherModulePosts(classInstanceId: string, moduleId: s
 export async function saveTeacherCreatedModule(formData: FormData) {
   let stage = "Server Action gestartet";
   try {
+  console.info("[teacher-module-publish] started", { stage, timestamp: new Date().toISOString() });
   const supabase = supabaseServerClient();
   stage = "Authentifizierung";
+  console.info("[teacher-module-publish] stage", stage, new Date().toISOString());
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) throw new Error("Nicht authentifiziert");
 
@@ -107,6 +109,7 @@ export async function saveTeacherCreatedModule(formData: FormData) {
   // have a separate class_instance_memberships row: their authority is scoped
   // to their own school via the canonical is_school_admin_of() helper.
   stage = "Klasse und Schulzuordnung prüfen";
+  console.info("[teacher-module-publish] stage", stage, new Date().toISOString());
   const { data: classInstance, error: classError } = await supabase
     .from("class_instances")
     .select("id,school_id")
@@ -121,6 +124,7 @@ export async function saveTeacherCreatedModule(formData: FormData) {
   }
 
   stage = "Schulmitgliedschaft prüfen";
+  console.info("[teacher-module-publish] stage", stage, new Date().toISOString());
   const { data: schoolMembership } = await supabase
     .from("school_memberships")
     .select("school_id,role")
@@ -133,6 +137,7 @@ export async function saveTeacherCreatedModule(formData: FormData) {
   let isClassTeacher = false;
   if (!isSchoolAdmin) {
     stage = "Lehrkraft-Berechtigung prüfen";
+  console.info("[teacher-module-publish] stage", stage, new Date().toISOString());
     const { data: membership, error: membershipError } = await supabase
       .from("class_instance_memberships")
       .select("id,role")
@@ -156,6 +161,7 @@ export async function saveTeacherCreatedModule(formData: FormData) {
   if (!Array.isArray(posts) || posts.length < 1 || posts.length > 40) throw new Error("Ein Modul benötigt mindestens einen und höchstens 40 Beiträge.");
 
   stage = "Modul-Datensatz anlegen";
+  console.info("[teacher-module-publish] stage", stage, new Date().toISOString());
   const { data: module, error: moduleError } = await supabase
     .from("teacher_modules")
     .insert({ school_id: schoolId, created_by: user.id, title, description, title_card_enabled: titleCardEnabled, intro_title: null, intro_text: null, visibility_scope: visibilityScope, status: "draft" })
@@ -165,6 +171,7 @@ export async function saveTeacherCreatedModule(formData: FormData) {
 
   const rows = [];
   stage = "Beiträge und Bilddateien verarbeiten";
+  console.info("[teacher-module-publish] stage", stage, new Date().toISOString());
   for (let index = 0; index < posts.length; index++) {
     const post = posts[index];
     if (!post.id || !["text", "image", "embed", "mixed", "poll", "true_false"].includes(post.postType)) throw new Error("Ungültiger Beitrag.");
@@ -198,10 +205,12 @@ export async function saveTeacherCreatedModule(formData: FormData) {
   }
 
   stage = "Beiträge in Supabase speichern";
+  console.info("[teacher-module-publish] stage", stage, new Date().toISOString());
   const { error: postsError } = await supabase.from("teacher_module_posts").insert(rows);
   if (postsError) throw new Error(postsError.message);
 
   stage = "Modul der Klasse zuordnen";
+  console.info("[teacher-module-publish] stage", stage, new Date().toISOString());
   const { error: assignmentError } = await supabase.from("teacher_module_class_assignments").insert({
     module_id: module.id,
     school_id: schoolId,
@@ -212,6 +221,7 @@ export async function saveTeacherCreatedModule(formData: FormData) {
   if (assignmentError) throw new Error(assignmentError.message);
 
   stage = "Modul veröffentlichen";
+  console.info("[teacher-module-publish] stage", stage, new Date().toISOString());
   const { error: publishError } = await supabase
     .from("teacher_modules")
     .update({ status: "published", published_at: new Date().toISOString() })
@@ -220,6 +230,7 @@ export async function saveTeacherCreatedModule(formData: FormData) {
   if (publishError) throw new Error(publishError.message);
 
   stage = "Cache aktualisieren";
+  console.info("[teacher-module-publish] stage", stage, new Date().toISOString());
   revalidatePath(`/classes/${classInstanceId}`);
   console.info("[teacher-module-publish] success", { moduleId: module.id, classInstanceId, postCount: rows.length });
   return { moduleId: module.id };
