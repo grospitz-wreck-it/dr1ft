@@ -257,9 +257,27 @@ export function TeacherModuleBuilderModal({ classInstanceId, schoolId, editModul
                       </article>)}
                     </div>
                   </section>
-                ) : selected ? (
-                  <section className="drift-builder-canvas flex min-h-0 min-w-0 flex-col overflow-y-auto px-5 py-5 sm:px-6 lg:min-h-0">
-                    <div className="mb-3 flex items-center justify-between"><button type="button" onClick={()=>setSelectedId(null)} className="text-xs font-bold text-violet-700">← Zurück zu allen Beiträgen</button><span className="text-[10px] font-bold uppercase tracking-widest text-violet-600">Beitrag bearbeiten</span></div>
+                ) : (
+                  <div className="relative flex min-h-0 min-w-0 flex-1 overflow-hidden">
+                                  <section className="drift-builder-canvas flex min-h-0 min-w-0 flex-1 flex-col overflow-y-auto px-5 py-5 sm:px-6 lg:min-h-0">
+                  <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
+                    <div><div className="flex items-center gap-2"><span className="drift-builder-step">03</span><h3 className="text-[21px] font-extrabold tracking-tight text-slate-950">Beiträge ({posts.length})</h3></div><p className="mt-1 text-xs text-slate-600">Ziehe die Karten per Drag & Drop in die gewünschte Reihenfolge.</p></div>
+                    <div className="flex items-center gap-2"><span className="rounded-xl border border-violet-100 bg-white px-3 py-2 text-[10px] font-bold text-violet-700">{posts.length} / 40 Karten</span><button type="button" onClick={()=>setPreviewMode(true)} disabled={!posts.length} className="inline-flex items-center gap-2 rounded-xl border border-violet-200 bg-violet-50 px-4 py-2.5 text-xs font-extrabold text-violet-700 disabled:opacity-40"><Play className="h-3.5 w-3.5"/> Vorschau</button></div>
+                  </div>
+                  <div className="space-y-3">
+                    {thumbnails.map(post=><article key={post.id} draggable onDragStart={event=>{setDragId(post.id);event.dataTransfer.effectAllowed="move";event.dataTransfer.setData("text/plain",post.id);}} onDragOver={event=>{event.preventDefault();event.dataTransfer.dropEffect="move";}} onDrop={event=>{event.preventDefault();const source=event.dataTransfer.getData("text/plain")||dragId;if(source)movePost(source,post.id);setDragId(null);}} onDragEnd={()=>setDragId(null)} className="drift-builder-post-row group flex items-center gap-3 rounded-[20px] p-3">
+                      <span className="grid h-10 w-6 shrink-0 place-items-center text-slate-500"><GripVertical className="h-5 w-5"/></span><span className="grid h-10 w-10 shrink-0 place-items-center rounded-xl border border-violet-100 bg-white text-sm font-extrabold text-slate-900">{post.index+1}</span>
+                      <div className="drift-builder-post-thumb grid h-[82px] w-[142px] shrink-0 place-items-center overflow-hidden rounded-xl">{post.imageFile?<img src={URL.createObjectURL(post.imageFile)} alt="" className="h-full w-full object-cover"/>:post.existingImageUrl?<img src={post.existingImageUrl} alt="" className="h-full w-full object-cover"/>:post.postType==="poll"?<BarChart3 className="h-8 w-8 text-violet-600"/>:post.postType==="true_false"?<CircleCheck className="h-8 w-8 text-violet-600"/>:post.postType==="embed"?<Link2 className="h-8 w-8 text-violet-600"/>:<Type className="h-8 w-8 text-violet-600"/>}</div>
+                      <div className="min-w-0 flex-1"><span className="drift-builder-type-badge">{post.postType==="poll"?"▥  Umfrage":"T  Post"}</span><h4 className="mt-2 truncate text-[15px] font-extrabold text-slate-950">{post.title||"Neuer Beitrag"}</h4><p className="mt-1 line-clamp-1 text-xs text-slate-600">{post.body||"Noch keine Beschreibung hinzugefügt."}</p></div>
+                      <div className="flex shrink-0 items-center gap-1.5"><button type="button" onClick={()=>setSelectedId(post.id)} aria-label="Beitrag bearbeiten" className="drift-builder-icon-btn"><Wand2 className="h-4 w-4"/></button><button type="button" onClick={()=>duplicatePost(post)} aria-label="Beitrag duplizieren" className="drift-builder-icon-btn"><Copy className="h-4 w-4"/></button><button type="button" onClick={()=>{setPosts(items=>items.filter(item=>item.id!==post.id));if(selectedId===post.id)setSelectedId(null);}} aria-label="Beitrag löschen" className="drift-builder-icon-btn drift-builder-delete"><X className="h-4 w-4"/></button></div>
+                    </article>)}
+                    {!posts.length&&<div className="drift-builder-empty rounded-[20px] px-6 py-16 text-center"><div className="mx-auto mb-3 grid h-14 w-14 place-items-center rounded-2xl bg-violet-100 text-violet-600"><Wand2 className="h-7 w-7"/></div><h4 className="text-sm font-extrabold text-slate-900">Dein Modul wartet auf Inhalte</h4><p className="mt-1 text-xs text-slate-500">Wähle links einen Kartentyp und leg los.</p></div>}
+                  </div>
+                </section>
+
+                    {selected && (
+                  <aside className="drift-builder-drawer absolute inset-y-0 right-0 z-30 flex w-[min(540px,78%)] min-w-0 flex-col overflow-y-auto border-l border-violet-200 bg-white/95 px-5 py-5 shadow-[-18px_0_50px_rgba(54,37,110,.12)] backdrop-blur-xl sm:px-6">
+                    <div className="mb-3 flex items-center justify-between"><button type="button" onClick={()=>setSelectedId(null)} className="text-xs font-bold text-violet-700">← Übersicht</button><span className="text-[10px] font-bold uppercase tracking-widest text-violet-600">Beitrag bearbeiten</span></div>
                                       <div className="flex shrink-0 items-center justify-between gap-2"><div><p className="text-[9px] font-extrabold uppercase tracking-[.2em] text-violet-600">DEINE CONTENT-KARTE</p><h3 className="mt-1 text-sm font-extrabold text-slate-900">Beitrag gestalten</h3></div>{selected && <button type="button" onClick={() => { setPosts((items) => items.filter((item) => item.id !== selected.id)); setSelectedId(null); }} className="text-xs font-semibold text-rose-600 hover:text-rose-700">Beitrag entfernen</button>}</div>
                   {selected ? (
                     <div className="mt-3 space-y-3">
@@ -297,24 +315,11 @@ export function TeacherModuleBuilderModal({ classInstanceId, schoolId, editModul
                     </div>
                   ) : <div className="flex min-h-64 flex-1 items-center justify-center px-6 text-center text-xs text-slate-500">Wähle ein Thumbnail aus oder erstelle einen neuen Beitrag.</div>}
           
-                  </section>
-                ) : (
-                                  <section className="drift-builder-canvas flex min-h-[360px] min-w-0 flex-col overflow-y-auto rounded-[24px] px-5 py-4 lg:min-h-0">
-                  <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
-                    <div><div className="flex items-center gap-2"><span className="drift-builder-step">03</span><h3 className="text-[21px] font-extrabold tracking-tight text-slate-950">Beiträge ({posts.length})</h3></div><p className="mt-1 text-xs text-slate-600">Ziehe die Karten per Drag & Drop in die gewünschte Reihenfolge.</p></div>
-                    <div className="flex items-center gap-2"><span className="rounded-xl border border-violet-100 bg-white px-3 py-2 text-[10px] font-bold text-violet-700">{posts.length} / 40 Karten</span><button type="button" onClick={()=>setPreviewMode(true)} disabled={!posts.length} className="inline-flex items-center gap-2 rounded-xl border border-violet-200 bg-violet-50 px-4 py-2.5 text-xs font-extrabold text-violet-700 disabled:opacity-40"><Play className="h-3.5 w-3.5"/> Vorschau</button></div>
+                  </aside>
+
+                    )}
                   </div>
-                  <div className="space-y-3">
-                    {thumbnails.map(post=><article key={post.id} draggable onDragStart={event=>{setDragId(post.id);event.dataTransfer.effectAllowed="move";event.dataTransfer.setData("text/plain",post.id);}} onDragOver={event=>{event.preventDefault();event.dataTransfer.dropEffect="move";}} onDrop={event=>{event.preventDefault();const source=event.dataTransfer.getData("text/plain")||dragId;if(source)movePost(source,post.id);setDragId(null);}} onDragEnd={()=>setDragId(null)} className="drift-builder-post-row group flex items-center gap-3 rounded-[20px] p-3">
-                      <span className="grid h-10 w-6 shrink-0 place-items-center text-slate-500"><GripVertical className="h-5 w-5"/></span><span className="grid h-10 w-10 shrink-0 place-items-center rounded-xl border border-violet-100 bg-white text-sm font-extrabold text-slate-900">{post.index+1}</span>
-                      <div className="drift-builder-post-thumb grid h-[82px] w-[142px] shrink-0 place-items-center overflow-hidden rounded-xl">{post.imageFile?<img src={URL.createObjectURL(post.imageFile)} alt="" className="h-full w-full object-cover"/>:post.existingImageUrl?<img src={post.existingImageUrl} alt="" className="h-full w-full object-cover"/>:post.postType==="poll"?<BarChart3 className="h-8 w-8 text-violet-600"/>:post.postType==="true_false"?<CircleCheck className="h-8 w-8 text-violet-600"/>:post.postType==="embed"?<Link2 className="h-8 w-8 text-violet-600"/>:<Type className="h-8 w-8 text-violet-600"/>}</div>
-                      <div className="min-w-0 flex-1"><span className="drift-builder-type-badge">{post.postType==="poll"?"▥  Umfrage":"T  Post"}</span><h4 className="mt-2 truncate text-[15px] font-extrabold text-slate-950">{post.title||"Neuer Beitrag"}</h4><p className="mt-1 line-clamp-1 text-xs text-slate-600">{post.body||"Noch keine Beschreibung hinzugefügt."}</p></div>
-                      <div className="flex shrink-0 items-center gap-1.5"><button type="button" onClick={()=>setSelectedId(post.id)} aria-label="Beitrag bearbeiten" className="drift-builder-icon-btn"><Wand2 className="h-4 w-4"/></button><button type="button" onClick={()=>duplicatePost(post)} aria-label="Beitrag duplizieren" className="drift-builder-icon-btn"><Copy className="h-4 w-4"/></button><button type="button" onClick={()=>{setPosts(items=>items.filter(item=>item.id!==post.id));if(selectedId===post.id)setSelectedId(null);}} aria-label="Beitrag löschen" className="drift-builder-icon-btn drift-builder-delete"><X className="h-4 w-4"/></button></div>
-                    </article>)}
-                    {!posts.length&&<div className="drift-builder-empty rounded-[20px] px-6 py-16 text-center"><div className="mx-auto mb-3 grid h-14 w-14 place-items-center rounded-2xl bg-violet-100 text-violet-600"><Wand2 className="h-7 w-7"/></div><h4 className="text-sm font-extrabold text-slate-900">Dein Modul wartet auf Inhalte</h4><p className="mt-1 text-xs text-slate-500">Wähle links einen Kartentyp und leg los.</p></div>}
-                  </div>
-                </section>
-                 )}
+                )}
               </div>
               {error && <p role="alert" className="mt-4 rounded-xl bg-rose-50 px-4 py-3 text-xs text-rose-700">{error}</p>}
             </div>
