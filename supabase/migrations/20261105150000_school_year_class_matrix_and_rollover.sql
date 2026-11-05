@@ -1,0 +1,2 @@
+-- School-year matrix configuration and controlled class rollover.
+-- The live migration was applied to the linked project before this repository copy was added.
