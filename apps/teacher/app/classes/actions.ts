@@ -78,19 +78,51 @@ export async function toggleScenarioAssignment(
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) throw new Error("Nicht authentifiziert");
 
-  const { data: membership, error: membershipError } = await supabase
-    .from("class_instance_memberships")
-    .select("id,role")
-    .eq("class_instance_id", classId)
+  const { data: classInfo } = await supabase.from("class_instances")
+    .select("school_id,school_year,is_active").eq("id", classId).maybeSingle();
+  if (!classInfo?.school_id || !classInfo.is_active) throw new Error("Die Klasseninstanz ist nicht aktiv.");
+
+  const { data: schoolMembership, error: schoolMembershipError } = await supabase
+    .from("school_memberships")
+    .select("role")
+    .eq("school_id", classInfo.school_id)
     .eq("user_id", user.id)
-    .is("left_at", null)
+    .eq("active", true)
     .maybeSingle();
 
-  if (membershipError || !membership || !["teacher", "school_admin", "school_lead"].includes(membership.role)) {
-    throw new Error("Keine Berechtigung, die Lernmodule dieser Klasse zu ändern");
+  if (schoolMembershipError || !["teacher", "school_admin", "school_lead"].includes(schoolMembership?.role ?? "")) {
+    throw new Error("Du benötigst eine aktive Lehrkraft-Mitgliedschaft an dieser Schule.");
   }
 
   if (shouldBeAssigned) {
+    const { error: subscriptionError } = await supabase.rpc("subscribe_teacher_to_class_instance", {
+      p_class_instance_id: classId,
+    });
+    if (subscriptionError) throw new Error(subscriptionError.message);
+
+    const { data: subscription, error: subscriptionLookupError } = await supabase
+      .from("teacher_class_subscriptions")
+      .select("id")
+      .eq("class_instance_id", classId)
+      .eq("teacher_user_id", user.id)
+      .eq("is_active", true)
+      .maybeSingle();
+    if (subscriptionLookupError || !subscription) throw new Error("Dein Klassenabonnement konnte nicht geladen werden.");
+
+    const { error: scopedAssignmentError } = await supabase.from("teacher_class_module_assignments").upsert({
+      subscription_id: subscription.id,
+      school_id: classInfo.school_id,
+      class_instance_id: classId,
+      teacher_user_id: user.id,
+      school_year: classInfo.school_year,
+      module_type: "scenario",
+      module_id: scenarioId,
+      assigned_by: user.id,
+      is_active: true,
+      archived_at: null,
+    }, { onConflict: "teacher_user_id,class_instance_id,module_type,module_id" });
+    if (scopedAssignmentError) throw new Error(scopedAssignmentError.message);
+
     const { error } = await supabase.rpc("upsert_class_instance_scenario_assignment", {
       p_instance_id: classId,
       p_scenario_id: scenarioId,
@@ -106,6 +138,15 @@ export async function toggleScenarioAssignment(
     if (restoreError) throw new Error(restoreError.message);
   } else {
     // Legacy false calls now mean "deactivate", never archive.
+    const { error: scopedDeactivateError } = await supabase.from("teacher_class_module_assignments")
+      .update({ is_active: false, archived_at: new Date().toISOString() })
+      .eq("class_instance_id", classId)
+      .eq("teacher_user_id", user.id)
+      .eq("module_type", "scenario")
+      .eq("module_id", scenarioId)
+      .is("archived_at", null);
+    if (scopedDeactivateError) throw new Error(scopedDeactivateError.message);
+
     const { error } = await supabase
       .from("class_instance_scenario_assignments")
       .update({ is_active: false })
