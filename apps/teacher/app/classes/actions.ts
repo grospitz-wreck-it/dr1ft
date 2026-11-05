@@ -354,16 +354,41 @@ export async function setClassVisual(classId: string, visualId: string) {
     throw new Error("Ungültiges Klassenmotiv");
   }
 
-  const { data: membership, error: membershipError } = await supabase
-    .from("class_instance_memberships")
-    .select("id,role")
-    .eq("class_instance_id", classId)
-    .eq("user_id", user.id)
-    .eq("role", "teacher")
-    .is("left_at", null)
+  const { data: classInstance, error: classError } = await supabase
+    .from("class_instances")
+    .select("id,school_id")
+    .eq("id", classId)
     .maybeSingle();
 
-  if (membershipError || !membership) {
+  if (classError || !classInstance) {
+    throw new Error("Klasse nicht gefunden oder kein Zugriff");
+  }
+
+  const [teacherMembershipResult, schoolMembershipResult] = await Promise.all([
+    supabase
+      .from("class_instance_memberships")
+      .select("id")
+      .eq("class_instance_id", classId)
+      .eq("user_id", user.id)
+      .eq("role", "teacher")
+      .is("left_at", null)
+      .maybeSingle(),
+    classInstance.school_id
+      ? supabase
+          .from("school_memberships")
+          .select("id")
+          .eq("school_id", classInstance.school_id)
+          .eq("user_id", user.id)
+          .eq("role", "school_admin")
+          .eq("active", true)
+          .maybeSingle()
+      : Promise.resolve({ data: null, error: null }),
+  ]);
+
+  const isAssignedTeacher = Boolean(teacherMembershipResult.data);
+  const isSchoolAdmin = Boolean(schoolMembershipResult.data);
+
+  if (teacherMembershipResult.error || schoolMembershipResult.error || (!isAssignedTeacher && !isSchoolAdmin)) {
     throw new Error("Keine Berechtigung, das Klassenmotiv zu ändern");
   }
 
