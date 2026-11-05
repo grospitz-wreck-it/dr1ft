@@ -519,9 +519,8 @@ export function SchoolDetailWorkspace({ school: initialSchool, initialMembers, i
 
         </div>
       </div>
-    </sect
+    </section>
     )}
-ion>
 
     {message && <div className="mt-5 rounded-xl border border-border bg-panel px-4 py-3 text-sm text-slate-700">{message}</div>}
     {imageEditorOpen && (
