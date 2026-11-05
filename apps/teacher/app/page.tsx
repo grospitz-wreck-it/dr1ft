@@ -28,7 +28,7 @@ export default async function TeacherHomePage() {
     supabase.auth.getUser(),
     supabase
       .from("class_instance_memberships")
-      .select("class_instance_id, role, class_instances(id,name,is_active,grade_level,school_year,school_id,class_image_path,class_image_position_x,class_image_position_y,class_image_zoom)")
+      .select("class_instance_id, role, class_instances(id,name,is_active,grade_level,school_year,school_id,class_visual_id)")
       .eq("role", "teacher")
       .is("left_at", null),
   ]);
@@ -93,30 +93,21 @@ export default async function TeacherHomePage() {
     if (row.scenarios) current.push(row.scenarios);
     assignmentsByClass.set(row.class_instance_id, current);
   });
-  const imageSigningStartedAt = Date.now();
-  const overviewClasses = await Promise.all(classes.map(async (item: any) => {
+  const overviewClasses = classes.map((item: any) => {
     const school = schoolsById.get(item.school_id) as any;
-    const hasClassImage = Boolean(item.class_image_path);
-    let thumbnailUrl: string | null = null;
-    if (hasClassImage) {
-      const { data } = await supabase.storage.from("class-images").createSignedUrl(item.class_image_path, 60 * 60);
-      thumbnailUrl = data?.signedUrl ?? null;
-    }
-    if (!thumbnailUrl && school?.school_image_path) {
-      thumbnailUrl = `${process.env.NEXT_PUBLIC_SUPABASE_URL}/storage/v1/object/public/school-images/${school.school_image_path}`;
-    }
+    const thumbnailUrl = school?.school_image_path
+      ? `${process.env.NEXT_PUBLIC_SUPABASE_URL}/storage/v1/object/public/school-images/${school.school_image_path}`
+      : null;
     return {
       id: item.id, name: item.name, gradeLevel: item.grade_level, schoolYear: item.school_year,
-      isActive: item.is_active, thumbnailUrl,
-      imagePositionX: hasClassImage ? item.class_image_position_x ?? 50 : school?.school_image_position_x ?? 50,
-      imagePositionY: hasClassImage ? item.class_image_position_y ?? 50 : school?.school_image_position_y ?? 50,
-      imageZoom: hasClassImage ? item.class_image_zoom ?? 1 : school?.school_image_zoom ?? 1,
+      isActive: item.is_active, thumbnailUrl, classVisualId: item.class_visual_id ?? null,
+      imagePositionX: school?.school_image_position_x ?? 50,
+      imagePositionY: school?.school_image_position_y ?? 50,
+      imageZoom: school?.school_image_zoom ?? 1,
       studentCount: studentsByClass.get(item.id) ?? 0,
       missions: assignmentsByClass.get(item.id) ?? [],
     };
-  }));
-
-  mark("Klassenbilder signieren + Daten aufbereiten", imageSigningStartedAt);
+  });
   timings.push({ name: "Server gesamt bis Render", ms: Date.now() - pageStartedAt });
   console.info("[teacher-dashboard-timing]", JSON.stringify({ timings, classes: classes.length, students: studentCount }));
 
