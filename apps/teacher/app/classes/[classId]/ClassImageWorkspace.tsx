@@ -64,10 +64,14 @@ export default function ClassImageWorkspace({
   return (
     <>
       <section className="group relative mt-4 min-h-[270px] overflow-hidden rounded-[2rem] bg-[#090B2C] text-white shadow-[0_24px_70px_-35px_rgba(54,37,150,.75)] sm:min-h-[300px]">
-        {heroImageUrl ? (
+        {classVisualId ? (
+          <div className="absolute inset-0">
+            <ClassVisual visualId={classVisualId} className="absolute inset-0 h-full w-full" />
+          </div>
+        ) : heroImageUrl ? (
           <img src={heroImageUrl} alt="" className="absolute inset-0 h-full w-full object-cover" style={{ objectPosition: String(heroPositionX) + "% " + String(heroPositionY) + "%", transform: "scale(" + heroZoom + ")" }} />
         ) : (
-          <ClassVisual visualId={activeVisual} className="absolute inset-0" />
+          <ClassVisual visualId={activeVisual} className="absolute inset-0 h-full w-full" />
         )}
         <div className="relative flex min-h-[270px] flex-col justify-between p-6 sm:min-h-[300px] sm:p-9">
           <div className="flex items-start justify-between gap-4">
