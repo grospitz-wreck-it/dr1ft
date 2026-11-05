@@ -411,6 +411,14 @@ export function SchoolDetailWorkspace({ school: initialSchool, initialMembers, i
               </div>
 
               <div className="p-1.5">
+                <a
+                  href="/account"
+                  onClick={() => setAccountOpen(false)}
+                  className="flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-sm text-slate-700 transition hover:bg-canvas"
+                >
+                  <UserRound className="h-4 w-4 text-slate-400" />
+                  Mein Konto
+                </a>
                 <button
                   type="button"
                   onClick={() => {
@@ -422,7 +430,7 @@ export function SchoolDetailWorkspace({ school: initialSchool, initialMembers, i
                   className="flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-sm text-slate-700 transition hover:bg-canvas"
                 >
                   <Settings className="h-4 w-4 text-slate-400" />
-                  Einstellungen
+                  Schulprofil & Einstellungen
                 </button>
 
                 <button
