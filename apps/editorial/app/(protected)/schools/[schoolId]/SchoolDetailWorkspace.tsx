@@ -462,6 +462,7 @@ export function SchoolDetailWorkspace({ school: initialSchool, initialMembers, i
         <main className="editorial-content">
           <div className="mx-auto max-w-[1440px]">
 
+    {tab !== "classes" && (
     <section className="group relative aspect-[16/7] min-h-[210px] overflow-hidden rounded-[1.75rem] bg-slate-950 text-white shadow-[0_16px_40px_rgba(15,23,42,0.16)] ring-1 ring-black/5 sm:aspect-[16/4.2]">
       {school.school_image_path ? (
         <img
@@ -518,7 +519,9 @@ export function SchoolDetailWorkspace({ school: initialSchool, initialMembers, i
 
         </div>
       </div>
-    </section>
+    </sect
+    )}
+ion>
 
     {message && <div className="mt-5 rounded-xl border border-border bg-panel px-4 py-3 text-sm text-slate-700">{message}</div>}
     {imageEditorOpen && (
