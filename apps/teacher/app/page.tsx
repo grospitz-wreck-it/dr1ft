@@ -95,7 +95,7 @@ export default async function TeacherHomePage() {
   });
   const overviewClasses = classes.map((item: any) => {
     const school = schoolsById.get(item.school_id) as any;
-    const thumbnailUrl = school?.school_image_path
+    const thumbnailUrl = !item.class_visual_id && school?.school_image_path
       ? `${process.env.NEXT_PUBLIC_SUPABASE_URL}/storage/v1/object/public/school-images/${school.school_image_path}`
       : null;
     return {
