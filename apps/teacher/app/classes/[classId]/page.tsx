@@ -32,7 +32,7 @@ export default async function ClassDetailPage({
   } = await timed(timings, "class-instance", supabase
     .from("class_instances")
     .select(
-      "id,name,access_code,is_active,status,grade_level,school_year,school_id,class_image_path,class_image_position_x,class_image_position_y,class_image_zoom",
+      "id,name,access_code,is_active,status,grade_level,school_year,school_id,class_visual_id",
     )
     .eq("id", classId)
     .maybeSingle());
@@ -152,16 +152,6 @@ export default async function ClassDetailPage({
 
   const canEditClassImage = Boolean(teacherMembershipResult.data);
 
-  let classImageUrl: string | null = null;
-
-  if (canEditClassImage && instance.class_image_path) {
-    const { data } = await timed(timings, "class-image-signed-url", supabase.storage
-      .from("class-images")
-      .createSignedUrl(instance.class_image_path, 60 * 60));
-
-    classImageUrl = data?.signedUrl ?? null;
-  }
-
   const students = (roster ?? [])
     .filter((row: any) => row.role === "student")
     .map((row: any) => ({
@@ -181,20 +171,6 @@ export default async function ClassDetailPage({
 
   const heroImageUrl = classImageUrl ?? schoolImageUrl;
 
-  const heroPositionX =
-    classImageUrl
-      ? instance.class_image_position_x ?? 50
-      : school?.school_image_position_x ?? 50;
-
-  const heroPositionY =
-    classImageUrl
-      ? instance.class_image_position_y ?? 50
-      : school?.school_image_position_y ?? 50;
-
-  const heroZoom =
-    classImageUrl
-      ? instance.class_image_zoom ?? 1
-      : school?.school_image_zoom ?? 1;
 
   const totalPageDataMs = Date.now() - pageStartedAt;
   timings.push({ name: "page-data-total", ms: totalPageDataMs });
@@ -236,11 +212,7 @@ export default async function ClassDetailPage({
           heroPositionX={heroPositionX}
           heroPositionY={heroPositionY}
           heroZoom={heroZoom}
-          classImagePath={instance.class_image_path}
-          classImageUrl={classImageUrl}
-          classImagePositionX={instance.class_image_position_x ?? 50}
-          classImagePositionY={instance.class_image_position_y ?? 50}
-          classImageZoom={instance.class_image_zoom ?? 1}
+          classVisualId={instance.class_visual_id ?? null}
           canEditClassImage={canEditClassImage}
         />
 
