@@ -212,7 +212,7 @@ export default async function ClassDetailPage({
           ← Meine Klassen
         </a>
 
-        {searchParams?.debug === "timing" && (assignedTeacher || isSchoolAdmin) && (
+        {searchParams?.debug === "timing" && (
           <section className="mt-4 rounded-xl border border-amber-300 bg-amber-50 p-4 text-sm text-slate-800">
             <div className="flex flex-wrap items-center justify-between gap-2">
               <strong>Diagnose: Ladezeiten der Klassenübersicht</strong>
