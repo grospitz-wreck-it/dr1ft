@@ -116,14 +116,13 @@ export default async function ClassDetailPage({
           .eq("user_id", user.id).eq("active", true).maybeSingle())
       : Promise.resolve({ data: null, error: null }),
     user
-      ? timed(timings, "teacher-membership", supabase.from("class_instance_memberships").select("id")
-          .eq("class_instance_id", classId).eq("user_id", user.id).eq("role", "teacher")
-          .is("left_at", null).maybeSingle())
+      ? timed(timings, "teacher-subscription", supabase.from("teacher_class_subscriptions").select("id")
+          .eq("class_instance_id", classId).eq("teacher_user_id", user.id).eq("is_active", true).maybeSingle())
       : Promise.resolve({ data: null, error: null }),
   ]);
 
   const activeSchoolRole = schoolMembershipResult.data?.role ?? null;
-  const isSchoolAdmin = activeSchoolRole === "school_admin";
+  const isSchoolAdmin = activeSchoolRole === "school_admin" || activeSchoolRole === "school_lead";
   const assignedTeacher = Boolean(teacherMembershipResult.data);
   const mayUseTeacherModules = assignedTeacher || isSchoolAdmin;
 
