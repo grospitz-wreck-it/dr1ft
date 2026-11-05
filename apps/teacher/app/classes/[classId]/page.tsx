@@ -141,7 +141,7 @@ export default async function ClassDetailPage({
 
   const teacherModules = mayUseTeacherModules ? moduleLibrary.assigned : [];
 
-  const canEditClassImage = assignedTeacher || isSchoolAdmin;
+  const canEditClassImage = hasActiveTeachingSubscription || isSchoolAdmin;
 
   const students = (roster ?? [])
     .filter((row: any) => row.role === "student")
