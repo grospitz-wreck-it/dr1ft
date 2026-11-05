@@ -130,7 +130,7 @@ export default async function ClassDetailPage({
   const activeSchoolRole = schoolMembershipResult.data?.role ?? null;
   const isSchoolAdmin = activeSchoolRole === "school_admin" || activeSchoolRole === "school_lead";
   const assignedTeacher = Boolean(teacherMembershipResult.data);
-  const mayUseTeacherModules = assignedTeacher || isSchoolAdmin;
+  const mayUseTeacherModules = assignedTeacher && activeSchoolRole === "teacher";
 
   const availableTeacherModules = mayUseTeacherModules ? moduleLibrary.available : [];
 
