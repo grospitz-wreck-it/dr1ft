@@ -129,8 +129,13 @@ export default async function ClassDetailPage({
 
   const activeSchoolRole = schoolMembershipResult.data?.role ?? null;
   const isSchoolAdmin = activeSchoolRole === "school_admin" || activeSchoolRole === "school_lead";
-  const assignedTeacher = Boolean(teacherMembershipResult.data);
-  const mayUseTeacherModules = assignedTeacher && activeSchoolRole === "teacher";
+  // School admins and school leads may actively teach, but only after
+  // explicitly subscribing to this class. The subscription is the teaching
+  // relationship; the school role alone never grants module-report access.
+  const hasActiveTeachingSubscription = Boolean(teacherMembershipResult.data);
+  const mayUseTeacherModules =
+    hasActiveTeachingSubscription &&
+    ["teacher", "school_admin", "school_lead"].includes(activeSchoolRole ?? "");
 
   const availableTeacherModules = mayUseTeacherModules ? moduleLibrary.available : [];
 
