@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { ArrowLeft, Building2, ChevronDown, LogOut, MoreHorizontal, Pencil, Plus, Save, Settings, UserRound, Users, School as SchoolIcon, BarChart3, LayoutDashboard, X, ShieldCheck } from "lucide-react";
 import { createBrowserClient } from "@supabase/ssr";
 import { SchoolSsoSettings } from "./SchoolSsoSettings";
@@ -65,6 +65,7 @@ export function SchoolDetailWorkspace({ school: initialSchool, initialMembers, i
   const [school, setSchool] = useState(initialSchool);
   const [members, setMembers] = useState(initialMembers);
   const [classes, setClasses] = useState(initialClasses);
+  useEffect(() => { setClasses(initialClasses); }, [initialClasses]);
   const [assignmentOpenId, setAssignmentOpenId] = useState<string | null>(null);
   const [tab, setTab] = useState<"overview" | "classes" | "people" | "insights" | "settings" | "sso">("overview");
   const [accountOpen, setAccountOpen] = useState(false);
