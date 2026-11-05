@@ -169,7 +169,10 @@ export default async function ClassDetailPage({
     ? `${process.env.NEXT_PUBLIC_SUPABASE_URL}/storage/v1/object/public/school-images/${school.school_image_path}`
     : null;
 
-  const heroImageUrl = classImageUrl ?? schoolImageUrl;
+  const heroImageUrl = schoolImageUrl;
+  const heroPositionX = school?.school_image_position_x ?? 50;
+  const heroPositionY = school?.school_image_position_y ?? 50;
+  const heroZoom = school?.school_image_zoom ?? 1;
 
 
   const totalPageDataMs = Date.now() - pageStartedAt;
