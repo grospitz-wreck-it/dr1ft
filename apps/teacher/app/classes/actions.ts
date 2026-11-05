@@ -349,52 +349,16 @@ export async function setClassVisual(classId: string, visualId: string) {
   const supabase = supabaseServerClient();
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) throw new Error("Nicht authentifiziert");
+
   const allowedVisualIds = ["aurora", "nebula", "ocean", "sunrise", "forest", "cosmos", "spectrum", "glacier"];
   if (!allowedVisualIds.includes(visualId)) {
     throw new Error("Ungültiges Klassenmotiv");
   }
 
-  const { data: classInstance, error: classError } = await supabase
-    .from("class_instances")
-    .select("id,school_id")
-    .eq("id", classId)
-    .maybeSingle();
-
-  if (classError || !classInstance) {
-    throw new Error("Klasse nicht gefunden oder kein Zugriff");
-  }
-
-  const [teacherMembershipResult, schoolMembershipResult] = await Promise.all([
-    supabase
-      .from("class_instance_memberships")
-      .select("id")
-      .eq("class_instance_id", classId)
-      .eq("user_id", user.id)
-      .eq("role", "teacher")
-      .is("left_at", null)
-      .maybeSingle(),
-    classInstance.school_id
-      ? supabase
-          .from("school_memberships")
-          .select("id")
-          .eq("school_id", classInstance.school_id)
-          .eq("user_id", user.id)
-          .eq("role", "school_admin")
-          .eq("active", true)
-          .maybeSingle()
-      : Promise.resolve({ data: null, error: null }),
-  ]);
-
-  const isAssignedTeacher = Boolean(teacherMembershipResult.data);
-  const isSchoolAdmin = Boolean(schoolMembershipResult.data);
-
-  if (teacherMembershipResult.error || schoolMembershipResult.error || (!isAssignedTeacher && !isSchoolAdmin)) {
-    throw new Error("Keine Berechtigung, das Klassenmotiv zu ändern");
-  }
-
-  const { error } = await supabase.from("class_instances")
-    .update({ class_visual_id: visualId })
-    .eq("id", classId);
+  const { error } = await supabase.rpc("set_class_instance_visual", {
+    p_class_id: classId,
+    p_visual_id: visualId,
+  });
   if (error) throw new Error(error.message);
 
   revalidatePath("/");
