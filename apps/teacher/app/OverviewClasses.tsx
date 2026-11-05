@@ -4,6 +4,7 @@ import { useMemo, useState, useTransition } from "react";
 import { BookOpen, GraduationCap, Plus, Search, Users, X, Sparkles, Pencil } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { createClass, setClassActive } from "./classes/actions";
+import { ClassVisual, getFallbackClassVisualId } from "./classes/[classId]/ClassVisual";
 
 type Mission = { id: string; title: string; cover_image_url: string | null };
 type ClassItem = {
@@ -13,6 +14,7 @@ type ClassItem = {
   schoolYear: string;
   isActive: boolean;
   thumbnailUrl: string | null;
+  classVisualId: string | null;
   imagePositionX: number;
   imagePositionY: number;
   imageZoom: number;
@@ -77,8 +79,8 @@ export function OverviewClasses({ classes }: { classes: ClassItem[] }) {
         <div className="mt-3 overflow-hidden rounded-2xl border border-slate-200/90 bg-white shadow-sm divide-y divide-slate-100">
           {visible.map((item) => (
             <article key={item.id} className="group flex min-w-0 items-center gap-3 px-3 py-2.5 transition hover:bg-violet-50/40 sm:gap-4 sm:px-4">
-              <div className="relative h-11 w-11 shrink-0 overflow-hidden rounded-xl bg-gradient-to-br from-violet-100 via-fuchsia-50 to-cyan-100 sm:h-12 sm:w-12">
-                {item.thumbnailUrl ? <img src={item.thumbnailUrl} alt="" className="h-full w-full object-cover" style={{ objectPosition: `${item.imagePositionX}% ${item.imagePositionY}%`, transform: `scale(${item.imageZoom})` }} /> : <div className="grid h-full place-items-center text-violet-400"><Users className="h-5 w-5"/></div>}
+              <div className="relative h-11 w-11 shrink-0 overflow-hidden rounded-xl bg-slate-900 sm:h-12 sm:w-12">
+                {item.thumbnailUrl ? <img src={item.thumbnailUrl} alt="" className="h-full w-full object-cover" style={{ objectPosition: `${item.imagePositionX}% ${item.imagePositionY}%`, transform: `scale(${item.imageZoom})` }} /> : <ClassVisual visualId={item.classVisualId ?? getFallbackClassVisualId(item.id)} className="h-full w-full" />}
               </div>
               <div className="min-w-0 flex-1">
                 <div className="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-0.5">
