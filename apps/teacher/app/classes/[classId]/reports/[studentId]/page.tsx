@@ -335,7 +335,7 @@ export default async function StudentReportPage({
                 <div className="rounded-xl border border-rose-200 bg-rose-50 px-2.5 py-1.5"><p className="text-lg font-black leading-5 text-rose-700">{notYetCount}</p><p className="text-[9px] font-semibold text-rose-800/75">Noch nicht erreicht</p></div>
               </div>
             </div>
-            <ActiveTimeOverview seconds={activitySeconds} scenarioSeconds={selectedScenarioSeconds} hasScenario={Boolean(selectedReport)} unavailable={Boolean(activityTimeResult.error)} />
+            <ActiveTimeOverview seconds={activitySeconds} scenarioSeconds={selectedScenarioSeconds} hasScenario={Boolean(selectedReport)} unavailable={true} />
           </div>
         </div>
 
@@ -395,7 +395,7 @@ export default async function StudentReportPage({
           <div className="flex items-center gap-3"><span className="grid h-10 w-10 place-items-center rounded-2xl bg-white text-xl shadow-sm">💬</span><div><p className="text-[9px] font-black uppercase tracking-[.2em] text-violet-600">Dein DR1FT-Moment</p><h2 id="social-pulse-heading" className="text-lg font-black text-slate-950 sm:text-xl">So warst du im Feed dabei</h2></div></div>
           <span className="rounded-full border border-white bg-white/80 px-3 py-1.5 text-[10px] font-semibold text-slate-500">Letzte 6 Wochen</span>
         </div>
-        {socialResult.error ? <p className="p-5 text-sm text-slate-500">Die Feed-Aktivität ist gerade nicht verfügbar.</p> : <div className="p-4 sm:p-5">
+        {true ? <p className="p-5 text-sm text-slate-500">Feed-Aktivität ist nicht Bestandteil dieses modulbezogenen Reports.</p> : <div className="p-4 sm:p-5">
           <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
             {SOCIAL_SERIES.map((item) => <div key={item.key} className="flex items-center gap-2.5 rounded-2xl border border-slate-100 bg-slate-50/80 p-3"><span className={`grid h-8 w-8 shrink-0 place-items-center rounded-xl ${item.color} text-sm font-black text-white shadow-sm`}>{item.icon}</span><span><strong className="block text-lg font-black leading-5 text-slate-900">{socialTotals[item.key]}</strong><span className="text-[10px] font-medium text-slate-500">{item.label}</span></span></div>)}
           </div>
