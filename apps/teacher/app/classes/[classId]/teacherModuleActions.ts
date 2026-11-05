@@ -320,19 +320,19 @@ export async function getTeacherModulePollResults(classInstanceId: string, modul
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) throw new Error("Nicht authentifiziert.");
 
-  const { data: assignment, error: assignmentError } = await supabase
-    .from("teacher_module_class_assignments")
-    .select("id,school_id")
+  const { data: scopedAssignment, error: scopedAssignmentError } = await supabase
+    .from("teacher_class_module_assignments")
+    .select("id")
     .eq("class_instance_id", classInstanceId)
+    .eq("teacher_user_id", user.id)
+    .eq("module_type", "teacher_module")
     .eq("module_id", moduleId)
+    .eq("is_active", true)
+    .is("archived_at", null)
     .maybeSingle();
-  if (assignmentError || !assignment) throw new Error("Du hast keinen Zugriff auf diese Klasse.");
-
-  const { data: admin } = await supabase.from("school_memberships").select("role")
-    .eq("school_id", assignment.school_id).eq("user_id", user.id).eq("active", true).maybeSingle();
-  const { data: teacher } = await supabase.from("class_instance_memberships").select("id")
-    .eq("class_instance_id", classInstanceId).eq("user_id", user.id).eq("role", "teacher").is("left_at", null).maybeSingle();
-  if (admin?.role !== "school_admin" && !teacher) throw new Error("Nur die Lehrkraft dieser Klasse kann Ergebnisse einsehen.");
+  if (scopedAssignmentError || !scopedAssignment) {
+    throw new Error("Du kannst nur Antworten und Ergebnisse deiner eigenen aktiven Modulzuweisungen einsehen.");
+  }
 
   const { data: post, error: postError } = await supabase.from("teacher_module_posts")
     .select("id,post_type,title,interaction_data").eq("id", postId).eq("module_id", moduleId).maybeSingle();
@@ -361,19 +361,19 @@ export async function getTeacherModuleFreeTextReport(classInstanceId: string, mo
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) throw new Error("Nicht authentifiziert.");
 
-  const { data: assignment, error: assignmentError } = await supabase
-    .from("teacher_module_class_assignments")
-    .select("id,school_id,teacher_modules(title)")
+  const { data: scopedAssignment, error: scopedAssignmentError } = await supabase
+    .from("teacher_class_module_assignments")
+    .select("id")
     .eq("class_instance_id", classInstanceId)
+    .eq("teacher_user_id", user.id)
+    .eq("module_type", "teacher_module")
     .eq("module_id", moduleId)
+    .eq("is_active", true)
+    .is("archived_at", null)
     .maybeSingle();
-  if (assignmentError || !assignment) throw new Error("Modulzuordnung nicht gefunden.");
-
-  const { data: admin } = await supabase.from("school_memberships").select("role")
-    .eq("school_id", assignment.school_id).eq("user_id", user.id).eq("active", true).maybeSingle();
-  const { data: teacher } = await supabase.from("class_instance_memberships").select("id")
-    .eq("class_instance_id", classInstanceId).eq("user_id", user.id).eq("role", "teacher").is("left_at", null).maybeSingle();
-  if (admin?.role !== "school_admin" && !teacher) throw new Error("Nur die Lehrkraft dieser Klasse kann Antworten einsehen.");
+  if (scopedAssignmentError || !scopedAssignment) {
+    throw new Error("Du kannst nur Antworten und Ergebnisse deiner eigenen aktiven Modulzuweisungen einsehen.");
+  }
 
   const [{ data: posts, error: postsError }, { data: members, error: membersError }, { data: votes, error: votesError }] = await Promise.all([
     supabase.from("teacher_module_posts").select("id,title,interaction_data,post_type")
@@ -416,19 +416,19 @@ export async function getTeacherModuleFreeTextResponses(classInstanceId: string,
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) throw new Error("Nicht authentifiziert.");
 
-  const { data: assignment, error: assignmentError } = await supabase
-    .from("teacher_module_class_assignments")
-    .select("id,school_id")
+  const { data: scopedAssignment, error: scopedAssignmentError } = await supabase
+    .from("teacher_class_module_assignments")
+    .select("id")
     .eq("class_instance_id", classInstanceId)
+    .eq("teacher_user_id", user.id)
+    .eq("module_type", "teacher_module")
     .eq("module_id", moduleId)
+    .eq("is_active", true)
+    .is("archived_at", null)
     .maybeSingle();
-  if (assignmentError || !assignment) throw new Error("Du hast keinen Zugriff auf diese Klasse.");
-
-  const { data: admin } = await supabase.from("school_memberships").select("role")
-    .eq("school_id", assignment.school_id).eq("user_id", user.id).eq("active", true).maybeSingle();
-  const { data: teacher } = await supabase.from("class_instance_memberships").select("id")
-    .eq("class_instance_id", classInstanceId).eq("user_id", user.id).eq("role", "teacher").is("left_at", null).maybeSingle();
-  if (admin?.role !== "school_admin" && !teacher) throw new Error("Nur die Lehrkraft dieser Klasse kann Antworten einsehen.");
+  if (scopedAssignmentError || !scopedAssignment) {
+    throw new Error("Du kannst nur Antworten und Ergebnisse deiner eigenen aktiven Modulzuweisungen einsehen.");
+  }
 
   const { data: post, error: postError } = await supabase.from("teacher_module_posts")
     .select("id,interaction_data,post_type").eq("id", postId).eq("module_id", moduleId).maybeSingle();
@@ -595,17 +595,41 @@ export async function assignExistingTeacherModule(classInstanceId: string, modul
   const supabase = supabaseServerClient();
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) throw new Error("Nicht authentifiziert.");
-  const { data: targetClass, error: classError } = await supabase.from("class_instances").select("id,school_id").eq("id", classInstanceId).maybeSingle();
+  const { data: targetClass, error: classError } = await supabase.from("class_instances").select("id,school_id,school_year,is_active").eq("id", classInstanceId).maybeSingle();
   if (classError || !targetClass?.school_id) throw new Error("Klasse nicht gefunden.");
   const { data: module, error: moduleError } = await supabase.from("teacher_modules").select("id,school_id,created_by,visibility_scope,status").eq("id", moduleId).maybeSingle();
   if (moduleError || !module || module.school_id !== targetClass.school_id || module.status !== "published") throw new Error("Dieses Modul ist nicht verfügbar.");
   const { data: schoolMember } = await supabase.from("school_memberships").select("role").eq("school_id", targetClass.school_id).eq("user_id", user.id).eq("active", true).maybeSingle();
-  const { data: classMember } = await supabase.from("class_instance_memberships").select("role").eq("class_instance_id", classInstanceId).eq("user_id", user.id).eq("left_at", null).maybeSingle();
-  const authorized = schoolMember?.role === "school_admin" || classMember?.role === "teacher" || (module.created_by === user.id && module.visibility_scope !== "school");
+  const authorized = ["teacher", "school_admin", "school_lead"].includes(schoolMember?.role ?? "") &&
+    (module.visibility_scope === "school" || module.created_by === user.id);
   if (!authorized) throw new Error("Du darfst dieses Modul dieser Klasse nicht zuweisen.");
+  if (!targetClass.is_active) throw new Error("Die Klasseninstanz ist nicht aktiv.");
+
+  const { error: subscriptionError } = await supabase.rpc("subscribe_teacher_to_class_instance", {
+    p_class_instance_id: classInstanceId,
+  });
+  if (subscriptionError) throw new Error(subscriptionError.message);
+  const { data: subscription, error: subscriptionErrorLookup } = await supabase
+    .from("teacher_class_subscriptions").select("id")
+    .eq("class_instance_id", classInstanceId).eq("teacher_user_id", user.id)
+    .eq("is_active", true).maybeSingle();
+  if (subscriptionErrorLookup || !subscription) throw new Error("Klassenabonnement konnte nicht geladen werden.");
   const { error } = await supabase.from("teacher_module_class_assignments").upsert({
     module_id: moduleId, school_id: targetClass.school_id, class_instance_id: classInstanceId, assigned_by: user.id, is_active: true, archived_at: null,
   }, { onConflict: "module_id,class_instance_id" });
   if (error) throw new Error(error.message);
+  const { error: scopedError } = await supabase.from("teacher_class_module_assignments").upsert({
+    subscription_id: subscription.id,
+    school_id: targetClass.school_id,
+    class_instance_id: classInstanceId,
+    teacher_user_id: user.id,
+    school_year: targetClass.school_year,
+    module_type: "teacher_module",
+    module_id: moduleId,
+    assigned_by: user.id,
+    is_active: true,
+    archived_at: null,
+  }, { onConflict: "teacher_user_id,class_instance_id,module_type,module_id" });
+  if (scopedError) throw new Error(scopedError.message);
   revalidatePath(`/classes/${classInstanceId}`);
 }
