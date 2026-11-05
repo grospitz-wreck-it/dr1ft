@@ -1136,10 +1136,6 @@ export function SchoolDetailWorkspace({ school: initialSchool, initialMembers, i
             <h2 className="mt-1.5 text-2xl font-semibold tracking-tight text-slate-950">Klassen & Lehrkräfte</h2>
             <p className="mt-1.5 max-w-2xl text-sm leading-6 text-slate-500">Die Klassen deiner Schule – organisiert nach Schuljahr und Jahrgang.</p>
           </div>
-          <a href="https://lehrkraft.dr1ft.de/classes" target="_blank" rel="noreferrer"
-            className="inline-flex shrink-0 items-center justify-center rounded-xl bg-slate-950 px-4 py-2.5 text-sm font-medium text-white transition hover:bg-slate-800">
-            Teacher-Dashboard öffnen →
-          </a>
         </div>
         <SchoolClassMatrix schoolId={school.id} initialClasses={classes} members={activeMembers} canManage={canManageTeacherAssignments || isPlatformAdmin} />
       </section>
