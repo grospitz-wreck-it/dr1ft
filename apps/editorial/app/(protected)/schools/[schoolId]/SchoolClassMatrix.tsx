@@ -4,7 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import { createPortal } from "react-dom";
 import { useRouter } from "next/navigation";
 import { createBrowserClient } from "@supabase/ssr";
-import { ArrowRight, CalendarDays, CalendarPlus, Check, ChevronDown, ChevronUp, GraduationCap, Plus, RefreshCw, Settings2, Users, X } from "lucide-react";
+import { ArrowRight, BarChart3, CalendarDays, Check, ChevronDown, ChevronUp, GraduationCap, Plus, RefreshCw, Settings2, Users, X } from "lucide-react";
 
 type ClassItem = { id:string; name:string; grade_level:number|null; school_year:string; is_active:boolean; teachers:string[]; teacherUserIds:string[]; student_count?:number };
 type Member = { user_id:string; display_name:string|null; email:string|null; role:string; active:boolean };
