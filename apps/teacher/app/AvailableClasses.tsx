@@ -3,7 +3,7 @@
 import { useMemo, useState, useTransition } from "react";
 import { ArrowRight, BookOpen, Search, Users } from "lucide-react";
 import { useRouter } from "next/navigation";
-import { subscribeToClass } from "./subscriptionActions";
+import { subscribeToClass } from "./classes/subscriptionActions";
 
 type Item = { id: string; name: string; gradeLevel: number | null; schoolYear: string; schoolName: string; studentCount: number };
 
