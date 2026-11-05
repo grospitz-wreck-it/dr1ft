@@ -243,6 +243,8 @@ export default async function StudentReportPage({
   const answers = (reportResult.data ?? []) as ScenarioAnswer[];
   const socialWeeks: SocialWeek[] = [];
   const activityTimeRecords: ActivityTimeRecord[] = [];
+  const socialResult = { error: true };
+  const activityTimeResult = { error: true };
   const scenarioMeta = new Map(assignedScenarios.map((scenario) => [scenario.id, scenario]));
   const reports: ScenarioReport[] = assignedScenarios.map((scenario) => ({
     id: scenario.id,
