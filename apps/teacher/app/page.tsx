@@ -14,9 +14,13 @@ import {
 import { supabaseServerClient } from "../lib/supabaseServerClient";
 
 export default async function TeacherHomePage() {
+  const pageStartedAt = Date.now();
+  const timings: Array<{ name: string; ms: number }> = [];
+  const mark = (name: string, startedAt: number) => timings.push({ name, ms: Date.now() - startedAt });
   const supabase = supabaseServerClient();
 
   // Authentication and the RLS-protected class lookup are independent requests.
+  const authAndClassesStartedAt = Date.now();
   const [
     { data: { user } },
     { data: memberships },
@@ -28,6 +32,7 @@ export default async function TeacherHomePage() {
       .eq("role", "teacher")
       .is("left_at", null),
   ]);
+  mark("auth + Klassen", authAndClassesStartedAt);
   if (!user) redirect("/login");
 
   const classes = (memberships ?? [])
@@ -38,6 +43,7 @@ export default async function TeacherHomePage() {
 
   // Fetch school links, student roster counts and active missions concurrently.
   // The student rows also provide the dashboard total, so a separate COUNT(*) query is unnecessary.
+  const schoolStudentsMissionsStartedAt = Date.now();
   const [
     { data: schoolMemberships },
     { data: studentMemberships },
@@ -64,6 +70,8 @@ export default async function TeacherHomePage() {
       : Promise.resolve({ data: [] as any[] }),
   ]);
 
+  mark("Schulmitgliedschaft + Schüler + Missionen", schoolStudentsMissionsStartedAt);
+  const schoolLookupStartedAt = Date.now();
   const schoolIds = Array.from(new Set([
     ...classes.map((item: any) => item.school_id),
     ...(schoolMemberships ?? []).map((membership: any) => membership.school_id),
@@ -71,6 +79,7 @@ export default async function TeacherHomePage() {
   const { data: schoolRows } = schoolIds.length
     ? await supabase.from("schools").select("id,name,region,school_image_path,school_image_position_x,school_image_position_y,school_image_zoom").in("id", schoolIds)
     : { data: [] as any[] };
+  mark("Schuldaten", schoolLookupStartedAt);
   const schoolsById = new Map((schoolRows ?? []).map((school: any) => [school.id, school]));
   const linkedSchools = Array.from(schoolsById.values());
 
@@ -84,6 +93,7 @@ export default async function TeacherHomePage() {
     if (row.scenarios) current.push(row.scenarios);
     assignmentsByClass.set(row.class_instance_id, current);
   });
+  const imageSigningStartedAt = Date.now();
   const overviewClasses = await Promise.all(classes.map(async (item: any) => {
     const school = schoolsById.get(item.school_id) as any;
     const hasClassImage = Boolean(item.class_image_path);
@@ -106,6 +116,9 @@ export default async function TeacherHomePage() {
     };
   }));
 
+  mark("Klassenbilder signieren + Daten aufbereiten", imageSigningStartedAt);
+  timings.push({ name: "Server gesamt bis Render", ms: Date.now() - pageStartedAt });
+  console.info("[teacher-dashboard-timing]", JSON.stringify({ timings, classes: classes.length, students: studentCount }));
 
   return (
     <main className="min-h-screen">
