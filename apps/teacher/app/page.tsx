@@ -1,5 +1,6 @@
 import { redirect } from "next/navigation";
 import { OverviewClasses } from "./OverviewClasses";
+import { AvailableClasses } from "./AvailableClasses";
 import {
   ArrowRight,
   BarChart3,
@@ -24,6 +25,7 @@ export default async function TeacherHomePage() {
   const [
     { data: { user } },
     { data: memberships },
+    { data: subscriptions },
   ] = await Promise.all([
     supabase.auth.getUser(),
     supabase
@@ -31,13 +33,17 @@ export default async function TeacherHomePage() {
       .select("class_instance_id, role, class_instances(id,name,is_active,grade_level,school_year,school_id,class_visual_id)")
       .eq("role", "teacher")
       .is("left_at", null),
+    supabase.from("teacher_class_subscriptions")
+      .select("class_instance_id, class_instances(id,name,is_active,grade_level,school_year,school_id,class_visual_id)")
+      .eq("is_active", true),
   ]);
   mark("auth + Klassen", authAndClassesStartedAt);
   if (!user) redirect("/login");
 
-  const classes = (memberships ?? [])
-    .map((row: any) => row.class_instances)
-    .filter(Boolean);
+  const classes = Array.from(new Map([
+    ...(memberships ?? []).map((row: any) => row.class_instances),
+    ...(subscriptions ?? []).map((row: any) => row.class_instances),
+  ].filter(Boolean).map((item: any) => [item.id, item])).values());
 
   const classIds = classes.map((item: any) => item.id);
 
@@ -51,7 +57,7 @@ export default async function TeacherHomePage() {
   ] = await Promise.all([
     supabase
       .from("school_memberships")
-      .select("school_id, active")
+      .select("school_id, active, role")
       .eq("user_id", user.id)
       .eq("active", true),
     classIds.length
@@ -82,6 +88,30 @@ export default async function TeacherHomePage() {
   mark("Schuldaten", schoolLookupStartedAt);
   const schoolsById = new Map((schoolRows ?? []).map((school: any) => [school.id, school]));
   const linkedSchools = Array.from(schoolsById.values());
+  const schoolClassRows = schoolIds.length
+    ? await supabase.from("class_instances")
+        .select("id,name,grade_level,school_year,school_id")
+        .in("school_id", schoolIds)
+        .eq("is_active", true)
+        .order("name")
+    : { data: [] as any[] };
+  const candidateClasses = (schoolClassRows.data ?? []).filter((item: any) => !classIds.includes(item.id));
+  const candidateIds = candidateClasses.map((item: any) => item.id);
+  const { data: candidateStudents } = candidateIds.length
+    ? await supabase.from("class_instance_memberships")
+        .select("class_instance_id")
+        .in("class_instance_id", candidateIds)
+        .eq("role", "student")
+        .is("left_at", null)
+    : { data: [] as any[] };
+  const candidateCounts = new Map<string, number>();
+  (candidateStudents ?? []).forEach((row: any) => candidateCounts.set(row.class_instance_id, (candidateCounts.get(row.class_instance_id) ?? 0) + 1));
+  const availableClasses = candidateClasses.map((item: any) => ({
+    id: item.id, name: item.name, gradeLevel: item.grade_level, schoolYear: item.school_year,
+    schoolName: (schoolsById.get(item.school_id) as any)?.name ?? "Meine Schule",
+    studentCount: candidateCounts.get(item.id) ?? 0,
+  }));
+
 
   const activeClasses = classes.filter((item: any) => item.is_active);
   const studentCount = studentMemberships?.length ?? 0;
@@ -170,6 +200,8 @@ export default async function TeacherHomePage() {
       <section id="deine-klassen" className="drift-panel mt-5 overflow-hidden p-5 sm:p-6">
         <OverviewClasses classes={overviewClasses} />
       </section>
+
+      {availableClasses.length > 0 && <AvailableClasses classes={availableClasses} />}
 
     </main>
   );
