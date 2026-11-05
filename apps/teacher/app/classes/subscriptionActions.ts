@@ -1,7 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { supabaseServerClient } from "../../../lib/supabaseServerClient";
+import { supabaseServerClient } from "../../lib/supabaseServerClient";
 
 export async function subscribeToClass(classInstanceId: string) {
   if (!classInstanceId) throw new Error("Bitte wähle eine Klasse aus.");
