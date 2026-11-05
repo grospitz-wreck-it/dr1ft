@@ -69,7 +69,6 @@ export default function ClassImageWorkspace({
         ) : (
           <ClassVisual visualId={activeVisual} className="absolute inset-0" />
         )}
-        <img src="/classes_layer.webp" alt="" aria-hidden="true" className="pointer-events-none absolute inset-0 h-full w-full object-cover" />
         <div className="relative flex min-h-[270px] flex-col justify-between p-6 sm:min-h-[300px] sm:p-9">
           <div className="flex items-start justify-between gap-4">
             <p className="text-[10px] font-bold uppercase tracking-[0.28em] text-white/65">DR1FT <span className="text-cyan-300">✦</span> KLASSENRAUM</p>
@@ -109,8 +108,11 @@ export default function ClassImageWorkspace({
 
               <div className="border-t border-slate-200 pt-5">
                 <div className="flex flex-wrap items-center justify-between gap-3">
-                  <div><h3 className="text-sm font-semibold text-slate-900">Klassenvisual</h3><p className="mt-0.5 text-xs text-slate-500">Standardmäßig wird das Schulbild verwendet. Alternativ kannst du ein DR1FT-Motiv wählen.</p></div>
-                  <button type="button" onClick={() => setPickerOpen((open) => !open)} className="inline-flex shrink-0 items-center gap-2 rounded-xl border border-violet-200 px-3 py-2 text-xs font-semibold text-violet-700 transition hover:bg-violet-50"><Palette className="h-4 w-4" />{pickerOpen ? "Auswahl schließen" : "Motiv ändern"}</button>
+                  <div><h3 className="text-sm font-semibold text-slate-900">Klassenvisual</h3><p className="mt-0.5 text-xs text-slate-500">Du kannst das Schulbild deiner Schule verwenden oder ein eigenes DR1FT-Motiv auswählen.</p></div>
+                  <div className="flex flex-wrap gap-2">
+                    <button type="button" disabled={savingVisual} onClick={() => void chooseVisual("")} className="inline-flex shrink-0 items-center gap-2 rounded-xl border border-slate-200 px-3 py-2 text-xs font-semibold text-slate-700 transition hover:bg-slate-50 disabled:opacity-50">Schulbild verwenden</button>
+                    <button type="button" onClick={() => setPickerOpen((open) => !open)} className="inline-flex shrink-0 items-center gap-2 rounded-xl border border-violet-200 px-3 py-2 text-xs font-semibold text-violet-700 transition hover:bg-violet-50"><Palette className="h-4 w-4" />{pickerOpen ? "Auswahl schließen" : "Motiv ändern"}</button>
+                  </div>
                 </div>
                 {pickerOpen && (
                   <div className="mt-4">
