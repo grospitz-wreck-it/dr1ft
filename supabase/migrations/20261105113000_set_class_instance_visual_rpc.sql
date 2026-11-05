@@ -15,7 +15,7 @@ begin
     raise exception 'Nicht authentifiziert';
   end if;
 
-  if p_visual_id not in ('aurora', 'nebula', 'ocean', 'sunrise', 'forest', 'cosmos', 'spectrum', 'glacier') then
+  if p_visual_id is not null and p_visual_id not in ('aurora', 'nebula', 'ocean', 'sunrise', 'forest', 'cosmos', 'spectrum', 'glacier') then
     raise exception 'Ungültiges Klassenmotiv';
   end if;
 
