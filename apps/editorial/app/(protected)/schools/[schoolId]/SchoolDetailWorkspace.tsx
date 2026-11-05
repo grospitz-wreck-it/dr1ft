@@ -4,6 +4,7 @@ import { useState } from "react";
 import { ArrowLeft, Building2, ChevronDown, LogOut, MoreHorizontal, Pencil, Plus, Save, Settings, UserRound, Users, School as SchoolIcon, BarChart3, LayoutDashboard, X, ShieldCheck } from "lucide-react";
 import { createBrowserClient } from "@supabase/ssr";
 import { SchoolSsoSettings } from "./SchoolSsoSettings";
+import { SchoolClassMatrix } from "./SchoolClassMatrix";
 
 type School = { id: string; name: string; region: string | null; email_domain: string | null; school_type: string | null; street: string | null; house_number: string | null; postal_code: string | null; city: string | null; phone: string | null; website: string | null; student_count: number | null; status: string; plan: string; funding_type: string; internal_notes: string | null; school_image_path: string | null; school_image_position_x: number; school_image_position_y: number; school_image_zoom: number; created_at: string; updated_at: string };
 type Member = { id: string; user_id: string; email: string | null; display_name: string | null; role: string; active: boolean; created_at: string };
@@ -1121,187 +1122,16 @@ export function SchoolDetailWorkspace({ school: initialSchool, initialMembers, i
       <section className="mt-6 space-y-6">
         <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
           <div>
-            <p className="text-xs font-semibold uppercase tracking-[0.14em] text-accent">
-              Schulbetrieb
-            </p>
-            <h2 className="mt-1.5 text-2xl font-semibold tracking-tight text-slate-950">
-              Klassen & Lehrkräfte
-            </h2>
-            <p className="mt-1.5 max-w-2xl text-sm leading-6 text-slate-500">
-              Klasseninstanzen, Besetzung und aktive DR1FT-Szenarien auf einen Blick.
-            </p>
+            <p className="text-xs font-semibold uppercase tracking-[0.14em] text-accent">Schulbetrieb</p>
+            <h2 className="mt-1.5 text-2xl font-semibold tracking-tight text-slate-950">Klassen & Lehrkräfte</h2>
+            <p className="mt-1.5 max-w-2xl text-sm leading-6 text-slate-500">Die Klassen deiner Schule – organisiert nach Schuljahr und Jahrgang.</p>
           </div>
-
-          <a
-            href="https://lehrkraft.dr1ft.de/classes"
-            target="_blank"
-            rel="noreferrer"
-            className="inline-flex shrink-0 items-center justify-center rounded-xl bg-slate-950 px-4 py-2.5 text-sm font-medium text-white transition hover:bg-slate-800"
-          >
+          <a href="https://lehrkraft.dr1ft.de/classes" target="_blank" rel="noreferrer"
+            className="inline-flex shrink-0 items-center justify-center rounded-xl bg-slate-950 px-4 py-2.5 text-sm font-medium text-white transition hover:bg-slate-800">
             Teacher-Dashboard öffnen →
           </a>
         </div>
-
-        <div className="flex flex-wrap items-center gap-x-8 gap-y-3 border-y border-border py-4">
-          <div>
-            <span className="text-xs text-slate-400">Klassen gesamt</span>
-            <span className="ml-2 text-sm font-semibold text-slate-900">
-              {classes.length}
-            </span>
-          </div>
-          <div>
-            <span className="text-xs text-slate-400">Aktiv</span>
-            <span className="ml-2 text-sm font-semibold text-slate-900">
-              {classes.filter((c) => c.is_active).length}
-            </span>
-          </div>
-          <div>
-            <span className="text-xs text-slate-400">Mit Szenario</span>
-            <span className="ml-2 text-sm font-semibold text-slate-900">
-              {classes.filter((c) => c.scenario).length}
-            </span>
-          </div>
-        </div>
-
-        {classes.length > 0 ? (
-          <div className="grid gap-4 lg:grid-cols-2">
-            {classes.map((c) => (
-              <article
-                key={c.id}
-                className="overflow-hidden rounded-2xl border border-border bg-panel transition hover:border-slate-300 hover:shadow-sm"
-              >
-                <div className="border-b border-border px-5 py-4">
-                  <div className="flex items-start justify-between gap-4">
-                    <div className="min-w-0">
-                      <div className="flex flex-wrap items-center gap-2">
-                        <span className="text-[11px] font-semibold uppercase tracking-[0.12em] text-slate-400">
-                          {c.school_year}
-                        </span>
-                        <span
-                          className={`rounded-full px-2 py-1 text-[11px] font-semibold ${
-                            c.is_active
-                              ? "bg-emerald-50 text-emerald-700"
-                              : "bg-slate-100 text-slate-500"
-                          }`}
-                        >
-                          {c.is_active ? "Aktiv" : "Pausiert"}
-                        </span>
-                      </div>
-
-                      <h3 className="mt-2 truncate text-lg font-semibold tracking-tight text-slate-950">
-                        {c.name}
-                      </h3>
-
-                      <p className="mt-0.5 text-sm text-slate-500">
-                        {c.grade_level
-                          ? `Jahrgang ${c.grade_level}`
-                          : "Jahrgang nicht hinterlegt"}
-                      </p>
-                    </div>
-
-                    <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-canvas text-sm font-semibold text-slate-600">
-                      {c.grade_level ?? "—"}
-                    </div>
-                  </div>
-
-                  <div className="mt-5 flex items-center gap-6">
-                    <div>
-                      <p className="text-[11px] font-medium text-slate-400">Schüler:innen</p>
-                      <p className="mt-0.5 text-base font-semibold text-slate-950">
-                        {c.student_count ?? 0}
-                      </p>
-                    </div>
-                    <div className="h-7 w-px bg-border" />
-                    <div>
-                      <p className="text-[11px] font-medium text-slate-400">Lehrkräfte</p>
-                      <p className="mt-0.5 text-base font-semibold text-slate-950">
-                        {c.teachers.length}
-                      </p>
-                    </div>
-                  </div>
-                </div>
-
-                <div className="px-5 py-4">
-                  <div>
-                    <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-accent">
-                      Aktives Szenario
-                    </p>
-                    <div className="mt-1 flex flex-wrap items-center gap-2">
-                      <p className="text-sm font-medium text-slate-900">
-                        {c.scenario?.title ?? "Noch kein Szenario"}
-                      </p>
-
-                      {c.scenario && (
-                        <span className="rounded-full bg-canvas px-2 py-1 text-[10px] font-medium text-slate-500">
-                          {c.scenario.age_rating === "all_ages"
-                            ? "Alle Altersstufen"
-                            : c.scenario.age_rating === "12_plus"
-                              ? "Ab 12"
-                              : c.scenario.age_rating === "16_plus"
-                                ? "Ab 16"
-                                : c.scenario.age_rating}
-                        </span>
-                      )}
-                    </div>
-
-                    {c.scenario?.description && (
-                      <p className="mt-1.5 line-clamp-2 text-xs leading-5 text-slate-500">
-                        {c.scenario.description}
-                      </p>
-                    )}
-                  </div>
-
-                  <div className="mt-4 flex flex-wrap items-center gap-2">
-                    {c.teachers.length ? (
-                      c.teachers.map((teacher) => (
-                        <span
-                          key={teacher}
-                          className="inline-flex items-center rounded-full bg-canvas px-2.5 py-1 text-xs font-medium text-slate-600"
-                        >
-                          {teacher}
-                        </span>
-                      ))
-                    ) : (
-                      <span className="text-xs text-slate-400">
-                        Noch keine Lehrkraft zugeordnet
-                      </span>
-                    )}
-                  </div>
-
-                  <div className="mt-4 flex flex-wrap items-center justify-between gap-3 border-t border-border pt-3">
-                    <div className="text-xs text-slate-400">
-                      Angelegt {new Date(c.created_at).toLocaleDateString("de-DE")}
-                      {c.access_code && (
-                        <span className="ml-2 font-mono text-[10px] text-slate-500">
-                          · Code {c.access_code}
-                        </span>
-                      )}
-                    </div>
-
-                    <a
-                      href={`https://lehrkraft.dr1ft.de/classes/${c.id}`}
-                      target="_blank"
-                      rel="noreferrer"
-                      className="inline-flex items-center text-xs font-medium text-slate-700 transition hover:text-slate-950"
-                    >
-                      Klasse öffnen →
-                    </a>
-                  </div>
-                </div>
-              </article>
-            ))}
-          </div>
-        ) : (
-          <div className="rounded-2xl border border-dashed border-border bg-panel p-12 text-center">
-            <Building2 className="mx-auto h-8 w-8 text-slate-300" />
-            <p className="mt-3 text-sm font-medium text-slate-700">
-              Noch keine Klassen angelegt
-            </p>
-            <p className="mt-1 text-sm text-slate-500">
-              Sobald Lehrkräfte Klasseninstanzen erstellen, erscheinen sie hier.
-            </p>
-          </div>
-        )}
+        <SchoolClassMatrix schoolId={school.id} initialClasses={classes} members={activeMembers} canManage={canManageTeacherAssignments || isPlatformAdmin} />
       </section>
     )}
 
