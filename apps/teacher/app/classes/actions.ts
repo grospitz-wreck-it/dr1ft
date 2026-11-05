@@ -4,6 +4,7 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { supabaseServerClient } from "../../lib/supabaseServerClient";
+import { CLASS_VISUALS } from "./[classId]/ClassVisual";
 
 function generateAccessCode(): string {
   const alphabet = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
@@ -63,6 +64,12 @@ export async function createClass(formData: FormData) {
     p_school_year: schoolYear,
   });
   if (instanceError || !instanceId) throw new Error(instanceError?.message ?? "Klasseninstanz konnte nicht angelegt werden");
+
+  const initialVisual = CLASS_VISUALS[Math.floor(Math.random() * CLASS_VISUALS.length)].id;
+  const { error: visualError } = await supabase.from("class_instances")
+    .update({ class_visual_id: initialVisual })
+    .eq("id", instanceId);
+  if (visualError) throw new Error(visualError.message);
 
   revalidatePath("/classes");
   redirect(`/classes/${instanceId}`);
@@ -342,4 +349,36 @@ export async function archiveClass(classId: string) {
   if (error) throw new Error(error.message);
   revalidatePath("/classes");
   revalidatePath("/classes/" + classId);
+}
+
+
+export async function setClassVisual(classId: string, visualId: string) {
+  const supabase = supabaseServerClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) throw new Error("Nicht authentifiziert");
+  if (!CLASS_VISUALS.some((visual) => visual.id === visualId)) {
+    throw new Error("Ungültiges Klassenmotiv");
+  }
+
+  const { data: membership, error: membershipError } = await supabase
+    .from("class_instance_memberships")
+    .select("id,role")
+    .eq("class_instance_id", classId)
+    .eq("user_id", user.id)
+    .eq("role", "teacher")
+    .is("left_at", null)
+    .maybeSingle();
+
+  if (membershipError || !membership) {
+    throw new Error("Keine Berechtigung, das Klassenmotiv zu ändern");
+  }
+
+  const { error } = await supabase.from("class_instances")
+    .update({ class_visual_id: visualId })
+    .eq("id", classId);
+  if (error) throw new Error(error.message);
+
+  revalidatePath("/");
+  revalidatePath("/classes");
+  revalidatePath(`/classes/${classId}`);
 }
