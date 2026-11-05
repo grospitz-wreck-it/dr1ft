@@ -16,25 +16,54 @@ import { supabaseServerClient } from "../lib/supabaseServerClient";
 export default async function TeacherHomePage() {
   const supabase = supabaseServerClient();
 
-  const { data: { user } } = await supabase.auth.getUser();
+  // Authentication and the RLS-protected class lookup are independent requests.
+  const [
+    { data: { user } },
+    { data: memberships },
+  ] = await Promise.all([
+    supabase.auth.getUser(),
+    supabase
+      .from("class_instance_memberships")
+      .select("class_instance_id, role, class_instances(id,name,is_active,grade_level,school_year,school_id,class_image_path,class_image_position_x,class_image_position_y,class_image_zoom)")
+      .eq("role", "teacher")
+      .is("left_at", null),
+  ]);
   if (!user) redirect("/login");
-
-  const { data: memberships } = await supabase
-    .from("class_instance_memberships")
-    .select("class_instance_id, role, class_instances(id,name,is_active,grade_level,school_year,school_id,class_image_path,class_image_position_x,class_image_position_y,class_image_zoom)")
-    .eq("role", "teacher")
-    .is("left_at", null);
 
   const classes = (memberships ?? [])
     .map((row: any) => row.class_instances)
     .filter(Boolean);
 
   const classIds = classes.map((item: any) => item.id);
-  const { data: schoolMemberships } = await supabase
-    .from("school_memberships")
-    .select("school_id, active")
-    .eq("user_id", user.id)
-    .eq("active", true);
+
+  // Fetch school links, student roster counts and active missions concurrently.
+  // The student rows also provide the dashboard total, so a separate COUNT(*) query is unnecessary.
+  const [
+    { data: schoolMemberships },
+    { data: studentMemberships },
+    { data: scenarioAssignments },
+  ] = await Promise.all([
+    supabase
+      .from("school_memberships")
+      .select("school_id, active")
+      .eq("user_id", user.id)
+      .eq("active", true),
+    classIds.length
+      ? supabase.from("class_instance_memberships")
+          .select("class_instance_id")
+          .in("class_instance_id", classIds)
+          .eq("role", "student")
+          .is("left_at", null)
+      : Promise.resolve({ data: [] as any[] }),
+    classIds.length
+      ? supabase.from("class_instance_scenario_assignments")
+          .select("class_instance_id,scenario_id,is_active,archived_at,scenarios(id,title,cover_image_url)")
+          .in("class_instance_id", classIds)
+          .is("archived_at", null)
+          .eq("is_active", true)
+      : Promise.resolve({ data: [] as any[] }),
+  ]);
+
   const schoolIds = Array.from(new Set([
     ...classes.map((item: any) => item.school_id),
     ...(schoolMemberships ?? []).map((membership: any) => membership.school_id),
@@ -45,22 +74,8 @@ export default async function TeacherHomePage() {
   const schoolsById = new Map((schoolRows ?? []).map((school: any) => [school.id, school]));
   const linkedSchools = Array.from(schoolsById.values());
 
-  let studentCount = 0;
-  if (classIds.length) {
-    const { count } = await supabase
-      .from("class_instance_memberships")
-      .select("user_id", { count: "exact", head: true })
-      .in("class_instance_id", classIds)
-      .eq("role", "student")
-      .is("left_at", null);
-    studentCount = count ?? 0;
-  }
-
   const activeClasses = classes.filter((item: any) => item.is_active);
-  const [{ data: studentMemberships }, { data: scenarioAssignments }] = await Promise.all([
-    classIds.length ? supabase.from("class_instance_memberships").select("class_instance_id").in("class_instance_id", classIds).eq("role", "student").is("left_at", null) : Promise.resolve({ data: [] as any[] }),
-    classIds.length ? supabase.from("class_instance_scenario_assignments").select("class_instance_id,scenario_id,is_active,archived_at,scenarios(id,title,cover_image_url)").in("class_instance_id", classIds).is("archived_at", null).eq("is_active", true) : Promise.resolve({ data: [] as any[] }),
-  ]);
+  const studentCount = studentMemberships?.length ?? 0;
   const studentsByClass = new Map<string, number>();
   (studentMemberships ?? []).forEach((row: any) => studentsByClass.set(row.class_instance_id, (studentsByClass.get(row.class_instance_id) ?? 0) + 1));
   const assignmentsByClass = new Map<string, any[]>();
