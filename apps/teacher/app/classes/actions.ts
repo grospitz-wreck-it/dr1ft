@@ -345,19 +345,19 @@ export async function archiveClass(classId: string) {
 }
 
 
-export async function setClassVisual(classId: string, visualId: string) {
+export async function setClassVisual(classId: string, visualId: string | null) {
   const supabase = supabaseServerClient();
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) throw new Error("Nicht authentifiziert");
 
   const allowedVisualIds = ["aurora", "nebula", "ocean", "sunrise", "forest", "cosmos", "spectrum", "glacier"];
-  if (!allowedVisualIds.includes(visualId)) {
+  if (visualId !== null && visualId !== "" && !allowedVisualIds.includes(visualId)) {
     throw new Error("Ungültiges Klassenmotiv");
   }
 
   const { error } = await supabase.rpc("set_class_instance_visual", {
     p_class_id: classId,
-    p_visual_id: visualId,
+    p_visual_id: visualId || null,
   });
   if (error) throw new Error(error.message);
 
