@@ -597,41 +597,50 @@ export async function assignExistingTeacherModule(classInstanceId: string, modul
   const supabase = supabaseServerClient();
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) throw new Error("Nicht authentifiziert.");
-  const { data: targetClass, error: classError } = await supabase.from("class_instances").select("id,school_id,school_year,is_active").eq("id", classInstanceId).maybeSingle();
-  if (classError || !targetClass?.school_id) throw new Error("Klasse nicht gefunden.");
-  const { data: module, error: moduleError } = await supabase.from("teacher_modules").select("id,school_id,created_by,visibility_scope,status").eq("id", moduleId).maybeSingle();
-  if (moduleError || !module || module.school_id !== targetClass.school_id || module.status !== "published") throw new Error("Dieses Modul ist nicht verfügbar.");
-  const { data: schoolMember } = await supabase.from("school_memberships").select("role").eq("school_id", targetClass.school_id).eq("user_id", user.id).eq("active", true).maybeSingle();
-  const authorized = ["teacher", "school_admin", "school_lead"].includes(schoolMember?.role ?? "") &&
-    (module.visibility_scope === "school" || module.created_by === user.id);
-  if (!authorized) throw new Error("Du darfst dieses Modul dieser Klasse nicht zuweisen.");
-  if (!targetClass.is_active) throw new Error("Die Klasseninstanz ist nicht aktiv.");
+
+  const { data: targetClass, error: classError } = await supabase
+    .from("class_instances").select("id,school_id,school_year,is_active")
+    .eq("id", classInstanceId).maybeSingle();
+  if (classError || !targetClass?.school_id || !targetClass.is_active) throw new Error("Aktive Klasse nicht gefunden.");
+
+  const { data: module, error: moduleError } = await supabase
+    .from("teacher_modules").select("id,school_id,created_by,visibility_scope,status")
+    .eq("id", moduleId).maybeSingle();
+  if (moduleError || !module || module.school_id !== targetClass.school_id || module.status !== "published") {
+    throw new Error("Dieses Modul ist nicht verfügbar.");
+  }
+
+  const { data: schoolMember } = await supabase.from("school_memberships").select("role")
+    .eq("school_id", targetClass.school_id).eq("user_id", user.id).eq("active", true).maybeSingle();
+  const isStaff = ["teacher", "school_admin", "school_lead"].includes(schoolMember?.role ?? "");
+  const canUseModule = module.visibility_scope === "school" || module.created_by === user.id;
+  if (!isStaff || !canUseModule) throw new Error("Du darfst dieses Modul dieser Klasse nicht zuweisen.");
 
   const { error: subscriptionError } = await supabase.rpc("subscribe_teacher_to_class_instance", {
     p_class_instance_id: classInstanceId,
   });
   if (subscriptionError) throw new Error(subscriptionError.message);
-  const { data: subscription, error: subscriptionErrorLookup } = await supabase
+
+  const { data: subscription, error: subscriptionLookupError } = await supabase
     .from("teacher_class_subscriptions").select("id")
     .eq("class_instance_id", classInstanceId).eq("teacher_user_id", user.id)
     .eq("is_active", true).maybeSingle();
-  if (subscriptionErrorLookup || !subscription) throw new Error("Klassenabonnement konnte nicht geladen werden.");
-  const { error } = await supabase.from("teacher_module_class_assignments").upsert({
-    module_id: moduleId, school_id: targetClass.school_id, class_instance_id: classInstanceId, assigned_by: user.id, is_active: true, archived_at: null,
+  if (subscriptionLookupError || !subscription) throw new Error("Klassenabonnement konnte nicht geladen werden.");
+
+  const { error: legacyError } = await supabase.from("teacher_module_class_assignments").upsert({
+    module_id: moduleId, school_id: targetClass.school_id, class_instance_id: classInstanceId,
+    assigned_by: user.id, is_active: true, archived_at: null,
   }, { onConflict: "module_id,class_instance_id" });
-  if (error) throw new Error(error.message);
+  if (legacyError) throw new Error(legacyError.message);
+
   const { error: scopedError } = await supabase.from("teacher_class_module_assignments").upsert({
-    subscription_id: subscription.id,
-    school_id: targetClass.school_id,
-    class_instance_id: classInstanceId,
-    teacher_user_id: user.id,
-    school_year: targetClass.school_year,
-    module_type: "teacher_module",
-    module_id: moduleId,
-    assigned_by: user.id,
-    is_active: true,
-    archived_at: null,
+    subscription_id: subscription.id, school_id: targetClass.school_id,
+    class_instance_id: classInstanceId, teacher_user_id: user.id,
+    school_year: targetClass.school_year, module_type: "teacher_module",
+    module_id: moduleId, assigned_by: user.id, is_active: true, archived_at: null,
   }, { onConflict: "teacher_user_id,class_instance_id,module_type,module_id" });
   if (scopedError) throw new Error(scopedError.message);
+
   revalidatePath(`/classes/${classInstanceId}`);
 }
+
