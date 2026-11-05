@@ -191,69 +191,87 @@ export default async function StudentReportPage({
 }) {
   const supabase = supabaseServerClient();
   const { classId, studentId } = params;
-  const [{ data: classInfo }, { data: profile }, reportResult, socialResult, activityTimeResult] = await Promise.all([
+  const [{ data: { user } }, { data: classInfo }, { data: profile }] = await Promise.all([
+    supabase.auth.getUser(),
     supabase.from("class_instances").select("name, school_year, grade_level").eq("id", classId).maybeSingle(),
     supabase.from("user_profiles").select("display_name, username, avatar_seed").eq("id", studentId).maybeSingle(),
-    supabase.rpc("get_teacher_student_scenario_report_v1", { p_class_id: classId, p_student_id: studentId }),
-    supabase.rpc("get_teacher_student_social_pulse_v1", { p_class_id: classId, p_student_id: studentId }),
-    supabase.rpc("get_teacher_student_activity_time_v1", { p_class_id: classId, p_student_id: studentId }),
+  ]);
+
+  if (!user) throw new Error("Bitte melde dich erneut an.");
+  const { data: assignedModules, error: assignmentsError } = await supabase
+    .from("teacher_class_module_assignments")
+    .select("module_id")
+    .eq("class_instance_id", classId)
+    .eq("teacher_user_id", user.id)
+    .eq("module_type", "scenario")
+    .eq("is_active", true)
+    .is("archived_at", null);
+
+  if (assignmentsError) throw new Error("Deine Modulzuweisungen konnten nicht geladen werden.");
+  const assignedScenarioIds = Array.from(new Set((assignedModules ?? []).map((row: any) => row.module_id)));
+  const { data: scenarioRows } = assignedScenarioIds.length
+    ? await supabase.from("scenarios").select("id, title, cover_image_url, learning_cards").in("id", assignedScenarioIds)
+    : { data: [] as ScenarioMeta[] };
+
+  const assignedScenarios = (scenarioRows ?? []) as ScenarioMeta[];
+  const requestedScenario = searchParams.scenario || "";
+  const selectedScenario = assignedScenarios.find((item) => item.id === requestedScenario) ?? assignedScenarios[0] ?? null;
+
+  if (!selectedScenario) {
+    return (
+      <main className="min-h-screen bg-canvas px-4 py-10">
+        <section className="mx-auto max-w-3xl overflow-hidden rounded-3xl border border-violet-100 bg-white shadow-sm">
+          <div className="bg-[linear-gradient(110deg,#f5f0ff,#effaff)] px-6 py-7">
+            <p className="text-[10px] font-black uppercase tracking-[.2em] text-violet-600">DR1FT / LEHRKRAFT</p>
+            <h1 className="mt-2 text-2xl font-bold text-slate-950">Keine zugewiesenen DR1FT-Module</h1>
+            <p className="mt-2 text-sm leading-6 text-slate-600">Für diese Klasse hast du aktuell keine aktive eigene Modulzuweisung. Individuelle Auswertungen werden ausschließlich für deine eigenen zugewiesenen Module freigeschaltet.</p>
+          </div>
+          <div className="p-6"><a href={`/classes/${classId}`} className="inline-flex items-center rounded-xl bg-violet-600 px-4 py-2.5 text-sm font-semibold text-white hover:bg-violet-700">Zur Klasse</a></div>
+        </section>
+      </main>
+    );
+  }
+
+  const [reportResult] = await Promise.all([
+    supabase.rpc("get_teacher_student_scenario_report_scoped_v1", {
+      p_class_id: classId,
+      p_student_id: studentId,
+      p_scenario_id: selectedScenario.id,
+    }),
   ]);
 
   const answers = (reportResult.data ?? []) as ScenarioAnswer[];
-  const socialWeeks = (socialResult.data ?? []) as SocialWeek[];
-  const activityTimeRecords = (activityTimeResult.data ?? []) as ActivityTimeRecord[];
-  const scenarioIds = Array.from(new Set(answers.map((answer) => answer.scenario_id)));
-  let scenarioRows: ScenarioMeta[] = [];
-  if (scenarioIds.length) {
-    const result = await supabase.from("scenarios").select("id, title, cover_image_url, learning_cards").in("id", scenarioIds);
-    scenarioRows = (result.data ?? []) as ScenarioMeta[];
-  }
-  const scenarioMeta = new Map(scenarioRows.map((scenario) => [scenario.id, scenario]));
-  const grouped = new Map<string, ScenarioReport>();
-  for (const answer of answers) {
-    const report = grouped.get(answer.scenario_id) ?? { id: answer.scenario_id, title: answer.scenario_title, answers: [] };
-    report.answers.push(answer);
-    grouped.set(answer.scenario_id, report);
-  }
-  const reports = Array.from(grouped.values()).sort(
-    (a, b) => new Date(b.answers[0].occurred_at).getTime() - new Date(a.answers[0].occurred_at).getTime(),
-  );
-  const requestedScenario = searchParams.scenario || "";
-  const selectedReport = reports.find((report) => report.id === requestedScenario) ?? reports[0] ?? null;
+  const socialWeeks: SocialWeek[] = [];
+  const activityTimeRecords: ActivityTimeRecord[] = [];
+  const scenarioMeta = new Map(assignedScenarios.map((scenario) => [scenario.id, scenario]));
+  const reports: ScenarioReport[] = assignedScenarios.map((scenario) => ({
+    id: scenario.id,
+    title: scenario.title,
+    answers: scenario.id === selectedScenario.id ? answers : [],
+  }));
+  const selectedReport = reports.find((report) => report.id === selectedScenario.id) ?? null;
   const studentName = profile?.display_name || "Schüler:in";
   const selectedAnswers = selectedReport?.answers ?? [];
-  const overallGroups = groupEvidence(answers);
+  const overallGroups = groupEvidence(selectedAnswers);
   const objectiveGroups = groupEvidence(selectedAnswers);
-  const allSuccess = answers.filter((answer) => answer.outcome === "success").length;
-  const allPartial = answers.filter((answer) => answer.outcome === "partial").length;
-  const allNeedsWork = answers.filter((answer) => answer.outcome === "not_yet").length;
-  const successCount = selectedAnswers.filter((answer) => answer.outcome === "success").length;
-  const partialCount = selectedAnswers.filter((answer) => answer.outcome === "partial").length;
-  const notYetCount = selectedAnswers.filter((answer) => answer.outcome === "not_yet").length;
+  const allSuccess = selectedAnswers.filter((answer) => answer.outcome === "success").length;
+  const allPartial = selectedAnswers.filter((answer) => answer.outcome === "partial").length;
+  const allNeedsWork = selectedAnswers.filter((answer) => answer.outcome === "not_yet").length;
+  const successCount = allSuccess;
+  const partialCount = allPartial;
+  const notYetCount = allNeedsWork;
   const evidencedStrengths = objectiveGroups.filter((group) => group.answers.length >= 2 && group.needsWork === 0);
   const learningFocus = objectiveGroups.filter((group) => group.needsWork > 0).slice(0, 3);
   const latestFocusAnswer = learningFocus[0]?.answers.find((answer) => answer.outcome !== "success");
   const journeyError = reportResult.error?.message ?? null;
-  const scenarioTitle = selectedReport?.title || "Dein Lernweg beginnt hier";
-  const socialTotals = socialWeeks.reduce((totals, week) => {
-    SOCIAL_SERIES.forEach(({ key }) => { totals[key] += Number(week[key] ?? 0); });
-    return totals;
-  }, { likes_sent: 0, comments_sent: 0, shares_sent: 0, direct_messages_sent: 0 });
-  const socialTotal = SOCIAL_SERIES.reduce((sum, { key }) => sum + socialTotals[key], 0);
-  const socialWeekMax = Math.max(1, ...socialWeeks.map((week) => SOCIAL_SERIES.reduce((sum, { key }) => sum + Number(week[key] ?? 0), 0)));
-  let socialChartOffset = 0;
-  const socialDonutStops = SOCIAL_SERIES.map(({ key, hex }) => {
-    const start = socialChartOffset;
-    socialChartOffset += socialTotal ? socialTotals[key] / socialTotal * 100 : 0;
-    return `${hex} ${start}% ${socialChartOffset}%`;
-  }).join(", ");
+  const scenarioTitle = selectedReport?.title || selectedScenario.title;
+  const socialTotals = { likes_sent: 0, comments_sent: 0, shares_sent: 0, direct_messages_sent: 0 };
+  const socialTotal = 0;
+  const socialWeekMax = 1;
+  const socialDonutStops = "";
   const activitySeconds = { feed: 0, other: 0, learning_cards: 0 };
-  let selectedScenarioSeconds = 0;
-  activityTimeRecords.forEach((record) => {
-    const duration = Number(record.duration_seconds ?? 0);
-    activitySeconds[record.activity_type] += duration;
-    if (selectedReport && record.scenario_id === selectedReport.id) selectedScenarioSeconds += duration;
-  });
+  const selectedScenarioSeconds = 0;
+
 
   return <main className="student-report-page min-h-screen bg-[radial-gradient(ellipse_at_12%_0%,#f1eaff_0%,transparent_30%),radial-gradient(ellipse_at_92%_20%,#e6f7ff_0%,transparent_25%),linear-gradient(135deg,#f7f7fc_0%,#f0f1fb_52%,#fbf5ff_100%)] px-3 py-4 text-slate-900 sm:px-5 sm:py-5 md:px-8 print:bg-white print:px-0 print:py-0">
     <div className="student-report-print-root mx-auto max-w-[1380px] space-y-4">
@@ -370,7 +388,7 @@ export default async function StudentReportPage({
       </section>
       </div>
 
-      <section aria-labelledby="social-pulse-heading" className="overflow-hidden rounded-[26px] border border-violet-100 bg-white shadow-[0_12px_38px_rgba(56,65,120,.07)] print:hidden">
+      <section hidden aria-labelledby="social-pulse-heading" className="overflow-hidden rounded-[26px] border border-violet-100 bg-white shadow-[0_12px_38px_rgba(56,65,120,.07)] print:hidden">
         <div className="flex flex-wrap items-center justify-between gap-3 bg-[linear-gradient(105deg,#f5efff,#f1faff_62%,#fff8e7)] px-5 py-4 sm:px-6">
           <div className="flex items-center gap-3"><span className="grid h-10 w-10 place-items-center rounded-2xl bg-white text-xl shadow-sm">💬</span><div><p className="text-[9px] font-black uppercase tracking-[.2em] text-violet-600">Dein DR1FT-Moment</p><h2 id="social-pulse-heading" className="text-lg font-black text-slate-950 sm:text-xl">So warst du im Feed dabei</h2></div></div>
           <span className="rounded-full border border-white bg-white/80 px-3 py-1.5 text-[10px] font-semibold text-slate-500">Letzte 6 Wochen</span>
