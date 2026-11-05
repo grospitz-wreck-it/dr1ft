@@ -101,7 +101,7 @@ export default async function ClassDetailPage({
   const user = userResult.user;
 
 
-  const [teacherModuleAssignmentsResult, availableTeacherModulesResult, schoolMembershipResult] = await Promise.all([
+  const [teacherModuleAssignmentsResult, availableTeacherModulesResult, schoolMembershipResult, teacherMembershipResult] = await Promise.all([
     user
       ? timed(timings, "teacher-module-assignments", supabase.from("teacher_module_class_assignments")
           .select("id,module_id,school_id,assigned_by,is_active,scheduled_start_at,scheduled_end_at,archived_at,teacher_modules(id,title,description,intro_title,intro_text,visibility_scope,status,created_by,title_card_enabled)")
@@ -115,17 +115,15 @@ export default async function ClassDetailPage({
       ? timed(timings, "school-membership", supabase.from("school_memberships").select("role").eq("school_id", instance.school_id)
           .eq("user_id", user.id).eq("active", true).maybeSingle())
       : Promise.resolve({ data: null, error: null }),
+    user
+      ? timed(timings, "teacher-membership", supabase.from("class_instance_memberships").select("id")
+          .eq("class_instance_id", classId).eq("user_id", user.id).eq("role", "teacher")
+          .is("left_at", null).maybeSingle())
+      : Promise.resolve({ data: null, error: null }),
   ]);
 
   const activeSchoolRole = schoolMembershipResult.data?.role ?? null;
   const isSchoolAdmin = activeSchoolRole === "school_admin";
-  // Fetch the current teacher membership once and reuse it for module access
-  // and class-image permissions. The former implementation queried this row twice.
-  const teacherMembershipResult = user
-    ? await timed(timings, "teacher-membership", supabase.from("class_instance_memberships").select("id")
-        .eq("class_instance_id", classId).eq("user_id", user.id).eq("role", "teacher")
-        .is("left_at", null).maybeSingle())
-    : { data: null, error: null };
   const assignedTeacher = Boolean(teacherMembershipResult.data);
   const mayUseTeacherModules = assignedTeacher || isSchoolAdmin;
 
