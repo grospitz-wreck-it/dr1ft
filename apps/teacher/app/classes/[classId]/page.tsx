@@ -150,7 +150,7 @@ export default async function ClassDetailPage({
         }))
     : [];
 
-  const canEditClassImage = Boolean(teacherMembershipResult.data);
+  const canEditClassImage = assignedTeacher || isSchoolAdmin;
 
   const students = (roster ?? [])
     .filter((row: any) => row.role === "student")
