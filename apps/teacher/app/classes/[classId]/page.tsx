@@ -101,16 +101,12 @@ export default async function ClassDetailPage({
   const user = userResult.user;
 
 
-  const [teacherModuleAssignmentsResult, availableTeacherModulesResult, schoolMembershipResult, teacherMembershipResult] = await Promise.all([
+  const [moduleLibraryResult, schoolMembershipResult, teacherMembershipResult] = await Promise.all([
     user
-      ? timed(timings, "teacher-module-assignments", supabase.from("teacher_module_class_assignments")
-          .select("id,module_id,school_id,assigned_by,is_active,scheduled_start_at,scheduled_end_at,archived_at,teacher_modules(id,title,description,intro_title,intro_text,visibility_scope,status,created_by,title_card_enabled)")
-          .eq("class_instance_id", classId).is("archived_at", null))
-      : Promise.resolve({ data: [], error: null }),
-    instance.school_id
-      ? timed(timings, "available-teacher-modules", supabase.from("teacher_modules").select("id,title,description,visibility_scope,created_by,status")
-          .eq("school_id", instance.school_id).eq("status", "published").order("updated_at", { ascending: false }))
-      : Promise.resolve({ data: [], error: null }),
+      ? timed(timings, "teacher-module-library", supabase.rpc("get_teacher_module_library_for_class_v1", {
+          p_class_id: classId,
+        }))
+      : Promise.resolve({ data: { assigned: [], available: [] }, error: null }),
     user && instance.school_id
       ? timed(timings, "school-membership", supabase.from("school_memberships").select("role").eq("school_id", instance.school_id)
           .eq("user_id", user.id).eq("active", true).maybeSingle())
@@ -121,33 +117,24 @@ export default async function ClassDetailPage({
       : Promise.resolve({ data: null, error: null }),
   ]);
 
+  if (moduleLibraryResult.error) {
+    console.warn("[class-overview] teacher module library unavailable", {
+      classId, code: moduleLibraryResult.error.code, message: moduleLibraryResult.error.message,
+    });
+  }
+  const moduleLibrary = (moduleLibraryResult.data ?? { assigned: [], available: [] }) as {
+    assigned: any[];
+    available: any[];
+  };
+
   const activeSchoolRole = schoolMembershipResult.data?.role ?? null;
   const isSchoolAdmin = activeSchoolRole === "school_admin" || activeSchoolRole === "school_lead";
   const assignedTeacher = Boolean(teacherMembershipResult.data);
   const mayUseTeacherModules = assignedTeacher || isSchoolAdmin;
 
-  const availableTeacherModules = mayUseTeacherModules
-    ? (availableTeacherModulesResult.data ?? [])
-        .filter((module: any) => module.visibility_scope === "school" ||
-          (module.visibility_scope === "private" && module.created_by === user?.id))
-        .map((module: any) => ({ id: module.id, module_id: module.id, title: module.title,
-          description: module.description ?? "", visibility_scope: module.visibility_scope, posts: [] }))
-    : [];
+  const availableTeacherModules = mayUseTeacherModules ? moduleLibrary.available : [];
 
-  const teacherModules = mayUseTeacherModules
-    ? (teacherModuleAssignmentsResult.data ?? [])
-        .filter((row: any) => row.teacher_modules?.status === "published")
-        .map((row: any) => ({
-          id: row.id, module_id: row.module_id, school_id: row.school_id, assigned_by: row.assigned_by,
-          is_active: row.is_active, scheduled_start_at: row.scheduled_start_at, scheduled_end_at: row.scheduled_end_at,
-          title: row.teacher_modules.title, description: row.teacher_modules.description ?? "",
-          introTitle: row.teacher_modules.intro_title, introText: row.teacher_modules.intro_text,
-          visibility_scope: row.teacher_modules.visibility_scope,
-          canManage: Boolean(row.teacher_modules.created_by === user?.id && (assignedTeacher || isSchoolAdmin)),
-          title_card_enabled: row.teacher_modules.title_card_enabled !== false,
-          cover_image_url: null, posts: [],
-        }))
-    : [];
+  const teacherModules = mayUseTeacherModules ? moduleLibrary.assigned : [];
 
   const canEditClassImage = assignedTeacher || isSchoolAdmin;
 
