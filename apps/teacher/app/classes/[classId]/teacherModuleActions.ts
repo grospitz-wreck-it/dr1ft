@@ -375,6 +375,8 @@ export async function getTeacherModuleFreeTextReport(classInstanceId: string, mo
     throw new Error("Du kannst nur Antworten und Ergebnisse deiner eigenen aktiven Modulzuweisungen einsehen.");
   }
 
+  const { data: moduleInfo } = await supabase.from("teacher_modules").select("title").eq("id", moduleId).maybeSingle();
+
   const [{ data: posts, error: postsError }, { data: members, error: membersError }, { data: votes, error: votesError }] = await Promise.all([
     supabase.from("teacher_module_posts").select("id,title,interaction_data,post_type")
       .eq("module_id", moduleId).eq("post_type", "poll").order("sort_order", { ascending: true }),
@@ -403,7 +405,7 @@ export async function getTeacherModuleFreeTextReport(classInstanceId: string, mo
     });
   });
   return {
-    moduleTitle: (assignment as any).teacher_modules?.title ?? "Lernmodul",
+    moduleTitle: moduleInfo?.title ?? "Lernmodul",
     generatedAt: new Date().toISOString(),
     rows,
     questionCount: freeTextPosts.length,
