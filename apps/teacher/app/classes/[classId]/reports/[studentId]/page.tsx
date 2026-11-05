@@ -193,11 +193,16 @@ export default async function StudentReportPage({
   const { classId, studentId } = params;
   const [{ data: { user } }, { data: classInfo }, { data: profile }] = await Promise.all([
     supabase.auth.getUser(),
-    supabase.from("class_instances").select("name, school_year, grade_level").eq("id", classId).maybeSingle(),
+    supabase.from("class_instances").select("name, school_year, grade_level, school_id").eq("id", classId).maybeSingle(),
     supabase.from("user_profiles").select("display_name, username, avatar_seed").eq("id", studentId).maybeSingle(),
   ]);
 
   if (!user) throw new Error("Bitte melde dich erneut an.");
+  const { data: schoolMembership } = classInfo?.school_id
+    ? await supabase.from("school_memberships").select("role")
+        .eq("school_id", classInfo.school_id).eq("user_id", user.id).eq("active", true).maybeSingle()
+    : { data: null };
+  const isSchoolLeadership = schoolMembership?.role === "school_admin" || schoolMembership?.role === "school_lead";
   const { data: assignedModules, error: assignmentsError } = await supabase
     .from("teacher_class_module_assignments")
     .select("module_id")
@@ -223,8 +228,8 @@ export default async function StudentReportPage({
         <section className="mx-auto max-w-3xl overflow-hidden rounded-3xl border border-violet-100 bg-white shadow-sm">
           <div className="bg-[linear-gradient(110deg,#f5f0ff,#effaff)] px-6 py-7">
             <p className="text-[10px] font-black uppercase tracking-[.2em] text-violet-600">DR1FT / LEHRKRAFT</p>
-            <h1 className="mt-2 text-2xl font-bold text-slate-950">Keine zugewiesenen DR1FT-Module</h1>
-            <p className="mt-2 text-sm leading-6 text-slate-600">Für diese Klasse hast du aktuell keine aktive eigene Modulzuweisung. Individuelle Auswertungen werden ausschließlich für deine eigenen zugewiesenen Module freigeschaltet.</p>
+            <h1 className="mt-2 text-2xl font-bold text-slate-950">{isSchoolLeadership ? "Klassenreport statt Einzelauswertung" : "Keine zugewiesenen DR1FT-Module"}</h1>
+            <p className="mt-2 text-sm leading-6 text-slate-600">{isSchoolLeadership ? "Als Schuladmin oder Schulleitung erhältst du aggregierte Klassen- und Schulberichte. Individuelle Schülerreports sind in dieser Rolle nicht freigeschaltet." : "Für diese Klasse hast du aktuell keine aktive eigene Modulzuweisung. Individuelle Auswertungen werden ausschließlich für deine eigenen zugewiesenen Module freigeschaltet."}</p>
           </div>
           <div className="p-6"><a href={`/classes/${classId}`} className="inline-flex items-center rounded-xl bg-violet-600 px-4 py-2.5 text-sm font-semibold text-white hover:bg-violet-700">Zur Klasse</a></div>
         </section>
