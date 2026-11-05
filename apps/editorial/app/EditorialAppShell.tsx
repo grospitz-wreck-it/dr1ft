@@ -13,7 +13,7 @@ function client() {
 
 const PUBLIC_PATHS = ["/login", "/forgot-password", "/reset-password"];
 export function EditorialAppShell({ children }: { children: ReactNode }) {
-  const pathname = (usePathname() ?? "/").split("?")[0].replace(/\\/+$/, "") || "/";
+  const pathname = (usePathname() ?? "/").split("?")[0].replace(/\/+$/, "") || "/";
   const router = useRouter();
   const [accountOpen, setAccountOpen] = useState(false);
   const [email, setEmail] = useState<string | null>(null);
