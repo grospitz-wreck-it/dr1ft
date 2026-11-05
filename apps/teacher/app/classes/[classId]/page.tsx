@@ -5,26 +5,31 @@ import { ClassDashboardInsights } from "./ClassDashboardInsights";
 import { CollapsiblePanel } from "./CollapsiblePanel";
 import ClassImageWorkspace from "./ClassImageWorkspace";
 
-async function timed<T>(name: string, task: PromiseLike<T>): Promise<T> {
+async function timed<T>(timings: { name: string; ms: number }[], name: string, task: PromiseLike<T>): Promise<T> {
   const start = Date.now();
   const result = await task;
   const error = (result as any)?.error;
-  console.info("[class-overview-timing]", { name, ms: Date.now() - start, code: error?.code ?? null, message: error?.message ?? null });
+  const ms = Date.now() - start;
+  timings.push({ name, ms });
+  console.info("[class-overview-timing]", { name, ms, code: error?.code ?? null, message: error?.message ?? null });
   return result;
 }
 
 export default async function ClassDetailPage({
   params,
+  searchParams,
 }: {
   params: { classId: string };
+  searchParams?: { debug?: string };
 }) {
   const pageStartedAt = Date.now();
+  const timings: { name: string; ms: number }[] = [];
   const supabase = supabaseServerClient();
   const { classId } = params;
 
   const {
     data: instance,
-  } = await timed("class-instance", supabase
+  } = await timed(timings, "class-instance", supabase
     .from("class_instances")
     .select(
       "id,name,access_code,is_active,status,grade_level,school_year,school_id,class_image_path,class_image_position_x,class_image_position_y,class_image_zoom",
@@ -63,25 +68,25 @@ export default async function ClassDetailPage({
     { data: school },
     { data: userResult },
   ] = await Promise.all([
-    timed("roster", supabase
+    timed(timings, "roster", supabase
       .from("class_instance_memberships")
       .select("user_id,role,left_at,user_profiles(display_name,username,avatar_seed)")
       .eq("class_instance_id", classId)
       .is("left_at", null)),
 
-    timed("scenarios", supabase
+    timed(timings, "scenarios", supabase
       .from("scenarios")
       .select("id,title,description,cover_image_url,age_rating")
       .order("title")),
 
-    timed("scenario-assignments", supabase
+    timed(timings, "scenario-assignments", supabase
       .from("class_instance_scenario_assignments")
       .select("scenario_id,pacing_mode,scheduled_start_at,scheduled_end_at,show_reports_at_end,archived_at,is_active,scenarios(title)")
       .eq("class_instance_id", classId)
       .is("archived_at", null)),
 
     instance.school_id
-      ? timed("school", supabase
+      ? timed(timings, "school", supabase
           .from("schools")
           .select(
             "id,name,region,school_image_path,school_image_position_x,school_image_position_y,school_image_zoom",
@@ -90,7 +95,7 @@ export default async function ClassDetailPage({
           .maybeSingle())
       : Promise.resolve({ data: null }),
 
-    timed("auth-user", supabase.auth.getUser()),
+    timed(timings, "auth-user", supabase.auth.getUser()),
   ]);
 
   const user = userResult.user;
@@ -98,16 +103,16 @@ export default async function ClassDetailPage({
 
   const [teacherModuleAssignmentsResult, availableTeacherModulesResult, schoolMembershipResult] = await Promise.all([
     user
-      ? timed("teacher-module-assignments", supabase.from("teacher_module_class_assignments")
+      ? timed(timings, "teacher-module-assignments", supabase.from("teacher_module_class_assignments")
           .select("id,module_id,school_id,assigned_by,is_active,scheduled_start_at,scheduled_end_at,archived_at,teacher_modules(id,title,description,intro_title,intro_text,visibility_scope,status,created_by,title_card_enabled)")
           .eq("class_instance_id", classId).is("archived_at", null))
       : Promise.resolve({ data: [], error: null }),
     instance.school_id
-      ? timed("available-teacher-modules", supabase.from("teacher_modules").select("id,title,description,visibility_scope,created_by,status")
+      ? timed(timings, "available-teacher-modules", supabase.from("teacher_modules").select("id,title,description,visibility_scope,created_by,status")
           .eq("school_id", instance.school_id).eq("status", "published").order("updated_at", { ascending: false }))
       : Promise.resolve({ data: [], error: null }),
     user && instance.school_id
-      ? timed("school-membership", supabase.from("school_memberships").select("role").eq("school_id", instance.school_id)
+      ? timed(timings, "school-membership", supabase.from("school_memberships").select("role").eq("school_id", instance.school_id)
           .eq("user_id", user.id).eq("active", true).maybeSingle())
       : Promise.resolve({ data: null, error: null }),
   ]);
@@ -117,7 +122,7 @@ export default async function ClassDetailPage({
   // Fetch the current teacher membership once and reuse it for module access
   // and class-image permissions. The former implementation queried this row twice.
   const teacherMembershipResult = user
-    ? await timed("teacher-membership", supabase.from("class_instance_memberships").select("id")
+    ? await timed(timings, "teacher-membership", supabase.from("class_instance_memberships").select("id")
         .eq("class_instance_id", classId).eq("user_id", user.id).eq("role", "teacher")
         .is("left_at", null).maybeSingle())
     : { data: null, error: null };
@@ -152,7 +157,7 @@ export default async function ClassDetailPage({
   let classImageUrl: string | null = null;
 
   if (canEditClassImage && instance.class_image_path) {
-    const { data } = await timed("class-image-signed-url", supabase.storage
+    const { data } = await timed(timings, "class-image-signed-url", supabase.storage
       .from("class-images")
       .createSignedUrl(instance.class_image_path, 60 * 60));
 
@@ -193,7 +198,9 @@ export default async function ClassDetailPage({
       ? instance.class_image_zoom ?? 1
       : school?.school_image_zoom ?? 1;
 
-  console.info("[class-overview-timing]", { name: "page-data-total", ms: Date.now() - pageStartedAt, students: students.length, scenarios: scenarios?.length ?? 0, assignments: assignments?.length ?? 0 });
+  const totalPageDataMs = Date.now() - pageStartedAt;
+  timings.push({ name: "page-data-total", ms: totalPageDataMs });
+  console.info("[class-overview-timing]", { name: "page-data-total", ms: totalPageDataMs, students: students.length, scenarios: scenarios?.length ?? 0, assignments: assignments?.length ?? 0 });
 
   return (
     <main className="min-h-screen bg-canvas">
@@ -204,6 +211,23 @@ export default async function ClassDetailPage({
         >
           ← Meine Klassen
         </a>
+
+        {searchParams?.debug === "timing" && (assignedTeacher || isSchoolAdmin) && (
+          <section className="mt-4 rounded-xl border border-amber-300 bg-amber-50 p-4 text-sm text-slate-800">
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <strong>Diagnose: Ladezeiten der Klassenübersicht</strong>
+              <span className="font-mono font-semibold">{totalPageDataMs} ms Datenaufbau</span>
+            </div>
+            <ul className="mt-3 grid gap-1 sm:grid-cols-2 lg:grid-cols-3">
+              {timings.map((item) => (
+                <li key={item.name} className="flex justify-between gap-3 border-b border-amber-200 py-1">
+                  <span>{item.name}</span><span className="font-mono tabular-nums">{item.ms} ms</span>
+                </li>
+              ))}
+            </ul>
+            <p className="mt-2 text-xs text-slate-600">Nur für berechtigte Lehrkräfte und Schuladmins sichtbar. Messung der serverseitigen Datenabfragen; Browser- und Netzwerkzeit ist nicht enthalten.</p>
+          </section>
+        )}
 
         <ClassImageWorkspace
           classId={classId}
