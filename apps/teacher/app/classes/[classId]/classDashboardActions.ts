@@ -47,3 +47,19 @@ export async function loadClassDashboardReport(classId: string) {
   }
   return payload;
 }
+
+
+export async function loadClassAggregateReport(classId: string) {
+  if (!classId) throw new Error("Ungültige Klassen-ID.");
+  const supabase = supabaseServerClient();
+  const { data: { user }, error: authError } = await supabase.auth.getUser();
+  if (authError || !user) throw new Error("Bitte melde dich erneut an.");
+  const { data, error } = await supabase.rpc("get_class_aggregate_learning_report_v1", {
+    p_class_id: classId,
+  });
+  if (error) {
+    console.error("[class-aggregate-report] failed", { classId, userId: user.id, code: error.code });
+    throw new Error("Das aggregierte Klassenreporting konnte nicht geladen werden.");
+  }
+  return data;
+}
