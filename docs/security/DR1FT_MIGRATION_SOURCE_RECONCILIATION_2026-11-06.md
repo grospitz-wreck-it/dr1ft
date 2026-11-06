@@ -277,3 +277,6 @@ A forward-only migration and matching client change were added:
 - The RPC validates event scope and provenance but cannot prove that a learner actually paid attention or performed the claimed cognitive action. Views/inspection events remain behavioural telemetry, not competence evidence; reasoning, reflection and transfer evidence are still required.
 
 Before applying, test every Player interaction type (including group chat message views and learning-task responses), valid/invalid class-instance combinations, unassigned scenarios, archived content, anonymous calls, and direct table INSERT/UPDATE/DELETE denial. Confirm the mission trigger still fires after the RPC insert.
+
+
+The interaction RPC was additionally made idempotent for `view`: it takes a transaction-scoped advisory lock for the user/class/content tuple and returns the existing view row rather than inserting another. This prevents repeated visibility callbacks or client retries on the same content item from inflating mission counts. It does not prove attention and does not prevent a client from reporting views of different visible items; mission completion therefore remains gameplay progress, not competence evidence.
