@@ -156,3 +156,17 @@ Two branch changes address this:
 - `apps/player/app/api/content/[contentId]/comment/route.ts` now also requires the active membership role to be `student`, providing an application-layer check before the insert.
 
 Neither change has been applied to Supabase or deployed. Validate the Player comment flow with an active student, then verify denial for an unassigned student, a teacher, an ended membership, a different class instance, and an anonymous caller before applying the migration.
+
+
+## Additional school administration privilege finding (2026-11-06)
+
+The live `schools` table grants broad UPDATE privileges at table level to both client roles. RLS limits row access, but the policy `school admins update own school` calls `is_school_admin_of(id)`; the local helper definition explicitly includes both `school_admin` and `school_lead`. Consequently, either school role could attempt to change platform-controlled fields such as `status`, `plan`, `funding_type`, `internal_notes`, `email_domain` and `student_count` on its own school row. This is separate from cross-school access; the existing policy remains school-scoped.
+
+A forward-only branch migration was added:
+
+- `supabase/migrations/20261106150000_guard_school_protected_fields.sql`
+- Adds a `BEFORE UPDATE` guard that allows existing school-level profile editing but reserves school identity, billing, status and internal administration fields for platform admins.
+- Leaves the existing row-level school scope and profile-editing policy unchanged.
+- Has **not** been applied to Supabase.
+
+Before applying, test school_admin and school_lead updates to ordinary profile fields, and verify both are denied for protected fields while platform_admin remains allowed. The exact business ownership of `student_count` and `email_domain` should be confirmed with the school-operations workflow before production rollout.
