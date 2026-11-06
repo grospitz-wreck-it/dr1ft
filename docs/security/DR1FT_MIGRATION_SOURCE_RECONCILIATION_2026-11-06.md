@@ -192,3 +192,22 @@ A fresh live privilege inventory confirmed that both `anon` and `authenticated` 
 - Leaves `SELECT`, `INSERT`, `UPDATE` and `DELETE` unchanged. In particular, `DELETE` remains subject to RLS and must be reviewed table/policy by table/policy rather than revoked wholesale.
 
 No live privilege has been changed; this migration is source-only until explicitly approved and safely reconciled.
+
+
+## Additional student join / class-instance cutover finding (2026-11-06)
+
+The live migration history does not contain local migration `20260930100000_fix_join_class_as_student_instance_scope.sql`. A read-only inspection of the live `join_class_as_student(text,text)` definition confirmed that it still looks up `public.classes` and writes to legacy `public.class_memberships`. The current Player join page still calls this RPC, while the active runtime and its current-class resolution are based on `class_instances` and `class_instance_memberships`. The only live triggers on the two membership tables bootstrap story arcs; there is no trigger that mirrors legacy student joins into instance memberships.
+
+This is an MVP-critical consistency defect: a successful join can be recorded only in the legacy membership model, leaving the current class-instance runtime without the membership it expects.
+
+A forward-only correction was added:
+
+- `supabase/migrations/20261106180000_fix_student_join_class_instance_runtime.sql`
+- Keeps the existing RPC signature, so the current Player page does not need a client API change.
+- Requires an authenticated user and a non-empty access code/display name.
+- Looks up an active row in `class_instances` and creates/updates the corresponding active `class_instance_memberships` row with role `student`.
+- Creates/updates the user profile before the membership insert.
+- Does not write new legacy `class_memberships` rows.
+- Has **not** been applied to Supabase.
+
+Before deployment, test a new student joining a current active class instance, an invalid/archived code, an already-active student attempting a second class, a former student rejoining the same class, and an anonymous caller. Confirm that the Player feed, interactions, mission progress and teacher roster all resolve the same class-instance ID.
