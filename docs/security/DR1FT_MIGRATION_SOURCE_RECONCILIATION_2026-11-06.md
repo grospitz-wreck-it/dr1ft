@@ -262,3 +262,18 @@ Forward-only migration added:
 - Replaces class-member-wide SELECT with access for assigned class teachers/school admins and platform staff/admins.
 - No student-level content or safety records are returned to other students.
 - Has not been applied to Supabase.
+
+
+## Additional raw interaction integrity finding (2026-11-06)
+
+The live `user_interactions` policy `members manage own scoped interactions` allowed an active class member to INSERT, UPDATE and DELETE their own raw event rows directly. The Player's shared `recordInteraction()` helper wrote directly to this table. An AFTER INSERT trigger immediately evaluates mission conditions from these rows, so a client could bypass the UI and submit or alter raw events used for mission completion. The table also had no unique index preventing repeated `view` events for the same content item.
+
+A forward-only migration and matching client change were added:
+
+- `supabase/migrations/20261106220000_record_interactions_through_validated_rpc.sql`
+- Adds `record_user_interaction(...)`, which derives the user from `auth.uid()`, requires an active student membership in an active class instance, validates the interaction type and metadata size, requires live content, and checks class-instance ownership/scenario assignment before inserting.
+- Replaces the broad ALL policy with own-row SELECT only and removes browser INSERT/UPDATE/DELETE privileges.
+- `packages/engine-core/src/recordInteraction.ts` now calls the RPC instead of inserting directly.
+- The RPC validates event scope and provenance but cannot prove that a learner actually paid attention or performed the claimed cognitive action. Views/inspection events remain behavioural telemetry, not competence evidence; reasoning, reflection and transfer evidence are still required.
+
+Before applying, test every Player interaction type (including group chat message views and learning-task responses), valid/invalid class-instance combinations, unassigned scenarios, archived content, anonymous calls, and direct table INSERT/UPDATE/DELETE denial. Confirm the mission trigger still fires after the RPC insert.
