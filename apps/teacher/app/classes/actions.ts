@@ -23,6 +23,7 @@ export async function createClass(formData: FormData) {
     .select("school_id,role")
     .eq("user_id", user.id)
     .eq("active", true)
+    .in("role", ["school_admin", "school_lead"])
     .order("created_at", { ascending: true })
     .limit(1)
     .maybeSingle();
