@@ -308,3 +308,10 @@ The existing deployment review identified that deployed `create-student-account`
 The current repository scan found no committed automated test directories/files and no root test command. The QA specification requires unit, integration, gameplay, UI, backend, performance, accessibility and regression coverage.
 
 **Gate:** add a repeatable test runner and CI quality gates. At minimum, automate the role/RLS matrix, class-instance onboarding, mission/evidence pipeline and teacher-report access before the school pilot.
+
+
+### 3.13 Raw interaction events must be server-ingested
+
+The Player previously inserted directly into `user_interactions`, whose RLS policy also allowed learners to update/delete their own event rows. An INSERT trigger immediately evaluated mission conditions from those rows. Branch migration `20261106220000_record_interactions_through_validated_rpc.sql` adds a validated RPC, makes browser access read-only and updates the shared `recordInteraction()` helper to use it.
+
+**Gate:** every Player interaction type passes through the RPC; user identity is derived from the session; class membership, content state and scenario assignment are validated; direct table writes are denied. Mission completion remains a gameplay signal, not proof of competence: reports still require reasoning, reflection and transfer evidence.
