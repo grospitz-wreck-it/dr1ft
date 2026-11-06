@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { ArrowLeft, Building2, ChevronDown, LogOut, MoreHorizontal, Pencil, Plus, Save, Settings, UserRound, Users, School as SchoolIcon, BarChart3, LayoutDashboard, X, ShieldCheck } from "lucide-react";
+import { ArrowLeft, Building2, Check, ChevronDown, LogOut, MoreHorizontal, Pencil, Plus, Save, Settings, UserRound, Users, School as SchoolIcon, BarChart3, LayoutDashboard, X, ShieldCheck } from "lucide-react";
 import { createBrowserClient } from "@supabase/ssr";
 import { SchoolSsoSettings } from "./SchoolSsoSettings";
 import { SchoolClassMatrix } from "./SchoolClassMatrix";
@@ -76,7 +76,7 @@ export function SchoolDetailWorkspace({ school: initialSchool, initialMembers, i
   const [imageMessage, setImageMessage] = useState<string | null>(null);
   const [imagePositionX, setImagePositionX] = useState(initialSchool.school_image_position_x ?? 50);
   const [imagePositionY, setImagePositionY] = useState(initialSchool.school_image_position_y ?? 50);
-  const [imageZoom, setImageZoom] = useState(initialSchool.school_image_zoom ?? 1); const [showInvite, setShowInvite] = useState(false); const [email, setEmail] = useState(""); const [displayName, setDisplayName] = useState(""); const [role, setRole] = useState("teacher"); const [editingMemberId, setEditingMemberId] = useState<string | null>(null); const [editingMemberName, setEditingMemberName] = useState(""); const [pendingId, setPendingId] = useState<string | null>(null); const [message, setMessage] = useState<string | null>(null);
+  const [imageZoom, setImageZoom] = useState(initialSchool.school_image_zoom ?? 1); const [showInvite, setShowInvite] = useState(false); const [email, setEmail] = useState(""); const [displayName, setDisplayName] = useState(""); const [role, setRole] = useState("teacher"); const [editingMemberId, setEditingMemberId] = useState<string | null>(null); const [editingMemberName, setEditingMemberName] = useState(""); const [assignmentMember, setAssignmentMember] = useState<Member | null>(null); const [assignmentQuery, setAssignmentQuery] = useState(""); const [pendingId, setPendingId] = useState<string | null>(null); const [message, setMessage] = useState<string | null>(null);
 
   const activeMembers = members.filter((m) => m.active);
   function field<K extends keyof School>(key: K, value: School[K]) { setForm((current) => ({ ...current, [key]: value })); }
@@ -1457,178 +1457,11 @@ export function SchoolDetailWorkspace({ school: initialSchool, initialMembers, i
               >
                 <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
                   <div className="flex min-w-0 items-start gap-3.5">
-                    <div
-                      className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-xl text-xs font-bold ${
-                        member.active
-                          ? "bg-slate-950 text-white"
-                          : "bg-slate-200 text-slate-500"
-                      }`}
-                    >
-                      {initials || <UserRound className="h-4 w-4" />}
-                    </div>
-
-                    <div className="min-w-0">
-                      <div className="flex flex-wrap items-center gap-2">
-                        {isEditingName ? (
-                          <input
-                            autoFocus
-                            value={editingMemberName}
-                            onChange={(e) => setEditingMemberName(e.target.value)}
-                            onKeyDown={(e) => {
-                              if (e.key === "Enter") {
-                                e.preventDefault();
-                                void saveMemberName(member);
-                              }
-                              if (e.key === "Escape") {
-                                setEditingMemberId(null);
-                                setEditingMemberName("");
-                              }
-                            }}
-                            className="min-w-0 rounded-lg border border-accent bg-white px-2.5 py-1.5 text-sm font-semibold text-slate-900 outline-none ring-2 ring-accent/10"
-                          />
-                        ) : (
-                          <h3 className="truncate text-sm font-semibold text-slate-950">
-                            {member.display_name || "Name nicht hinterlegt"}
-                          </h3>
-                        )}
-
-                        <span
-                          className={`rounded-full px-2 py-1 text-[10px] font-semibold ${
-                            member.role === "school_lead"
-                              ? "bg-violet-50 text-violet-700"
-                              : member.role === "school_admin"
-                                ? "bg-indigo-50 text-indigo-700"
-                                : "bg-slate-100 text-slate-600"
-                          }`}
-                        >
-                          {roleLabel}
-                        </span>
-
-                        <span
-                          className={`inline-flex items-center gap-1.5 text-[10px] font-medium ${
-                            member.active ? "text-emerald-700" : "text-slate-400"
-                          }`}
-                        >
-                          <span
-                            className={`h-1.5 w-1.5 rounded-full ${
-                              member.active ? "bg-emerald-500" : "bg-slate-300"
-                            }`}
-                          />
-                          {member.active ? "Aktiv" : "Deaktiviert"}
-                        </span>
+                    <div className="relative h-10 w-10 shrink-0">
+                      <div className={`flex h-10 w-10 items-center justify-center rounded-xl text-xs font-bold ${member.active ? "bg-slate-950 text-white" : "bg-slate-200 text-slate-500"}`}>
+                        {initials || <UserRound className="h-4 w-4" />}
                       </div>
-
-                      <p className="mt-0.5 truncate text-xs text-slate-500">
-                        {member.email || member.user_id}
-                      </p>
-                    </div>
-                  </div>
-
-                  <div className="flex flex-wrap items-center gap-2 lg:justify-end">
-                    {isEditingName ? (
-                      <>
-                        <button
-                          type="button"
-                          disabled={pendingId === member.id}
-                          onClick={() => void saveMemberName(member)}
-                          className="rounded-lg bg-slate-950 px-3 py-2 text-xs font-medium text-white disabled:opacity-50"
-                        >
-                          {pendingId === member.id ? "Speichert …" : "Speichern"}
-                        </button>
-
-                        <button
-                          type="button"
-                          disabled={pendingId === member.id}
-                          onClick={() => {
-                            setEditingMemberId(null);
-                            setEditingMemberName("");
-                          }}
-                          className="rounded-lg border border-border px-3 py-2 text-xs font-medium text-slate-600"
-                        >
-                          Abbrechen
-                        </button>
-                      </>
-                    ) : (
-                      <button
-                        type="button"
-                        disabled={pendingId === member.id}
-                        onClick={() => {
-                          setEditingMemberId(member.id);
-                          setEditingMemberName(member.display_name ?? "");
-                        }}
-                        className="inline-flex items-center gap-1.5 rounded-lg border border-border px-3 py-2 text-xs font-medium text-slate-700 transition hover:bg-canvas"
-                      >
-                        <Pencil className="h-3.5 w-3.5" />
-                        Name bearbeiten
-                      </button>
-                    )}
-
-                    <select
-                      disabled={pendingId === member.id}
-                      value={member.role}
-                      onChange={(e) => void changeRole(member, e.target.value)}
-                      className="rounded-lg border border-border bg-panel px-3 py-2 text-xs text-slate-700"
-                    >
-                      <option value="teacher">Lehrkraft</option>
-                      <option value="school_lead">Schulleitung</option>
-                      <option value="school_admin">Schuladmin</option>
-                    </select>
-
-                    <button
-                      type="button"
-                      disabled={pendingId === member.id}
-                      onClick={() => void setActive(member, !member.active)}
-                      className="rounded-lg border border-border px-3 py-2 text-xs font-medium text-slate-600 transition hover:bg-canvas"
-                    >
-                      {member.active ? "Deaktivieren" : "Aktivieren"}
-                    </button>
-
-                    <button
-                      type="button"
-                      disabled={pendingId === member.id}
-                      onClick={() => void remove(member)}
-                      className="rounded-lg border border-red-200 px-3 py-2 text-xs font-medium text-red-600 transition hover:bg-red-50"
-                    >
-                      Entfernen
-                    </button>
-                  </div>
-                </div>
-                {canManageTeacherAssignments && member.role === "teacher" && member.active && (
-                  <div className="mt-4 border-t border-border pt-3">
-                    <button
-                      type="button"
-                      onClick={() => setAssignmentOpenId((current) => current === member.id ? null : member.id)}
-                      className="text-xs font-semibold text-violet-700 hover:text-violet-900"
-                    >
-                      {assignmentOpenId === member.id ? "Klassen-Zuordnung schließen" : "Klassen zuordnen"}
-                    </button>
-                    {assignmentOpenId === member.id && (
-                      <div className="mt-3 grid gap-2 sm:grid-cols-2">
-                        {classes.map((schoolClass) => {
-                          const checked = schoolClass.teacherUserIds.includes(member.user_id);
-                          const operationId = "assignment:" + member.id + ":" + schoolClass.id;
-                          return (
-                            <label key={schoolClass.id} className="flex items-center gap-2 rounded-xl border border-border bg-white px-3 py-2 text-xs text-slate-700">
-                              <input
-                                type="checkbox"
-                                checked={checked}
-                                disabled={pendingId === operationId || (!schoolClass.is_active && !checked)}
-                                onChange={(event) => void toggleTeacherClassAssignment(member, schoolClass.id, event.target.checked)}
-                                className="h-4 w-4 rounded border-slate-300 text-violet-600 focus:ring-violet-500"
-                              />
-                              <span className="min-w-0 flex-1">
-                                <span className="block truncate font-semibold">{schoolClass.name}</span>
-                                <span className="block text-[10px] text-slate-400">Jahrgang {schoolClass.grade_level ?? "—"} · {schoolClass.school_year}</span>
-                              </span>
-                              {!schoolClass.is_active && <span className="text-[10px] text-slate-400">Inaktiv</span>}
-                            </label>
-                          );
-                        })}
-                        {classes.length === 0 && <p className="text-xs text-slate-400">Noch keine Klassen vorhanden.</p>}
-                      </div>
-                    )}
-                  </div>
-                )}
+      
               </article>
             );
           })}
@@ -1648,6 +1481,23 @@ export function SchoolDetailWorkspace({ school: initialSchool, initialMembers, i
       </section>
     )}
 
+    {assignmentMember && (
+      <div className="fixed inset-0 z-[120] flex items-center justify-center bg-slate-950/35 p-4 backdrop-blur-sm" onClick={() => setAssignmentMember(null)}>
+        <div role="dialog" aria-modal="true" aria-labelledby="teacher-class-assignment-title" onClick={(event) => event.stopPropagation()} className="w-full max-w-xl overflow-hidden rounded-[26px] border border-slate-200 bg-white p-5 shadow-[0_24px_80px_rgba(15,23,42,.28)] sm:p-6">
+          <div className="flex items-start justify-between gap-4"><div><p className="text-[10px] font-bold uppercase tracking-[.18em] text-indigo-600">{school.name}</p><h2 id="teacher-class-assignment-title" className="mt-1 text-lg font-semibold text-slate-950">Klassen zuordnen</h2><p className="mt-1 text-sm text-slate-500">{assignmentMember.display_name || assignmentMember.email || "Lehrkraft"}</p></div><button type="button" onClick={() => setAssignmentMember(null)} aria-label="Schließen" className="rounded-lg p-2 text-slate-400 transition hover:bg-slate-100"><X className="h-5 w-5" /></button></div>
+          <input autoFocus value={assignmentQuery} onChange={(event) => setAssignmentQuery(event.target.value)} placeholder="Klasse oder Jahrgang suchen …" aria-label="Klassen durchsuchen" className="mt-4 h-11 w-full rounded-xl border border-slate-200 bg-slate-50 px-3.5 text-sm outline-none transition placeholder:text-slate-400 focus:border-indigo-300 focus:bg-white focus:ring-4 focus:ring-indigo-100" />
+          <div className="mt-3 max-h-[min(420px,55vh)] space-y-2 overflow-y-auto pr-1">
+            {classes.filter((item) => `${item.name} ${item.grade_level ?? ""} ${item.school_year}`.toLocaleLowerCase("de-DE").includes(assignmentQuery.trim().toLocaleLowerCase("de-DE"))).map((schoolClass) => {
+              const checked = schoolClass.teacherUserIds.includes(assignmentMember.user_id);
+              const operationId = "assignment:" + assignmentMember.id + ":" + schoolClass.id;
+              return <label key={schoolClass.id} className={`flex cursor-pointer items-center gap-3 rounded-xl border px-3.5 py-3 text-sm transition ${checked ? "border-indigo-200 bg-indigo-50/60" : "border-slate-200 bg-white hover:border-indigo-200 hover:bg-slate-50"} ${!schoolClass.is_active && !checked ? "cursor-not-allowed opacity-50" : ""}`}><input type="checkbox" checked={checked} disabled={pendingId === operationId || (!schoolClass.is_active && !checked)} onChange={(event) => void toggleTeacherClassAssignment(assignmentMember, schoolClass.id, event.target.checked)} className="h-4 w-4 rounded border-slate-300 text-indigo-600 focus:ring-indigo-500" /><span className="min-w-0 flex-1"><span className="block font-semibold text-slate-800">{schoolClass.name}</span><span className="mt-0.5 block text-xs text-slate-400">Jahrgang {schoolClass.grade_level ?? "—"} · {schoolClass.school_year}{!schoolClass.is_active ? " · Inaktiv" : ""}</span></span>{checked && <Check className="h-4 w-4 text-indigo-600" />}{pendingId === operationId && <span className="text-xs text-slate-400">Speichert …</span>}</label>;
+            })}
+            {classes.length === 0 && <p className="rounded-xl border border-dashed border-slate-200 px-4 py-8 text-center text-sm text-slate-400">Noch keine Klassen angelegt.</p>}
+          </div>
+          <div className="mt-4 flex items-center justify-between border-t border-slate-100 pt-4"><p className="text-xs text-slate-400">Mehrfachauswahl möglich – weitere Klassen lassen sich jederzeit hinzufügen.</p><button type="button" onClick={() => setAssignmentMember(null)} className="rounded-xl bg-slate-950 px-4 py-2.5 text-sm font-medium text-white transition hover:bg-slate-800">Fertig</button></div>
+        </div>
+      </div>
+    )}
     {showInvite && <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/30 p-4 backdrop-blur-sm"><div className="w-full max-w-lg rounded-3xl border border-border bg-panel p-6 shadow-2xl"><div className="flex items-start justify-between"><div><p className="text-xs font-semibold uppercase tracking-[0.14em] text-accent">{school.name}</p><h2 className="mt-1 text-xl font-semibold">Person einladen</h2></div><button onClick={() => setShowInvite(false)} className="p-2 text-slate-400"><X className="h-4 w-4" /></button></div><p className="mt-3 text-sm text-slate-500">Die E-Mail-Adresse muss zur hinterlegten Schul-Domain passen.</p><form onSubmit={invite} className="mt-6 space-y-4"><label className="block text-sm font-medium">Name<input required value={displayName} onChange={(e) => setDisplayName(e.target.value)} className="mt-1.5 w-full rounded-xl border border-border px-3 py-2.5" /></label><label className="block text-sm font-medium">Schul-E-Mail<input required type="email" value={email} onChange={(e) => setEmail(e.target.value)} className="mt-1.5 w-full rounded-xl border border-border px-3 py-2.5" /></label><label className="block text-sm font-medium">Rolle<select value={role} onChange={(e) => setRole(e.target.value)} className="mt-1.5 w-full rounded-xl border border-border px-3 py-2.5"><option value="teacher">Lehrkraft</option><option value="school_lead">Schulleitung</option><option value="school_admin">Schuladmin</option></select></label><div className="flex justify-end gap-2"><button type="button" onClick={() => setShowInvite(false)} className="rounded-xl border border-border px-4 py-2.5">Abbrechen</button><button disabled={pendingId === "invite"} className="rounded-xl bg-slate-950 px-4 py-2.5 text-sm text-white">{pendingId === "invite" ? "Wird gesendet …" : "Einladung senden"}</button></div></form></div></div>}
           </div>
         </main>
