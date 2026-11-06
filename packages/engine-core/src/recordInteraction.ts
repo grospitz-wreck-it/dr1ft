@@ -16,7 +16,7 @@ export async function recordInteraction(
   params: {
     userId: string;
     contentItemId: string;
-    interactionType: InteractionType;
+    interactionType: Exclude<InteractionType, "comment">;
     classInstanceId: string;
     metadata?: Record<string, unknown>;
   }
@@ -47,13 +47,6 @@ export async function recordInteraction(
   // Local app engines are notified only after the database accepted the row.
   if (interactionType === "view") {
     await eventBus.emit({ type: "PostViewed", userId, contentItemId });
-  } else if (interactionType === "comment") {
-    await eventBus.emit({
-      type: "CommentCreated",
-      userId,
-      contentItemId,
-      body: String(metadata.body ?? ""),
-    });
   }
 
   return true;

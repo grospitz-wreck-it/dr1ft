@@ -303,3 +303,10 @@ Two coordinated changes now close that gap:
 - `apps/player/app/api/content/[contentId]/comment/route.ts` calls that RPC and no longer performs direct table writes or silently ignores interaction failures.
 
 The comment interaction is recorded against the parent post, preserving the existing mission trigger's `CommentCreated` mapping. The migration has not been applied to Supabase.
+
+
+### Additional interaction provenance guard
+
+A further call-path review found that the generic client interaction RPC accepted `comment`, even though a learner could call that RPC directly without creating a comment row. Because mission evaluation maps `CommentCreated` to the `comment` interaction type, this would preserve a direct route to forge comment-based mission progress.
+
+The generic `record_user_interaction` allow-list now excludes `comment`. Legitimate comments can only be recorded by `create_student_comment_atomically`, which creates the comment row and corresponding interaction in the same transaction. The shared TypeScript helper also excludes `comment` at compile time. The atomic comment RPC additionally validates that a scenario-bound parent post is assigned and currently scheduled for the caller's class instance.

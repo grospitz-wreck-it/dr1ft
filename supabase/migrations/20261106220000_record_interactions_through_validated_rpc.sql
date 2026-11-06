@@ -39,7 +39,7 @@ begin
   end if;
 
   if p_interaction_type is null or p_interaction_type not in (
-    'view', 'like', 'share', 'report', 'ignore', 'comment', 'follow', 'block',
+    'view', 'like', 'share', 'report', 'ignore', 'follow', 'block',
     'inspect_source', 'inspect_media', 'inspect_context', 'inspect_profile',
     'compare_information', 'learning_task_response'
   ) then

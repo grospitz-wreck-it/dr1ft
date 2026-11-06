@@ -20,6 +20,7 @@ declare
   v_parent_status text;
   v_parent_type text;
   v_parent_instance_id uuid;
+  v_parent_scenario_id uuid;
   v_display_name text;
   v_username text;
   v_avatar_seed text;
@@ -55,8 +56,8 @@ begin
       using errcode = '42501';
   end if;
 
-  select ci.status::text, ci.type::text, ci.class_instance_id
-    into v_parent_status, v_parent_type, v_parent_instance_id
+  select ci.status::text, ci.type::text, ci.class_instance_id, ci.scenario_id
+    into v_parent_status, v_parent_type, v_parent_instance_id, v_parent_scenario_id
   from public.content_items ci
   where ci.id = p_content_item_id;
 
@@ -68,6 +69,18 @@ begin
   if v_parent_instance_id is not null
      and v_parent_instance_id <> v_instance_id then
     raise exception 'Beitrag gehört zu einer anderen Klasseninstanz'
+      using errcode = '42501';
+  end if;
+
+  if v_parent_scenario_id is not null and not exists (
+    select 1
+    from public.class_instance_scenario_assignments csa
+    where csa.class_instance_id = v_instance_id
+      and csa.scenario_id = v_parent_scenario_id
+      and (csa.scheduled_start_at is null or csa.scheduled_start_at <= now())
+      and (csa.scheduled_end_at is null or csa.scheduled_end_at > now())
+  ) then
+    raise exception 'Szenario ist dieser Klasseninstanz aktuell nicht zugewiesen'
       using errcode = '42501';
   end if;
 
