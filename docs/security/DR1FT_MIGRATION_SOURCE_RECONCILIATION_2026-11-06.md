@@ -291,3 +291,15 @@ The stricter own-row SELECT policy on `user_interactions` made the old share dia
 - `apps/player/components/PostCard.tsx` now uses this RPC instead of reading classmates' interaction records or querying profile rows by inferred IDs.
 
 The RPC does not expose interaction history, progress, safety records or any other class roster fields. It has not been applied to Supabase.
+
+
+### Compatibility correction: atomic student comment creation
+
+The interaction write hardening also exposed a silent failure in the existing comment API: it inserted the comment row, then attempted a direct `user_interactions` INSERT and ignored the result. Once browser INSERT privileges are removed from that table, comments could appear while their mission-evaluation interaction was missing.
+
+Two coordinated changes now close that gap:
+
+- `supabase/migrations/20261106240000_create_student_comment_atomically.sql` adds `create_student_comment_atomically(content_id, body)`. It derives the caller and active class instance from the authenticated session, validates student role and parent-post scope, and writes both the comment and its `comment` interaction in one transaction.
+- `apps/player/app/api/content/[contentId]/comment/route.ts` calls that RPC and no longer performs direct table writes or silently ignores interaction failures.
+
+The comment interaction is recorded against the parent post, preserving the existing mission trigger's `CommentCreated` mapping. The migration has not been applied to Supabase.

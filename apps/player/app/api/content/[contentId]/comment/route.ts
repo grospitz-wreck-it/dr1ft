@@ -21,76 +21,18 @@ export async function POST(
     return NextResponse.json({ error: "Nicht angemeldet." }, { status: 401 });
   }
 
-  const { data: instanceId } = await supabase.rpc("get_current_class_instance_id");
-  if (!instanceId) {
-    return NextResponse.json({ error: "Keine aktive Klasseninstanz." }, { status: 403 });
-  }
-
-  const { data: membership } = await supabase
-    .from("class_instance_memberships")
-    .select("id, role")
-    .eq("class_instance_id", instanceId)
-    .eq("user_id", user.id)
-    .is("left_at", null)
-    .maybeSingle();
-
-  if (!membership || membership.role !== "student") {
-    return NextResponse.json({ error: "Ein aktiver Schülerzugang ist erforderlich." }, { status: 403 });
-  }
-
-  const { data: content } = await supabase
-    .from("content_items")
-    .select("id,status,type")
-    .eq("id", params.contentId)
-    .maybeSingle();
-
-  if (!content || content.status !== "live" || content.type !== "post") {
-    return NextResponse.json({ error: "Beitrag nicht verfügbar." }, { status: 404 });
-  }
-
-  const { data: profile } = await supabase
-    .from("user_profiles")
-    .select("display_name, username, avatar_seed")
-    .eq("id", user.id)
-    .maybeSingle();
-
-  const { data: comment, error } = await supabase
-    .from("content_items")
-    .insert({
-      type: "comment",
-      scenario_id: null,
-      creator_id: null,
-      parent_id: content.id,
-      class_instance_id: instanceId,
-      body: text,
-      status: "live",
-      manipulation_techniques: [],
-      target_competencies: [],
-      difficulty: 1,
-      age_rating: "12_plus",
-      extra: {
-        parentContentItemId: content.id,
-        createdBy: "student",
-        userId: user.id,
-        displayName: profile?.display_name ?? "DR1FT User",
-        username: profile?.username ?? "user",
-        avatarSeed: profile?.avatar_seed ?? user.id,
-      },
-    })
-    .select("id, body, parent_id, class_instance_id, created_at, extra")
-    .single();
+  // Comment creation and its learning interaction are written atomically by
+  // one authenticated RPC. This avoids a comment being persisted while the
+  // now-protected user_interactions INSERT is rejected by RLS/GRANTs.
+  const { data: comment, error } = await supabase.rpc("create_student_comment_atomically", {
+    p_content_item_id: params.contentId,
+    p_body: text,
+  });
 
   if (error) {
-    return NextResponse.json({ error: error.message }, { status: 400 });
+    console.error("[comment] RPC failed:", error);
+    return NextResponse.json({ error: "Kommentar konnte nicht gespeichert werden." }, { status: 400 });
   }
-
-  await supabase.from("user_interactions").insert({
-    user_id: user.id,
-    content_item_id: content.id,
-    interaction_type: "comment",
-    class_instance_id: instanceId,
-    metadata: { commentId: comment.id },
-  });
 
   return NextResponse.json({ comment });
 }

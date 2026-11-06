@@ -46,6 +46,33 @@ begin
     raise exception 'Ungültiger oder inaktiver Zugangscode';
   end if;
 
+  -- A learner may have only one active student membership. Rejoining the
+  -- same class is idempotent; joining a second class requires staff action.
+  if exists (
+    select 1
+    from public.class_instance_memberships cim
+    where cim.user_id = v_user_id
+      and cim.role = 'student'::public.user_role
+      and cim.left_at is null
+      and cim.class_instance_id <> v_instance_id
+  ) then
+    raise exception 'Du bist bereits einer anderen aktiven Klasse zugeordnet. Bitte wende dich an deine Lehrkraft.'
+      using errcode = '23505';
+  end if;
+
+  -- Never turn an existing teacher/admin membership into a student account.
+  if exists (
+    select 1
+    from public.class_instance_memberships cim
+    where cim.user_id = v_user_id
+      and cim.class_instance_id = v_instance_id
+      and cim.left_at is null
+      and cim.role <> 'student'::public.user_role
+  ) then
+    raise exception 'Dieser Zugang ist bereits einer anderen Rolle zugeordnet.'
+      using errcode = '42501';
+  end if;
+
   insert into public.user_profiles (id, display_name)
   values (v_user_id, trim(p_display_name))
   on conflict (id) do update
@@ -62,8 +89,7 @@ begin
     'student'::public.user_role
   )
   on conflict (class_instance_id, user_id) do update
-    set role = excluded.role,
-        left_at = null;
+    set left_at = null;
 
   return v_instance_id;
 end;
