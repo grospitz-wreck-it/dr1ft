@@ -17,8 +17,8 @@ create policy "students create own instance comments"
   for insert
   to authenticated
   with check (
-    type = 'comment'::public.content_type
-    and status = 'live'::public.content_status
+    type = 'comment'
+    and status = 'live'
     and creator_id is null
     and parent_id is not null
     and class_instance_id = public.get_current_class_instance_id()
