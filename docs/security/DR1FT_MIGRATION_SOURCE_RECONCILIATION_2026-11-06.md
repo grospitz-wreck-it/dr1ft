@@ -125,3 +125,20 @@ Before applying, validate the migration in a disposable environment and re-check
 3. Confirm aggregate reporting remains available to the intended school leadership roles.
 4. Re-run Supabase Security Advisor and inspect function grants after the staged migration.
 5. Resolve the remaining missing-source mappings only where they materially affect future schema changes; do not manufacture historical backfill files.
+
+
+## Additional live SECURITY DEFINER finding (2026-11-06)
+
+A fresh read-only catalog query confirmed 29 public-schema SECURITY DEFINER functions remain executable by `anon`. The effective function ACLs also show that `authenticated` and `service_role` already have explicit execution rights for the affected functions. The remote migration history contains the earlier phase-1 hardening migration but does not contain the separate source migration `20261104240000_restrict_anonymous_security_definer_rpcs.sql`; that file exists on the branch but was not applied remotely. Public-schema function default privileges for both `postgres` and `supabase_admin` also explicitly grant EXECUTE to `anon`, which can expose functions created after a one-time cleanup.
+
+The Player join page was inspected. It calls `join_class_as_student` only after `signUp` or `signInWithPassword` has established an authenticated session. The inspected flow therefore does not require anonymous execution of that SECURITY DEFINER RPC.
+
+A corrective branch migration was added:
+
+- `supabase/migrations/20261106130000_restrict_anonymous_security_definer_rpcs.sql`
+- Finds existing public-schema SECURITY DEFINER functions executable by `anon`, excluding trigger-returning functions.
+- Revokes `PUBLIC` and `anon` execution while preserving the effective pre-existing `authenticated` and `service_role` permissions for each affected function.
+- Removes `PUBLIC` and `anon` execution from future public-schema function defaults for `postgres` and `supabase_admin`; it deliberately preserves the authenticated and service-role defaults.
+- Has **not** been applied to Supabase. The 29 live function grants and default ACLs remain unchanged until a separately approved deployment.
+
+This is a reachability/privilege finding, not proof that each function can be exploited. Authorization inside each RPC still requires function-by-function review and role-matrix testing.
