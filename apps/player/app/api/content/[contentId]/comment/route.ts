@@ -28,14 +28,14 @@ export async function POST(
 
   const { data: membership } = await supabase
     .from("class_instance_memberships")
-    .select("id")
+    .select("id, role")
     .eq("class_instance_id", instanceId)
     .eq("user_id", user.id)
     .is("left_at", null)
     .maybeSingle();
 
-  if (!membership) {
-    return NextResponse.json({ error: "Kein Zugriff auf diese Instanz." }, { status: 403 });
+  if (!membership || membership.role !== "student") {
+    return NextResponse.json({ error: "Ein aktiver Schülerzugang ist erforderlich." }, { status: 403 });
   }
 
   const { data: content } = await supabase
