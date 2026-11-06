@@ -198,13 +198,10 @@ export default async function StudentReportPage({
   ]);
 
   if (!user) throw new Error("Bitte melde dich erneut an.");
-  const { data: schoolMembership } = classInfo?.school_id
-    ? await supabase.from("school_memberships").select("role")
-        .eq("school_id", classInfo.school_id).eq("user_id", user.id).eq("active", true).maybeSingle()
-    : { data: null };
-  const { data: isPlatformAdmin } = await supabase.rpc("is_platform_admin");
-  const isReportAdmin = Boolean(isPlatformAdmin) || schoolMembership?.role === "school_admin" || schoolMembership?.role === "school_lead";
-  if (!isReportAdmin) {
+  const { data: canViewClassReports } = await supabase.rpc("can_view_class_individual_reports", {
+    p_class_id: classId,
+  });
+  if (!canViewClassReports) {
     return (
       <main className="min-h-screen bg-canvas px-4 py-10">
         <section className="mx-auto max-w-3xl rounded-3xl border border-violet-100 bg-white p-7 shadow-sm">
