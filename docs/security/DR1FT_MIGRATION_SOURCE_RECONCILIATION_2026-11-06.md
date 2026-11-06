@@ -250,3 +250,15 @@ Forward-only migration added:
 - Leaves the existing authenticated read policies unchanged.
 
 Before applying, verify the Editorial authoring workflow uses a platform-staff identity and that ordinary teachers/students cannot insert, update or delete canonical learning-design mappings.
+
+
+## Additional NPC safety-event visibility finding (2026-11-06)
+
+The live `npc_safety_events` table contains class-instance-scoped moderation/safety records (`npc_id`, source type/id, decision, reason and timestamp) but no learner-facing requirement was identified. Its SELECT policy allowed every active member of a class instance to read all safety events in that instance. This could expose moderation signals to classmates.
+
+Forward-only migration added:
+
+- `supabase/migrations/20261106210000_restrict_npc_safety_event_visibility.sql`
+- Replaces class-member-wide SELECT with access for assigned class teachers/school admins and platform staff/admins.
+- No student-level content or safety records are returned to other students.
+- Has not been applied to Supabase.
