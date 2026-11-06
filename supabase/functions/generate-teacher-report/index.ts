@@ -99,38 +99,40 @@ Deno.serve(async (req) => {
   }
 
   // ----------------------------------------------------------
-  // Teacher authorization
+  // Individual reports are restricted to school leadership/admins.
+  // Teachers may access aggregate class insights, never named reports.
   // ----------------------------------------------------------
 
-  const { data: membership, error: membershipError } =
-    await adminClient
-      .from("class_instance_memberships")
-      .select("user_id, role, left_at")
-      .eq("class_instance_id", classId)
-      .eq("user_id", caller.id)
-      .is("left_at", null)
-      .maybeSingle();
+  const { data: classScope, error: classScopeError } = await adminClient
+    .from("class_instances")
+    .select("school_id")
+    .eq("id", classId)
+    .maybeSingle();
 
-  if (membershipError) {
-    return json(
-      {
-        error: "Berechtigung konnte nicht geprüft werden",
-      },
-      500
-    );
+  if (classScopeError || !classScope) {
+    return json({ error: "Klasseninstanz nicht gefunden" }, 404);
   }
 
-  if (
-    !membership ||
-    !["teacher", "school_admin", "school_lead"].includes(
-      membership.role
-    )
-  ) {
+  const [{ data: schoolAdmin }, { data: platformAdmin }] = await Promise.all([
+    adminClient
+      .from("school_memberships")
+      .select("role")
+      .eq("school_id", classScope.school_id)
+      .eq("user_id", caller.id)
+      .eq("active", true)
+      .in("role", ["school_admin", "school_lead"])
+      .maybeSingle(),
+    adminClient
+      .from("platform_staff")
+      .select("user_id")
+      .eq("user_id", caller.id)
+      .eq("role", "platform_admin")
+      .maybeSingle(),
+  ]);
+
+  if (!schoolAdmin && !platformAdmin) {
     return json(
-      {
-        error:
-          "Keine Berechtigung für diese Klasseninstanz",
-      },
+      { error: "Individuelle Schülerberichte sind ausschließlich für Schuladmins, Schulleitung und Plattformadmins freigegeben." },
       403
     );
   }
