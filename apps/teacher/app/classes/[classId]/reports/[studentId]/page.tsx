@@ -222,7 +222,9 @@ export default async function StudentReportPage({
   const requestedScenario = searchParams.scenario || "";
   const selectedScenario = assignedScenarios.find((item) => item.id === requestedScenario) ?? assignedScenarios[0] ?? null;
 
-  if (!selectedScenario) {
+  // School leadership receives aggregate reports only, even if a legacy or
+  // stale assignment row exists for the leadership account.
+  if (isSchoolLeadership || !selectedScenario) {
     return (
       <main className="min-h-screen bg-canvas px-4 py-10">
         <section className="mx-auto max-w-3xl overflow-hidden rounded-3xl border border-violet-100 bg-white shadow-sm">
