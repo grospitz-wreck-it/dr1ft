@@ -27,7 +27,7 @@ returns table (
 language plpgsql
 stable
 security definer
-set search_path = public, pg_temp
+set search_path = ''
 as $function$
 begin
   if auth.uid() is null then
