@@ -273,3 +273,18 @@ Prepared on branch `security/hardening-phase-1`:
 These are source changes only. They have **not** been applied to the live Supabase project. No merge to `main`, production deployment or production migration is authorised by this plan.
 
 The first pilot should proceed only after the migration set is reconciled, reviewed, tested in a separate environment and explicitly approved.
+
+
+### 3.8 System-managed learning records must not be client-writable
+
+The live policies allowed learners to write their own mission completion, unlocked mission, story-arc state and competency evidence/level records directly. The same competency policy also allowed any class member to read all classmates' competency records.
+
+Branch migration `20261106190000_protect_system_managed_learning_progress.sql` changes these tables to read-only for browser roles, limits student reads to their own records, and preserves assigned-teacher reads where required. Server-side mission/competency/story-arc triggers remain the write path.
+
+**Gate:** a student cannot self-award mission completion or competency level, cannot unlock arbitrary missions or alter arc state, and cannot read classmates' individual competency evidence. The legitimate event-triggered pipeline must still work end to end.
+
+### 3.9 Canonical learning design must be editorially controlled
+
+Five learning-design mapping tables allowed any authenticated user to write/delete rows when the parent object existed. Branch migration `20261106200000_restrict_learning_design_mapping_writes.sql` limits writes to platform staff and retains the existing authenticated read policies.
+
+**Gate:** Editorial authoring works for platform staff; teacher/student accounts cannot modify canonical learning objectives, competency mappings, learning-step content, mission mappings or objective mappings.
