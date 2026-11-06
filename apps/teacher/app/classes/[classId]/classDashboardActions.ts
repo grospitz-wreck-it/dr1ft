@@ -16,14 +16,12 @@ export async function loadClassDashboardReport(classId: string) {
   if (userError || !user) throw new Error("Bitte melde dich erneut an.");
   if (instanceError || !instance) throw new Error("Klasse nicht gefunden.");
 
-  const [{ data: schoolMembership }, { data: teacherMembership }] = await Promise.all([
-    instance.school_id
-      ? supabase.from("school_memberships").select("role").eq("school_id", instance.school_id).eq("user_id", user.id).eq("active", true).maybeSingle()
-      : Promise.resolve({ data: null }),
-    supabase.from("class_instance_memberships").select("id").eq("class_instance_id", classId).eq("user_id", user.id).eq("role", "teacher").is("left_at", null).maybeSingle(),
-  ]);
+  const { data: canAccessDashboard, error: dashboardPermissionError } = await supabase.rpc(
+    "can_access_class_dashboard",
+    { p_class_id: classId },
+  );
 
-  if (schoolMembership?.role !== "school_admin" && !teacherMembership) {
+  if (dashboardPermissionError || !canAccessDashboard) {
     throw new Error("Du darfst das Lernreporting dieser Klasse nicht einsehen.");
   }
 
