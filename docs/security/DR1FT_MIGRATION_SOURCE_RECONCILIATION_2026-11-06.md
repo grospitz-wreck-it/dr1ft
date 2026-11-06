@@ -280,3 +280,14 @@ Before applying, test every Player interaction type (including group chat messag
 
 
 The interaction RPC was additionally made idempotent for `view`: it takes a transaction-scoped advisory lock for the user/class/content tuple and returns the existing view row rather than inserting another. This prevents repeated visibility callbacks or client retries on the same content item from inflating mission counts. It does not prove attention and does not prevent a client from reporting views of different visible items; mission completion therefore remains gameplay progress, not competence evidence.
+
+
+### Compatibility correction: Player share recipient lookup
+
+The stricter own-row SELECT policy on `user_interactions` made the old share dialog's recipient discovery query invalid: it inferred classmates by selecting other users' interaction rows. A separate, narrowly scoped RPC was added:
+
+- `supabase/migrations/20261106230000_get_student_class_peers_rpc.sql`
+- `get_student_class_peers(class_instance_id)` requires an active student membership in an active class instance and returns only active student peer IDs and display names for that same instance.
+- `apps/player/components/PostCard.tsx` now uses this RPC instead of reading classmates' interaction records or querying profile rows by inferred IDs.
+
+The RPC does not expose interaction history, progress, safety records or any other class roster fields. It has not been applied to Supabase.
