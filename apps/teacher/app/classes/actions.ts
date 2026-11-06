@@ -20,13 +20,18 @@ export async function createClass(formData: FormData) {
   const name = String(formData.get("name") ?? "").trim();
   const { data: schoolMembership } = await supabase
     .from("school_memberships")
-    .select("school_id")
+    .select("school_id,role")
     .eq("user_id", user.id)
     .eq("active", true)
     .order("created_at", { ascending: true })
     .limit(1)
     .maybeSingle();
+  const { data: isPlatformAdmin } = await supabase.rpc("is_platform_admin");
+  if (!isPlatformAdmin && !["school_admin", "school_lead"].includes(schoolMembership?.role ?? "")) {
+    throw new Error("Nur Schuladmins, Schulleitung oder Plattformadmins dürfen Klassen anlegen.");
+  }
   const schoolId = schoolMembership?.school_id ?? null;
+  if (!schoolId && !isPlatformAdmin) throw new Error("Deinem Konto ist keine Schule zugeordnet.");
   const gradeLevelRaw = formData.get("gradeLevel");
   const gradeLevel = gradeLevelRaw ? Number(gradeLevelRaw) : null;
   if (!name) throw new Error("Klassenname darf nicht leer sein");
@@ -53,7 +58,7 @@ export async function createClass(formData: FormData) {
   const { error: membershipError } = await supabase.from("class_memberships").insert({
     class_id: newClass.id,
     user_id: user.id,
-    role: "teacher",
+    role: "school_admin",
   });
   if (membershipError) throw new Error(membershipError.message);
 
