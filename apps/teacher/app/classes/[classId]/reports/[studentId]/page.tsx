@@ -239,8 +239,8 @@ export default async function StudentReportPage({
         <section className="mx-auto max-w-3xl overflow-hidden rounded-3xl border border-violet-100 bg-white shadow-sm">
           <div className="bg-[linear-gradient(110deg,#f5f0ff,#effaff)] px-6 py-7">
             <p className="text-[10px] font-black uppercase tracking-[.2em] text-violet-600">DR1FT / LEHRKRAFT</p>
-            <h1 className="mt-2 text-2xl font-bold text-slate-950">"Keine aktiven DR1FT-Module"</h1>
-            <p className="mt-2 text-sm leading-6 text-slate-600">"Für diese Klasse sind aktuell keine aktiven Szenarien für die Einzelauswertung vorhanden."</p>
+            <h1 className="mt-2 text-2xl font-bold text-slate-950">Keine aktiven DR1FT-Module</h1>
+            <p className="mt-2 text-sm leading-6 text-slate-600">Für diese Klasse sind aktuell keine aktiven Szenarien für die Einzelauswertung vorhanden.</p>
           </div>
           <div className="p-6"><a href={`/classes/${classId}`} className="inline-flex items-center rounded-xl bg-violet-600 px-4 py-2.5 text-sm font-semibold text-white hover:bg-violet-700">Zur Klasse</a></div>
         </section>
