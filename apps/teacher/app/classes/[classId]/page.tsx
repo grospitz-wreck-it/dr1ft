@@ -258,6 +258,7 @@ export default async function ClassDetailPage({
             classId={classId}
             initialStudents={students}
             reportingUnlocked={reportingUnlocked}
+            canViewIndividualReports={isSchoolAdmin}
           />
         </div>
         </CollapsiblePanel>
