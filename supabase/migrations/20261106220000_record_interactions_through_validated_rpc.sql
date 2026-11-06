@@ -38,7 +38,7 @@ begin
       using errcode = '22023';
   end if;
 
-  if p_interaction_type not in (
+  if p_interaction_type is null or p_interaction_type not in (
     'view', 'like', 'share', 'report', 'ignore', 'comment', 'follow', 'block',
     'inspect_source', 'inspect_media', 'inspect_context', 'inspect_profile',
     'compare_information', 'learning_task_response'
@@ -94,6 +94,30 @@ begin
   ) then
     raise exception 'Szenario ist dieser Klasseninstanz aktuell nicht zugewiesen'
       using errcode = '42501';
+  end if;
+
+  -- A view is a once-per-learner/content/class observation. Repeated
+  -- visibility callbacks or client retries must not inflate mission counts.
+  if p_interaction_type = 'view' then
+    perform pg_catalog.pg_advisory_xact_lock(
+      pg_catalog.hashtextextended(
+        v_user_id::text || ':' || p_class_instance_id::text || ':' || p_content_item_id::text,
+        0
+      )
+    );
+
+    select ui.id
+      into v_interaction_id
+    from public.user_interactions ui
+    where ui.user_id = v_user_id
+      and ui.content_item_id = p_content_item_id
+      and ui.class_instance_id = p_class_instance_id
+      and ui.interaction_type = 'view'
+    limit 1;
+
+    if v_interaction_id is not null then
+      return v_interaction_id;
+    end if;
   end if;
 
   insert into public.user_interactions (
