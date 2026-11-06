@@ -95,7 +95,7 @@ export default async function SchoolDetailPage({ params }: { params: { schoolId:
         </div>
       ) : (
         <SchoolDetailWorkspace
-          school={school}
+          school={{ ...school, internal_notes: isPlatformAdmin ? school.internal_notes : null }}
           isPlatformAdmin={isPlatformAdmin}
           canManageTeacherAssignments={isPlatformAdmin || schoolMembership?.role === "school_admin" || schoolMembership?.role === "school_lead"}
           initialMembers={members ?? []}

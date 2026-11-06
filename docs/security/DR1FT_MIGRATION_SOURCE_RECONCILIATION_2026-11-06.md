@@ -310,3 +310,10 @@ The comment interaction is recorded against the parent post, preserving the exis
 A further call-path review found that the generic client interaction RPC accepted `comment`, even though a learner could call that RPC directly without creating a comment row. Because mission evaluation maps `CommentCreated` to the `comment` interaction type, this would preserve a direct route to forge comment-based mission progress.
 
 The generic `record_user_interaction` allow-list now excludes `comment`. Legitimate comments can only be recorded by `create_student_comment_atomically`, which creates the comment row and corresponding interaction in the same transaction. The shared TypeScript helper also excludes `comment` at compile time. The atomic comment RPC additionally validates that a scenario-bound parent post is assigned and currently scheduled for the caller's class instance.
+
+
+### School administration UI and internal-note confidentiality
+
+The school profile page is also accessible to a school's active `school_admin` and `school_lead`. The database trigger protects platform-controlled fields from modification, but the server page previously selected `internal_notes` and passed the value to every school role. A trigger cannot protect read access to an individual column.
+
+The page now sends `internal_notes` to the client only for platform admins. The edit UI hides platform-controlled fields from school roles, and its update payload omits those fields unless the caller is a platform admin. The database trigger remains the authoritative enforcement layer.

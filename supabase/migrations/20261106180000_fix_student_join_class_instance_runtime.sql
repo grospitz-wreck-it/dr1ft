@@ -66,7 +66,6 @@ begin
     from public.class_instance_memberships cim
     where cim.user_id = v_user_id
       and cim.class_instance_id = v_instance_id
-      and cim.left_at is null
       and cim.role <> 'student'::public.user_role
   ) then
     raise exception 'Dieser Zugang ist bereits einer anderen Rolle zugeordnet.'
