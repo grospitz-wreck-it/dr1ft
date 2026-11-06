@@ -170,3 +170,6 @@ A forward-only branch migration was added:
 - Has **not** been applied to Supabase.
 
 Before applying, test school_admin and school_lead updates to ordinary profile fields, and verify both are denied for protected fields while platform_admin remains allowed. The exact business ownership of `student_count` and `email_domain` should be confirmed with the school-operations workflow before production rollout.
+
+
+The anonymous-RPC migration was refined after checking all live RLS policy expressions. Seven currently anon-executable helper functions are referenced by policies granted to `PUBLIC` and must remain executable so PostgreSQL can evaluate those policies; their authorization logic binds to `auth.uid()`. The migration now excludes functions referenced by `PUBLIC` RLS policies, while preserving each affected function's existing authenticated/service-role permissions. A read-only preflight query indicates 22 of the 29 anon-executable SECURITY DEFINER functions would be revoked; the RLS helper functions are retained. Future helper functions used by `PUBLIC` policies must receive an explicit, reviewed grant.
