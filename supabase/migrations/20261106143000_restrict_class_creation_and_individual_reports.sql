@@ -182,7 +182,12 @@ begin
     'get_class_student_competency_evidence',
     'get_class_student_competency_progress',
     'get_class_student_mission_progress',
-    'get_class_student_learning_evidence_v1'
+    'get_class_student_learning_evidence_v1',
+    'get_class_student_learning_evidence',
+    'get_teacher_student_activity_time_v1',
+    'get_teacher_student_learning_journey_v1',
+    'get_teacher_student_scenario_report_v1',
+    'get_teacher_student_social_pulse_v1'
   ]
   loop
     select p.oid into fn_oid
