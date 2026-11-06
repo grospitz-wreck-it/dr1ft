@@ -22,7 +22,7 @@ type ClassItem = {
   missions: Mission[];
 };
 
-export function OverviewClasses({ classes }: { classes: ClassItem[] }) {
+export function OverviewClasses({ classes, canCreateClasses = false }: { classes: ClassItem[]; canCreateClasses?: boolean }) {
   const [query, setQuery] = useState("");
   const [showInactive, setShowInactive] = useState(false);
   const [showCreate, setShowCreate] = useState(false);
@@ -57,9 +57,9 @@ export function OverviewClasses({ classes }: { classes: ClassItem[] }) {
           <h2 className="mt-1.5 text-2xl font-extrabold tracking-tight text-slate-950 sm:text-[28px]">Deine Klassen</h2>
           <p className="mt-1 text-sm text-slate-500">Alle Lernräume, Missionen und Schüler:innen an einem Ort.</p>
         </div>
-        <button type="button" onClick={() => setShowCreate(true)} className="inline-flex items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-violet-600 to-indigo-600 px-4 py-2.5 text-sm font-bold text-white shadow-lg shadow-violet-500/20 transition hover:-translate-y-0.5">
+        {canCreateClasses && <button type="button" onClick={() => setShowCreate(true)} className="inline-flex items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-violet-600 to-indigo-600 px-4 py-2.5 text-sm font-bold text-white shadow-lg shadow-violet-500/20 transition hover:-translate-y-0.5">
           <Plus className="h-4 w-4" /> Neue Klasse
-        </button>
+        </button>}
       </div>
 
       <div className="mt-5 flex flex-col gap-3 border-b border-slate-200 pb-4 sm:flex-row sm:items-center sm:justify-between">
@@ -109,12 +109,12 @@ export function OverviewClasses({ classes }: { classes: ClassItem[] }) {
         <div className="mt-4 rounded-2xl border border-dashed border-violet-200 bg-violet-50/40 px-6 py-12 text-center">
           <Users className="mx-auto h-8 w-8 text-violet-300" />
           <p className="mt-3 text-sm font-bold text-slate-700">{query ? "Keine passende Klasse gefunden" : "Noch keine Klassen vorhanden"}</p>
-          <p className="mt-1 text-xs text-slate-500">Lege einen Lernraum an und starte mit DR1FT.</p>
-          <button type="button" onClick={() => setShowCreate(true)} className="mt-4 inline-flex items-center gap-2 rounded-xl bg-violet-600 px-4 py-2.5 text-xs font-bold text-white"><Plus className="h-4 w-4" /> Klasse anlegen</button>
+          <p className="mt-1 text-xs text-slate-500">{canCreateClasses ? "Lege einen Lernraum an und starte mit DR1FT." : "Klassen werden durch Schuladmins oder die Schulleitung angelegt."}</p>
+          {canCreateClasses && <button type="button" onClick={() => setShowCreate(true)} className="mt-4 inline-flex items-center gap-2 rounded-xl bg-violet-600 px-4 py-2.5 text-xs font-bold text-white"><Plus className="h-4 w-4" /> Klasse anlegen</button>}
         </div>
       )}
 
-      {showCreate && (
+      {canCreateClasses && showCreate && (
         <div className="fixed inset-0 z-[70] flex items-center justify-center overflow-y-auto bg-slate-950/40 p-4 backdrop-blur-sm" onMouseDown={(event) => { if (event.target === event.currentTarget) setShowCreate(false); }}>
           <section role="dialog" aria-modal="true" aria-labelledby="create-class-title" className="my-auto w-full max-w-lg overflow-hidden rounded-[28px] border border-white/70 bg-white shadow-[0_30px_100px_rgba(46,16,101,.28)]">
             <div className="relative overflow-hidden bg-gradient-to-br from-violet-700 via-indigo-600 to-cyan-500 px-6 py-6 text-white">
