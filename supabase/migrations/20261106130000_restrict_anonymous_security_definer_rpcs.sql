@@ -9,6 +9,12 @@
 -- exist before revoking PUBLIC/anon. Trigger-returning functions are excluded:
 -- they are invoked by PostgreSQL triggers, not directly through PostgREST.
 --
+-- Preserve SECURITY DEFINER helpers that are referenced by RLS policies
+-- granted to PUBLIC. PostgreSQL must be able to execute those helpers while
+-- evaluating the policy for anon; the helpers themselves must still bind
+-- their authorization checks to auth.uid(). New RLS helpers need an explicit
+-- privilege review and grant rather than inheriting anonymous EXECUTE.
+--
 -- The student join flow calls join_class_as_student only after signUp/signIn
 -- has established an authenticated session; no anonymous RPC exception is
 -- required for that workflow.
@@ -30,6 +36,14 @@ begin
       and p.prosecdef
       and p.prorettype <> 'trigger'::regtype
       and has_function_privilege('anon', p.oid, 'EXECUTE')
+      and not exists (
+        select 1
+        from pg_policies pol
+        where 'public'::name = any(pol.roles)
+          and (
+            coalesce(pol.qual, '') || ' ' || coalesce(pol.with_check, '')
+          ) ilike '%' || p.proname || '(%'
+      )
   loop
     execute format(
       'revoke execute on function %s from public, anon',
