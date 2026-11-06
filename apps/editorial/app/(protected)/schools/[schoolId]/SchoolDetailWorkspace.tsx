@@ -1461,7 +1461,33 @@ export function SchoolDetailWorkspace({ school: initialSchool, initialMembers, i
                       <div className={`flex h-10 w-10 items-center justify-center rounded-xl text-xs font-bold ${member.active ? "bg-slate-950 text-white" : "bg-slate-200 text-slate-500"}`}>
                         {initials || <UserRound className="h-4 w-4" />}
                       </div>
-      
+                      {canManageTeacherAssignments && member.role === "teacher" && member.active && (
+                        <button type="button" onClick={() => { setAssignmentMember(member); setAssignmentQuery(""); }} title="Klassen zuordnen" aria-label={`Klassen für ${member.display_name || member.email || "Lehrkraft"} zuordnen`} className="absolute -bottom-1.5 -right-1.5 flex h-5 w-5 items-center justify-center rounded-full border-2 border-white bg-indigo-50 text-indigo-700 shadow-sm transition hover:bg-indigo-600 hover:text-white">
+                          <Users className="h-2.5 w-2.5" /><Plus className="-ml-1 -mt-1 h-2 w-2 rounded-full bg-white text-indigo-600" />
+                        </button>
+                      )}
+                    </div>
+                    <div className="min-w-0">
+                      <div className="flex flex-wrap items-center gap-2">
+                        {isEditingName ? (
+                          <input autoFocus value={editingMemberName} onChange={(e) => setEditingMemberName(e.target.value)} onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); void saveMemberName(member); } if (e.key === "Escape") { setEditingMemberId(null); setEditingMemberName(""); } }} className="min-w-0 rounded-lg border border-accent bg-white px-2.5 py-1.5 text-sm font-semibold text-slate-900 outline-none ring-2 ring-accent/10" />
+                        ) : <h3 className="truncate text-sm font-semibold text-slate-950">{member.display_name || "Name nicht hinterlegt"}</h3>}
+                        <span className={`rounded-full px-2 py-1 text-[10px] font-semibold ${member.role === "school_lead" ? "bg-violet-50 text-violet-700" : member.role === "school_admin" ? "bg-indigo-50 text-indigo-700" : "bg-slate-100 text-slate-600"}`}>{roleLabel}</span>
+                        <span className={`inline-flex items-center gap-1.5 text-[10px] font-medium ${member.active ? "text-emerald-700" : "text-slate-400"}`}><span className={`h-1.5 w-1.5 rounded-full ${member.active ? "bg-emerald-500" : "bg-slate-300"}`} />{member.active ? "Aktiv" : "Deaktiviert"}</span>
+                      </div>
+                      <p className="mt-0.5 truncate text-xs text-slate-500">{member.email || member.user_id}</p>
+                    </div>
+                  </div>
+                  <div className="flex flex-wrap items-center gap-2 lg:justify-end">
+                    {isEditingName ? <>
+                      <button type="button" disabled={pendingId === member.id} onClick={() => void saveMemberName(member)} className="rounded-lg bg-slate-950 px-3 py-2 text-xs font-medium text-white disabled:opacity-50">{pendingId === member.id ? "Speichert …" : "Speichern"}</button>
+                      <button type="button" disabled={pendingId === member.id} onClick={() => { setEditingMemberId(null); setEditingMemberName(""); }} className="rounded-lg border border-border px-3 py-2 text-xs font-medium text-slate-600">Abbrechen</button>
+                    </> : <button type="button" disabled={pendingId === member.id} onClick={() => { setEditingMemberId(member.id); setEditingMemberName(member.display_name ?? ""); }} className="inline-flex items-center gap-1.5 rounded-lg border border-border px-3 py-2 text-xs font-medium text-slate-700 transition hover:bg-canvas"><Pencil className="h-3.5 w-3.5" />Name bearbeiten</button>}
+                    <select disabled={pendingId === member.id} value={member.role} onChange={(e) => void changeRole(member, e.target.value)} className="rounded-lg border border-border bg-panel px-3 py-2 text-xs text-slate-700"><option value="teacher">Lehrkraft</option><option value="school_lead">Schulleitung</option><option value="school_admin">Schuladmin</option></select>
+                    <button type="button" disabled={pendingId === member.id} onClick={() => void setActive(member, !member.active)} className="rounded-lg border border-border px-3 py-2 text-xs font-medium text-slate-600 transition hover:bg-canvas">{member.active ? "Deaktivieren" : "Aktivieren"}</button>
+                    <button type="button" disabled={pendingId === member.id} onClick={() => void remove(member)} className="rounded-lg border border-red-200 px-3 py-2 text-xs font-medium text-red-600 transition hover:bg-red-50">Entfernen</button>
+                  </div>
+                </div>
               </article>
             );
           })}
