@@ -41,18 +41,16 @@ Deno.serve(async (req) => {
   const { data: { user: caller }, error: callerError } = await admin.auth.getUser(token);
   if (callerError || !caller) return json({ error: "Ungültige oder abgelaufene Sitzung" }, 401);
 
-  const { data: callerMembership, error: callerMembershipError } = await admin
-    .from("class_instance_memberships")
-    .select("role")
-    .eq("class_instance_id", classId)
-    .eq("user_id", caller.id)
-    .is("left_at", null)
-    .maybeSingle();
+  const callerClient = createClient(url, Deno.env.get("SUPABASE_ANON_KEY")!, {
+    global: { headers: { Authorization: authHeader } },
+  });
+  const { data: canManageStudents, error: permissionError } = await callerClient.rpc(
+    "can_manage_student_accounts",
+    { p_class_id: classId },
+  );
 
-  if (callerMembershipError) return json({ error: callerMembershipError.message }, 500);
-  if (!callerMembership || !["teacher", "school_admin"].includes(callerMembership.role)) {
-    return json({ error: "Keine Berechtigung für diese Klasseninstanz" }, 403);
-  }
+  if (permissionError) return json({ error: "Berechtigung konnte nicht geprüft werden" }, 500);
+  if (!canManageStudents) return json({ error: "Keine Berechtigung für diese Klasseninstanz" }, 403);
 
   const { data: studentMembership, error: studentMembershipError } = await admin
     .from("class_instance_memberships")
