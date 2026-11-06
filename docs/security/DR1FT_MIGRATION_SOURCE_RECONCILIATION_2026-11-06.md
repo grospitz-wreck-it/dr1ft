@@ -101,6 +101,23 @@ A new migration was added on `security/hardening-phase-1`:
 
 The teacher report page was also changed so school admins and school leads are returned to the aggregate-report path even if a stale/legacy individual assignment row exists.
 
+
+## Additional live privilege finding (2026-11-06)
+
+A read-only inspection of effective privileges found that both `anon` and `authenticated` have the table-level `TRUNCATE` privilege on 67 of 77 relations in the `public` schema. The same broad grants also include `DELETE`, `TRIGGER` and `REFERENCES` on many relations. RLS does not constrain `TRUNCATE`; therefore this is a separate high-priority privilege-hardening issue, not merely a row-policy concern.
+
+The `schools` table itself has RLS enabled but is among the relations with client `TRUNCATE` privilege. The inspected default-privilege ACLs for both `postgres` and `supabase_admin` also include `TRUNCATE` for `anon` and `authenticated` on future tables in `public`.
+
+A second corrective migration was added on `security/hardening-phase-1`:
+
+- `supabase/migrations/20261106120000_revoke_client_truncate_privileges.sql`
+- Revokes only `TRUNCATE` from `anon` and `authenticated` on existing public relations.
+- Removes inherited `TRUNCATE` from default privileges for future public tables created by `postgres` or `supabase_admin`.
+- Deliberately leaves `SELECT`, `INSERT`, `UPDATE` and `DELETE` grants unchanged; existing RLS and application authorization remain responsible for row-level access.
+- It has **not** been applied to Supabase. No production data or schema was changed by this inspection.
+
+Before applying, validate the migration in a disposable environment and re-check effective privileges. Also review the broad `TRIGGER` and `REFERENCES` grants separately; this migration intentionally does not change them.
+
 ## Remaining verification before applying
 
 1. Validate the migration against a disposable/staging database before production.
