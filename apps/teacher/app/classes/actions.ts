@@ -87,16 +87,13 @@ export async function toggleScenarioAssignment(
     .select("school_id,school_year,is_active").eq("id", classId).maybeSingle();
   if (!classInfo?.school_id || !classInfo.is_active) throw new Error("Die Klasseninstanz ist nicht aktiv.");
 
-  const { data: schoolMembership, error: schoolMembershipError } = await supabase
-    .from("school_memberships")
-    .select("role")
-    .eq("school_id", classInfo.school_id)
-    .eq("user_id", user.id)
-    .eq("active", true)
-    .maybeSingle();
+  const { data: canManageClass, error: permissionError } = await supabase.rpc(
+    "is_teacher_of_class_instance",
+    { target_instance_id: classId },
+  );
 
-  if (schoolMembershipError || !["teacher", "school_admin", "school_lead"].includes(schoolMembership?.role ?? "")) {
-    throw new Error("Du benötigst eine aktive Lehrkraft-Mitgliedschaft an dieser Schule.");
+  if (permissionError || !canManageClass) {
+    throw new Error("Du darfst Module dieser Klasseninstanz nicht verwalten.");
   }
 
   if (shouldBeAssigned) {
@@ -170,15 +167,12 @@ export async function setScenarioAssignmentActive(classId: string, scenarioId: s
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) throw new Error("Nicht authentifiziert");
 
-  const { data: membership, error: membershipError } = await supabase
-    .from("class_instance_memberships")
-    .select("id,role")
-    .eq("class_instance_id", classId)
-    .eq("user_id", user.id)
-    .is("left_at", null)
-    .maybeSingle();
+  const { data: canManageClass, error: membershipError } = await supabase.rpc(
+    "is_teacher_of_class_instance",
+    { target_instance_id: classId },
+  );
 
-  if (membershipError || !membership || !["teacher", "school_admin", "school_lead"].includes(membership.role)) {
+  if (membershipError || !canManageClass) {
     throw new Error("Keine Berechtigung, den Modulstatus dieser Klasse zu ändern");
   }
 
@@ -198,15 +192,12 @@ export async function archiveScenarioAssignment(classId: string, scenarioId: str
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) throw new Error("Nicht authentifiziert");
 
-  const { data: membership, error: membershipError } = await supabase
-    .from("class_instance_memberships")
-    .select("id,role")
-    .eq("class_instance_id", classId)
-    .eq("user_id", user.id)
-    .is("left_at", null)
-    .maybeSingle();
+  const { data: canManageClass, error: membershipError } = await supabase.rpc(
+    "is_teacher_of_class_instance",
+    { target_instance_id: classId },
+  );
 
-  if (membershipError || !membership || !["teacher", "school_admin", "school_lead"].includes(membership.role)) {
+  if (membershipError || !canManageClass) {
     throw new Error("Keine Berechtigung, Module dieser Klasse zu archivieren");
   }
 
@@ -249,15 +240,12 @@ export async function updateScenarioSchedule(
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) throw new Error("Nicht authentifiziert");
 
-  const { data: membership, error: membershipError } = await supabase
-    .from("class_instance_memberships")
-    .select("id,role")
-    .eq("class_instance_id", classId)
-    .eq("user_id", user.id)
-    .is("left_at", null)
-    .maybeSingle();
+  const { data: canManageClass, error: membershipError } = await supabase.rpc(
+    "is_teacher_of_class_instance",
+    { target_instance_id: classId },
+  );
 
-  if (membershipError || !membership || !["teacher", "school_admin", "school_lead"].includes(membership.role)) {
+  if (membershipError || !canManageClass) {
     throw new Error("Keine Berechtigung, den Zeitplan dieser Klasse zu ändern");
   }
 
@@ -287,15 +275,12 @@ export async function setClassActive(classId: string, isActive: boolean) {
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) throw new Error("Nicht authentifiziert");
 
-  const { data: membership, error: membershipError } = await supabase
-    .from("class_instance_memberships")
-    .select("id,role")
-    .eq("class_instance_id", classId)
-    .eq("user_id", user.id)
-    .is("left_at", null)
-    .maybeSingle();
+  const { data: canManageClass, error: membershipError } = await supabase.rpc(
+    "is_teacher_of_class_instance",
+    { target_instance_id: classId },
+  );
 
-  if (membershipError || !membership || !["teacher", "school_admin", "school_lead"].includes(membership.role)) {
+  if (membershipError || !canManageClass) {
     throw new Error("Keine Berechtigung, den Status dieser Klasse zu ändern");
   }
 
@@ -378,16 +363,12 @@ export async function updateClassDetails(classId: string, formData: FormData) {
     throw new Error("Klasse oder Schulzuordnung nicht gefunden");
   }
 
-  const { data: schoolAdmin, error: roleError } = await supabase
-    .from("school_memberships")
-    .select("id")
-    .eq("school_id", classInfo.school_id)
-    .eq("user_id", user.id)
-    .eq("role", "school_admin")
-    .eq("active", true)
-    .maybeSingle();
-  if (roleError || !schoolAdmin) {
-    throw new Error("Nur aktive Schuladmins dürfen Klassendaten bearbeiten. Bitte nutze dafür die Schulverwaltung.");
+  const { data: canManageSchool, error: roleError } = await supabase.rpc(
+    "can_manage_school",
+    { p_school_id: classInfo.school_id },
+  );
+  if (roleError || !canManageSchool) {
+    throw new Error("Nur Schuladmins, Schulleitung oder Plattformadmins dürfen Klassendaten bearbeiten.");
   }
 
   const { error } = await supabase
