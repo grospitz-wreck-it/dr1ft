@@ -191,22 +191,24 @@ export default async function StudentReportPage({
 }) {
   const supabase = supabaseServerClient();
   const { classId, studentId } = params;
-  const [{ data: { user } }, { data: classInfo }, { data: profile }] = await Promise.all([
+  const [{ data: { user } }, { data: classInfo }] = await Promise.all([
     supabase.auth.getUser(),
     supabase.from("class_instances").select("name, school_year, grade_level, school_id").eq("id", classId).maybeSingle(),
-    supabase.from("user_profiles").select("display_name, username, avatar_seed").eq("id", studentId).maybeSingle(),
   ]);
 
   if (!user) throw new Error("Bitte melde dich erneut an.");
-  const { data: canViewClassReports } = await supabase.rpc("can_view_class_individual_reports", {
+  const { data: canViewClassReports, error: permissionError } = await supabase.rpc("can_view_class_individual_reports", {
     p_class_id: classId,
   });
-  if (!canViewClassReports) {
+  if (permissionError) throw new Error("Die Report-Berechtigung konnte nicht geprüft werden.");
+
+  const requestedScenario = searchParams.scenario || "";
+  if (!canViewClassReports && !requestedScenario) {
     return (
       <main className="min-h-screen bg-canvas px-4 py-10">
         <section className="mx-auto max-w-3xl rounded-3xl border border-violet-100 bg-white p-7 shadow-sm">
           <h1 className="text-xl font-bold text-slate-950">Einzelreports sind nicht freigegeben</h1>
-          <p className="mt-2 text-sm text-slate-600">Individuelle Schülerberichte sind ausschließlich für Schuladmins, Schulleitung und Plattformadmins verfügbar.</p>
+          <p className="mt-2 text-sm text-slate-600">Für Lehrkräfte ist nur der Report eines ausdrücklich zugewiesenen Moduls freigegeben.</p>
           <a href={`/classes/${classId}`} className="mt-5 inline-flex rounded-xl bg-violet-600 px-4 py-2.5 text-sm font-semibold text-white">Zur Klasse</a>
         </section>
       </main>
@@ -226,9 +228,12 @@ export default async function StudentReportPage({
     ? await supabase.from("scenarios").select("id, title, cover_image_url, learning_cards").in("id", assignedScenarioIds)
     : { data: [] as ScenarioMeta[] };
 
-  const assignedScenarios = (scenarioRows ?? []) as ScenarioMeta[];
-  const requestedScenario = searchParams.scenario || "";
-  const selectedScenario = assignedScenarios.find((item) => item.id === requestedScenario) ?? assignedScenarios[0] ?? null;
+  const allAssignedScenarios = (scenarioRows ?? []) as ScenarioMeta[];
+  const assignedScenarios = canViewClassReports
+    ? allAssignedScenarios
+    : allAssignedScenarios.filter((item) => item.id === requestedScenario);
+  const selectedScenario = assignedScenarios.find((item) => item.id === requestedScenario)
+    ?? (canViewClassReports ? assignedScenarios[0] ?? null : null);
 
   if (!selectedScenario) {
     return (
@@ -245,13 +250,27 @@ export default async function StudentReportPage({
     );
   }
 
-  const [reportResult] = await Promise.all([
-    supabase.rpc("get_teacher_student_scenario_report_scoped_v1", {
-      p_class_id: classId,
-      p_student_id: studentId,
-      p_scenario_id: selectedScenario.id,
-    }),
-  ]);
+  const reportResult = await supabase.rpc("get_teacher_student_scenario_report_scoped_v1", {
+    p_class_id: classId,
+    p_student_id: studentId,
+    p_scenario_id: selectedScenario.id,
+  });
+  if (reportResult.error) {
+    return (
+      <main className="min-h-screen bg-canvas px-4 py-10">
+        <section className="mx-auto max-w-3xl rounded-3xl border border-violet-100 bg-white p-7 shadow-sm">
+          <h1 className="text-xl font-bold text-slate-950">Dieser Modulreport ist nicht freigegeben</h1>
+          <p className="mt-2 text-sm text-slate-600">Es liegt keine aktive, persönliche Modulzuweisung für diese Auswertung vor.</p>
+          <a href={`/classes/${classId}`} className="mt-5 inline-flex rounded-xl bg-violet-600 px-4 py-2.5 text-sm font-semibold text-white">Zur Klasse</a>
+        </section>
+      </main>
+    );
+  }
+  const { data: profile } = await supabase
+    .from("user_profiles")
+    .select("display_name, username, avatar_seed")
+    .eq("id", studentId)
+    .maybeSingle();
 
   const answers = (reportResult.data ?? []) as ScenarioAnswer[];
   const socialWeeks: SocialWeek[] = [];
