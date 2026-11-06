@@ -173,3 +173,10 @@ Before applying, test school_admin and school_lead updates to ordinary profile f
 
 
 The anonymous-RPC migration was refined after checking all live RLS policy expressions. Seven currently anon-executable helper functions are referenced by policies granted to `PUBLIC` and must remain executable so PostgreSQL can evaluate those policies; their authorization logic binds to `auth.uid()`. The migration now excludes functions referenced by `PUBLIC` RLS policies, while preserving each affected function's existing authenticated/service-role permissions. A read-only preflight query indicates 22 of the 29 anon-executable SECURITY DEFINER functions would be revoked; the RLS helper functions are retained. Future helper functions used by `PUBLIC` policies must receive an explicit, reviewed grant.
+
+
+## Security Advisor view finding retained for compatibility review
+
+The live view `public.visible_content_for_user` remains an owner-rights (security-definer) view with broad `anon` and `authenticated` relation privileges. Its current definition returns live `content_items` joined through legacy `class_scenario_assignments` and `class_memberships`, filtered by `cm.user_id = auth.uid()`. The current Player feed page instead queries `content_items` and class-instance assignments directly; however, repository-wide consumers and the legacy teacher/editorial paths have not yet been conclusively traced.
+
+No change was made to this view. Converting it to `security_invoker` or revoking its grants without tracing every consumer and validating the underlying RLS behavior could silently remove legacy content access or change which content is visible. Treat the Security Advisor error as an open review item, not as a resolved finding.
