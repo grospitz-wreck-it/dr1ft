@@ -18,9 +18,8 @@ function json(data: unknown, status = 200) {
 function cleanPart(value: string) { return value.toLowerCase().replace(/[^a-z0-9]/g, ""); }
 function generateTempPassword() {
   const alphabet = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
-  let pw = "";
-  for (let i = 0; i < 10; i++) pw += alphabet[Math.floor(Math.random() * alphabet.length)];
-  return pw;
+  const random = crypto.getRandomValues(new Uint8Array(12));
+  return Array.from(random, (value) => alphabet[value & 31]).join("");
 }
 
 Deno.serve(async (req) => {
@@ -38,7 +37,7 @@ Deno.serve(async (req) => {
   if (displayName.length > 80) return json({ error: "Der Anzeigename darf höchstens 80 Zeichen lang sein" }, 400);
 
   const callerClient = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_ANON_KEY")!, { global: { headers: { Authorization: authHeader } } });
-  const { data: isTeacher, error: authCheckError } = await callerClient.rpc("is_teacher_of_class_instance", { target_instance_id: classId });
+  const { data: isTeacher, error: authCheckError } = await callerClient.rpc("can_manage_student_accounts", { p_class_id: classId });
   if (authCheckError || !isTeacher) return json({ error: "Keine Berechtigung für diese Klasseninstanz" }, 403);
 
   const { data: classRow, error: classError } = await callerClient
