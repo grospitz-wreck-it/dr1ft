@@ -317,3 +317,16 @@ The generic `record_user_interaction` allow-list now excludes `comment`. Legitim
 The school profile page is also accessible to a school's active `school_admin` and `school_lead`. The database trigger protects platform-controlled fields from modification, but the server page previously selected `internal_notes` and passed the value to every school role. A trigger cannot protect read access to an individual column.
 
 The page now sends `internal_notes` to the client only for platform admins. The edit UI hides platform-controlled fields from school roles, and its update payload omits those fields unless the caller is a platform admin. The database trigger remains the authoritative enforcement layer.
+
+
+### Compatibility correction: class feed like aggregates
+
+The own-row-only policy on `user_interactions` also affected the feed's like aggregation: the server page previously selected every class member's like rows and then loaded their profiles. Under the new policy, that query would return only the current learner's likes, silently reducing class like counts and hiding peer-like identities.
+
+A narrow read RPC was added:
+
+- `supabase/migrations/20261106250000_get_class_instance_post_likes_rpc.sql`
+- `get_class_instance_post_likes(class_instance_id, content_item_ids)` requires an active student membership and returns only like rows, display name, username and avatar seed for active student members, limited to explicitly supplied live posts that are visible in that class instance.
+- `apps/player/app/feed/page.tsx` now uses this RPC and no longer reads other learners' raw interaction rows or performs a second profile lookup.
+
+The RPC does not expose views, comments, reports, metadata, timestamps, mission events or learning progress. It has not been applied to Supabase.

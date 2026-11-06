@@ -102,7 +102,12 @@ export default async function FeedPage() {
   const creatorIds = Array.from(new Set((pool ?? []).map((row: any) => row.creator_id).filter((id: unknown): id is string => typeof id === "string")));
   const { data: creatorRows } = creatorIds.length ? await supabase.from("creators").select("id, display_name, handle, avatar_url").in("id", creatorIds) : { data: [] as { id: string; display_name: string; handle: string; avatar_url: string | null }[] };
   const creatorById = new Map((creatorRows ?? []).map((creator) => [creator.id, creator]));
-  const { data: instanceLikes } = contentIds.length ? await supabase.from("user_interactions").select("content_item_id, user_id").eq("class_instance_id", classInstanceId).eq("interaction_type", "like").in("content_item_id", contentIds) : { data: [] as { content_item_id: string; user_id: string }[] };
+  const { data: instanceLikes } = contentIds.length
+    ? await supabase.rpc("get_class_instance_post_likes", {
+        p_class_instance_id: classInstanceId,
+        p_content_item_ids: contentIds,
+      })
+    : { data: [] as { content_item_id: string; user_id: string; display_name: string; username: string; avatar_seed: string }[] };
   const { data: npcLikes } = contentIds.length ? await supabase.from("npc_social_interactions").select("content_item_id").eq("class_instance_id", classInstanceId).eq("interaction_type", "like").in("content_item_id", contentIds) : { data: [] as { content_item_id: string }[] };
   const { data: classComments } = contentIds.length
     ? await supabase.from("content_items").select("id, parent_id").eq("class_instance_id", classInstanceId).eq("type", "comment").eq("status", "live").in("parent_id", contentIds)
@@ -110,7 +115,7 @@ export default async function FeedPage() {
   const { data: scenarioComments } = contentIds.length && assignedScenarioIds.length
     ? await supabase.from("content_items").select("id, parent_id").is("class_instance_id", null).in("scenario_id", assignedScenarioIds).eq("type", "comment").eq("status", "live").in("parent_id", contentIds)
     : { data: [] as { id: string; parent_id: string | null }[] };
-  const likeCounts = new Map<string, number>(); const commentCounts = new Map<string, number>(); const likeUserIds: string[] = Array.from(new Set<string>((instanceLikes ?? []).map((like) => like.user_id)));
+  const likeCounts = new Map<string, number>(); const commentCounts = new Map<string, number>();
   for (const like of instanceLikes ?? []) likeCounts.set(like.content_item_id, (likeCounts.get(like.content_item_id) ?? 0) + 1);
   for (const like of npcLikes ?? []) likeCounts.set(like.content_item_id, (likeCounts.get(like.content_item_id) ?? 0) + 1);
   const countedCommentIds = new Set<string>();
@@ -119,9 +124,19 @@ export default async function FeedPage() {
     countedCommentIds.add(comment.id);
     commentCounts.set(comment.parent_id, (commentCounts.get(comment.parent_id) ?? 0) + 1);
   }
-  const { data: socialProfiles } = likeUserIds.length ? await supabase.from("user_profiles").select("id, display_name, username, avatar_seed").in("id", likeUserIds) : { data: [] as { id: string; display_name: string | null; username: string | null; avatar_seed: string | null }[] };
-  const socialProfileById = new Map((socialProfiles ?? []).map((p) => [p.id, p])); const socialByContent = new Map<string, Array<{ id: string; displayName: string; username: string; avatarSeed: string }>>();
-  for (const like of instanceLikes ?? []) { const profile = socialProfileById.get(like.user_id); if (!profile) continue; const list = socialByContent.get(like.content_item_id) ?? []; if (!list.some((p) => p.id === profile.id)) list.push({ id: profile.id, displayName: profile.display_name ?? "DR1FT User", username: profile.username ?? "user", avatarSeed: profile.avatar_seed ?? profile.id }); socialByContent.set(like.content_item_id, list); }
+  const socialByContent = new Map<string, Array<{ id: string; displayName: string; username: string; avatarSeed: string }>>();
+  for (const like of instanceLikes ?? []) {
+    const list = socialByContent.get(like.content_item_id) ?? [];
+    if (!list.some((profile) => profile.id === like.user_id)) {
+      list.push({
+        id: like.user_id,
+        displayName: like.display_name ?? "DR1FT User",
+        username: like.username ?? "user",
+        avatarSeed: like.avatar_seed ?? like.user_id,
+      });
+    }
+    socialByContent.set(like.content_item_id, list);
+  }
   const mappedPool: FeedItem[] = (pool ?? []).map((row: any) => ({ id: row.id, type: row.type, scenarioId: row.scenario_id, creatorId: row.creator_id, parentId: row.parent_id, title: row.title, body: row.body, mediaUrl: row.media_url, mediaType: row.media_type, manipulationTechniques: row.manipulation_techniques ?? [], targetCompetencies: row.target_competencies ?? [], difficulty: row.difficulty, ageRating: row.age_rating, sourceRefs: row.source_refs ?? [], status: row.status, reviewedBy: row.reviewed_by, reviewedAt: row.reviewed_at, reviewNotes: row.review_notes, extra: { ...(row.extra ?? {}), interestKeys: addInterestAncestors(row.extra?.interestKeys), classLikeCount: likeCounts.get(row.id) ?? 0, classLikeUsers: socialByContent.get(row.id) ?? [], classCommentCount: commentCounts.get(row.id) ?? 0 }, createdAt: row.created_at, updatedAt: row.updated_at, creator: mapCreatorRow(row.creators ?? creatorById.get(row.creator_id)) }));
   const ageRating: FeedContext["userAgeRating"] = currentProfile?.birth_year && new Date().getFullYear() - currentProfile.birth_year >= 16 ? "16_plus" : "12_plus";
   const progress = (competencyProgress ?? []).map((c) => ({ userId: c.user_id, competencyId: c.competency_id, evidence: c.evidence, level: c.level, updatedAt: c.updated_at }));
