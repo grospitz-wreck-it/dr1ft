@@ -68,12 +68,13 @@ Deno.serve(async (req) => {
     .eq("id", classId)
     .maybeSingle();
 
+  const { data: { user: dashboardUser } } = await supabase.auth.getUser();
   const [{ data: schoolAdmin }, { data: platformAdmin }] = await Promise.all([
     classScope?.school_id
       ? supabase.from("school_memberships")
           .select("role")
           .eq("school_id", classScope.school_id)
-          .eq("user_id", (await supabase.auth.getUser()).data.user?.id ?? "")
+           .eq("user_id", dashboardUser?.id ?? "")
           .eq("active", true)
           .in("role", ["school_admin", "school_lead"])
           .maybeSingle()
