@@ -52,7 +52,7 @@ Deno.serve(async (req) => {
   if (!canManageStudents) return json({ error: "Keine Berechtigung für diese Klasseninstanz" }, 403);
 
   const adminClient = createClient(url, serviceKey);
-  const token = authHeader.replace(/^Bearer\\s+/i, "").trim();
+  const token = authHeader.replace(/^Bearer\s+/i, "").trim();
   const { data: { user: caller }, error: callerError } = await adminClient.auth.getUser(token);
   if (callerError || !caller) return json({ error: "Ungültige oder abgelaufene Sitzung" }, 401);
 
