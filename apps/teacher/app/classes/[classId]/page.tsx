@@ -133,12 +133,13 @@ export default async function ClassDetailPage({
     ? await supabase.rpc("can_view_class_individual_reports", { p_class_id: classId })
     : { data: false };
 
-  const [{ data: canManageClassWorkspace }, { data: canManageClassImage }] = user
+  const [{ data: canManageClassWorkspace }, { data: canManageClassImage }, { data: canManageStudents }] = user
     ? await Promise.all([
         supabase.rpc("is_teacher_of_class_instance", { target_instance_id: classId }),
         supabase.rpc("can_manage_class_image", { object_name: `${classId}/class-image` }),
+        supabase.rpc("can_manage_student_accounts", { p_class_id: classId }),
       ])
-    : [{ data: false }, { data: false }];
+    : [{ data: false }, { data: false }, { data: false }];
 
   const hasActiveTeachingSubscription = Boolean(teacherMembershipResult.data);
   const mayUseTeacherModules =
@@ -254,6 +255,7 @@ export default async function ClassDetailPage({
             initialStudents={students}
             reportingUnlocked={reportingUnlocked}
             canViewIndividualReports={canViewIndividualReports}
+            canManageStudents={Boolean(canManageStudents)}
           />
         </div>
         </CollapsiblePanel>
