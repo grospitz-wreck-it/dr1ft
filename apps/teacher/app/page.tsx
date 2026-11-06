@@ -77,6 +77,9 @@ export default async function TeacherHomePage() {
   ]);
 
   mark("Schulmitgliedschaft + Schüler + Missionen", schoolStudentsMissionsStartedAt);
+  const { data: isPlatformAdmin } = await supabase.rpc("is_platform_admin");
+  const canCreateClasses = Boolean(isPlatformAdmin) || (schoolMemberships ?? []).some((membership: any) => ["school_admin", "school_lead"].includes(membership.role));
+
   const schoolLookupStartedAt = Date.now();
   const schoolIds = Array.from(new Set([
     ...classes.map((item: any) => item.school_id),
@@ -198,7 +201,7 @@ export default async function TeacherHomePage() {
       </section>
 
       <section id="deine-klassen" className="drift-panel mt-5 overflow-hidden p-5 sm:p-6">
-        <OverviewClasses classes={overviewClasses} />
+        <OverviewClasses classes={overviewClasses} canCreateClasses={canCreateClasses} />
       </section>
 
       {availableClasses.length > 0 && <AvailableClasses classes={availableClasses} />}
