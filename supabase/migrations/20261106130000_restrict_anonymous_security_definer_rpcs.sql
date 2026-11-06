@@ -73,5 +73,4 @@ $$;
 alter default privileges for role postgres in schema public
   revoke execute on functions from public, anon;
 
-alter default privileges for role supabase_admin in schema public
-  revoke execute on functions from public, anon;
+-- The connected postgres role cannot alter supabase_admin-owned defaults.
