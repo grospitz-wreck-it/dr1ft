@@ -45,3 +45,9 @@ alter function public.set_learning_updated_at()
 
 alter function public.unlock_mission_for_user(uuid, uuid, integer)
   set search_path = pg_catalog, public, auth, pg_temp;
+
+-- Pin the other overloads present in the live database as well.
+alter function public.unlock_mission_for_user(uuid, uuid)
+  set search_path = pg_catalog, public, auth, pg_temp;
+alter function public.unlock_mission_for_user(uuid, uuid, uuid)
+  set search_path = pg_catalog, public, auth, pg_temp;
