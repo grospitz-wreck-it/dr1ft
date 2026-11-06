@@ -364,6 +364,27 @@ export async function updateClassDetails(classId: string, formData: FormData) {
   }
   if (!schoolYear) throw new Error("Schuljahr darf nicht leer sein");
 
+  const { data: classInfo, error: classLookupError } = await supabase
+    .from("class_instances")
+    .select("school_id")
+    .eq("id", classId)
+    .maybeSingle();
+  if (classLookupError || !classInfo?.school_id) {
+    throw new Error("Klasse oder Schulzuordnung nicht gefunden");
+  }
+
+  const { data: schoolAdmin, error: roleError } = await supabase
+    .from("school_memberships")
+    .select("id")
+    .eq("school_id", classInfo.school_id)
+    .eq("user_id", user.id)
+    .eq("role", "school_admin")
+    .eq("active", true)
+    .maybeSingle();
+  if (roleError || !schoolAdmin) {
+    throw new Error("Nur aktive Schuladmins dürfen Klassendaten bearbeiten. Bitte nutze dafür die Schulverwaltung.");
+  }
+
   const { error } = await supabase
     .from("class_instances")
     .update({ name, grade_level: gradeLevel, school_year: schoolYear })
