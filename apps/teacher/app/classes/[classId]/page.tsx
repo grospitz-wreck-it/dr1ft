@@ -141,7 +141,18 @@ export default async function ClassDetailPage({
 
   const teacherModules = mayUseTeacherModules ? moduleLibrary.assigned : [];
 
-  const canEditClassImage = hasActiveTeachingSubscription || isSchoolAdmin;
+  // The class visual belongs to the class workspace. Active teachers and
+  // school administrators may edit it; do not hide the editor just because
+  // a legacy teacher subscription has not been created for this class yet.
+  const currentUserClassRole = (roster ?? []).find(
+    (row: any) => row.user_id === user?.id && row.left_at == null,
+  )?.role ?? null;
+  const canEditClassImage =
+    isSchoolAdmin ||
+    currentUserClassRole === "teacher" ||
+    currentUserClassRole === "school_admin" ||
+    currentUserClassRole === "school_lead" ||
+    hasActiveTeachingSubscription;
 
   const students = (roster ?? [])
     .filter((row: any) => row.role === "student")
