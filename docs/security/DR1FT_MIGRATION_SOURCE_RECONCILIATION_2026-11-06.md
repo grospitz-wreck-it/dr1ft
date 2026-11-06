@@ -142,3 +142,17 @@ A corrective branch migration was added:
 - Has **not** been applied to Supabase. The 29 live function grants and default ACLs remain unchanged until a separately approved deployment.
 
 This is a reachability/privilege finding, not proof that each function can be exploited. Authorization inside each RPC still requires function-by-function review and role-matrix testing.
+
+
+## Additional live student-comment policy drift (2026-11-06)
+
+A read-only inspection of `pg_policies` confirmed that the live `content_items` policy `instance members create student comments` contains the tautology `m.class_instance_id = m.class_instance_id` instead of correlating the membership row to the inserted content row. The corrected outer-row correlation exists in local source migration `20260930120000_student_comments_instance_scope.sql`, but that migration is absent from the remote migration history. The live policy therefore does not enforce the intended exact-instance membership relationship by itself.
+
+The Player comment API was inspected. It authenticates the user, resolves the current class instance, checks membership in that instance, verifies the target is a live post, and inserts comment metadata with `createdBy: "student"` and `userId: user.id`. The API's membership lookup previously accepted any active role, not only a student role. A second permissive legacy policy expected `studentUserId`, which the current API does not send; the policies therefore did not form one coherent authorization contract.
+
+Two branch changes address this:
+
+- `supabase/migrations/20261106140000_fix_student_comment_membership_policy.sql` drops both permissive legacy INSERT policies and replaces them with one authenticated policy requiring a live comment, a parent post, the current class instance, matching authenticated user metadata, and an active `student` membership correlated to `content_items.class_instance_id`.
+- `apps/player/app/api/content/[contentId]/comment/route.ts` now also requires the active membership role to be `student`, providing an application-layer check before the insert.
+
+Neither change has been applied to Supabase or deployed. Validate the Player comment flow with an active student, then verify denial for an unassigned student, a teacher, an ended membership, a different class instance, and an anonymous caller before applying the migration.
