@@ -295,3 +295,16 @@ Five learning-design mapping tables allowed any authenticated user to write/dele
 The live policy allowed every active class member to read all `npc_safety_events` for their class instance. The table stores moderation decisions and reasons. Branch migration `20261106210000_restrict_npc_safety_event_visibility.sql` limits reads to assigned class staff and platform staff/admins.
 
 **Gate:** a student cannot query class safety/moderation events; assigned staff can review only the class instances they are authorised to manage.
+
+
+### 3.11 Deployed Edge Function source drift
+
+The existing deployment review identified that deployed `create-student-account` Edge Function version 8 differs materially from the repository copy. Do not redeploy that function from this branch until the deployed implementation, environment requirements and intended source are reconciled.
+
+**Gate:** obtain and review the deployed source/configuration, compare it with the repository implementation, document the canonical version, and test account creation, role assignment, duplicate handling and failure recovery in a non-production environment.
+
+### 3.12 Automated test infrastructure is not yet established
+
+The current repository scan found no committed automated test directories/files and no root test command. The QA specification requires unit, integration, gameplay, UI, backend, performance, accessibility and regression coverage.
+
+**Gate:** add a repeatable test runner and CI quality gates. At minimum, automate the role/RLS matrix, class-instance onboarding, mission/evidence pipeline and teacher-report access before the school pilot.
