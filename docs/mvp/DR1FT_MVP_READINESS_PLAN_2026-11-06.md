@@ -288,3 +288,10 @@ Branch migration `20261106190000_protect_system_managed_learning_progress.sql` c
 Five learning-design mapping tables allowed any authenticated user to write/delete rows when the parent object existed. Branch migration `20261106200000_restrict_learning_design_mapping_writes.sql` limits writes to platform staff and retains the existing authenticated read policies.
 
 **Gate:** Editorial authoring works for platform staff; teacher/student accounts cannot modify canonical learning objectives, competency mappings, learning-step content, mission mappings or objective mappings.
+
+
+### 3.10 NPC safety events are operational records, not peer-visible content
+
+The live policy allowed every active class member to read all `npc_safety_events` for their class instance. The table stores moderation decisions and reasons. Branch migration `20261106210000_restrict_npc_safety_event_visibility.sql` limits reads to assigned class staff and platform staff/admins.
+
+**Gate:** a student cannot query class safety/moderation events; assigned staff can review only the class instances they are authorised to manage.
