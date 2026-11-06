@@ -278,7 +278,72 @@ export function SchoolDetailWorkspace({ school: initialSchool, initialMembers, i
     }
   }
 
-  async function saveSchool(e: React.FormEvent) { e.preventDefault(); setPendingId("school"); setMessage(null); try { const supabase = client(); const { data, error } = await supabase.from("schools").update({ name: form.name, region: form.region || null, email_domain: form.email_domain || null, school_type: form.school_type || null, street: form.street || null, house_number: form.house_number || null, postal_code: form.postal_code || null, city: form.city || null, phone: form.phone || null, website: form.website || null, ...(isPlatformAdmin ? { email_domain: form.email_domain || null, student_count: form.student_count === null ? null : Number(form.student_count), status: form.status, plan: form.plan, funding_type: form.funding_type, internal_notes: form.internal_notes || null } : {}), updated_at: new Date().toISOString() }).eq("id", school.id).select(isPlatformAdmin ? "*" : "id, name, region, email_domain, school_type, street, house_number, postal_code, city, phone, website, student_count, status, plan, funding_type, school_image_path, school_image_position_x, school_image_position_y, school_image_zoom, created_at, updated_at").single(); if (error) throw error; setSchool(data); setForm(data); setEditing(false); setTab("overview"); setMessage("Schulprofil gespeichert."); } catch (error) { setMessage(error instanceof Error ? error.message : "Schulprofil konnte nicht gespeichert werden."); } finally { setPendingId(null); } }
+  async function saveSchool(e: React.FormEvent) {
+    e.preventDefault();
+    setPendingId("school");
+    setMessage(null);
+
+    try {
+      const supabase = client();
+      const updates = {
+        name: form.name,
+        region: form.region || null,
+        school_type: form.school_type || null,
+        street: form.street || null,
+        house_number: form.house_number || null,
+        postal_code: form.postal_code || null,
+        city: form.city || null,
+        phone: form.phone || null,
+        website: form.website || null,
+        ...(isPlatformAdmin
+          ? {
+              email_domain: form.email_domain || null,
+              student_count: form.student_count === null ? null : Number(form.student_count),
+              status: form.status,
+              plan: form.plan,
+              funding_type: form.funding_type,
+              internal_notes: form.internal_notes || null,
+            }
+          : {}),
+        updated_at: new Date().toISOString(),
+      };
+
+      const { error: updateError } = await supabase
+        .from("schools")
+        .update(updates)
+        .eq("id", school.id);
+      if (updateError) throw updateError;
+
+      let refreshedSchool: School;
+      if (isPlatformAdmin) {
+        const { data, error } = await supabase
+          .from("schools")
+          .select("*")
+          .eq("id", school.id)
+          .single();
+        if (error) throw error;
+        refreshedSchool = data;
+      } else {
+        const { data, error } = await supabase
+          .from("schools")
+          .select("id, name, region, email_domain, school_type, street, house_number, postal_code, city, phone, website, student_count, status, plan, funding_type, school_image_path, school_image_position_x, school_image_position_y, school_image_zoom, created_at, updated_at")
+          .eq("id", school.id)
+          .single();
+        if (error) throw error;
+        refreshedSchool = { ...data, internal_notes: null };
+      }
+
+      setSchool(refreshedSchool);
+      setForm(refreshedSchool);
+      setEditing(false);
+      setTab("overview");
+      setMessage("Schulprofil gespeichert.");
+    } catch (error) {
+      setMessage(error instanceof Error ? error.message : "Schulprofil konnte nicht gespeichert werden.");
+    } finally {
+      setPendingId(null);
+    }
+  }
 
   async function invite(e: React.FormEvent) { e.preventDefault(); setPendingId("invite"); setMessage(null); try { const supabase = client(); const { data: { session } } = await supabase.auth.getSession(); const response = await fetch(`${process.env.NEXT_PUBLIC_SUPABASE_URL}/functions/v1/provision-school-user`, { method: "POST", headers: { Authorization: `Bearer ${session?.access_token}`, "Content-Type": "application/json" }, body: JSON.stringify({ schoolId: school.id, email, displayName, role }) }); const data = await response.json(); if (!response.ok) throw new Error(data.error ?? "Einladung fehlgeschlagen"); setEmail(""); setDisplayName(""); setRole("teacher"); setShowInvite(false); setMessage("Einladung versendet und Schulrolle angelegt."); window.location.reload(); } catch (error) { setMessage(error instanceof Error ? error.message : "Einladung fehlgeschlagen"); } finally { setPendingId(null); } }
   async function changeRole(member: Member, nextRole: string) { if (nextRole === member.role) return; setPendingId(member.id); setMessage(null); const { error } = await client().from("school_memberships").update({ role: nextRole }).eq("id", member.id); if (error) setMessage(error.message); else { setMembers((c) => c.map((m) => m.id === member.id ? { ...m, role: nextRole } : m)); setMessage(`${member.display_name || member.email || "Person"} ist jetzt ${ROLE_LABELS[nextRole]}.`); } setPendingId(null); }
