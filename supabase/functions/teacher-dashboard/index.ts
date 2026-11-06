@@ -60,28 +60,12 @@ Deno.serve(async (req) => {
   }
 
   // ---------- Klassen-Modus ----------
-  // Named student-level data is reserved for school admins, school leadership
-  // and platform admins. Teachers receive the aggregate metrics only.
-  const { data: classScope } = await supabase
-    .from("class_instances")
-    .select("school_id")
-    .eq("id", classId)
-    .maybeSingle();
-
-  const { data: { user: dashboardUser } } = await supabase.auth.getUser();
-  const [{ data: schoolAdmin }, { data: platformAdmin }] = await Promise.all([
-    classScope?.school_id
-      ? supabase.from("school_memberships")
-          .select("role")
-          .eq("school_id", classScope.school_id)
-           .eq("user_id", dashboardUser?.id ?? "")
-          .eq("active", true)
-          .in("role", ["school_admin", "school_lead"])
-          .maybeSingle()
-      : Promise.resolve({ data: null }),
-    supabase.rpc("is_platform_admin"),
-  ]);
-  const canViewIndividualReports = Boolean(schoolAdmin || platformAdmin);
+  // The shared DB permission helper grants named student-level reporting to
+  // school admins/leads, platform admins and explicitly assigned class teachers.
+  // A plain class subscription does not grant individual reports.
+  const { data: canViewIndividualReports, error: reportPermissionError } = await supabase
+    .rpc("can_view_class_individual_reports", { p_class_id: classId });
+  if (reportPermissionError) return fail(reportPermissionError.message);
 
   const [competency, mission, activity, studentCompetency, studentEvidence, studentMissions, learningEvidence, bottlenecks, scenarioLearningCards] = await Promise.all([
     supabase.rpc("get_class_competency_overview", { p_class_id: classId }),

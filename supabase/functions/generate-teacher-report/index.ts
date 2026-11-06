@@ -99,8 +99,8 @@ Deno.serve(async (req) => {
   }
 
   // ----------------------------------------------------------
-  // Individual reports are restricted to school leadership/admins.
-  // Teachers may access aggregate class insights, never named reports.
+  // Individual reports are available to school leadership/admins and
+  // explicitly assigned class teachers. A class subscription alone is not enough.
   // ----------------------------------------------------------
 
   const { data: classScope, error: classScopeError } = await adminClient
@@ -130,9 +130,18 @@ Deno.serve(async (req) => {
       .maybeSingle(),
   ]);
 
-  if (!schoolAdmin && !platformAdmin) {
+  const { data: classTeacher } = await adminClient
+    .from("class_instance_teacher_roles")
+    .select("id")
+    .eq("class_instance_id", classId)
+    .eq("teacher_user_id", caller.id)
+    .eq("role", "class_teacher")
+    .eq("is_active", true)
+    .maybeSingle();
+
+  if (!schoolAdmin && !platformAdmin && !classTeacher) {
     return json(
-      { error: "Individuelle Schülerberichte sind ausschließlich für Schuladmins, Schulleitung und Plattformadmins freigegeben." },
+      { error: "Individuelle Schülerberichte sind nur für Schuladmins, Schulleitung, Plattformadmins und zugewiesene Klassenlehrkräfte freigegeben." },
       403
     );
   }
