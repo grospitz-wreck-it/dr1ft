@@ -17,5 +17,4 @@ revoke trigger, references on all tables in schema public
 alter default privileges for role postgres in schema public
   revoke trigger, references on tables from anon, authenticated;
 
-alter default privileges for role supabase_admin in schema public
-  revoke trigger, references on tables from anon, authenticated;
+-- The connected postgres role cannot alter supabase_admin-owned defaults.
