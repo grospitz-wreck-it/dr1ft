@@ -132,30 +132,22 @@ export default async function ClassDetailPage({
   const { data: canViewIndividualReports } = user
     ? await supabase.rpc("can_view_class_individual_reports", { p_class_id: classId })
     : { data: false };
-  // School admins and school leads may actively teach, but only after
-  // explicitly subscribing to this class. The subscription is the teaching
-  // relationship; the school role alone never grants module-report access.
+
+  const [{ data: canManageClassWorkspace }, { data: canManageClassImage }] = user
+    ? await Promise.all([
+        supabase.rpc("is_teacher_of_class_instance", { target_instance_id: classId }),
+        supabase.rpc("can_manage_class_image", { object_name: `${classId}/class-image` }),
+      ])
+    : [{ data: false }, { data: false }];
+
   const hasActiveTeachingSubscription = Boolean(teacherMembershipResult.data);
   const mayUseTeacherModules =
-    hasActiveTeachingSubscription &&
-    ["teacher", "school_admin", "school_lead"].includes(activeSchoolRole ?? "");
+    Boolean(canManageClassWorkspace) &&
+    (activeSchoolRole !== "teacher" || hasActiveTeachingSubscription);
 
   const availableTeacherModules = mayUseTeacherModules ? moduleLibrary.available : [];
-
   const teacherModules = mayUseTeacherModules ? moduleLibrary.assigned : [];
-
-  // The class visual belongs to the class workspace. Active teachers and
-  // school administrators may edit it; do not hide the editor just because
-  // a legacy teacher subscription has not been created for this class yet.
-  const currentUserClassRole = (roster ?? []).find(
-    (row: any) => row.user_id === user?.id && row.left_at == null,
-  )?.role ?? null;
-  const canEditClassImage =
-    isSchoolAdmin ||
-    currentUserClassRole === "teacher" ||
-    currentUserClassRole === "school_admin" ||
-    currentUserClassRole === "school_lead" ||
-    hasActiveTeachingSubscription;
+  const canEditClassImage = Boolean(canManageClassImage);
 
   const students = (roster ?? [])
     .filter((row: any) => row.role === "student")
