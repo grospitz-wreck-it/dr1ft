@@ -60,14 +60,37 @@ Deno.serve(async (req) => {
   }
 
   // ---------- Klassen-Modus ----------
+  // Named student-level data is reserved for school admins, school leadership
+  // and platform admins. Teachers receive the aggregate metrics only.
+  const { data: classScope } = await supabase
+    .from("class_instances")
+    .select("school_id")
+    .eq("id", classId)
+    .maybeSingle();
+
+  const { data: { user: dashboardUser } } = await supabase.auth.getUser();
+  const [{ data: schoolAdmin }, { data: platformAdmin }] = await Promise.all([
+    classScope?.school_id
+      ? supabase.from("school_memberships")
+          .select("role")
+          .eq("school_id", classScope.school_id)
+           .eq("user_id", dashboardUser?.id ?? "")
+          .eq("active", true)
+          .in("role", ["school_admin", "school_lead"])
+          .maybeSingle()
+      : Promise.resolve({ data: null }),
+    supabase.rpc("is_platform_admin"),
+  ]);
+  const canViewIndividualReports = Boolean(schoolAdmin || platformAdmin);
+
   const [competency, mission, activity, studentCompetency, studentEvidence, studentMissions, learningEvidence, bottlenecks, scenarioLearningCards] = await Promise.all([
     supabase.rpc("get_class_competency_overview", { p_class_id: classId }),
     supabase.rpc("get_class_mission_overview", { p_class_id: classId }),
     supabase.rpc("get_class_activity_overview", { p_class_id: classId }),
-    supabase.rpc("get_class_student_competency_progress", { p_class_id: classId }),
-    supabase.rpc("get_class_student_competency_evidence", { p_class_id: classId }),
-    supabase.rpc("get_class_student_mission_progress", { p_class_id: classId }),
-    supabase.rpc("get_class_student_learning_evidence_v1", { p_class_id: classId }),
+    canViewIndividualReports ? supabase.rpc("get_class_student_competency_progress", { p_class_id: classId }) : Promise.resolve({ data: [], error: null }),
+    canViewIndividualReports ? supabase.rpc("get_class_student_competency_evidence", { p_class_id: classId }) : Promise.resolve({ data: [], error: null }),
+    canViewIndividualReports ? supabase.rpc("get_class_student_mission_progress", { p_class_id: classId }) : Promise.resolve({ data: [], error: null }),
+    canViewIndividualReports ? supabase.rpc("get_class_student_learning_evidence_v1", { p_class_id: classId }) : Promise.resolve({ data: [], error: null }),
     supabase.rpc("get_class_mission_bottlenecks", { p_class_id: classId }),
     supabase.rpc("get_class_scenario_learning_card_insights_v1", { p_class_id: classId }),
   ]);

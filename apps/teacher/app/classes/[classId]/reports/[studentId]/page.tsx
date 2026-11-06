@@ -202,18 +202,29 @@ export default async function StudentReportPage({
     ? await supabase.from("school_memberships").select("role")
         .eq("school_id", classInfo.school_id).eq("user_id", user.id).eq("active", true).maybeSingle()
     : { data: null };
-  const isSchoolLeadership = schoolMembership?.role === "school_admin" || schoolMembership?.role === "school_lead";
+  const { data: isPlatformAdmin } = await supabase.rpc("is_platform_admin");
+  const isReportAdmin = Boolean(isPlatformAdmin) || schoolMembership?.role === "school_admin" || schoolMembership?.role === "school_lead";
+  if (!isReportAdmin) {
+    return (
+      <main className="min-h-screen bg-canvas px-4 py-10">
+        <section className="mx-auto max-w-3xl rounded-3xl border border-violet-100 bg-white p-7 shadow-sm">
+          <h1 className="text-xl font-bold text-slate-950">Einzelreports sind nicht freigegeben</h1>
+          <p className="mt-2 text-sm text-slate-600">Individuelle Schülerberichte sind ausschließlich für Schuladmins, Schulleitung und Plattformadmins verfügbar.</p>
+          <a href={`/classes/${classId}`} className="mt-5 inline-flex rounded-xl bg-violet-600 px-4 py-2.5 text-sm font-semibold text-white">Zur Klasse</a>
+        </section>
+      </main>
+    );
+  }
+
   const { data: assignedModules, error: assignmentsError } = await supabase
-    .from("teacher_class_module_assignments")
-    .select("module_id")
+    .from("class_instance_scenario_assignments")
+    .select("scenario_id")
     .eq("class_instance_id", classId)
-    .eq("teacher_user_id", user.id)
-    .eq("module_type", "scenario")
     .eq("is_active", true)
     .is("archived_at", null);
 
-  if (assignmentsError) throw new Error("Deine Modulzuweisungen konnten nicht geladen werden.");
-  const assignedScenarioIds = Array.from(new Set((assignedModules ?? []).map((row: any) => row.module_id)));
+  if (assignmentsError) throw new Error("Die aktiven Szenariozuweisungen konnten nicht geladen werden.");
+  const assignedScenarioIds = Array.from(new Set((assignedModules ?? []).map((row: any) => row.scenario_id)));
   const { data: scenarioRows } = assignedScenarioIds.length
     ? await supabase.from("scenarios").select("id, title, cover_image_url, learning_cards").in("id", assignedScenarioIds)
     : { data: [] as ScenarioMeta[] };
@@ -222,16 +233,14 @@ export default async function StudentReportPage({
   const requestedScenario = searchParams.scenario || "";
   const selectedScenario = assignedScenarios.find((item) => item.id === requestedScenario) ?? assignedScenarios[0] ?? null;
 
-  // School leadership receives aggregate reports only, even if a legacy or
-  // stale assignment row exists for the leadership account.
-  if (isSchoolLeadership || !selectedScenario) {
+  if (!selectedScenario) {
     return (
       <main className="min-h-screen bg-canvas px-4 py-10">
         <section className="mx-auto max-w-3xl overflow-hidden rounded-3xl border border-violet-100 bg-white shadow-sm">
           <div className="bg-[linear-gradient(110deg,#f5f0ff,#effaff)] px-6 py-7">
             <p className="text-[10px] font-black uppercase tracking-[.2em] text-violet-600">DR1FT / LEHRKRAFT</p>
-            <h1 className="mt-2 text-2xl font-bold text-slate-950">{isSchoolLeadership ? "Klassenreport statt Einzelauswertung" : "Keine zugewiesenen DR1FT-Module"}</h1>
-            <p className="mt-2 text-sm leading-6 text-slate-600">{isSchoolLeadership ? "Als Schuladmin oder Schulleitung erhältst du aggregierte Klassen- und Schulberichte. Individuelle Schülerreports sind in dieser Rolle nicht freigeschaltet." : "Für diese Klasse hast du aktuell keine aktive eigene Modulzuweisung. Individuelle Auswertungen werden ausschließlich für deine eigenen zugewiesenen Module freigeschaltet."}</p>
+            <h1 className="mt-2 text-2xl font-bold text-slate-950">Keine aktiven DR1FT-Module</h1>
+            <p className="mt-2 text-sm leading-6 text-slate-600">Für diese Klasse sind aktuell keine aktiven Szenarien für die Einzelauswertung vorhanden.</p>
           </div>
           <div className="p-6"><a href={`/classes/${classId}`} className="inline-flex items-center rounded-xl bg-violet-600 px-4 py-2.5 text-sm font-semibold text-white hover:bg-violet-700">Zur Klasse</a></div>
         </section>
