@@ -180,3 +180,15 @@ The anonymous-RPC migration was refined after checking all live RLS policy expre
 The live view `public.visible_content_for_user` remains an owner-rights (security-definer) view with broad `anon` and `authenticated` relation privileges. Its current definition returns live `content_items` joined through legacy `class_scenario_assignments` and `class_memberships`, filtered by `cm.user_id = auth.uid()`. The current Player feed page instead queries `content_items` and class-instance assignments directly; however, repository-wide consumers and the legacy teacher/editorial paths have not yet been conclusively traced.
 
 No change was made to this view. Converting it to `security_invoker` or revoking its grants without tracing every consumer and validating the underlying RLS behavior could silently remove legacy content access or change which content is visible. Treat the Security Advisor error as an open review item, not as a resolved finding.
+
+
+## Additional non-RLS table privilege finding (2026-11-06)
+
+A fresh live privilege inventory confirmed that both `anon` and `authenticated` have table-level `TRIGGER` and `REFERENCES` on the same 67 public relations that also carry the broad `TRUNCATE` grant. These privileges are not restricted by row-level security. The earlier `20261106120000_revoke_client_truncate_privileges.sql` removes `TRUNCATE`; a separate forward-only migration was added for the other two privileges:
+
+- `supabase/migrations/20261106170000_revoke_client_trigger_references.sql`
+- Revokes `TRIGGER` and `REFERENCES` from `anon` and `authenticated` across public relations.
+- Removes these two grants from future public-table defaults for `postgres` and `supabase_admin`.
+- Leaves `SELECT`, `INSERT`, `UPDATE` and `DELETE` unchanged. In particular, `DELETE` remains subject to RLS and must be reviewed table/policy by table/policy rather than revoked wholesale.
+
+No live privilege has been changed; this migration is source-only until explicitly approved and safely reconciled.
