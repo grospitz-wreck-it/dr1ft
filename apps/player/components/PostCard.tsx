@@ -415,20 +415,19 @@ export function PostCard({ item, userId, classInstanceId, initiallyLiked, onView
     setShareOpen(true);
     setShareLoading(true);
     setSelectedRecipients([]);
-    const { data: interactions } = await supabase
-      .from("user_interactions")
-      .select("user_id")
-      .eq("class_instance_id", classInstanceId)
-      .neq("user_id", userId)
-      .limit(500);
-    const ids = Array.from(new Set((interactions ?? []).map((row) => row.user_id).filter((id): id is string => Boolean(id))));
-    const { data: profiles } = ids.length
-      ? await supabase.from("user_profiles").select("id, display_name, username").in("id", ids).order("display_name")
-      : { data: [] as { id: string; display_name: string | null; username: string | null }[] };
-    setShareRecipients((profiles ?? []).map((profile) => ({
-      id: profile.id,
-      displayName: profile.display_name || profile.username || "DR1FT User",
-      username: profile.username || "user",
+    const { data: peers, error } = await supabase.rpc("get_student_class_peers", {
+      p_class_instance_id: classInstanceId,
+    });
+    if (error) {
+      console.error("[PostCard] Klassenkameraden konnten nicht geladen werden:", error);
+      showFeedback("Klassenkameraden konnten gerade nicht geladen werden.");
+      setShareLoading(false);
+      return;
+    }
+    setShareRecipients((peers ?? []).map((peer: { peer_user_id: string; display_name: string | null; username: string | null }) => ({
+      id: peer.peer_user_id,
+      displayName: peer.display_name || peer.username || "DR1FT User",
+      username: peer.username || "user",
     })));
     setShareLoading(false);
   }

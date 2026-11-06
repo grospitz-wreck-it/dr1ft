@@ -1,14 +1,15 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { ArrowLeft, Building2, ChevronDown, LogOut, MoreHorizontal, Pencil, Plus, Save, Settings, UserRound, Users, School as SchoolIcon, BarChart3, LayoutDashboard, X, ShieldCheck } from "lucide-react";
 import { createBrowserClient } from "@supabase/ssr";
 import { SchoolSsoSettings } from "./SchoolSsoSettings";
+import { SchoolClassMatrix } from "./SchoolClassMatrix";
 
 type School = { id: string; name: string; region: string | null; email_domain: string | null; school_type: string | null; street: string | null; house_number: string | null; postal_code: string | null; city: string | null; phone: string | null; website: string | null; student_count: number | null; status: string; plan: string; funding_type: string; internal_notes: string | null; school_image_path: string | null; school_image_position_x: number; school_image_position_y: number; school_image_zoom: number; created_at: string; updated_at: string };
 type Member = { id: string; user_id: string; email: string | null; display_name: string | null; role: string; active: boolean; created_at: string };
 type Stats = { total: number; teachers: number; admins: number; leads: number; classes: number };
-type SchoolClass = { id: string; name: string; grade_level: number | null; school_year: string; access_code: string | null; is_active: boolean; created_at: string; teachers: string[]; student_count?: number; scenario: { id: string; title: string; description: string | null; age_rating: string; is_active: boolean; assigned_at: string } | null };
+type SchoolClass = { id: string; name: string; grade_level: number | null; school_year: string; access_code: string | null; is_active: boolean; created_at: string; teachers: string[]; teacherUserIds: string[]; student_count?: number; scenario: { id: string; title: string; description: string | null; age_rating: string; is_active: boolean; assigned_at: string } | null };
 
 function client() { return createBrowserClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!); }
 const ROLE_LABELS: Record<string, string> = { teacher: "Lehrkraft", school_lead: "Schulleitung", school_admin: "Schuladmin" };
@@ -60,9 +61,12 @@ function regionLabel(value: string | null) {
 
 
 
-export function SchoolDetailWorkspace({ school: initialSchool, initialMembers, initialClasses, stats, isPlatformAdmin }: { school: School; initialMembers: Member[]; initialClasses: SchoolClass[]; stats: Stats; isPlatformAdmin: boolean }) {
+export function SchoolDetailWorkspace({ school: initialSchool, initialMembers, initialClasses, stats, isPlatformAdmin, canManageTeacherAssignments }: { school: School; initialMembers: Member[]; initialClasses: SchoolClass[]; stats: Stats; isPlatformAdmin: boolean; canManageTeacherAssignments: boolean }) {
   const [school, setSchool] = useState(initialSchool);
   const [members, setMembers] = useState(initialMembers);
+  const [classes, setClasses] = useState(initialClasses);
+  useEffect(() => { setClasses(initialClasses); }, [initialClasses]);
+  const [assignmentOpenId, setAssignmentOpenId] = useState<string | null>(null);
   const [tab, setTab] = useState<"overview" | "classes" | "people" | "insights" | "settings" | "sso">("overview");
   const [accountOpen, setAccountOpen] = useState(false);
   const [editing, setEditing] = useState(false);
@@ -274,12 +278,104 @@ export function SchoolDetailWorkspace({ school: initialSchool, initialMembers, i
     }
   }
 
-  async function saveSchool(e: React.FormEvent) { e.preventDefault(); setPendingId("school"); setMessage(null); try { const supabase = client(); const { data, error } = await supabase.from("schools").update({ name: form.name, region: form.region || null, email_domain: form.email_domain || null, school_type: form.school_type || null, street: form.street || null, house_number: form.house_number || null, postal_code: form.postal_code || null, city: form.city || null, phone: form.phone || null, website: form.website || null, student_count: form.student_count === null ? null : Number(form.student_count), status: form.status, plan: form.plan, funding_type: form.funding_type, internal_notes: form.internal_notes || null, updated_at: new Date().toISOString() }).eq("id", school.id).select("*").single(); if (error) throw error; setSchool(data); setForm(data); setEditing(false); setTab("overview"); setMessage("Schulprofil gespeichert."); } catch (error) { setMessage(error instanceof Error ? error.message : "Schulprofil konnte nicht gespeichert werden."); } finally { setPendingId(null); } }
+  async function saveSchool(e: React.FormEvent) {
+    e.preventDefault();
+    setPendingId("school");
+    setMessage(null);
+
+    try {
+      const supabase = client();
+      const updates = {
+        name: form.name,
+        region: form.region || null,
+        school_type: form.school_type || null,
+        street: form.street || null,
+        house_number: form.house_number || null,
+        postal_code: form.postal_code || null,
+        city: form.city || null,
+        phone: form.phone || null,
+        website: form.website || null,
+        ...(isPlatformAdmin
+          ? {
+              email_domain: form.email_domain || null,
+              student_count: form.student_count === null ? null : Number(form.student_count),
+              status: form.status,
+              plan: form.plan,
+              funding_type: form.funding_type,
+              internal_notes: form.internal_notes || null,
+            }
+          : {}),
+        updated_at: new Date().toISOString(),
+      };
+
+      const { error: updateError } = await supabase
+        .from("schools")
+        .update(updates)
+        .eq("id", school.id);
+      if (updateError) throw updateError;
+
+      let refreshedSchool: School;
+      if (isPlatformAdmin) {
+        const { data, error } = await supabase
+          .from("schools")
+          .select("*")
+          .eq("id", school.id)
+          .single();
+        if (error) throw error;
+        refreshedSchool = data;
+      } else {
+        const { data, error } = await supabase
+          .from("schools")
+          .select("id, name, region, email_domain, school_type, street, house_number, postal_code, city, phone, website, student_count, status, plan, funding_type, school_image_path, school_image_position_x, school_image_position_y, school_image_zoom, created_at, updated_at")
+          .eq("id", school.id)
+          .single();
+        if (error) throw error;
+        refreshedSchool = { ...data, internal_notes: null };
+      }
+
+      setSchool(refreshedSchool);
+      setForm(refreshedSchool);
+      setEditing(false);
+      setTab("overview");
+      setMessage("Schulprofil gespeichert.");
+    } catch (error) {
+      setMessage(error instanceof Error ? error.message : "Schulprofil konnte nicht gespeichert werden.");
+    } finally {
+      setPendingId(null);
+    }
+  }
 
   async function invite(e: React.FormEvent) { e.preventDefault(); setPendingId("invite"); setMessage(null); try { const supabase = client(); const { data: { session } } = await supabase.auth.getSession(); const response = await fetch(`${process.env.NEXT_PUBLIC_SUPABASE_URL}/functions/v1/provision-school-user`, { method: "POST", headers: { Authorization: `Bearer ${session?.access_token}`, "Content-Type": "application/json" }, body: JSON.stringify({ schoolId: school.id, email, displayName, role }) }); const data = await response.json(); if (!response.ok) throw new Error(data.error ?? "Einladung fehlgeschlagen"); setEmail(""); setDisplayName(""); setRole("teacher"); setShowInvite(false); setMessage("Einladung versendet und Schulrolle angelegt."); window.location.reload(); } catch (error) { setMessage(error instanceof Error ? error.message : "Einladung fehlgeschlagen"); } finally { setPendingId(null); } }
   async function changeRole(member: Member, nextRole: string) { if (nextRole === member.role) return; setPendingId(member.id); setMessage(null); const { error } = await client().from("school_memberships").update({ role: nextRole }).eq("id", member.id); if (error) setMessage(error.message); else { setMembers((c) => c.map((m) => m.id === member.id ? { ...m, role: nextRole } : m)); setMessage(`${member.display_name || member.email || "Person"} ist jetzt ${ROLE_LABELS[nextRole]}.`); } setPendingId(null); }
   async function setActive(member: Member, active: boolean) { setPendingId(member.id); const { error } = await client().from("school_memberships").update({ active }).eq("id", member.id); if (error) setMessage(error.message); else { setMembers((c) => c.map((m) => m.id === member.id ? { ...m, active } : m)); setMessage(active ? "Person wieder aktiviert." : "Person deaktiviert."); } setPendingId(null); }
   async function remove(member: Member) { if (!window.confirm(`${member.display_name || member.email || "Diese Person"} wirklich aus der Schule entfernen?`)) return; setPendingId(member.id); const { error } = await client().from("school_memberships").delete().eq("id", member.id); if (error) setMessage(error.message); else { setMembers((c) => c.filter((m) => m.id !== member.id)); setMessage("Person aus der Schule entfernt."); } setPendingId(null); }
+
+  async function toggleTeacherClassAssignment(member: Member, classId: string, assigned: boolean) {
+    const operationId = "assignment:" + member.id + ":" + classId;
+    setPendingId(operationId);
+    setMessage(null);
+    const { error } = await client().rpc(
+      assigned ? "assign_teacher_to_class_instance" : "unassign_teacher_from_class_instance",
+      { p_class_instance_id: classId, p_teacher_user_id: member.user_id },
+    );
+    if (error) {
+      setMessage(error.message);
+    } else {
+      setClasses((current) => current.map((item) => {
+        if (item.id !== classId) return item;
+        const teacherUserIds = assigned
+          ? Array.from(new Set([...item.teacherUserIds, member.user_id]))
+          : item.teacherUserIds.filter((id) => id !== member.user_id);
+        const teacherName = member.display_name || member.email || "Lehrkraft";
+        const teachers = assigned
+          ? Array.from(new Set([...item.teachers, teacherName]))
+          : item.teachers.filter((name) => name !== teacherName);
+        return { ...item, teacherUserIds, teachers };
+      }));
+      setMessage(assigned ? "Lehrkraft der Klasse zugeordnet." : "Lehrkraft aus der Klasse entfernt.");
+    }
+    setPendingId(null);
+  }
 
   async function saveMemberName(member: Member) {
     const name = editingMemberName.trim();
@@ -381,6 +477,14 @@ export function SchoolDetailWorkspace({ school: initialSchool, initialMembers, i
               </div>
 
               <div className="p-1.5">
+                <a
+                  href="/account"
+                  onClick={() => setAccountOpen(false)}
+                  className="flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-sm text-slate-700 transition hover:bg-canvas"
+                >
+                  <UserRound className="h-4 w-4 text-slate-400" />
+                  Mein Konto
+                </a>
                 <button
                   type="button"
                   onClick={() => {
@@ -392,7 +496,7 @@ export function SchoolDetailWorkspace({ school: initialSchool, initialMembers, i
                   className="flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-sm text-slate-700 transition hover:bg-canvas"
                 >
                   <Settings className="h-4 w-4 text-slate-400" />
-                  Einstellungen
+                  Schulprofil & Einstellungen
                 </button>
 
                 <button
@@ -424,6 +528,7 @@ export function SchoolDetailWorkspace({ school: initialSchool, initialMembers, i
         <main className="editorial-content">
           <div className="mx-auto max-w-[1440px]">
 
+    {tab !== "classes" && (
     <section className="group relative aspect-[16/7] min-h-[210px] overflow-hidden rounded-[1.75rem] bg-slate-950 text-white shadow-[0_16px_40px_rgba(15,23,42,0.16)] ring-1 ring-black/5 sm:aspect-[16/4.2]">
       {school.school_image_path ? (
         <img
@@ -481,6 +586,7 @@ export function SchoolDetailWorkspace({ school: initialSchool, initialMembers, i
         </div>
       </div>
     </section>
+    )}
 
     {message && <div className="mt-5 rounded-xl border border-border bg-panel px-4 py-3 text-sm text-slate-700">{message}</div>}
     {imageEditorOpen && (
@@ -751,6 +857,7 @@ export function SchoolDetailWorkspace({ school: initialSchool, initialMembers, i
                 </select>
               </label>
 
+              {isPlatformAdmin && (
               <label>
                 <span className="text-sm font-medium text-slate-700">Schul-E-Mail-Domain</span>
                 <input
@@ -760,7 +867,9 @@ export function SchoolDetailWorkspace({ school: initialSchool, initialMembers, i
                   className="mt-1.5 w-full rounded-xl border border-border bg-white px-3.5 py-2.5 text-sm text-slate-900"
                 />
               </label>
+              )}
 
+              {isPlatformAdmin && (
               <label>
                 <span className="text-sm font-medium text-slate-700">Schüler:innen</span>
                 <input
@@ -773,6 +882,7 @@ export function SchoolDetailWorkspace({ school: initialSchool, initialMembers, i
                   className="mt-1.5 w-full rounded-xl border border-border bg-white px-3.5 py-2.5 text-sm text-slate-900"
                 />
               </label>
+              )}
             </div>
           </section>
 
@@ -846,6 +956,7 @@ export function SchoolDetailWorkspace({ school: initialSchool, initialMembers, i
             </div>
           </section>
 
+          {isPlatformAdmin && (
           <section className="rounded-2xl border border-slate-200/80 bg-white p-6 shadow-[0_2px_12px_rgba(15,23,42,0.03)]">
             <div>
               <p className="text-xs font-semibold uppercase tracking-[0.14em] text-accent">
@@ -907,6 +1018,7 @@ export function SchoolDetailWorkspace({ school: initialSchool, initialMembers, i
               />
             </label>
           </section>
+          )}
 
           <div className="flex flex-col-reverse gap-2 border-t border-border pt-5 sm:flex-row sm:justify-end">
             <button
@@ -959,7 +1071,7 @@ export function SchoolDetailWorkspace({ school: initialSchool, initialMembers, i
             ["Schüler:innen", school.student_count?.toLocaleString("de-DE") ?? "—"],
             ["Lehrkräfte", String(stats.teachers)],
             ["Klassen", String(stats.classes)],
-            ["Aktive Klassen", String(initialClasses.filter((c) => c.is_active).length)],
+            ["Aktive Klassen", String(classes.filter((c) => c.is_active).length)],
           ].map(([label, value]) => (
             <div
               key={label}
@@ -1092,187 +1204,12 @@ export function SchoolDetailWorkspace({ school: initialSchool, initialMembers, i
       <section className="mt-6 space-y-6">
         <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
           <div>
-            <p className="text-xs font-semibold uppercase tracking-[0.14em] text-accent">
-              Schulbetrieb
-            </p>
-            <h2 className="mt-1.5 text-2xl font-semibold tracking-tight text-slate-950">
-              Klassen & Lehrkräfte
-            </h2>
-            <p className="mt-1.5 max-w-2xl text-sm leading-6 text-slate-500">
-              Klasseninstanzen, Besetzung und aktive DR1FT-Szenarien auf einen Blick.
-            </p>
-          </div>
-
-          <a
-            href="https://lehrkraft.dr1ft.de/classes"
-            target="_blank"
-            rel="noreferrer"
-            className="inline-flex shrink-0 items-center justify-center rounded-xl bg-slate-950 px-4 py-2.5 text-sm font-medium text-white transition hover:bg-slate-800"
-          >
-            Teacher-Dashboard öffnen →
-          </a>
-        </div>
-
-        <div className="flex flex-wrap items-center gap-x-8 gap-y-3 border-y border-border py-4">
-          <div>
-            <span className="text-xs text-slate-400">Klassen gesamt</span>
-            <span className="ml-2 text-sm font-semibold text-slate-900">
-              {initialClasses.length}
-            </span>
-          </div>
-          <div>
-            <span className="text-xs text-slate-400">Aktiv</span>
-            <span className="ml-2 text-sm font-semibold text-slate-900">
-              {initialClasses.filter((c) => c.is_active).length}
-            </span>
-          </div>
-          <div>
-            <span className="text-xs text-slate-400">Mit Szenario</span>
-            <span className="ml-2 text-sm font-semibold text-slate-900">
-              {initialClasses.filter((c) => c.scenario).length}
-            </span>
+            <p className="text-xs font-semibold uppercase tracking-[0.14em] text-accent">Schulbetrieb</p>
+            <h2 className="mt-1.5 text-2xl font-semibold tracking-tight text-slate-950">Klassen & Lehrkräfte</h2>
+            <p className="mt-1.5 max-w-2xl text-sm leading-6 text-slate-500">Die Klassen deiner Schule – organisiert nach Schuljahr und Jahrgang.</p>
           </div>
         </div>
-
-        {initialClasses.length > 0 ? (
-          <div className="grid gap-4 lg:grid-cols-2">
-            {initialClasses.map((c) => (
-              <article
-                key={c.id}
-                className="overflow-hidden rounded-2xl border border-border bg-panel transition hover:border-slate-300 hover:shadow-sm"
-              >
-                <div className="border-b border-border px-5 py-4">
-                  <div className="flex items-start justify-between gap-4">
-                    <div className="min-w-0">
-                      <div className="flex flex-wrap items-center gap-2">
-                        <span className="text-[11px] font-semibold uppercase tracking-[0.12em] text-slate-400">
-                          {c.school_year}
-                        </span>
-                        <span
-                          className={`rounded-full px-2 py-1 text-[11px] font-semibold ${
-                            c.is_active
-                              ? "bg-emerald-50 text-emerald-700"
-                              : "bg-slate-100 text-slate-500"
-                          }`}
-                        >
-                          {c.is_active ? "Aktiv" : "Pausiert"}
-                        </span>
-                      </div>
-
-                      <h3 className="mt-2 truncate text-lg font-semibold tracking-tight text-slate-950">
-                        {c.name}
-                      </h3>
-
-                      <p className="mt-0.5 text-sm text-slate-500">
-                        {c.grade_level
-                          ? `Jahrgang ${c.grade_level}`
-                          : "Jahrgang nicht hinterlegt"}
-                      </p>
-                    </div>
-
-                    <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-canvas text-sm font-semibold text-slate-600">
-                      {c.grade_level ?? "—"}
-                    </div>
-                  </div>
-
-                  <div className="mt-5 flex items-center gap-6">
-                    <div>
-                      <p className="text-[11px] font-medium text-slate-400">Schüler:innen</p>
-                      <p className="mt-0.5 text-base font-semibold text-slate-950">
-                        {c.student_count ?? 0}
-                      </p>
-                    </div>
-                    <div className="h-7 w-px bg-border" />
-                    <div>
-                      <p className="text-[11px] font-medium text-slate-400">Lehrkräfte</p>
-                      <p className="mt-0.5 text-base font-semibold text-slate-950">
-                        {c.teachers.length}
-                      </p>
-                    </div>
-                  </div>
-                </div>
-
-                <div className="px-5 py-4">
-                  <div>
-                    <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-accent">
-                      Aktives Szenario
-                    </p>
-                    <div className="mt-1 flex flex-wrap items-center gap-2">
-                      <p className="text-sm font-medium text-slate-900">
-                        {c.scenario?.title ?? "Noch kein Szenario"}
-                      </p>
-
-                      {c.scenario && (
-                        <span className="rounded-full bg-canvas px-2 py-1 text-[10px] font-medium text-slate-500">
-                          {c.scenario.age_rating === "all_ages"
-                            ? "Alle Altersstufen"
-                            : c.scenario.age_rating === "12_plus"
-                              ? "Ab 12"
-                              : c.scenario.age_rating === "16_plus"
-                                ? "Ab 16"
-                                : c.scenario.age_rating}
-                        </span>
-                      )}
-                    </div>
-
-                    {c.scenario?.description && (
-                      <p className="mt-1.5 line-clamp-2 text-xs leading-5 text-slate-500">
-                        {c.scenario.description}
-                      </p>
-                    )}
-                  </div>
-
-                  <div className="mt-4 flex flex-wrap items-center gap-2">
-                    {c.teachers.length ? (
-                      c.teachers.map((teacher) => (
-                        <span
-                          key={teacher}
-                          className="inline-flex items-center rounded-full bg-canvas px-2.5 py-1 text-xs font-medium text-slate-600"
-                        >
-                          {teacher}
-                        </span>
-                      ))
-                    ) : (
-                      <span className="text-xs text-slate-400">
-                        Noch keine Lehrkraft zugeordnet
-                      </span>
-                    )}
-                  </div>
-
-                  <div className="mt-4 flex flex-wrap items-center justify-between gap-3 border-t border-border pt-3">
-                    <div className="text-xs text-slate-400">
-                      Angelegt {new Date(c.created_at).toLocaleDateString("de-DE")}
-                      {c.access_code && (
-                        <span className="ml-2 font-mono text-[10px] text-slate-500">
-                          · Code {c.access_code}
-                        </span>
-                      )}
-                    </div>
-
-                    <a
-                      href={`https://lehrkraft.dr1ft.de/classes/${c.id}`}
-                      target="_blank"
-                      rel="noreferrer"
-                      className="inline-flex items-center text-xs font-medium text-slate-700 transition hover:text-slate-950"
-                    >
-                      Klasse öffnen →
-                    </a>
-                  </div>
-                </div>
-              </article>
-            ))}
-          </div>
-        ) : (
-          <div className="rounded-2xl border border-dashed border-border bg-panel p-12 text-center">
-            <Building2 className="mx-auto h-8 w-8 text-slate-300" />
-            <p className="mt-3 text-sm font-medium text-slate-700">
-              Noch keine Klassen angelegt
-            </p>
-            <p className="mt-1 text-sm text-slate-500">
-              Sobald Lehrkräfte Klasseninstanzen erstellen, erscheinen sie hier.
-            </p>
-          </div>
-        )}
+        <SchoolClassMatrix schoolId={school.id} initialClasses={classes} members={activeMembers} canManage={canManageTeacherAssignments || isPlatformAdmin} />
       </section>
     )}
 
@@ -1291,13 +1228,13 @@ export function SchoolDetailWorkspace({ school: initialSchool, initialMembers, i
         </div>
 
         {(() => {
-          const activeClasses = initialClasses.filter((c) => c.is_active);
-          const scenarioClasses = initialClasses.filter((c) => c.scenario);
-          const activeRate = initialClasses.length
-            ? Math.round((activeClasses.length / initialClasses.length) * 100)
+          const activeClasses = classes.filter((c) => c.is_active);
+          const scenarioClasses = classes.filter((c) => c.scenario);
+          const activeRate = classes.length
+            ? Math.round((activeClasses.length / classes.length) * 100)
             : 0;
-          const scenarioRate = initialClasses.length
-            ? Math.round((scenarioClasses.length / initialClasses.length) * 100)
+          const scenarioRate = classes.length
+            ? Math.round((scenarioClasses.length / classes.length) * 100)
             : 0;
           const averageClassSize =
             stats.classes > 0 && school.student_count
@@ -1317,7 +1254,7 @@ export function SchoolDetailWorkspace({ school: initialSchool, initialMembers, i
                     {scenarioRate} %
                   </p>
                   <p className="mt-1 text-xs text-slate-400">
-                    {scenarioClasses.length} von {initialClasses.length} Klassen
+                    {scenarioClasses.length} von {classes.length} Klassen
                   </p>
                 </div>
 
@@ -1327,7 +1264,7 @@ export function SchoolDetailWorkspace({ school: initialSchool, initialMembers, i
                     {activeRate} %
                   </p>
                   <p className="mt-1 text-xs text-slate-400">
-                    {activeClasses.length} von {initialClasses.length} Klassen
+                    {activeClasses.length} von {classes.length} Klassen
                   </p>
                 </div>
 
@@ -1381,7 +1318,7 @@ export function SchoolDetailWorkspace({ school: initialSchool, initialMembers, i
 
                   <div className="mt-3 flex items-center justify-between text-xs text-slate-400">
                     <span>{scenarioClasses.length} Klassen mit Szenario</span>
-                    <span>{initialClasses.length - scenarioClasses.length} ohne Szenario</span>
+                    <span>{classes.length - scenarioClasses.length} ohne Szenario</span>
                   </div>
                 </section>
 
@@ -1398,7 +1335,7 @@ export function SchoolDetailWorkspace({ school: initialSchool, initialMembers, i
                       <div className="flex items-center justify-between text-sm">
                         <span className="text-slate-500">Aktive Klassen</span>
                         <strong className="text-slate-900">
-                          {activeClasses.length} / {initialClasses.length}
+                          {activeClasses.length} / {classes.length}
                         </strong>
                       </div>
                       <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-canvas">
@@ -1429,12 +1366,12 @@ export function SchoolDetailWorkspace({ school: initialSchool, initialMembers, i
                       Einordnung
                     </p>
                     <p className="mt-1 text-sm text-slate-600">
-                      {initialClasses.length === 0
+                      {classes.length === 0
                         ? "Für diese Schule wurden noch keine Klasseninstanzen angelegt."
                         : scenarioRate === 100
                           ? "Alle Klassen verfügen bereits über ein aktives DR1FT-Szenario."
                           : scenarioRate > 0
-                            ? `${scenarioClasses.length} von ${initialClasses.length} Klassen arbeiten bereits mit einem DR1FT-Szenario.`
+                            ? `${scenarioClasses.length} von ${classes.length} Klassen arbeiten bereits mit einem DR1FT-Szenario.`
                             : "Noch keine Klasse arbeitet mit einem DR1FT-Szenario."}
                     </p>
                   </div>
@@ -1656,6 +1593,42 @@ export function SchoolDetailWorkspace({ school: initialSchool, initialMembers, i
                     </button>
                   </div>
                 </div>
+                {canManageTeacherAssignments && member.role === "teacher" && member.active && (
+                  <div className="mt-4 border-t border-border pt-3">
+                    <button
+                      type="button"
+                      onClick={() => setAssignmentOpenId((current) => current === member.id ? null : member.id)}
+                      className="text-xs font-semibold text-violet-700 hover:text-violet-900"
+                    >
+                      {assignmentOpenId === member.id ? "Klassen-Zuordnung schließen" : "Klassen zuordnen"}
+                    </button>
+                    {assignmentOpenId === member.id && (
+                      <div className="mt-3 grid gap-2 sm:grid-cols-2">
+                        {classes.map((schoolClass) => {
+                          const checked = schoolClass.teacherUserIds.includes(member.user_id);
+                          const operationId = "assignment:" + member.id + ":" + schoolClass.id;
+                          return (
+                            <label key={schoolClass.id} className="flex items-center gap-2 rounded-xl border border-border bg-white px-3 py-2 text-xs text-slate-700">
+                              <input
+                                type="checkbox"
+                                checked={checked}
+                                disabled={pendingId === operationId || (!schoolClass.is_active && !checked)}
+                                onChange={(event) => void toggleTeacherClassAssignment(member, schoolClass.id, event.target.checked)}
+                                className="h-4 w-4 rounded border-slate-300 text-violet-600 focus:ring-violet-500"
+                              />
+                              <span className="min-w-0 flex-1">
+                                <span className="block truncate font-semibold">{schoolClass.name}</span>
+                                <span className="block text-[10px] text-slate-400">Jahrgang {schoolClass.grade_level ?? "—"} · {schoolClass.school_year}</span>
+                              </span>
+                              {!schoolClass.is_active && <span className="text-[10px] text-slate-400">Inaktiv</span>}
+                            </label>
+                          );
+                        })}
+                        {classes.length === 0 && <p className="text-xs text-slate-400">Noch keine Klassen vorhanden.</p>}
+                      </div>
+                    )}
+                  </div>
+                )}
               </article>
             );
           })}

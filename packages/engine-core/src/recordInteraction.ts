@@ -16,7 +16,7 @@ export async function recordInteraction(
   params: {
     userId: string;
     contentItemId: string;
-    interactionType: InteractionType;
+    interactionType: Exclude<InteractionType, "comment">;
     classInstanceId: string;
     metadata?: Record<string, unknown>;
   }
@@ -32,12 +32,11 @@ export async function recordInteraction(
   // Persist first: the database trigger evaluates mission progress from this
   // row. Publishing before the insert could advance local engines even when
   // the durable interaction (and its mission trigger) failed.
-  const { error } = await supabase.from("user_interactions").insert({
-    user_id: userId,
-    content_item_id: contentItemId,
-    interaction_type: interactionType,
-    class_instance_id: classInstanceId,
-    metadata,
+  const { error } = await supabase.rpc("record_user_interaction", {
+    p_content_item_id: contentItemId,
+    p_interaction_type: interactionType,
+    p_class_instance_id: classInstanceId,
+    p_metadata: metadata,
   });
 
   if (error) {
@@ -48,13 +47,6 @@ export async function recordInteraction(
   // Local app engines are notified only after the database accepted the row.
   if (interactionType === "view") {
     await eventBus.emit({ type: "PostViewed", userId, contentItemId });
-  } else if (interactionType === "comment") {
-    await eventBus.emit({
-      type: "CommentCreated",
-      userId,
-      contentItemId,
-      body: String(metadata.body ?? ""),
-    });
   }
 
   return true;
