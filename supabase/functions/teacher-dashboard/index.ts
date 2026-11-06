@@ -79,11 +79,7 @@ Deno.serve(async (req) => {
           .in("role", ["school_admin", "school_lead"])
           .maybeSingle()
       : Promise.resolve({ data: null }),
-    supabase.from("platform_staff")
-      .select("user_id")
-      .eq("user_id", (await supabase.auth.getUser()).data.user?.id ?? "")
-      .eq("role", "platform_admin")
-      .maybeSingle(),
+    supabase.rpc("is_platform_admin"),
   ]);
   const canViewIndividualReports = Boolean(schoolAdmin || platformAdmin);
 
