@@ -1,0 +1,110 @@
+# DR1FT – Migration Source Reconciliation (2026-11-06)
+
+## Scope and safety
+
+This document records the read-only reconciliation of the remote Supabase migration history, the `security/hardening-phase-1` branch, and the current live schema.
+
+- No migration was replayed.
+- No SQL was applied to Supabase.
+- No production deployment or promotion was performed.
+- Applied migrations must not be edited or replayed to repair missing source files. Any required correction gets a new migration version.
+- Existing rollback basis: Git branch `backup/pre-security-repair-2026-11-04`, base commit `0d12136e8fe091b0abcd76742496c6b1176d5a84`; existing encrypted Supabase dump `dr1ft-supabase-backup-20261104-193330`. This work did not create another backup.
+
+## Reconciliation snapshot
+
+At the initial detailed comparison:
+
+- Remote migration history: 93 entries.
+- Local SQL files: 124.
+- Unique local version IDs: 122.
+- Exact version + filename matches: 59.
+- Same migration name at a different timestamp: 18.
+- Remote applied migration filenames without a local filename match: 16.
+- Local filenames not represented by remote history: 47 (45 unique local version IDs).
+- Duplicate local version groups:
+  - `20260930130000`: `enforce_one_active_class_module` and `teacher_workspace_hardening`.
+  - `20261104230000`: `restrict_class_membership_and_instance_grants` and `teacher_module_editor_posts_rpc`.
+- Duplicate-content files: `0031_fix_teacher_competency_rpc_types.sql` and `0032_fix_teacher_competency_rpc_types.sql` share blob SHA `1c04a02c93de430f36a2410f8c295db336b187b4`.
+
+The remote migration history includes the 16 entries below. Their absence from the local branch is a source-history gap, not evidence that the remote migrations were not applied.
+
+## Remote-only source files
+
+| Remote version | Migration | Source status |
+|---|---|---|
+| 20261104222042 | save_teacher_module_editor_rpc | Live function definition is reconstructable; original file not found |
+| 20261105062315 | allow_school_image_as_class_visual | Partially reconstructable from live helper/RPC and local visual migrations |
+| 20261105071625 | teacher_class_module_self_service_assignments | Live schema and RPC behavior are reconstructable |
+| 20261105071638 | school_staff_class_discovery_and_class_teacher_roles | Partially reconstructable from live tables, policies and helpers |
+| 20261105073339 | scope_individual_reports_to_teacher_module_assignments | Live scoped-report implementation is reconstructable |
+| 20261105073800 | make_scoped_student_report_independent_of_legacy_rpc | Live state confirmed; legacy report RPC is not granted to authenticated |
+| 20261105073903 | allow_subscribed_teachers_to_read_class_rosters | Live state confirmed in the membership/RLS model |
+| 20261105074036 | add_role_aware_aggregate_class_reporting | Live aggregate-report function is reconstructable |
+| 20261105074706 | backfill_teacher_scoped_assignments_from_legacy_assigners | Backfill history/data effects cannot be proven from current empty assignment tables |
+| 20261105074750 | add_fast_scoped_teacher_module_library_rpc | Live function definition is reconstructable |
+| 20261105074853 | backfill_legacy_assignments_with_original_teacher_attribution | Backfill history/data effects cannot be proven from current empty assignment tables |
+| 20261105074930 | restrict_individual_module_reports_to_teacher_role | Drift detected: the applied-history entry exists, but the live scoped-report RPC did not contain the teacher-role guard |
+| 20261105075630 | allow_school_leadership_to_teach_subscribed_classes | Live helper/assignment behavior confirmed |
+| 20261105190518 | platform_admin_teacher_class_assignments | Local equivalent exists in the platform-admin assignment migration |
+| 20261105201549 | archive_school_class_instance_and_skip_archived_rollover | Local archive/rollover implementation exists in `20261105200000_archive_school_class_instance.sql` |
+| 20261105201824 | delete_empty_school_class_instance | Local equivalent exists in `20261106080000_strict_single_class_delete_guard.sql`; live function intent matches |
+
+## Timestamp/name mappings
+
+These remote entries have matching local migration names but different timestamps. Do not rename or replay either side without an explicit reconciliation plan.
+
+- `20261104220252_security_hardening_phase_1` → `20261104180000_security_hardening_phase_1.sql`
+- `20261104220254_harden_student_message_reports` → `20261104190000_harden_student_message_reports.sql`
+- `20261104220257_revoke_client_execute_on_trigger_functions` → `20261104200000_revoke_client_execute_on_trigger_functions.sql`
+- `20261104220259_validate_student_promotion_source_membership` → `20261104210000_validate_student_promotion_source_membership.sql`
+- `20261104220301_scope_membership_helper_to_caller` → `20261104220000_scope_membership_helper_to_caller.sql`
+- `20261104220304_restrict_class_membership_and_instance_grants` → `20261104230000_restrict_class_membership_and_instance_grants.sql`
+- `20261104221729_teacher_module_editor_posts_rpc` → `20261104230000_teacher_module_editor_posts_rpc.sql`
+- `20261104220311_harden_legacy_class_memberships` → `20261104250000_harden_legacy_class_memberships.sql`
+- `20261104220313_school_lead_teacher_assignment_and_membership_scope` → `20261104260000_school_lead_teacher_assignment_and_membership_scope.sql`
+- `20261104220338_separate_school_lead_and_class_roster_access` → `20261104270000_separate_school_lead_and_class_roster_access.sql`
+- `20261105061023_add_class_visual_id` → `20261105100000_add_class_visual_id.sql`
+- `20261105061901_set_class_instance_visual_rpc` → `20261105113000_set_class_instance_visual_rpc.sql`
+- `20261105182222_school_year_class_matrix_and_rollover` → `20261105150000_school_year_class_matrix_and_rollover.sql`
+- `20261105190442_platform_admin_school_class_matrix_access` → `20261105173000_platform_admin_school_class_matrix_access.sql`
+- `20261105201509_archive_school_class_instance` → `20261105200000_archive_school_class_instance.sql`
+- `20261105202426_fix_school_year_short_format_validation` → `20261105210000_fix_school_year_short_format_validation.sql`
+- `20261105204355_fix_class_access_code_generation` → `20261105220000_fix_class_access_code_generation.sql`
+- `20261106064653_strict_single_class_delete_guard` → `20261106080000_strict_single_class_delete_guard.sql`
+
+## Live-state observations relevant to recovery
+
+The following assignment tables were empty at inspection time:
+
+| Table | Rows |
+|---|---:|
+| teacher_module_class_assignments | 0 |
+| teacher_class_module_assignments | 0 |
+| teacher_class_subscriptions | 0 |
+| class_instance_teacher_roles | 0 |
+
+This means there were no current rows to backfill from the legacy assignment model at inspection time. It does not prove that a historical backfill never ran.
+
+The live function `get_teacher_student_scenario_report_scoped_v1(uuid, uuid, uuid)` was SECURITY DEFINER, executable by `authenticated`, not executable by `anon`, and its definition did not contain a teacher-role check. The migration history nevertheless contained `20261105074930_restrict_individual_module_reports_to_teacher_role`. This is recorded as schema drift.
+
+The aggregate report function separately permits school leadership to obtain aggregate reporting. That access model must remain distinct from individual student reporting.
+
+## Corrective branch changes
+
+A new migration was added on `security/hardening-phase-1`:
+
+- `supabase/migrations/20261106110000_enforce_teacher_role_for_individual_reports.sql`
+- It adds a same-school active `teacher` membership check tied to the exact class, scenario assignment, subscription, school year and active time window.
+- It retains the existing module-assignment helper and active-student membership check as defense in depth.
+- It revokes execution from `PUBLIC` and `anon`, then grants to `authenticated` and `service_role`.
+- It has **not** been applied to Supabase.
+
+The teacher report page was also changed so school admins and school leads are returned to the aggregate-report path even if a stale/legacy individual assignment row exists.
+
+## Remaining verification before applying
+
+1. Validate the migration against a disposable/staging database before production.
+2. Test the report RPC as: assigned teacher (allowed), unassigned teacher (denied), school_admin (denied), school_lead (denied), student (denied), anonymous (denied).
+3. Confirm aggregate reporting remains available to the intended school leadership roles.
+4. Re-run Supabase Security Advisor and inspect function grants after the staged migration.
+5. Resolve the remaining missing-source mappings only where they materially affect future schema changes; do not manufacture historical backfill files.
