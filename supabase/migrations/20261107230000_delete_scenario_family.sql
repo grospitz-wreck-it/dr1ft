@@ -45,16 +45,21 @@ begin
   where coalesce(scenario_group, slug, id::text) = v_group;
 
   -- Remove conversations first: they contain NO ACTION references to content items.
+  -- Include scenario-owned replies/comments whose scenario_id is NULL but whose
+  -- parent_id points into the scenario's content tree.
+  with recursive family_content(id) as (
+    select id from public.content_items where scenario_id = any(v_scenario_ids)
+    union all
+    select child.id
+    from public.content_items child
+    join family_content parent on child.parent_id = parent.id
+  )
   delete from public.user_npc_conversations
   where creator_id in (
     select id from public.creators where scenario_id = any(v_scenario_ids)
   )
-  or current_content_item_id in (
-    select id from public.content_items where scenario_id = any(v_scenario_ids)
-  )
-  or pending_resume_content_id in (
-    select id from public.content_items where scenario_id = any(v_scenario_ids)
-  );
+  or current_content_item_id in (select id from family_content)
+  or pending_resume_content_id in (select id from family_content);
 
   -- These event tables use SET NULL on ordinary scenario deletion. For an explicit
   -- permanent family deletion, remove their scenario-owned records as well.
@@ -82,14 +87,19 @@ begin
        where sa.scenario_id = any(v_scenario_ids)
      );
 
+  with recursive family_content(id) as (
+    select id from public.content_items where scenario_id = any(v_scenario_ids)
+    union all
+    select child.id
+    from public.content_items child
+    join family_content parent on child.parent_id = parent.id
+  )
   delete from public.learning_result_events
   where scenario_id = any(v_scenario_ids)
      or mission_id in (
        select id from public.missions where scenario_id = any(v_scenario_ids)
      )
-     or content_item_id in (
-       select id from public.content_items where scenario_id = any(v_scenario_ids)
-     );
+     or content_item_id in (select id from family_content);
 
   delete from public.student_activity_time_events
   where scenario_id = any(v_scenario_ids);
