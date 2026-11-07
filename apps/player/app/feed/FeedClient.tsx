@@ -9,8 +9,7 @@ import { LearningCardFeedItem, type PlayerLearningCard } from "../../components/
 import { ReflectionOverlay } from "../../components/ReflectionOverlay";
 
 // Keep signed URLs across feed remounts/navigation and deduplicate concurrent
-// requests. Signed URLs are valid for 7 days; the browser can cache the actual
-// image independently for the object's Cache-Control lifetime.
+// requests. Use a conservative one-hour expiry compatible with Storage settings.
 const teacherModuleImageUrlCache = new Map<string, { url: string; expiresAt: number }>();
 const teacherModuleImageUrlPending = new Map<string, Promise<string | null>>();
 
@@ -21,7 +20,7 @@ function getTeacherModuleImageUrl(imagePath: string, supabase: ReturnType<typeof
   if (pending) return pending;
 
   const request = supabase.storage.from("teacher-module-assets")
-    .createSignedUrl(imagePath, 7 * 24 * 60 * 60)
+    .createSignedUrl(imagePath, 60 * 60)
     .then(({ data, error }) => {
       if (error || !data?.signedUrl) {
         console.error("[Player] teacher module image URL failed", { imagePath, message: error?.message });
@@ -29,7 +28,7 @@ function getTeacherModuleImageUrl(imagePath: string, supabase: ReturnType<typeof
       }
       teacherModuleImageUrlCache.set(imagePath, {
         url: data.signedUrl,
-        expiresAt: Date.now() + 7 * 24 * 60 * 60 * 1000,
+        expiresAt: Date.now() + 55 * 60 * 1000,
       });
       return data.signedUrl;
     })
@@ -367,7 +366,6 @@ export function FeedClient({ initialItems, teacherModules = [], userId, classIns
   </div>}
 </section>}{scenarioStarted&&!scenarioFinished&&learningCards.filter(card=>card.position==="before_feed").map(card=><LearningCardFeedItem key={card.id} card={card} classInstanceId={classInstanceId}/>)}
 {!scenarioFinished&&teacherModules.length>0&&<section className="space-y-5" aria-label="Lernmodule deiner Lehrkraft">
-  {!scenarioStarted&&<div className="flex justify-end"><button type="button" onClick={handleScenarioStart} className="inline-flex items-center gap-2 rounded-xl bg-gradient-to-r from-violet-600 to-fuchsia-600 px-5 py-3 text-sm font-bold text-white shadow-md">Lernmodul starten <ArrowRight className="h-4 w-4"/></button></div>}
   {teacherModules.map((module)=><article key={module.id} className="overflow-hidden rounded-[26px] border border-violet-100 bg-white/95 shadow-sm">
     {module.title_card_enabled!==false&&<header className="border-b border-violet-100 bg-gradient-to-r from-violet-50 via-white to-cyan-50 px-5 py-5 sm:px-6">
       <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-violet-600">Lernmodul</p>
