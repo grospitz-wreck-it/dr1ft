@@ -151,6 +151,10 @@ export async function saveTeacherCreatedModule(formData: FormData) {
   console.info("[teacher-module-publish] stage", stage, new Date().toISOString());
   for (let index = 0; index < posts.length; index++) {
     const post = posts[index];
+    const postStartedAt = Date.now();
+    console.info("[teacher-module-publish] post started", {
+      index, postType: post.postType, hasImageField: Boolean(post.imageField),
+    });
     if (!post.id || !["text", "image", "embed", "mixed", "poll", "true_false"].includes(post.postType)) throw new Error("Ungültiger Beitrag.");
     // Always let the server mint the database primary key. Client draft IDs are
     // only correlation keys for uploaded files and must never become DB IDs.
@@ -163,8 +167,21 @@ export async function saveTeacherCreatedModule(formData: FormData) {
         throw new Error("Bilder müssen vor dem Upload in WebP umgewandelt werden und dürfen maximal 8 MB groß sein.");
       }
       imagePath = `${schoolId}/${module.id}/${postId}.webp`;
+      const uploadStartedAt = Date.now();
+      console.info("[teacher-module-publish] image upload started", {
+        index, sizeBytes: file.size, mimeType: file.type,
+      });
       const { error: uploadError } = await supabase.storage.from("teacher-module-assets").upload(imagePath, file, { contentType: file.type, upsert: true });
-      if (uploadError) throw new Error(uploadError.message);
+      if (uploadError) {
+        console.error("[teacher-module-publish] image upload failed", {
+          index, durationMs: Date.now() - uploadStartedAt,
+          code: uploadError.name, message: uploadError.message,
+        });
+        throw new Error("Bild-Upload fehlgeschlagen: " + uploadError.message);
+      }
+      console.info("[teacher-module-publish] image upload success", {
+        index, durationMs: Date.now() - uploadStartedAt,
+      });
     }
     rows.push({
       id: postId,
@@ -179,12 +196,27 @@ export async function saveTeacherCreatedModule(formData: FormData) {
       sort_order: index,
       status: "published",
     });
+    console.info("[teacher-module-publish] post processed", {
+      index, durationMs: Date.now() - postStartedAt,
+    });
   }
 
   stage = "Beiträge in Supabase speichern";
   console.info("[teacher-module-publish] stage", stage, new Date().toISOString());
+  const postsInsertStartedAt = Date.now();
+  console.info("[teacher-module-publish] posts insert started", { count: rows.length });
   const { error: postsError } = await supabase.from("teacher_module_posts").insert(rows);
-  if (postsError) throw new Error(postsError.message);
+  if (postsError) {
+    console.error("[teacher-module-publish] posts insert failed", {
+      count: rows.length, durationMs: Date.now() - postsInsertStartedAt,
+      code: postsError.code, message: postsError.message,
+      details: postsError.details, hint: postsError.hint,
+    });
+    throw new Error("Beiträge konnten nicht gespeichert werden: " + postsError.message);
+  }
+  console.info("[teacher-module-publish] posts insert success", {
+    count: rows.length, durationMs: Date.now() - postsInsertStartedAt,
+  });
 
   stage = "Modul der Klasse zuordnen";
   console.info("[teacher-module-publish] stage", stage, new Date().toISOString());
