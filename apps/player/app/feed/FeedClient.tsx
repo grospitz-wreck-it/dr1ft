@@ -8,6 +8,41 @@ import { PostCard } from "../../components/PostCard";
 import { LearningCardFeedItem, type PlayerLearningCard } from "../../components/LearningCardFeedItem";
 import { ReflectionOverlay } from "../../components/ReflectionOverlay";
 
+// Keep signed URLs across feed remounts/navigation and deduplicate concurrent
+// requests. Signed URLs are valid for 7 days; the browser can cache the actual
+// image independently for the object's Cache-Control lifetime.
+const teacherModuleImageUrlCache = new Map<string, { url: string; expiresAt: number }>();
+const teacherModuleImageUrlPending = new Map<string, Promise<string | null>>();
+
+function getTeacherModuleImageUrl(imagePath: string, supabase: ReturnType<typeof supabaseBrowserClient>) {
+  const cached = teacherModuleImageUrlCache.get(imagePath);
+  if (cached && cached.expiresAt > Date.now() + 60_000) return Promise.resolve(cached.url);
+  const pending = teacherModuleImageUrlPending.get(imagePath);
+  if (pending) return pending;
+
+  const request = supabase.storage.from("teacher-module-assets")
+    .createSignedUrl(imagePath, 7 * 24 * 60 * 60)
+    .then(({ data, error }) => {
+      if (error || !data?.signedUrl) {
+        console.error("[Player] teacher module image URL failed", { imagePath, message: error?.message });
+        return null;
+      }
+      teacherModuleImageUrlCache.set(imagePath, {
+        url: data.signedUrl,
+        expiresAt: Date.now() + 7 * 24 * 60 * 60 * 1000,
+      });
+      return data.signedUrl;
+    })
+    .catch((error) => {
+      console.error("[Player] teacher module image URL failed", error);
+      return null;
+    })
+    .finally(() => teacherModuleImageUrlPending.delete(imagePath));
+
+  teacherModuleImageUrlPending.set(imagePath, request);
+  return request;
+}
+
 function TeacherModuleImage({ imagePath, alt }: { imagePath: string; alt: string }) {
   const supabase = supabaseBrowserClient();
   const [src, setSrc] = useState<string | null>(null);
@@ -25,7 +60,7 @@ function TeacherModuleImage({ imagePath, alt }: { imagePath: string; alt: string
   }, [imagePath, supabase]);
   return <div className="post-media-stage relative isolate mx-2 overflow-hidden rounded-[22px] sm:mx-3">
     <div aria-hidden="true" className="post-media-pattern pointer-events-none absolute inset-0"/>
-    {src ? <img src={src} alt={alt} loading="lazy" className="post-media-image relative z-[1] mx-auto block h-auto max-h-[75vh] w-auto max-w-full object-contain" onError={() => setFailed(true)}/> :
+    {src ? <img src={src} alt={alt} loading="eager" fetchPriority="high" decoding="async" className="post-media-image relative z-[1] mx-auto block h-auto max-h-[75vh] w-auto max-w-full object-contain" onError={() => setFailed(true)}/> :
       <div className="relative z-[1] grid min-h-56 w-full place-items-center text-sm font-medium text-violet-500">{failed ? "Bild konnte nicht geladen werden" : "Bild wird geladen …"}</div>}
   </div>;
 }
