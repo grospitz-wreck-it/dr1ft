@@ -54,6 +54,78 @@ Deno.serve(async (req) => {
   const password = generateTempPassword();
 
   const adminClient = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!);
+  // If the same username belongs to a student who was previously removed
+  // from this exact class, reactivate that account instead of creating a duplicate.
+  const { data: existingProfile, error: profileLookupError } = await adminClient
+    .from("user_profiles")
+    .select("id, username")
+    .ilike("username", username)
+    .maybeSingle();
+  if (profileLookupError) return json({ error: "Vorhandenes Schülerkonto konnte nicht geprüft werden." }, 500);
+
+  if (existingProfile) {
+    const { data: previousMembership, error: membershipLookupError } = await adminClient
+      .from("class_instance_memberships")
+      .select("id, left_at")
+      .eq("class_instance_id", classId)
+      .eq("user_id", existingProfile.id)
+      .eq("role", "student")
+      .maybeSingle();
+    if (membershipLookupError) return json({ error: "Frühere Klassenmitgliedschaft konnte nicht geprüft werden." }, 500);
+    if (!previousMembership || !previousMembership.left_at) {
+      return json({ error: "Dieser Nutzername ist bereits vergeben." }, 409);
+    }
+
+    const { data: activeElsewhere, error: activeElsewhereError } = await adminClient
+      .from("class_instance_memberships")
+      .select("id")
+      .eq("user_id", existingProfile.id)
+      .eq("role", "student")
+      .is("left_at", null)
+      .neq("class_instance_id", classId)
+      .maybeSingle();
+    if (activeElsewhereError) return json({ error: "Aktive Klassenmitgliedschaften konnten nicht geprüft werden." }, 500);
+    if (activeElsewhere) {
+      return json({ error: "Dieses Schülerkonto ist bereits einer anderen aktiven Klasse zugeordnet." }, 409);
+    }
+
+    const { error: authUpdateError } = await adminClient.auth.admin.updateUserById(existingProfile.id, {
+      email,
+      password,
+      user_metadata: { display_name: displayName, username, class_instance_id: classId },
+      app_metadata: { require_password_change: true },
+    });
+    if (authUpdateError) {
+      if (authUpdateError.message.toLowerCase().includes("already") || authUpdateError.message.toLowerCase().includes("duplicate")) {
+        return json({ error: "Dieser Nutzername ist bereits vergeben." }, 409);
+      }
+      return json({ error: authUpdateError.message }, 500);
+    }
+
+    const { error: profileUpdateError } = await adminClient.from("user_profiles")
+      .update({ display_name: displayName, username })
+      .eq("id", existingProfile.id);
+    if (profileUpdateError) return json({ error: profileUpdateError.message }, 500);
+
+    const { error: reactivateError } = await adminClient.from("class_instance_memberships")
+      .update({ left_at: null, joined_at: new Date().toISOString() })
+      .eq("id", previousMembership.id);
+    if (reactivateError) return json({ error: reactivateError.message }, 500);
+
+    const { data: callerData } = await callerClient.auth.getUser();
+    const { error: credentialError } = await adminClient.rpc("store_student_onboarding_credential", {
+      p_class_id: classId, p_student_user_id: existingProfile.id, p_username: username, p_password: password, p_created_by: callerData.user?.id,
+    });
+    if (credentialError) {
+      console.error("[create-student-account] credential refresh failed after reactivation", {
+        studentId: existingProfile.id, classId, message: credentialError.message,
+      });
+      return json({ error: "Konto wurde reaktiviert, aber die neuen Zugangsdaten konnten nicht für den Druck hinterlegt werden. Bitte Passwort zurücksetzen." }, 500);
+    }
+
+    return json({ student: { id: existingProfile.id, displayName, username }, tempPassword: password, reactivated: true });
+  }
+
   const { data: created, error: createError } = await adminClient.auth.admin.createUser({
     email, password, email_confirm: true,
     user_metadata: { display_name: displayName, username, class_instance_id: classId },
