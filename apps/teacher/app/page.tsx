@@ -11,6 +11,7 @@ import {
   Send,
   Users,
 } from "lucide-react";
+import Link from "next/link";
 import { supabaseServerClient } from "../lib/supabaseServerClient";
 
 export default async function TeacherHomePage() {
@@ -241,7 +242,7 @@ function Metric({ label, value, detail, icon, tone, href }: {
   href: string;
 }) {
   return (
-    <a href={href} className="drift-stat-card group flex items-center gap-3 border-slate-200/80 bg-white/90 transition hover:-translate-y-0.5 hover:border-violet-200 hover:shadow-lg">
+    <Link href={href} className="drift-stat-card group flex items-center gap-3 border-slate-200/80 bg-white/90 transition hover:-translate-y-0.5 hover:border-violet-200 hover:shadow-lg">
       <span className={`drift-stat-icon h-14 w-14 rounded-2xl ${tone === "violet" ? "drift-violet" : tone === "cyan" ? "drift-cyan" : "drift-pink"}`}>{icon}</span>
       <span className="min-w-0 flex-1">
         <span className="block text-2xl font-extrabold leading-none tracking-tight text-slate-950">{value}</span>
@@ -249,7 +250,7 @@ function Metric({ label, value, detail, icon, tone, href }: {
         <span className="mt-0.5 block text-[11px] text-slate-400">{detail}</span>
       </span>
       <ArrowRight className="h-4 w-4 shrink-0 text-slate-300 transition group-hover:translate-x-1 group-hover:text-violet-600" />
-    </a>
+    </Link>
   );
 }
 
