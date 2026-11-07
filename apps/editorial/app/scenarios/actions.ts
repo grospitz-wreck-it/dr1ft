@@ -1047,6 +1047,29 @@ export async function updateScenarioBasics(scenarioId: string, formData: FormDat
     throw new Error("Bitte eine gültige Altersgruppe auswählen.");
   }
 
+  const { data: currentScenario, error: currentScenarioError } = await supabase
+    .from("scenarios")
+    .select("scenario_group")
+    .eq("id", scenarioId)
+    .single();
+  if (currentScenarioError || !currentScenario) {
+    throw new Error(currentScenarioError?.message ?? "Szenario nicht gefunden.");
+  }
+
+  if (currentScenario.scenario_group) {
+    const { data: conflictingVariant, error: variantError } = await supabase
+      .from("scenarios")
+      .select("id")
+      .eq("scenario_group", currentScenario.scenario_group)
+      .eq("age_band", ageBand)
+      .neq("id", scenarioId)
+      .maybeSingle();
+    if (variantError) throw new Error(variantError.message);
+    if (conflictingVariant) {
+      throw new Error("In dieser Szenario-Familie gibt es bereits eine Variante für diese Altersgruppe.");
+    }
+  }
+
   const ageRating = ageBand === "16_17" || ageBand === "18_plus" ? "16_plus" : "12_plus";
   const { error } = await supabase
     .from("scenarios")
