@@ -38,29 +38,29 @@ export default async function FeedPage() {
   // the assigned IDs. This removes another serial request without widening scope.
   // Keep these policy-heavy reads sequential: the feed already performs many
   // concurrent database reads, and parallel RLS evaluation can amplify load.
-  const teacherModuleRows = teacherModuleIds.length
-    ? await supabase.from("teacher_modules")
-        .select("id,title,description,intro_title,intro_text,title_card_enabled")
-        .in("id", teacherModuleIds)
-        .eq("status", "published")
-    : { data: [] as any[], error: null };
+  const [{ data: teacherModuleRowsData, error: teacherModuleRowsError }, { data: teacherModulePostsData, error: teacherModulePostsError }] = teacherModuleIds.length
+    ? await Promise.all([
+        supabase.from("teacher_modules")
+          .select("id,title,description,intro_title,intro_text,title_card_enabled")
+          .in("id", teacherModuleIds)
+          .eq("status", "published"),
+        supabase.from("teacher_module_posts")
+          .select("id,module_id,post_type,title,body,image_path,embed_provider,embed_url,interaction_data,sort_order")
+          .in("module_id", teacherModuleIds)
+          .eq("status", "published")
+          .order("sort_order", { ascending: true }),
+      ])
+    : [{ data: [] as any[], error: null }, { data: [] as any[], error: null }];
+  const teacherModuleRows = { data: teacherModuleRowsData, error: teacherModuleRowsError };
+  const teacherModulePostResult = { data: teacherModulePostsData, error: teacherModulePostsError };
   if (teacherModuleRows.error) {
     console.error("[player-feed] teacher_modules query failed", {
-      code: teacherModuleRows.error.code,
-      message: teacherModuleRows.error.message,
+      code: teacherModuleRows.error.code, message: teacherModuleRows.error.message,
     });
   }
-  const teacherModulePostResult = teacherModuleIds.length
-    ? await supabase.from("teacher_module_posts")
-        .select("id,module_id,post_type,title,body,image_path,embed_provider,embed_url,interaction_data,sort_order")
-        .in("module_id", teacherModuleIds)
-        .eq("status", "published")
-        .order("sort_order", { ascending: true })
-    : { data: [] as any[], error: null };
   if (teacherModulePostResult.error) {
     console.error("[player-feed] teacher_module_posts query failed", {
-      code: teacherModulePostResult.error.code,
-      message: teacherModulePostResult.error.message,
+      code: teacherModulePostResult.error.code, message: teacherModulePostResult.error.message,
     });
   }
 
@@ -94,13 +94,10 @@ export default async function FeedPage() {
   });
   const assignedScenarioIds: string[] = Array.from(new Set<string>(availableAssignments.map((a: any) => a.scenario_id)));
   const { data: assignedScenarios } = assignedScenarioIds.length
-    ? await supabase.from("scenarios").select("id, title, description, ambient_density, cover_image_url").in("id", assignedScenarioIds).order("created_at", { ascending: true })
+    ? await supabase.from("scenarios").select("id, title, description, ambient_density, cover_image_url, learning_cards").in("id", assignedScenarioIds).order("created_at", { ascending: true })
     : { data: [] as { id: string; title: string; description: string | null; ambient_density: string | null }[] };
   const scenarioIntros = assignedScenarios ?? [];
-  const { data: scenarioLearningCardRows } = assignedScenarioIds.length
-    ? await supabase.from("scenarios").select("id,title,learning_cards").in("id", assignedScenarioIds)
-    : { data: [] as { id: string; title: string; learning_cards: unknown }[] };
-  const scenarioLearningCards = (scenarioLearningCardRows ?? []).flatMap((scenario: any) =>
+  const scenarioLearningCards = (scenarioIntros ?? []).flatMap((scenario: any) =>
     (Array.isArray(scenario.learning_cards) ? scenario.learning_cards : [])
       .filter((card: any) => card && typeof card.id === "string" && typeof card.title === "string" && typeof card.prompt === "string" && Array.isArray(card.options))
       .map((card: any) => ({
