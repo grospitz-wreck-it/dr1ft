@@ -220,14 +220,44 @@ export async function saveTeacherCreatedModule(formData: FormData) {
 
   stage = "Modul der Klasse zuordnen";
   console.info("[teacher-module-publish] stage", stage, new Date().toISOString());
+  const { error: subscriptionError } = await supabase.rpc("subscribe_teacher_to_class_instance", {
+    p_class_instance_id: classInstanceId,
+  });
+  if (subscriptionError) throw new Error(subscriptionError.message);
+
+  const { data: subscription, error: subscriptionLookupError } = await supabase
+    .from("teacher_class_subscriptions")
+    .select("id,school_year")
+    .eq("class_instance_id", classInstanceId)
+    .eq("teacher_user_id", user.id)
+    .eq("is_active", true)
+    .maybeSingle();
+  if (subscriptionLookupError || !subscription) {
+    throw new Error("Klassenabonnement konnte nicht angelegt werden.");
+  }
+
   const { error: assignmentError } = await supabase.from("teacher_module_class_assignments").insert({
+    subscription_id: subscription.id,
+    school_id: schoolId,
+    class_instance_id: classInstanceId,
+    teacher_user_id: user.id,
+    school_year: subscription.school_year,
+    module_type: "teacher_module",
+    module_id: module.id,
+    assigned_by: user.id,
+    is_active: false,
+  });
+  if (assignmentError) throw new Error(assignmentError.message);
+
+  // Keep the legacy assignment in sync for older class views.
+  const { error: legacyAssignmentError } = await supabase.from("teacher_module_class_assignments").insert({
     module_id: module.id,
     school_id: schoolId,
     class_instance_id: classInstanceId,
     assigned_by: user.id,
-    is_active: true,
+    is_active: false,
   });
-  if (assignmentError) throw new Error(assignmentError.message);
+  if (legacyAssignmentError) throw new Error(legacyAssignmentError.message);
 
   stage = "Modul veröffentlichen";
   console.info("[teacher-module-publish] stage", stage, new Date().toISOString());
@@ -482,10 +512,12 @@ export async function setTeacherModuleAssignmentActive(classInstanceId: string, 
   if (!user) throw new Error("Nicht authentifiziert.");
 
   const { data: assignment, error: assignmentError } = await supabase
-    .from("teacher_module_class_assignments")
-    .select("id,school_id,class_instance_id,assigned_by")
+    .from("teacher_class_module_assignments")
+    .select("id,school_id,class_instance_id")
     .eq("id", assignmentId)
     .eq("class_instance_id", classInstanceId)
+    .eq("teacher_user_id", user.id)
+    .eq("module_type", "teacher_module")
     .maybeSingle();
   if (assignmentError || !assignment) throw new Error("Modulzuordnung nicht gefunden.");
 
@@ -512,10 +544,18 @@ export async function setTeacherModuleAssignmentActive(classInstanceId: string, 
   if (!isSchoolAdmin && !isClassTeacher) throw new Error("Du darfst dieses Modul nicht verwalten.");
 
   const { error } = await supabase
-    .from("teacher_module_class_assignments")
+    .from("teacher_class_module_assignments")
     .update({ is_active: active })
     .eq("id", assignmentId)
-    .eq("class_instance_id", classInstanceId);
+    .eq("class_instance_id", classInstanceId)
+    .eq("teacher_user_id", user.id)
+    .eq("module_type", "teacher_module");
+  if (!error) {
+    await supabase.from("teacher_module_class_assignments")
+      .update({ is_active: active })
+      .eq("module_id", (assignment as any).module_id)
+      .eq("class_instance_id", classInstanceId);
+  }
   if (error) throw new Error(error.message);
   revalidatePath(`/classes/${classInstanceId}`);
 }
@@ -524,17 +564,24 @@ export async function archiveTeacherModuleAssignment(classInstanceId: string, as
   const supabase = supabaseServerClient();
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) throw new Error("Nicht authentifiziert.");
-  const { data: assignment, error: lookupError } = await supabase.from("teacher_module_class_assignments")
-    .select("id,school_id").eq("id", assignmentId).eq("class_instance_id", classInstanceId).maybeSingle();
+  const { data: assignment, error: lookupError } = await supabase.from("teacher_class_module_assignments")
+    .select("id,school_id,module_id").eq("id", assignmentId).eq("class_instance_id", classInstanceId)
+    .eq("teacher_user_id", user.id).eq("module_type", "teacher_module").maybeSingle();
   if (lookupError || !assignment) throw new Error("Modulzuordnung nicht gefunden.");
   const { data: admin } = await supabase.from("school_memberships").select("role")
     .eq("school_id", assignment.school_id).eq("user_id", user.id).eq("active", true).maybeSingle();
   const { data: teacher } = await supabase.from("class_instance_memberships").select("id")
     .eq("class_instance_id", classInstanceId).eq("user_id", user.id).eq("role", "teacher").is("left_at", null).maybeSingle();
   if (admin?.role !== "school_admin" && !teacher) throw new Error("Du darfst dieses Modul nicht archivieren.");
-  const { error } = await supabase.from("teacher_module_class_assignments")
-    .update({ archived_at: new Date().toISOString(), is_active: false })
-    .eq("id", assignmentId).eq("class_instance_id", classInstanceId);
+  const archivedAt = new Date().toISOString();
+  const { error } = await supabase.from("teacher_class_module_assignments")
+    .update({ archived_at: archivedAt, is_active: false })
+    .eq("id", assignmentId).eq("class_instance_id", classInstanceId).eq("teacher_user_id", user.id);
+  if (!error) {
+    await supabase.from("teacher_module_class_assignments")
+      .update({ archived_at: archivedAt, is_active: false })
+      .eq("module_id", (assignment as any).module_id).eq("class_instance_id", classInstanceId);
+  }
   if (error) throw new Error(error.message);
   revalidatePath("/classes/" + classInstanceId);
 }
@@ -573,10 +620,12 @@ export async function updateTeacherModuleSchedule(classInstanceId: string, assig
   if (startAt && endAt && new Date(endAt) <= new Date(startAt)) throw new Error("Das Ende muss nach dem Start liegen.");
 
   const { data: assignment, error: lookupError } = await supabase
-    .from("teacher_module_class_assignments")
+    .from("teacher_class_module_assignments")
     .select("id,school_id")
     .eq("id", assignmentId)
     .eq("class_instance_id", classInstanceId)
+    .eq("teacher_user_id", user.id)
+    .eq("module_type", "teacher_module")
     .maybeSingle();
   if (lookupError || !assignment) throw new Error("Modulzuordnung nicht gefunden.");
 
@@ -603,10 +652,17 @@ export async function updateTeacherModuleSchedule(classInstanceId: string, assig
   if (!isSchoolAdmin && !isClassTeacher) throw new Error("Du darfst diesen Zeitplan nicht ändern.");
 
   const { error } = await supabase
-    .from("teacher_module_class_assignments")
+    .from("teacher_class_module_assignments")
     .update({ scheduled_start_at: startAt, scheduled_end_at: endAt })
     .eq("id", assignmentId)
-    .eq("class_instance_id", classInstanceId);
+    .eq("class_instance_id", classInstanceId)
+    .eq("teacher_user_id", user.id)
+    .eq("module_type", "teacher_module");
+  if (!error) {
+    await supabase.from("teacher_module_class_assignments")
+      .update({ scheduled_start_at: startAt, scheduled_end_at: endAt })
+      .eq("module_id", (assignment as any).module_id).eq("class_instance_id", classInstanceId);
+  }
   if (error) throw new Error(error.message);
   revalidatePath(`/classes/${classInstanceId}`);
 }
