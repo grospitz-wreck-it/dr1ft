@@ -521,27 +521,11 @@ export async function setTeacherModuleAssignmentActive(classInstanceId: string, 
     .maybeSingle();
   if (assignmentError || !assignment) throw new Error("Modulzuordnung nicht gefunden.");
 
-  const { data: schoolMembership } = await supabase
-    .from("school_memberships")
-    .select("role")
-    .eq("school_id", assignment.school_id)
-    .eq("user_id", user.id)
-    .eq("active", true)
-    .maybeSingle();
-  const isSchoolAdmin = ["school_admin"].includes(schoolMembership?.role ?? "");
-  let isClassTeacher = false;
-  if (!isSchoolAdmin) {
-    const { data: membership } = await supabase
-      .from("class_instance_memberships")
-      .select("id")
-      .eq("class_instance_id", classInstanceId)
-      .eq("user_id", user.id)
-      .eq("role", "teacher")
-      .is("left_at", null)
-      .maybeSingle();
-    isClassTeacher = Boolean(membership);
-  }
-  if (!isSchoolAdmin && !isClassTeacher) throw new Error("Du darfst dieses Modul nicht verwalten.");
+  const { data: canManageClass, error: permissionError } = await supabase.rpc(
+    "is_teacher_of_class_instance",
+    { target_instance_id: classInstanceId },
+  );
+  if (permissionError || !canManageClass) throw new Error("Du darfst dieses Modul nicht verwalten.");
 
   const { error } = await supabase
     .from("teacher_class_module_assignments")
@@ -568,11 +552,11 @@ export async function archiveTeacherModuleAssignment(classInstanceId: string, as
     .select("id,school_id,module_id").eq("id", assignmentId).eq("class_instance_id", classInstanceId)
     .eq("teacher_user_id", user.id).eq("module_type", "teacher_module").maybeSingle();
   if (lookupError || !assignment) throw new Error("Modulzuordnung nicht gefunden.");
-  const { data: admin } = await supabase.from("school_memberships").select("role")
-    .eq("school_id", assignment.school_id).eq("user_id", user.id).eq("active", true).maybeSingle();
-  const { data: teacher } = await supabase.from("class_instance_memberships").select("id")
-    .eq("class_instance_id", classInstanceId).eq("user_id", user.id).eq("role", "teacher").is("left_at", null).maybeSingle();
-  if (admin?.role !== "school_admin" && !teacher) throw new Error("Du darfst dieses Modul nicht archivieren.");
+  const { data: canManageClass, error: permissionError } = await supabase.rpc(
+    "is_teacher_of_class_instance",
+    { target_instance_id: classInstanceId },
+  );
+  if (permissionError || !canManageClass) throw new Error("Du darfst dieses Modul nicht archivieren.");
   const archivedAt = new Date().toISOString();
   const { error } = await supabase.from("teacher_class_module_assignments")
     .update({ archived_at: archivedAt, is_active: false })
@@ -629,27 +613,11 @@ export async function updateTeacherModuleSchedule(classInstanceId: string, assig
     .maybeSingle();
   if (lookupError || !assignment) throw new Error("Modulzuordnung nicht gefunden.");
 
-  const { data: schoolMembership } = await supabase
-    .from("school_memberships")
-    .select("role")
-    .eq("school_id", assignment.school_id)
-    .eq("user_id", user.id)
-    .eq("active", true)
-    .maybeSingle();
-  const isSchoolAdmin = ["school_admin"].includes(schoolMembership?.role ?? "");
-  let isClassTeacher = false;
-  if (!isSchoolAdmin) {
-    const { data: membership } = await supabase
-      .from("class_instance_memberships")
-      .select("id")
-      .eq("class_instance_id", classInstanceId)
-      .eq("user_id", user.id)
-      .eq("role", "teacher")
-      .is("left_at", null)
-      .maybeSingle();
-    isClassTeacher = Boolean(membership);
-  }
-  if (!isSchoolAdmin && !isClassTeacher) throw new Error("Du darfst diesen Zeitplan nicht ändern.");
+  const { data: canManageClass, error: permissionError } = await supabase.rpc(
+    "is_teacher_of_class_instance",
+    { target_instance_id: classInstanceId },
+  );
+  if (permissionError || !canManageClass) throw new Error("Du darfst diesen Zeitplan nicht ändern.");
 
   const { error } = await supabase
     .from("teacher_class_module_assignments")
