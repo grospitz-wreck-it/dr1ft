@@ -18,9 +18,8 @@ function json(data: unknown, status = 200) {
 function cleanPart(value: string) { return value.toLowerCase().replace(/[^a-z0-9]/g, ""); }
 function generateTempPassword() {
   const alphabet = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
-  let pw = "";
-  for (let i = 0; i < 10; i++) pw += alphabet[Math.floor(Math.random() * alphabet.length)];
-  return pw;
+  const random = crypto.getRandomValues(new Uint8Array(12));
+  return Array.from(random, (value) => alphabet[value & 31]).join("");
 }
 
 Deno.serve(async (req) => {
@@ -32,13 +31,12 @@ Deno.serve(async (req) => {
   const classId = body?.classId?.trim();
   const displayName = body?.displayName?.trim();
   const username = body?.username?.trim();
-  const requestedPassword = body?.password?.trim();
   if (!classId || !displayName || !username) return json({ error: "Klasse, Anzeigename und Nutzername sind erforderlich" }, 400);
   if (username.length < 2 || username.length > 32) return json({ error: "Der Nutzername muss 2–32 Zeichen lang sein" }, 400);
   if (displayName.length > 80) return json({ error: "Der Anzeigename darf höchstens 80 Zeichen lang sein" }, 400);
 
   const callerClient = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_ANON_KEY")!, { global: { headers: { Authorization: authHeader } } });
-  const { data: isTeacher, error: authCheckError } = await callerClient.rpc("is_teacher_of_class_instance", { target_instance_id: classId });
+  const { data: isTeacher, error: authCheckError } = await callerClient.rpc("can_manage_student_accounts", { p_class_id: classId });
   if (authCheckError || !isTeacher) return json({ error: "Keine Berechtigung für diese Klasseninstanz" }, 403);
 
   const { data: classRow, error: classError } = await callerClient
@@ -53,12 +51,13 @@ Deno.serve(async (req) => {
   const cleanCode = cleanPart(classRow.access_code);
   if (!cleanUsername) return json({ error: "Nutzername enthält keine gültigen Zeichen" }, 400);
   const email = `${cleanUsername}.${cleanCode}@dr1ft.local`;
-  const password = requestedPassword && requestedPassword.length >= 6 ? requestedPassword : generateTempPassword();
+  const password = generateTempPassword();
 
   const adminClient = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!);
   const { data: created, error: createError } = await adminClient.auth.admin.createUser({
     email, password, email_confirm: true,
     user_metadata: { display_name: displayName, username, class_instance_id: classId },
+    app_metadata: { require_password_change: true },
   });
   if (createError || !created.user) {
     const message = createError?.message ?? "Schüler-Account konnte nicht angelegt werden";
@@ -67,7 +66,7 @@ Deno.serve(async (req) => {
   }
 
   const studentId = created.user.id;
-  const { error: profileError } = await adminClient.from("user_profiles").upsert({ id: studentId, display_name: displayName }, { onConflict: "id" });
+  const { error: profileError } = await adminClient.from("user_profiles").upsert({ id: studentId, display_name: displayName, username }, { onConflict: "id" });
   if (profileError) {
     await adminClient.auth.admin.deleteUser(studentId);
     return json({ error: profileError.message }, 500);
@@ -77,6 +76,16 @@ Deno.serve(async (req) => {
   if (membershipError) {
     await adminClient.auth.admin.deleteUser(studentId);
     return json({ error: membershipError.message }, 500);
+  }
+
+  const { data: callerData } = await callerClient.auth.getUser();
+  const { error: credentialError } = await adminClient.rpc("store_student_onboarding_credential", {
+    p_class_id: classId, p_student_user_id: studentId, p_username: username, p_password: password, p_created_by: callerData.user?.id,
+  });
+  if (credentialError) {
+    await adminClient.from("class_instance_memberships").delete().eq("class_instance_id", classId).eq("user_id", studentId);
+    await adminClient.auth.admin.deleteUser(studentId);
+    return json({ error: "Zugangsdaten konnten nicht sicher für den Druck hinterlegt werden" }, 500);
   }
 
   return json({ student: { id: studentId, displayName, username }, tempPassword: password });

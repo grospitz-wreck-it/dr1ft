@@ -4,6 +4,7 @@ import { StudentRoster } from "./StudentRoster";
 import { ClassDashboardInsights } from "./ClassDashboardInsights";
 import { CollapsiblePanel } from "./CollapsiblePanel";
 import ClassImageWorkspace from "./ClassImageWorkspace";
+import { StudentOnboardingPrintButton } from "./StudentOnboardingPrintButton";
 
 async function timed<T>(timings: { name: string; ms: number }[], name: string, task: PromiseLike<T>): Promise<T> {
   const start = Date.now();
@@ -128,34 +129,31 @@ export default async function ClassDetailPage({
   };
 
   const activeSchoolRole = schoolMembershipResult.data?.role ?? null;
+
   const isSchoolAdmin = activeSchoolRole === "school_admin" || activeSchoolRole === "school_lead";
   const { data: canViewIndividualReports } = user
     ? await supabase.rpc("can_view_class_individual_reports", { p_class_id: classId })
     : { data: false };
-  // School admins and school leads may actively teach, but only after
-  // explicitly subscribing to this class. The subscription is the teaching
-  // relationship; the school role alone never grants module-report access.
+
+  const [{ data: canManageClassWorkspace }, { data: canManageClassImage }, { data: canManageStudents }] = user
+    ? await Promise.all([
+        supabase.rpc("is_teacher_of_class_instance", { target_instance_id: classId }),
+        supabase.rpc("can_manage_class_image", { object_name: `${classId}/class-image` }),
+        supabase.rpc("can_manage_student_accounts", { p_class_id: classId }),
+      ])
+    : [{ data: false }, { data: false }, { data: false }];
+
   const hasActiveTeachingSubscription = Boolean(teacherMembershipResult.data);
+  const { data: canPrintOnboarding } = user
+    ? await supabase.rpc("can_print_class_onboarding_credentials", { p_class_id: classId })
+    : { data: false };
   const mayUseTeacherModules =
-    hasActiveTeachingSubscription &&
-    ["teacher", "school_admin", "school_lead"].includes(activeSchoolRole ?? "");
+    Boolean(canManageClassWorkspace) &&
+    (activeSchoolRole !== "teacher" || hasActiveTeachingSubscription);
 
   const availableTeacherModules = mayUseTeacherModules ? moduleLibrary.available : [];
-
   const teacherModules = mayUseTeacherModules ? moduleLibrary.assigned : [];
-
-  // The class visual belongs to the class workspace. Active teachers and
-  // school administrators may edit it; do not hide the editor just because
-  // a legacy teacher subscription has not been created for this class yet.
-  const currentUserClassRole = (roster ?? []).find(
-    (row: any) => row.user_id === user?.id && row.left_at == null,
-  )?.role ?? null;
-  const canEditClassImage =
-    isSchoolAdmin ||
-    currentUserClassRole === "teacher" ||
-    currentUserClassRole === "school_admin" ||
-    currentUserClassRole === "school_lead" ||
-    hasActiveTeachingSubscription;
+  const canEditClassImage = Boolean(canManageClassImage);
 
   const students = (roster ?? [])
     .filter((row: any) => row.role === "student")
@@ -262,6 +260,8 @@ export default async function ClassDetailPage({
             initialStudents={students}
             reportingUnlocked={reportingUnlocked}
             canViewIndividualReports={canViewIndividualReports}
+            canManageStudents={Boolean(canManageStudents)}
+            canPrintOnboarding={Boolean(canPrintOnboarding)}
           />
         </div>
         </CollapsiblePanel>

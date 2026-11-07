@@ -1,6 +1,5 @@
 import { redirect } from "next/navigation";
 import { OverviewClasses } from "./OverviewClasses";
-import { AvailableClasses } from "./AvailableClasses";
 import {
   ArrowRight,
   BarChart3,
@@ -98,21 +97,40 @@ export default async function TeacherHomePage() {
         .eq("is_active", true)
         .order("name")
     : { data: [] as any[] };
-  const candidateClasses = (schoolClassRows.data ?? []).filter((item: any) => !classIds.includes(item.id));
-  const candidateIds = candidateClasses.map((item: any) => item.id);
-  const { data: candidateStudents } = candidateIds.length
+  const schoolClassItems = schoolClassRows.data ?? [];
+  const searchableClassIds = Array.from(new Set([...classIds, ...schoolClassItems.map((item: any) => item.id)]));
+  const { data: allSchoolStudents } = searchableClassIds.length
     ? await supabase.from("class_instance_memberships")
         .select("class_instance_id")
-        .in("class_instance_id", candidateIds)
+        .in("class_instance_id", searchableClassIds)
         .eq("role", "student")
         .is("left_at", null)
     : { data: [] as any[] };
+  const assignmentsByClass = new Map<string, any[]>();
+  (scenarioAssignments ?? []).forEach((row: any) => {
+    const current = assignmentsByClass.get(row.class_instance_id) ?? [];
+    if (row.scenarios) current.push(row.scenarios);
+    assignmentsByClass.set(row.class_instance_id, current);
+  });
   const candidateCounts = new Map<string, number>();
-  (candidateStudents ?? []).forEach((row: any) => candidateCounts.set(row.class_instance_id, (candidateCounts.get(row.class_instance_id) ?? 0) + 1));
-  const availableClasses = candidateClasses.map((item: any) => ({
+  (allSchoolStudents ?? []).forEach((row: any) => candidateCounts.set(row.class_instance_id, (candidateCounts.get(row.class_instance_id) ?? 0) + 1));
+  const subscriptionIds = new Set((subscriptions ?? []).map((row: any) => row.class_instance_id));
+  const searchableClasses = Array.from(new Map([
+    ...schoolClassItems.map((item: any) => item),
+    ...classes.map((item: any) => item),
+  ].map((item: any) => [item.id, item])).values()).map((item: any) => ({
     id: item.id, name: item.name, gradeLevel: item.grade_level, schoolYear: item.school_year,
     schoolName: (schoolsById.get(item.school_id) as any)?.name ?? "Meine Schule",
     studentCount: candidateCounts.get(item.id) ?? 0,
+    isSubscribed: subscriptionIds.has(item.id),
+    isMine: classIds.includes(item.id),
+    isActive: item.is_active ?? true,
+    thumbnailUrl: null,
+    classVisualId: item.class_visual_id ?? null,
+    imagePositionX: 50,
+    imagePositionY: 50,
+    imageZoom: 1,
+    missions: assignmentsByClass.get(item.id) ?? [],
   }));
 
 
@@ -120,12 +138,6 @@ export default async function TeacherHomePage() {
   const studentCount = studentMemberships?.length ?? 0;
   const studentsByClass = new Map<string, number>();
   (studentMemberships ?? []).forEach((row: any) => studentsByClass.set(row.class_instance_id, (studentsByClass.get(row.class_instance_id) ?? 0) + 1));
-  const assignmentsByClass = new Map<string, any[]>();
-  (scenarioAssignments ?? []).forEach((row: any) => {
-    const current = assignmentsByClass.get(row.class_instance_id) ?? [];
-    if (row.scenarios) current.push(row.scenarios);
-    assignmentsByClass.set(row.class_instance_id, current);
-  });
   const overviewClasses = classes.map((item: any) => {
     const school = schoolsById.get(item.school_id) as any;
     const thumbnailUrl = !item.class_visual_id && school?.school_image_path
@@ -139,6 +151,9 @@ export default async function TeacherHomePage() {
       imageZoom: school?.school_image_zoom ?? 1,
       studentCount: studentsByClass.get(item.id) ?? 0,
       missions: assignmentsByClass.get(item.id) ?? [],
+      schoolName: school?.name ?? "Meine Schule",
+      isSubscribed: subscriptionIds.has(item.id),
+      isMine: true,
     };
   });
   timings.push({ name: "Server gesamt bis Render", ms: Date.now() - pageStartedAt });
@@ -201,10 +216,9 @@ export default async function TeacherHomePage() {
       </section>
 
       <section id="deine-klassen" className="drift-panel mt-5 overflow-hidden p-5 sm:p-6">
-        <OverviewClasses classes={overviewClasses} canCreateClasses={canCreateClasses} />
+        <OverviewClasses classes={overviewClasses} searchableClasses={searchableClasses} canCreateClasses={canCreateClasses} />
       </section>
 
-      {availableClasses.length > 0 && <AvailableClasses classes={availableClasses} />}
 
     </main>
   );

@@ -119,34 +119,17 @@ export async function saveTeacherCreatedModule(formData: FormData) {
 
   stage = "Schulmitgliedschaft prüfen";
   console.info("[teacher-module-publish] stage", stage, new Date().toISOString());
-  const { data: schoolMembership } = await supabase
-    .from("school_memberships")
-    .select("school_id,role")
-    .eq("school_id", schoolId)
-    .eq("user_id", user.id)
-    .eq("active", true)
-    .maybeSingle();
-
-  const isSchoolAdmin = ["school_admin"].includes(schoolMembership?.role ?? "");
-  let isClassTeacher = false;
-  if (!isSchoolAdmin) {
-    stage = "Lehrkraft-Berechtigung prüfen";
+  stage = "Lehrkraft-Berechtigung prüfen";
   console.info("[teacher-module-publish] stage", stage, new Date().toISOString());
-    const { data: membership, error: membershipError } = await supabase
-      .from("class_instance_memberships")
-      .select("id,role")
-      .eq("class_instance_id", classInstanceId)
-      .eq("user_id", user.id)
-      .eq("role", "teacher")
-      .is("left_at", null)
-      .maybeSingle();
-    isClassTeacher = !membershipError && Boolean(membership);
-  }
-
-  // A class teacher may be assigned directly to a class instance even if
-  // no separate school_memberships row exists (legacy/imported memberships).
-  // School admins and school leads are authorized at school scope.
-  if (!isSchoolAdmin && !isClassTeacher) {
+  const { data: canManageClass, error: permissionError } = await supabase.rpc(
+    "is_teacher_of_class_instance",
+    { target_instance_id: classInstanceId },
+  );
+  if (permissionError || !canManageClass) {
+    console.warn("[teacher-module-publish] permission denied", {
+      classInstanceId, schoolId, userId: user.id,
+      code: permissionError?.code, message: permissionError?.message,
+    });
     throw new Error("Du hast keine Berechtigung, Inhalte für diese Klasse zu erstellen.");
   }
 
@@ -168,6 +151,10 @@ export async function saveTeacherCreatedModule(formData: FormData) {
   console.info("[teacher-module-publish] stage", stage, new Date().toISOString());
   for (let index = 0; index < posts.length; index++) {
     const post = posts[index];
+    const postStartedAt = Date.now();
+    console.info("[teacher-module-publish] post started", {
+      index, postType: post.postType, hasImageField: Boolean(post.imageField),
+    });
     if (!post.id || !["text", "image", "embed", "mixed", "poll", "true_false"].includes(post.postType)) throw new Error("Ungültiger Beitrag.");
     // Always let the server mint the database primary key. Client draft IDs are
     // only correlation keys for uploaded files and must never become DB IDs.
@@ -180,8 +167,21 @@ export async function saveTeacherCreatedModule(formData: FormData) {
         throw new Error("Bilder müssen vor dem Upload in WebP umgewandelt werden und dürfen maximal 8 MB groß sein.");
       }
       imagePath = `${schoolId}/${module.id}/${postId}.webp`;
-      const { error: uploadError } = await supabase.storage.from("teacher-module-assets").upload(imagePath, file, { contentType: file.type, upsert: true });
-      if (uploadError) throw new Error(uploadError.message);
+      const uploadStartedAt = Date.now();
+      console.info("[teacher-module-publish] image upload started", {
+        index, sizeBytes: file.size, mimeType: file.type,
+      });
+      const { error: uploadError } = await supabase.storage.from("teacher-module-assets").upload(imagePath, file, { contentType: file.type });
+      if (uploadError) {
+        console.error("[teacher-module-publish] image upload failed", {
+          index, durationMs: Date.now() - uploadStartedAt,
+          code: uploadError.name, message: uploadError.message,
+        });
+        throw new Error("Bild-Upload fehlgeschlagen: " + uploadError.message);
+      }
+      console.info("[teacher-module-publish] image upload success", {
+        index, durationMs: Date.now() - uploadStartedAt,
+      });
     }
     rows.push({
       id: postId,
@@ -196,23 +196,68 @@ export async function saveTeacherCreatedModule(formData: FormData) {
       sort_order: index,
       status: "published",
     });
+    console.info("[teacher-module-publish] post processed", {
+      index, durationMs: Date.now() - postStartedAt,
+    });
   }
 
   stage = "Beiträge in Supabase speichern";
   console.info("[teacher-module-publish] stage", stage, new Date().toISOString());
+  const postsInsertStartedAt = Date.now();
+  console.info("[teacher-module-publish] posts insert started", { count: rows.length });
   const { error: postsError } = await supabase.from("teacher_module_posts").insert(rows);
-  if (postsError) throw new Error(postsError.message);
+  if (postsError) {
+    console.error("[teacher-module-publish] posts insert failed", {
+      count: rows.length, durationMs: Date.now() - postsInsertStartedAt,
+      code: postsError.code, message: postsError.message,
+      details: postsError.details, hint: postsError.hint,
+    });
+    throw new Error("Beiträge konnten nicht gespeichert werden: " + postsError.message);
+  }
+  console.info("[teacher-module-publish] posts insert success", {
+    count: rows.length, durationMs: Date.now() - postsInsertStartedAt,
+  });
 
   stage = "Modul der Klasse zuordnen";
   console.info("[teacher-module-publish] stage", stage, new Date().toISOString());
-  const { error: assignmentError } = await supabase.from("teacher_module_class_assignments").insert({
+  const { error: subscriptionError } = await supabase.rpc("subscribe_teacher_to_class_instance", {
+    p_class_instance_id: classInstanceId,
+  });
+  if (subscriptionError) throw new Error(subscriptionError.message);
+
+  const { data: subscription, error: subscriptionLookupError } = await supabase
+    .from("teacher_class_subscriptions")
+    .select("id,school_year")
+    .eq("class_instance_id", classInstanceId)
+    .eq("teacher_user_id", user.id)
+    .eq("is_active", true)
+    .maybeSingle();
+  if (subscriptionLookupError || !subscription) {
+    throw new Error("Klassenabonnement konnte nicht angelegt werden.");
+  }
+
+  const { error: assignmentError } = await supabase.from("teacher_class_module_assignments").insert({
+    subscription_id: subscription.id,
+    school_id: schoolId,
+    class_instance_id: classInstanceId,
+    teacher_user_id: user.id,
+    school_year: subscription.school_year,
+    module_type: "teacher_module",
+    module_id: module.id,
+    assigned_by: user.id,
+    is_active: false,
+  });
+  if (assignmentError) throw new Error(assignmentError.message);
+
+  // Keep the legacy assignment in sync for older class views.
+  const { error: legacyAssignmentError } = await supabase.from("teacher_module_class_assignments").insert({
     module_id: module.id,
     school_id: schoolId,
     class_instance_id: classInstanceId,
     assigned_by: user.id,
-    is_active: true,
+    is_active: false,
   });
-  if (assignmentError) throw new Error(assignmentError.message);
+  if (legacyAssignmentError) throw new Error(legacyAssignmentError.message);
 
   stage = "Modul veröffentlichen";
   console.info("[teacher-module-publish] stage", stage, new Date().toISOString());
@@ -257,13 +302,17 @@ export async function updateTeacherCreatedModule(formData: FormData) {
     .select("id,school_id,created_by")
     .eq("id", moduleId).eq("school_id", schoolId).maybeSingle();
   if (moduleError || !module) throw new Error("Das Modul wurde nicht gefunden.");
-  if (module.created_by !== user.id) throw new Error("Nur die erstellende Lehrkraft kann dieses Modul bearbeiten.");
-
   const { data: classInstance } = await supabase.from("class_instances").select("id,school_id").eq("id", classInstanceId).maybeSingle();
   if (!classInstance || classInstance.school_id !== schoolId) throw new Error("Die Klasse gehört nicht zu dieser Schule.");
-  const { data: admin } = await supabase.from("school_memberships").select("role").eq("school_id", schoolId).eq("user_id", user.id).eq("active", true).maybeSingle();
-  const { data: teacher } = await supabase.from("class_instance_memberships").select("id").eq("class_instance_id", classInstanceId).eq("user_id", user.id).eq("role", "teacher").is("left_at", null).maybeSingle();
-  if (admin?.role !== "school_admin" && !teacher) throw new Error("Du darfst dieses Modul nicht bearbeiten.");
+
+  const [{ data: canManageClass }, { data: canManageSchool }] = await Promise.all([
+    supabase.rpc("is_teacher_of_class_instance", { target_instance_id: classInstanceId }),
+    supabase.rpc("can_manage_school", { p_school_id: schoolId }),
+  ]);
+  if (!canManageClass) throw new Error("Du hast keine Berechtigung für diese Klasse.");
+  if (module.created_by !== user.id && !canManageSchool) {
+    throw new Error("Nur die erstellende Lehrkraft oder die Schul-/Plattformadministration kann dieses Modul bearbeiten.");
+  }
 
   const { data: currentPosts, error: currentError } = await supabase.rpc(
     "get_teacher_module_editor_posts",
@@ -285,7 +334,7 @@ export async function updateTeacherCreatedModule(formData: FormData) {
     if (file instanceof File && file.size > 0) {
       if (file.type !== "image/webp" || file.size > 8 * 1024 * 1024) throw new Error("Bilder müssen vor dem Upload in WebP umgewandelt werden und dürfen maximal 8 MB groß sein.");
       imagePath = `${schoolId}/${moduleId}/${postId}.webp`;
-      const { error: uploadError } = await supabase.storage.from("teacher-module-assets").upload(imagePath, file, { contentType: file.type, upsert: true });
+      const { error: uploadError } = await supabase.storage.from("teacher-module-assets").upload(imagePath, file, { contentType: file.type });
       if (uploadError) throw new Error(uploadError.message);
     }
     rows.push({ id: postId, module_id: moduleId, post_type: post.postType, title: String(post.title ?? "").slice(0,180), body: String(post.body ?? "").slice(0,12000), image_path: imagePath, interaction_data: post.interactionData ?? {}, embed_provider: embed?.provider ?? null, embed_url: embed?.url ?? null, sort_order: index, status: "published" });
@@ -463,40 +512,34 @@ export async function setTeacherModuleAssignmentActive(classInstanceId: string, 
   if (!user) throw new Error("Nicht authentifiziert.");
 
   const { data: assignment, error: assignmentError } = await supabase
-    .from("teacher_module_class_assignments")
-    .select("id,school_id,class_instance_id,assigned_by")
+    .from("teacher_class_module_assignments")
+    .select("id,school_id,class_instance_id,module_id")
     .eq("id", assignmentId)
     .eq("class_instance_id", classInstanceId)
+    .eq("teacher_user_id", user.id)
+    .eq("module_type", "teacher_module")
     .maybeSingle();
   if (assignmentError || !assignment) throw new Error("Modulzuordnung nicht gefunden.");
 
-  const { data: schoolMembership } = await supabase
-    .from("school_memberships")
-    .select("role")
-    .eq("school_id", assignment.school_id)
-    .eq("user_id", user.id)
-    .eq("active", true)
-    .maybeSingle();
-  const isSchoolAdmin = ["school_admin"].includes(schoolMembership?.role ?? "");
-  let isClassTeacher = false;
-  if (!isSchoolAdmin) {
-    const { data: membership } = await supabase
-      .from("class_instance_memberships")
-      .select("id")
-      .eq("class_instance_id", classInstanceId)
-      .eq("user_id", user.id)
-      .eq("role", "teacher")
-      .is("left_at", null)
-      .maybeSingle();
-    isClassTeacher = Boolean(membership);
-  }
-  if (!isSchoolAdmin && !isClassTeacher) throw new Error("Du darfst dieses Modul nicht verwalten.");
+  const { data: canManageClass, error: permissionError } = await supabase.rpc(
+    "is_teacher_of_class_instance",
+    { target_instance_id: classInstanceId },
+  );
+  if (permissionError || !canManageClass) throw new Error("Du darfst dieses Modul nicht verwalten.");
 
   const { error } = await supabase
-    .from("teacher_module_class_assignments")
+    .from("teacher_class_module_assignments")
     .update({ is_active: active })
     .eq("id", assignmentId)
-    .eq("class_instance_id", classInstanceId);
+    .eq("class_instance_id", classInstanceId)
+    .eq("teacher_user_id", user.id)
+    .eq("module_type", "teacher_module");
+  if (!error) {
+    await supabase.from("teacher_module_class_assignments")
+      .update({ is_active: active })
+      .eq("module_id", (assignment as any).module_id)
+      .eq("class_instance_id", classInstanceId);
+  }
   if (error) throw new Error(error.message);
   revalidatePath(`/classes/${classInstanceId}`);
 }
@@ -505,17 +548,24 @@ export async function archiveTeacherModuleAssignment(classInstanceId: string, as
   const supabase = supabaseServerClient();
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) throw new Error("Nicht authentifiziert.");
-  const { data: assignment, error: lookupError } = await supabase.from("teacher_module_class_assignments")
-    .select("id,school_id").eq("id", assignmentId).eq("class_instance_id", classInstanceId).maybeSingle();
+  const { data: assignment, error: lookupError } = await supabase.from("teacher_class_module_assignments")
+    .select("id,school_id,module_id").eq("id", assignmentId).eq("class_instance_id", classInstanceId)
+    .eq("teacher_user_id", user.id).eq("module_type", "teacher_module").maybeSingle();
   if (lookupError || !assignment) throw new Error("Modulzuordnung nicht gefunden.");
-  const { data: admin } = await supabase.from("school_memberships").select("role")
-    .eq("school_id", assignment.school_id).eq("user_id", user.id).eq("active", true).maybeSingle();
-  const { data: teacher } = await supabase.from("class_instance_memberships").select("id")
-    .eq("class_instance_id", classInstanceId).eq("user_id", user.id).eq("role", "teacher").is("left_at", null).maybeSingle();
-  if (admin?.role !== "school_admin" && !teacher) throw new Error("Du darfst dieses Modul nicht archivieren.");
-  const { error } = await supabase.from("teacher_module_class_assignments")
-    .update({ archived_at: new Date().toISOString(), is_active: false })
-    .eq("id", assignmentId).eq("class_instance_id", classInstanceId);
+  const { data: canManageClass, error: permissionError } = await supabase.rpc(
+    "is_teacher_of_class_instance",
+    { target_instance_id: classInstanceId },
+  );
+  if (permissionError || !canManageClass) throw new Error("Du darfst dieses Modul nicht archivieren.");
+  const archivedAt = new Date().toISOString();
+  const { error } = await supabase.from("teacher_class_module_assignments")
+    .update({ archived_at: archivedAt, is_active: false })
+    .eq("id", assignmentId).eq("class_instance_id", classInstanceId).eq("teacher_user_id", user.id);
+  if (!error) {
+    await supabase.from("teacher_module_class_assignments")
+      .update({ archived_at: archivedAt, is_active: false })
+      .eq("module_id", (assignment as any).module_id).eq("class_instance_id", classInstanceId);
+  }
   if (error) throw new Error(error.message);
   revalidatePath("/classes/" + classInstanceId);
 }
@@ -554,40 +604,33 @@ export async function updateTeacherModuleSchedule(classInstanceId: string, assig
   if (startAt && endAt && new Date(endAt) <= new Date(startAt)) throw new Error("Das Ende muss nach dem Start liegen.");
 
   const { data: assignment, error: lookupError } = await supabase
-    .from("teacher_module_class_assignments")
-    .select("id,school_id")
+    .from("teacher_class_module_assignments")
+    .select("id,school_id,module_id")
     .eq("id", assignmentId)
     .eq("class_instance_id", classInstanceId)
+    .eq("teacher_user_id", user.id)
+    .eq("module_type", "teacher_module")
     .maybeSingle();
   if (lookupError || !assignment) throw new Error("Modulzuordnung nicht gefunden.");
 
-  const { data: schoolMembership } = await supabase
-    .from("school_memberships")
-    .select("role")
-    .eq("school_id", assignment.school_id)
-    .eq("user_id", user.id)
-    .eq("active", true)
-    .maybeSingle();
-  const isSchoolAdmin = ["school_admin"].includes(schoolMembership?.role ?? "");
-  let isClassTeacher = false;
-  if (!isSchoolAdmin) {
-    const { data: membership } = await supabase
-      .from("class_instance_memberships")
-      .select("id")
-      .eq("class_instance_id", classInstanceId)
-      .eq("user_id", user.id)
-      .eq("role", "teacher")
-      .is("left_at", null)
-      .maybeSingle();
-    isClassTeacher = Boolean(membership);
-  }
-  if (!isSchoolAdmin && !isClassTeacher) throw new Error("Du darfst diesen Zeitplan nicht ändern.");
+  const { data: canManageClass, error: permissionError } = await supabase.rpc(
+    "is_teacher_of_class_instance",
+    { target_instance_id: classInstanceId },
+  );
+  if (permissionError || !canManageClass) throw new Error("Du darfst diesen Zeitplan nicht ändern.");
 
   const { error } = await supabase
-    .from("teacher_module_class_assignments")
+    .from("teacher_class_module_assignments")
     .update({ scheduled_start_at: startAt, scheduled_end_at: endAt })
     .eq("id", assignmentId)
-    .eq("class_instance_id", classInstanceId);
+    .eq("class_instance_id", classInstanceId)
+    .eq("teacher_user_id", user.id)
+    .eq("module_type", "teacher_module");
+  if (!error) {
+    await supabase.from("teacher_module_class_assignments")
+      .update({ scheduled_start_at: startAt, scheduled_end_at: endAt })
+      .eq("module_id", (assignment as any).module_id).eq("class_instance_id", classInstanceId);
+  }
   if (error) throw new Error(error.message);
   revalidatePath(`/classes/${classInstanceId}`);
 }

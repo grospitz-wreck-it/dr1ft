@@ -19,7 +19,7 @@ type DraftPost = {
 
 type EditableModule = { id: string; title: string; description: string; introTitle?: string | null; introText?: string | null; visibilityScope?: "private" | "school" | "class"; titleCardEnabled?: boolean; posts: Array<{ id: string; postType: DraftPost["postType"]; title: string; body: string; embedUrl: string; imageUrl: string | null; interactionData?: DraftPost["interactionData"] }> };
 
-export function TeacherModuleBuilderModal({ classInstanceId, schoolId, editModule, triggerLabel = "Eigenes Modul erstellen", autoOpen = false }: { classInstanceId: string; schoolId: string; editModule?: EditableModule; triggerLabel?: string; autoOpen?: boolean }) {
+export function TeacherModuleBuilderModal({ classInstanceId, schoolId, editModule, triggerLabel = "Eigenes Modul erstellen", autoOpen = false, onCreated }: { classInstanceId: string; schoolId: string; editModule?: EditableModule; triggerLabel?: string; autoOpen?: boolean; onCreated?: () => void }) {
   const [open, setOpen] = useState(false);
   const [moduleId, setModuleId] = useState<string | null>(null);
   const [title, setTitle] = useState("");
@@ -219,6 +219,7 @@ export function TeacherModuleBuilderModal({ classInstanceId, schoolId, editModul
         await saveTeacherCreatedModule(form);
       }
       console.info("[teacher-module-builder] server action succeeded");
+      if (!moduleId) onCreated?.();
       setOpen(false);
       reset();
       router.refresh();

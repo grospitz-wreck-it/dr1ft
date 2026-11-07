@@ -6,10 +6,14 @@ import {
   LogOut,
   Settings,
   Users,
+  Copy,
+  RefreshCw,
+  Check,
 } from "lucide-react";
 import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { createBrowserClient } from "@supabase/ssr";
+import { regenerateClassInstanceAccessCode } from "../app/classes/actions";
 
 function client() {
   return createBrowserClient(
@@ -55,6 +59,11 @@ export function TeacherNav() {
   const [region, setRegion] = useState<string | null>(null);
   const [studentCount, setStudentCount] = useState(0);
   const [classAccessCode, setClassAccessCode] = useState<string | null>(null);
+  const [classIdForCode, setClassIdForCode] = useState<string | null>(null);
+  const [canRerollClassCode, setCanRerollClassCode] = useState(false);
+  const [rerollingClassCode, setRerollingClassCode] = useState(false);
+  const [copiedClassCode, setCopiedClassCode] = useState(false);
+  const [classCodeError, setClassCodeError] = useState("");
   const [accountOpen, setAccountOpen] = useState(false);
 
   const publicRoute =
@@ -129,14 +138,31 @@ export function TeacherNav() {
 
       const classMatch = pathname.match(/^\/classes\/([^/]+)$/);
       if (classMatch) {
+        const currentClassId = classMatch[1];
         const { data: classRow } = await supabase
           .from("class_instances")
-          .select("access_code")
-          .eq("id", classMatch[1])
+          .select("id,access_code,school_id")
+          .eq("id", currentClassId)
           .maybeSingle();
-        if (alive) setClassAccessCode(classRow?.access_code ?? null);
+        if (alive) {
+          setClassIdForCode(currentClassId);
+          setClassAccessCode(classRow?.access_code ?? null);
+        }
+        if (classRow) {
+          const [{ data: isPlatformAdmin }, { data: canManageSchool }, { data: canManageStudents }, { data: subscription }] = await Promise.all([
+            supabase.rpc("is_platform_admin"),
+            classRow.school_id ? supabase.rpc("can_manage_school", { p_school_id: classRow.school_id }) : Promise.resolve({ data: false }),
+            supabase.rpc("can_manage_student_accounts", { p_class_id: currentClassId }),
+            supabase.from("teacher_class_subscriptions").select("id").eq("class_instance_id", currentClassId).eq("teacher_user_id", user.id).eq("is_active", true).maybeSingle(),
+          ]);
+          if (alive) setCanRerollClassCode(Boolean(isPlatformAdmin || canManageSchool || canManageStudents || subscription));
+        } else if (alive) {
+          setCanRerollClassCode(false);
+        }
       } else {
         setClassAccessCode(null);
+        setClassIdForCode(null);
+        setCanRerollClassCode(false);
       }
       await loadAccountData(user.id);
     })();
@@ -174,9 +200,28 @@ export function TeacherNav() {
         <div className="relative flex items-center gap-3">
           {classAccessCode && (
             <div className="hidden items-center gap-2 rounded-xl border border-slate-200 bg-white px-3 py-1.5 sm:flex">
-              <span className="text-[10px] font-semibold uppercase tracking-[0.12em] text-slate-400">Klassencode</span>
+              <span className="bg-gradient-to-r from-violet-600 via-fuchsia-500 to-cyan-500 bg-clip-text text-[10px] font-extrabold uppercase tracking-[0.12em] text-transparent">Klassencode</span>
               <code className="font-mono text-sm font-semibold tracking-[0.14em] text-slate-800">{classAccessCode}</code>
-              <button type="button" onClick={() => navigator.clipboard.writeText(classAccessCode)} className="rounded-lg bg-violet-50 px-2.5 py-1.5 text-xs font-semibold text-violet-700 transition hover:bg-violet-100">Kopieren</button>
+              <button type="button" onClick={() => { void navigator.clipboard.writeText(classAccessCode).then(() => { setCopiedClassCode(true); window.setTimeout(() => setCopiedClassCode(false), 1400); }); }} aria-label="Klassencode kopieren" title="Klassencode kopieren" className="inline-flex h-8 w-8 items-center justify-center rounded-lg text-violet-700 transition hover:bg-violet-50">
+                {copiedClassCode ? <Check className="h-4 w-4" /> : <Copy className="h-4 w-4" />}
+              </button>
+              {canRerollClassCode && classIdForCode && (
+                <button type="button" disabled={rerollingClassCode} onClick={async () => {
+                  if (!window.confirm("Neuen Klassencode generieren? Der bisherige Code wird sofort ungültig.")) return;
+                  setRerollingClassCode(true);
+                  setClassCodeError("");
+                  try {
+                    const nextCode = await regenerateClassInstanceAccessCode(classIdForCode);
+                    setClassAccessCode(nextCode);
+                  } catch (error) {
+                    setClassCodeError(error instanceof Error ? error.message : "Klassencode konnte nicht erneuert werden.");
+                  } finally {
+                    setRerollingClassCode(false);
+                  }
+                }} aria-label="Klassencode neu generieren" title={classCodeError || "Klassencode neu generieren"} className="inline-flex h-8 w-8 items-center justify-center rounded-lg text-violet-700 transition hover:bg-violet-50 disabled:opacity-50">
+                  <RefreshCw className={"h-4 w-4 " + (rerollingClassCode ? "animate-spin" : "")} />
+                </button>
+              )}
             </div>
           )}
           <span className="hidden max-w-[260px] truncate rounded-full border border-slate-200 bg-white px-3 py-1.5 text-[11px] font-medium text-slate-600 sm:inline-flex" title={school ? `${school}${region ? " · " + region : ""}` : "Noch keine Schule zugeordnet"}>{school ? `${school}${region ? " · " + region : ""}` : "Noch keine Schule zugeordnet"}</span>

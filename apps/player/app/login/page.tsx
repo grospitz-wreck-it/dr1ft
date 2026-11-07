@@ -51,7 +51,8 @@ export default function LoginPage() {
       return;
     }
 
-    router.push("/feed");
+    const { data: { user } } = await supabase.auth.getUser();
+    router.replace(user?.app_metadata?.require_password_change === true ? "/change-password" : "/feed");
   }
 
   if (checkingSession) return null;

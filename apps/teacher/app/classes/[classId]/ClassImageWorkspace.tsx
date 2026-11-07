@@ -59,7 +59,7 @@ export default function ClassImageWorkspace({
           <div className="flex items-start justify-between gap-4">
             <p className="text-[10px] font-bold uppercase tracking-[0.28em] text-white/65">DR1FT <span className="text-cyan-300">✦</span> KLASSENRAUM</p>
             {canEditClassImage && (
-              <button type="button" onClick={() => { setEditorOpen(true); setPickerOpen(false); setVisualMessage(""); }} aria-label="Klassenmotiv ändern" title="Klassenmotiv ändern" className="inline-flex h-11 w-11 items-center justify-center rounded-2xl border border-white/35 bg-white/15 text-white shadow-[0_8px_30px_rgba(0,0,0,.18)] backdrop-blur-xl transition hover:border-white/60 hover:bg-white/25 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-300">
+              <button type="button" onClick={() => { setEditorOpen(true); setPickerOpen(false); setVisualMessage(""); }} aria-label="Klassenmotiv ändern" title="Klassenmotiv ändern" className="inline-flex h-10 w-10 items-center justify-center rounded-xl border border-white/35 bg-white/15 text-white shadow-[0_8px_30px_rgba(0,0,0,.18)] backdrop-blur-xl transition hover:border-white/60 hover:bg-white/25 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-300">
                 <Pencil className="h-4 w-4" />
               </button>
             )}
