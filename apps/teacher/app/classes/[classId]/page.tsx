@@ -144,7 +144,9 @@ export default async function ClassDetailPage({
     : [{ data: false }, { data: false }, { data: false }];
 
   const hasActiveTeachingSubscription = Boolean(teacherMembershipResult.data);
-  const canPrintOnboarding = activeSchoolRole === "school_admin" || (activeSchoolRole === "teacher" && hasActiveTeachingSubscription);
+  const { data: canPrintOnboarding } = user
+    ? await supabase.rpc("can_print_class_onboarding_credentials", { p_class_id: classId })
+    : { data: false };
   const mayUseTeacherModules =
     Boolean(canManageClassWorkspace) &&
     (activeSchoolRole !== "teacher" || hasActiveTeachingSubscription);
