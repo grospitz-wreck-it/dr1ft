@@ -49,7 +49,7 @@ begin
   -- parent_id points into the scenario's content tree.
   with recursive family_content(id) as (
     select id from public.content_items where scenario_id = any(v_scenario_ids)
-    union all
+    union
     select child.id
     from public.content_items child
     join family_content parent on child.parent_id = parent.id
@@ -100,7 +100,7 @@ begin
 
   with recursive family_content(id) as (
     select id from public.content_items where scenario_id = any(v_scenario_ids)
-    union all
+    union
     select child.id
     from public.content_items child
     join family_content parent on child.parent_id = parent.id
