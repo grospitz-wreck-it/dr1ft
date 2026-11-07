@@ -110,14 +110,21 @@ export default async function TeacherHomePage() {
   (allSchoolStudents ?? []).forEach((row: any) => candidateCounts.set(row.class_instance_id, (candidateCounts.get(row.class_instance_id) ?? 0) + 1));
   const subscriptionIds = new Set((subscriptions ?? []).map((row: any) => row.class_instance_id));
   const searchableClasses = Array.from(new Map([
-    ...classes.map((item: any) => item),
     ...schoolClassItems.map((item: any) => item),
+    ...classes.map((item: any) => item),
   ].map((item: any) => [item.id, item])).values()).map((item: any) => ({
     id: item.id, name: item.name, gradeLevel: item.grade_level, schoolYear: item.school_year,
     schoolName: (schoolsById.get(item.school_id) as any)?.name ?? "Meine Schule",
     studentCount: candidateCounts.get(item.id) ?? 0,
     isSubscribed: subscriptionIds.has(item.id),
     isMine: classIds.includes(item.id),
+    isActive: item.is_active ?? true,
+    thumbnailUrl: null,
+    classVisualId: item.class_visual_id ?? null,
+    imagePositionX: 50,
+    imagePositionY: 50,
+    imageZoom: 1,
+    missions: assignmentsByClass.get(item.id) ?? [],
   }));
 
 
