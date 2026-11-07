@@ -235,7 +235,7 @@ export function FeedClient({ initialItems, teacherModules = [], userId, classIns
     </button>
   </div>}
 </section>{scenarioStarted&&!scenarioFinished&&learningCards.filter(card=>card.position==="before_feed").map(card=><LearningCardFeedItem key={card.id} card={card} classInstanceId={classInstanceId}/>)}
-{scenarioStarted&&!scenarioFinished&&teacherModules.length>0&&<section className="space-y-5" aria-label="Lernmodule deiner Lehrkraft">
+{!scenarioFinished&&teacherModules.length>0&&(scenarioStarted||teacherModules.some(module=>module.title_card_enabled))&&<section className="space-y-5" aria-label="Lernmodule deiner Lehrkraft">
   <div className="px-1"><p className="text-[10px] font-bold uppercase tracking-[0.2em] text-violet-600">Aus deinem Unterricht</p><h2 className="mt-1 font-display text-xl font-semibold text-[#27213d]">Lernmodule deiner Lehrkraft</h2></div>
   {teacherModules.map((module)=><article key={module.id} className="overflow-hidden rounded-[26px] border border-violet-100 bg-white/95 shadow-sm">
     {module.title_card_enabled!==false&&<header className="border-b border-violet-100 bg-gradient-to-r from-violet-50 via-white to-cyan-50 px-5 py-5 sm:px-6">
@@ -243,7 +243,7 @@ export function FeedClient({ initialItems, teacherModules = [], userId, classIns
       <h3 className="mt-1 font-display text-xl font-semibold text-[#27213d]">{module.intro_title?.trim()||module.title}</h3>
       {(module.intro_text?.trim()||module.description)&&<p className="mt-2 whitespace-pre-line text-sm leading-6 text-[#746d89]">{module.intro_text?.trim()||module.description}</p>}
     </header>}
-    <div className="space-y-5 p-4 sm:p-6">
+    {scenarioStarted&&<div className="space-y-5 p-4 sm:p-6">
       {module.posts.map((post,index)=>{
         const config=post.interaction_data??{};
         const options=Array.isArray(config.options)?config.options.filter((option:any)=>typeof option==="string"&&option.trim()):[];
@@ -266,7 +266,7 @@ export function FeedClient({ initialItems, teacherModules = [], userId, classIns
           </div>}
         </section>;
       })}
-    </div>
+    </div>}
   </article>)}
 </section>}
 {scenarioStarted&&!scenarioFinished&&initialItems.length===0&&teacherModules.length===0&&<div className="rounded-[28px] bg-white/80 border border-dashed border-violet-200 p-12 text-center shadow-sm"><p className="font-display font-semibold">Noch ist es ruhig.</p><p className="text-sm text-[#746d89] mt-2">Für dich sind gerade keine Szenarien freigeschaltet.</p></div>}{scenarioStarted&&!scenarioFinished&&initialItems.slice(0,visibleCount).map((item,index)=><div key={item.id} className="space-y-3"><PostCard item={item} userId={userId} classInstanceId={classInstanceId} initiallyLiked={likedContentIds.has(item.id)} onView={()=>handleView(item)}/>{index===2&&<div className="h-px bg-gradient-to-r from-transparent via-violet-200 to-transparent"/>}</div>)}{scenarioStarted&&!scenarioFinished&&visibleCount<initialItems.length&&<div ref={loadMoreRef} className="flex justify-center py-6 text-violet-300" aria-label="Weitere Beiträge werden geladen"><ArrowDown className="w-5 h-5 animate-bounce"/></div>}{scenarioStarted&&!scenarioFinished&&visibleCount>=initialItems.length&&learningCards.filter(card=>card.position==="feed_end").map(card=><LearningCardFeedItem key={card.id} card={card} classInstanceId={classInstanceId}/>)}{scenarioFinished&&<section className="rounded-[26px] border border-violet-100 bg-white p-8 text-center shadow-sm"><span className="mx-auto grid h-12 w-12 place-items-center rounded-2xl bg-violet-50"><CheckCircle2 className="h-6 w-6 text-violet-600"/></span><h2 className="mt-4 font-display text-2xl font-semibold text-[#27213d]">{multipleScenarios ? "Lernlauf beendet" : "Szenario beendet"}</h2><p className="mt-2 text-sm text-[#746d89]">Du kannst jetzt aufhören. Nicht abgeschlossene Aufgaben bleiben offen.</p></section>}</div></div>{reflection&&<ReflectionOverlay contentItemId={reflection.contentItemId} onClose={()=>setReflection(null)}/>}</main>;
