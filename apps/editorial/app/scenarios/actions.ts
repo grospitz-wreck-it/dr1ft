@@ -73,6 +73,93 @@ export async function toggleScenarioActive(scenarioId: string, nextActive: boole
 }
 
 /**
+ * Löscht eine komplette Szenario-Familie inklusive aller Varianten und
+ * der zugehörigen Lern-, Interaktions- und Fortschrittsdaten.
+ * Die eigentliche Löschung läuft atomar über eine abgesicherte DB-Funktion.
+ */
+export async function deleteScenarioFamily(scenarioId: string, confirmationTitle: string) {
+  const supabase = supabaseServerClient();
+
+  const { data: selected, error: selectedError } = await supabase
+    .from("scenarios")
+    .select("id, scenario_group, slug, cover_image_url")
+    .eq("id", scenarioId)
+    .single();
+  if (selectedError || !selected) throw new Error(selectedError?.message ?? "Szenario nicht gefunden.");
+
+  let variantsQuery = supabase.from("scenarios").select("id, cover_image_url");
+  variantsQuery = selected.scenario_group
+    ? variantsQuery.eq("scenario_group", selected.scenario_group)
+    : variantsQuery.eq("slug", selected.slug);
+  const { data: variants, error: variantsError } = await variantsQuery;
+  if (variantsError) throw new Error(variantsError.message);
+  const scenarioIds = (variants ?? []).map((variant) => variant.id);
+  const coverUrls = Array.from(new Set((variants ?? [])
+    .map((variant) => variant.cover_image_url)
+    .filter((url): url is string => typeof url === "string")));
+
+  // Database deletion is atomic. Storage objects are removed only after it
+  // succeeds, so a failed DB operation never destroys still-referenced media.
+  const { error } = await supabase.rpc("delete_scenario_family", {
+    p_scenario_id: scenarioId,
+    p_confirmation_title: confirmationTitle,
+  });
+  if (error) throw new Error(error.message || "Szenario konnte nicht vollständig gelöscht werden.");
+
+  // Scenario uploads use the scenario UUID as their content-media folder.
+  // A storage cleanup failure must not report the already-completed DB delete
+  // as failed; log it for operational follow-up instead.
+  for (const id of scenarioIds) {
+    const storage = supabase.storage.from("content-media");
+    const { data: objects, error: listError } = await storage.list(id, { limit: 1000 });
+    if (listError) {
+      console.error("[scenario-delete] media listing failed", { scenarioId: id, error: listError.message });
+      continue;
+    }
+    const paths = (objects ?? [])
+      .filter((object) => Boolean(object.id || object.metadata))
+      .map((object) => `${id}/${object.name}`);
+    if (paths.length) {
+      const { error: removeError } = await storage.remove(paths);
+      if (removeError) {
+        console.error("[scenario-delete] media cleanup failed", { scenarioId: id, error: removeError.message });
+      }
+    }
+  }
+
+  // Scenario cover artwork is stored in ambient-assets under generated/date/.
+  // Preserve any image URL that is still referenced by another scenario.
+  if (coverUrls.length) {
+    const { data: remainingCoverRefs, error: refsError } = await supabase
+      .from("scenarios")
+      .select("cover_image_url")
+      .in("cover_image_url", coverUrls);
+    if (refsError) {
+      console.error("[scenario-delete] cover reference check failed", { scenarioId, error: refsError.message });
+    } else {
+      const stillUsed = new Set((remainingCoverRefs ?? []).map((row) => row.cover_image_url));
+      const coverPaths = coverUrls
+        .filter((url) => !stillUsed.has(url))
+        .map((url) => {
+          const marker = "/storage/v1/object/public/ambient-assets/";
+          const markerIndex = url.indexOf(marker);
+          return markerIndex >= 0 ? decodeURIComponent(url.slice(markerIndex + marker.length)) : null;
+        })
+        .filter((path): path is string => Boolean(path));
+      if (coverPaths.length) {
+        const { error: coverCleanupError } = await supabase.storage.from("ambient-assets").remove(coverPaths);
+        if (coverCleanupError) {
+          console.error("[scenario-delete] cover cleanup failed", { scenarioId, error: coverCleanupError.message });
+        }
+      }
+    }
+  }
+
+  revalidatePath("/scenarios");
+  revalidatePath("/dashboard");
+}
+
+/**
  * Legt ein neues Content-Item als Draft an. Manipulationstechniken und
  * Ziel-Kompetenzen kommen als kommagetrennte Strings/IDs aus dem Formular.
  */

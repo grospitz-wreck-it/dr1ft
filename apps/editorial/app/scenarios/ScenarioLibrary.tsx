@@ -1,7 +1,8 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { BookOpen, Building2, CheckCircle2, Flag, GraduationCap, Layers3, School, Search, Sparkles, ArrowUpRight, Users, SlidersHorizontal, List, LayoutGrid } from "lucide-react";
+import { BookOpen, CheckCircle2, Flag, GraduationCap, Layers3, School, Search, Users, SlidersHorizontal, List, LayoutGrid, Pencil } from "lucide-react";
+import { ScenarioDeleteButton } from "./ScenarioDeleteButton";
 import { ScenarioCoverEditor } from "./ScenarioCoverEditor";
 
 type Family = {
@@ -133,9 +134,12 @@ export function ScenarioLibrary({ families }: { families: Family[] }) {
                       {statuses.map((value) => <span key={value} className={`rounded-full px-2 py-0.5 text-[10px] font-semibold ${value === "live" || value === "approved" ? "bg-emerald-50 text-emerald-700" : value === "rejected" ? "bg-rose-50 text-rose-700" : "bg-slate-100 text-slate-600"}`}>{value === "live" ? "Aktiv" : (STATUS_LABELS[value] || "Entwurf")}</span>)}
                     </div>
                   </div>
-                  <a href={`/scenarios/${family.variants[0].id}`} className="inline-flex h-9 shrink-0 items-center gap-1.5 rounded-lg border border-violet-200 bg-white px-3 text-xs font-bold text-violet-700 transition hover:border-violet-300 hover:bg-violet-50">
-                    Bearbeiten <ArrowUpRight className="h-3.5 w-3.5" />
-                  </a>
+                  <div className="flex shrink-0 items-center gap-2">
+                    <a href={`/scenarios/${family.variants[0].id}`} aria-label={`Szenario ${family.title} bearbeiten`} title="Szenario bearbeiten" className="grid h-9 w-9 place-items-center rounded-lg border border-violet-200 bg-white text-violet-700 transition hover:border-violet-300 hover:bg-violet-50">
+                      <Pencil className="h-4 w-4" />
+                    </a>
+                    <ScenarioDeleteButton scenarioId={family.variants[0].id} title={family.title} />
+                  </div>
                 </article>
               );
             })}
@@ -159,9 +163,12 @@ export function ScenarioLibrary({ families }: { families: Family[] }) {
                 <ScenarioCoverEditor scenarioId={family.variants[0].id} title={family.title} coverImageUrl={family.coverImageUrl} />
               </div>
               <div className="flex min-w-0 flex-col gap-3">
-                <a href={`/scenarios/${family.variants[0].id}`} className="group inline-flex min-h-12 w-full items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-violet-600 via-indigo-600 to-blue-600 px-5 py-3 text-sm font-bold text-white shadow-md shadow-violet-500/20 transition hover:-translate-y-0.5 hover:shadow-lg hover:shadow-violet-500/25 focus:outline-none focus:ring-2 focus:ring-violet-400 focus:ring-offset-2">
-                  <Sparkles className="h-4 w-4" /> Bearbeiten <ArrowUpRight className="h-4 w-4 transition-transform group-hover:-translate-y-0.5 group-hover:translate-x-0.5" />
-                </a>
+                <div className="flex items-center justify-end gap-2">
+                  <a href={`/scenarios/${family.variants[0].id}`} aria-label={`Szenario ${family.title} bearbeiten`} title="Szenario bearbeiten" className="grid h-11 w-11 place-items-center rounded-xl border border-violet-200 bg-white text-violet-700 shadow-sm transition hover:border-violet-300 hover:bg-violet-50 focus:outline-none focus:ring-2 focus:ring-violet-300">
+                    <Pencil className="h-4 w-4" />
+                  </a>
+                  <ScenarioDeleteButton scenarioId={family.variants[0].id} title={family.title} />
+                </div>
                 <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
                   <MiniKpi icon={<School className="h-4 w-4" />} tint="violet" label="Schulen" value={String(family.schoolsInUse)} />
                   <MiniKpi icon={<Users className="h-4 w-4" />} tint="blue" label="Aktive Klassen" value={String(family.activeClasses)} />
