@@ -66,7 +66,7 @@ Deno.serve(async (req) => {
   }
 
   const studentId = created.user.id;
-  const { error: profileError } = await adminClient.from("user_profiles").upsert({ id: studentId, display_name: displayName }, { onConflict: "id" });
+  const { error: profileError } = await adminClient.from("user_profiles").upsert({ id: studentId, display_name: displayName, username }, { onConflict: "id" });
   if (profileError) {
     await adminClient.auth.admin.deleteUser(studentId);
     return json({ error: profileError.message }, 500);
