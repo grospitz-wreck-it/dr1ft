@@ -8,10 +8,32 @@ import { PostCard } from "../../components/PostCard";
 import { LearningCardFeedItem, type PlayerLearningCard } from "../../components/LearningCardFeedItem";
 import { ReflectionOverlay } from "../../components/ReflectionOverlay";
 
+function TeacherModuleImage({ imagePath, alt }: { imagePath: string; alt: string }) {
+  const supabase = supabaseBrowserClient();
+  const [src, setSrc] = useState<string | null>(null);
+  const [failed, setFailed] = useState(false);
+  useEffect(() => {
+    let cancelled = false;
+    void supabase.storage.from("teacher-module-assets").createSignedUrl(imagePath, 60 * 60)
+      .then(({ data, error }) => {
+        if (cancelled) return;
+        if (error || !data?.signedUrl) setFailed(true);
+        else setSrc(data.signedUrl);
+      })
+      .catch(() => { if (!cancelled) setFailed(true); });
+    return () => { cancelled = true; };
+  }, [imagePath, supabase]);
+  return <div className="post-media-stage relative isolate mx-2 overflow-hidden rounded-[22px] sm:mx-3">
+    <div aria-hidden="true" className="post-media-pattern pointer-events-none absolute inset-0"/>
+    {src ? <img src={src} alt={alt} loading="lazy" className="post-media-image relative z-[1] mx-auto block h-auto max-h-[75vh] w-auto max-w-full object-contain" onError={() => setFailed(true)}/> :
+      <div className="relative z-[1] grid min-h-56 w-full place-items-center text-sm font-medium text-violet-500">{failed ? "Bild konnte nicht geladen werden" : "Bild wird geladen …"}</div>}
+  </div>;
+}
+
 type PlayerTeacherModule = {
   id: string; title: string; description: string | null; intro_title: string | null; intro_text: string | null;
   title_card_enabled: boolean;
-  posts: Array<{ id: string; post_type: string; title: string | null; body: string | null; imageUrl: string | null; embed_provider: string | null; embed_url: string | null; interaction_data: Record<string, any> | null; sort_order: number }>;
+  posts: Array<{ id: string; post_type: string; title: string | null; body: string | null; imageUrl: string | null; imagePath?: string | null; embed_provider: string | null; embed_url: string | null; interaction_data: Record<string, any> | null; sort_order: number }>;
 };
 
 export function FeedClient({ initialItems, teacherModules = [], userId, classInstanceId, likedContentIds, profile, scenarioIntro, scenarioSummaries = [], scenarioIds = [], scenarioMissionCount = 0, completedScenarioMissionCount = 0, learningCards = [] }: {
@@ -287,7 +309,7 @@ export function FeedClient({ initialItems, teacherModules = [], userId, classIns
             {post.title&&<h4 className="mt-1 text-lg font-semibold text-[#27213d]">{post.title}</h4>}
             {post.body&&<p className="mt-2 whitespace-pre-line break-words text-sm leading-6 text-[#51476a] [overflow-wrap:anywhere]">{post.body}</p>}
           </div>
-          {post.imageUrl&&<div className="post-media-stage relative isolate mx-2 overflow-hidden rounded-[22px] sm:mx-3"><div aria-hidden="true" className="post-media-pattern pointer-events-none absolute inset-0"/><img src={post.imageUrl} alt={post.title||"Bild zum Lernmodul"} loading="lazy" className="post-media-image relative z-[1] mx-auto block h-auto max-h-[75vh] w-auto max-w-full object-contain" onError={(event)=>{event.currentTarget.style.display="none";}}/></div>}
+          {post.imagePath&&<TeacherModuleImage imagePath={post.imagePath} alt={post.title||"Bild zum Lernmodul"}/>}
           {post.embed_url&&<div className="px-4 pb-4"><a href={post.embed_url} target="_blank" rel="noreferrer" className="text-sm font-semibold text-violet-700 underline">Medieninhalt öffnen</a></div>}
           {(post.post_type==="poll"||post.post_type==="true_false")&&<div className="space-y-3 px-4 pb-4 sm:px-5 sm:pb-5">
             {responseMode==="free_text"?<textarea value={moduleFreeText[post.id]??""} onChange={event=>setModuleFreeText(current=>({...current,[post.id]:event.target.value}))} disabled={submitted} rows={3} maxLength={3000} placeholder="Deine Antwort ..." className="w-full rounded-xl border border-violet-200 bg-white p-3 text-sm text-slate-800 outline-none focus:border-violet-400 focus:ring-2 focus:ring-violet-100 disabled:opacity-60"/>:
