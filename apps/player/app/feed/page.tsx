@@ -93,20 +93,42 @@ export default async function FeedPage() {
     return (startsAt === null || startsAt <= now) && (endsAt === null || endsAt > now);
   });
   const assignedScenarioIds: string[] = Array.from(new Set<string>(availableAssignments.map((a: any) => a.scenario_id)));
-  const { data: assignedScenarios } = assignedScenarioIds.length
-    ? await supabase.from("scenarios").select("id, title, description, ambient_density, cover_image_url, learning_cards").in("id", assignedScenarioIds).order("created_at", { ascending: true })
-    : { data: [] as { id: string; title: string; description: string | null; ambient_density: string | null }[] };
-  const scenarioIntros = assignedScenarios ?? [];
-  const scenarioLearningCards = (scenarioIntros ?? []).flatMap((scenario: any) =>
+  const scenarioFilter = assignedScenarioIds.length > 0 ? `scenario_id.in.(${assignedScenarioIds.join(",")}),scenario_id.is.null` : "scenario_id.is.null";
+  // Independent feed data is fetched together. The previous implementation
+  // serialized most of these network roundtrips even though none depended on
+  // the result of another query.
+  const [
+    scenarioResult,
+    scenarioMissionResult,
+    competencyProgressResult,
+    competenciesResult,
+    profileResult,
+    ambientCatalogResult,
+    ambientPreferencesResult,
+    recentInteractionsResult,
+    poolResult,
+  ] = await Promise.all([
+    assignedScenarioIds.length
+      ? supabase.from("scenarios").select("id, title, description, ambient_density, cover_image_url, learning_cards").in("id", assignedScenarioIds).order("created_at", { ascending: true })
+      : Promise.resolve({ data: [] as any[], error: null }),
+    assignedScenarioIds.length
+      ? supabase.from("missions").select("id").in("scenario_id", assignedScenarioIds).eq("status", "live")
+      : Promise.resolve({ data: [] as any[], error: null }),
+    supabase.from("user_competency_progress").select("*").eq("user_id", user.id).eq("class_instance_id", classInstanceId),
+    supabase.from("competencies").select("id, title"),
+    supabase.from("user_profiles").select("display_name, username, avatar_seed").eq("id", user.id).maybeSingle(),
+    supabase.from("ambient_interests").select("key, parent_key").eq("is_active", true).eq("taxonomy_status", "active"),
+    supabase.from("user_ambient_preferences").select("interest_keys").eq("user_id", user.id).maybeSingle(),
+    supabase.from("user_interactions").select("content_item_id, interaction_type").eq("user_id", user.id).eq("class_instance_id", classInstanceId).order("created_at", { ascending: false }).limit(200),
+    supabase.from("content_items").select("*, creators(id, display_name, handle, avatar_url)").eq("status", "live").eq("type", "post").or(scenarioFilter).or(`class_instance_id.eq.${classInstanceId},class_instance_id.is.null`),
+  ]);
+  const scenarioIntros = scenarioResult.data ?? [];
+  const scenarioLearningCards = scenarioIntros.flatMap((scenario: any) =>
     (Array.isArray(scenario.learning_cards) ? scenario.learning_cards : [])
       .filter((card: any) => card && typeof card.id === "string" && typeof card.title === "string" && typeof card.prompt === "string" && Array.isArray(card.options))
       .map((card: any) => ({
-        id: card.id,
-        scenarioId: scenario.id,
-        scenarioTitle: scenario.title,
-        type: String(card.type ?? "decision"),
-        title: card.title,
-        prompt: card.prompt,
+        id: card.id, scenarioId: scenario.id, scenarioTitle: scenario.title,
+        type: String(card.type ?? "decision"), title: card.title, prompt: card.prompt,
         position: card.position === "before_feed" ? "before_feed" as const : "feed_end" as const,
         objective: typeof card.objective === "string" ? card.objective : "",
         objectiveId: typeof card.objectiveId === "string" ? card.objectiveId : "",
@@ -122,27 +144,19 @@ export default async function FeedPage() {
   const scenarioIntroDescription = scenarioIntros.length > 1
     ? "In deinem Feed begegnen dir Inhalte aus mehreren Szenarien. Die Themen und Perspektiven wechseln sich ab – dazwischen erscheinen ganz normale Beiträge. Schau genau hin, verknüpfe Hinweise und bilde dir deine eigene Meinung. Nicht jeder Beitrag gehört zum selben Zusammenhang."
     : scenarioIntro?.description ?? null;
-  const { data: scenarioMissions } = assignedScenarioIds.length
-    ? await supabase.from("missions").select("id").in("scenario_id", assignedScenarioIds).eq("status", "live")
-    : { data: [] as { id: string }[] };
-  const scenarioMissionIds = (scenarioMissions ?? []).map((mission) => mission.id);
+  const scenarioMissions = scenarioMissionResult.data ?? [];
+  const scenarioMissionIds = scenarioMissions.map((mission: any) => mission.id);
   const { data: completedScenarioMissions } = scenarioMissionIds.length
     ? await supabase.from("user_mission_progress").select("mission_id").eq("user_id", user.id).eq("class_instance_id", classInstanceId).eq("status", "completed").in("mission_id", scenarioMissionIds)
     : { data: [] as { mission_id: string }[] };
-  const { data: competencyProgress } = await supabase.from("user_competency_progress").select("*").eq("user_id", user.id).eq("class_instance_id", classInstanceId);
-  const { data: allCompetencies } = await supabase.from("competencies").select("id, title");
-  const progressByCompetency = new Map((competencyProgress ?? []).map((c) => [c.competency_id, c.level]));
-  const competencyDisplay = (allCompetencies ?? []).map((c) => ({ id: c.id, title: c.title, level: progressByCompetency.get(c.id) ?? 1 }));
-  const [
-    { data: currentProfile },
-    { data: ambientCatalog },
-    { data: ambientPreferences },
-  ] = await Promise.all([
-    supabase.from("user_profiles").select("display_name, username, avatar_seed").eq("id", user.id).maybeSingle(),
-    supabase.from("ambient_interests").select("key, parent_key").eq("is_active", true).eq("taxonomy_status", "active"),
-    supabase.from("user_ambient_preferences").select("interest_keys").eq("user_id", user.id).maybeSingle(),
-  ]);
-  const interestParentByKey = new Map((ambientCatalog ?? []).map((interest) => [interest.key, interest.parent_key]));
+  const competencyProgress = competencyProgressResult.data ?? [];
+  const allCompetencies = competenciesResult.data ?? [];
+  const progressByCompetency = new Map(competencyProgress.map((item: any) => [item.competency_id, item.level]));
+  const competencyDisplay = allCompetencies.map((item: any) => ({ id: item.id, title: item.title, level: progressByCompetency.get(item.id) ?? 1 }));
+  const currentProfile = profileResult.data;
+  const ambientCatalog = ambientCatalogResult.data ?? [];
+  const ambientPreferences = ambientPreferencesResult.data;
+  const interestParentByKey = new Map(ambientCatalog.map((interest: any) => [interest.key, interest.parent_key]));
   const selectedInterestKeys: string[] = Array.isArray(ambientPreferences?.interest_keys)
     ? ambientPreferences.interest_keys.filter((key: unknown): key is string => typeof key === "string")
     : [];
@@ -161,27 +175,30 @@ export default async function FeedPage() {
     }
     return Array.from(expanded);
   };
-  const { data: recentInteractions } = await supabase.from("user_interactions").select("content_item_id, interaction_type").eq("user_id", user.id).eq("class_instance_id", classInstanceId).order("created_at", { ascending: false }).limit(200);
-  const recentlySeenContentIds = (recentInteractions ?? []).filter((i) => i.interaction_type === "view").map((i) => i.content_item_id);
-  const scenarioFilter = assignedScenarioIds.length > 0 ? `scenario_id.in.(${assignedScenarioIds.join(",")}),scenario_id.is.null` : "scenario_id.is.null";
-  const { data: pool } = await supabase.from("content_items").select("*, creators(id, display_name, handle, avatar_url)").eq("status", "live").eq("type", "post").or(scenarioFilter).or(`class_instance_id.eq.${classInstanceId},class_instance_id.is.null`);
-  const contentIds = (pool ?? []).map((row: any) => row.id);
-  const creatorIds = Array.from(new Set((pool ?? []).map((row: any) => row.creator_id).filter((id: unknown): id is string => typeof id === "string")));
-  const { data: creatorRows } = creatorIds.length ? await supabase.from("creators").select("id, display_name, handle, avatar_url").in("id", creatorIds) : { data: [] as { id: string; display_name: string; handle: string; avatar_url: string | null }[] };
-  const creatorById = new Map((creatorRows ?? []).map((creator) => [creator.id, creator]));
-  const { data: instanceLikes } = contentIds.length
-    ? await supabase.rpc("get_class_instance_post_likes", {
-        p_class_instance_id: classInstanceId,
-        p_content_item_ids: contentIds,
-      })
-    : { data: [] as { content_item_id: string; user_id: string; display_name: string; username: string; avatar_seed: string }[] };
-  const { data: npcLikes } = contentIds.length ? await supabase.from("npc_social_interactions").select("content_item_id").eq("class_instance_id", classInstanceId).eq("interaction_type", "like").in("content_item_id", contentIds) : { data: [] as { content_item_id: string }[] };
-  const { data: classComments } = contentIds.length
-    ? await supabase.from("content_items").select("id, parent_id").eq("class_instance_id", classInstanceId).eq("type", "comment").eq("status", "live").in("parent_id", contentIds)
-    : { data: [] as { id: string; parent_id: string | null }[] };
-  const { data: scenarioComments } = contentIds.length && assignedScenarioIds.length
-    ? await supabase.from("content_items").select("id, parent_id").is("class_instance_id", null).in("scenario_id", assignedScenarioIds).eq("type", "comment").eq("status", "live").in("parent_id", contentIds)
-    : { data: [] as { id: string; parent_id: string | null }[] };
+  const recentInteractions = recentInteractionsResult.data ?? [];
+  const recentlySeenContentIds = recentInteractions.filter((item: any) => item.interaction_type === "view").map((item: any) => item.content_item_id);
+  const pool = poolResult.data ?? [];
+  const contentIds = pool.map((row: any) => row.id);
+  const creatorIds = Array.from(new Set(pool.map((row: any) => row.creator_id).filter((id: unknown): id is string => typeof id === "string")));
+  const [
+    creatorRowsResult,
+    instanceLikesResult,
+    npcLikesResult,
+    classCommentsResult,
+    scenarioCommentsResult,
+  ] = await Promise.all([
+    creatorIds.length ? supabase.from("creators").select("id, display_name, handle, avatar_url").in("id", creatorIds) : Promise.resolve({ data: [] as any[], error: null }),
+    contentIds.length ? supabase.rpc("get_class_instance_post_likes", { p_class_instance_id: classInstanceId, p_content_item_ids: contentIds }) : Promise.resolve({ data: [] as any[], error: null }),
+    contentIds.length ? supabase.from("npc_social_interactions").select("content_item_id").eq("class_instance_id", classInstanceId).eq("interaction_type", "like").in("content_item_id", contentIds) : Promise.resolve({ data: [] as any[], error: null }),
+    contentIds.length ? supabase.from("content_items").select("id, parent_id").eq("class_instance_id", classInstanceId).eq("type", "comment").eq("status", "live").in("parent_id", contentIds) : Promise.resolve({ data: [] as any[], error: null }),
+    contentIds.length && assignedScenarioIds.length ? supabase.from("content_items").select("id, parent_id").is("class_instance_id", null).in("scenario_id", assignedScenarioIds).eq("type", "comment").eq("status", "live").in("parent_id", contentIds) : Promise.resolve({ data: [] as any[], error: null }),
+  ]);
+  const creatorRows = creatorRowsResult.data ?? [];
+  const creatorById = new Map(creatorRows.map((creator: any) => [creator.id, creator]));
+  const instanceLikes = instanceLikesResult.data ?? [];
+  const npcLikes = npcLikesResult.data ?? [];
+  const classComments = classCommentsResult.data ?? [];
+  const scenarioComments = scenarioCommentsResult.data ?? [];
   const likeCounts = new Map<string, number>(); const commentCounts = new Map<string, number>();
   for (const like of instanceLikes ?? []) likeCounts.set(like.content_item_id, (likeCounts.get(like.content_item_id) ?? 0) + 1);
   for (const like of npcLikes ?? []) likeCounts.set(like.content_item_id, (likeCounts.get(like.content_item_id) ?? 0) + 1);
