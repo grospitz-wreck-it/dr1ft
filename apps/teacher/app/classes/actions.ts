@@ -12,6 +12,21 @@ function generateAccessCode(): string {
   return code;
 }
 
+export async function regenerateClassInstanceAccessCode(classId: string): Promise<string> {
+  const supabase = supabaseServerClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) throw new Error("Nicht authentifiziert");
+
+  const { data: accessCode, error } = await supabase.rpc("regenerate_class_instance_access_code", {
+    p_class_id: classId,
+  });
+  if (error || !accessCode) throw new Error(error?.message ?? "Klassencode konnte nicht erneuert werden.");
+
+  revalidatePath(`/classes/${classId}`);
+  revalidatePath("/classes");
+  return accessCode as string;
+}
+
 export async function createClass(formData: FormData) {
   const supabase = supabaseServerClient();
   const { data: { user } } = await supabase.auth.getUser();
