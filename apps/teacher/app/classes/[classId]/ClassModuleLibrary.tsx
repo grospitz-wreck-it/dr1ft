@@ -52,6 +52,7 @@ export function ClassModuleLibrary({
   const [libraryTab, setLibraryTab] = useState<"dr1ft" | "own">("dr1ft");
   const [pendingId, setPendingId] = useState<string | null>(null);
   const [error, setError] = useState("");
+  const [createdMessage, setCreatedMessage] = useState("");
   const [pending, startTransition] = useTransition();
   const router = useRouter();
 
@@ -87,7 +88,7 @@ export function ClassModuleLibrary({
           <p className="mt-1 text-sm text-slate-500">Wähle ein Lernmodul aus der DR1FT-Bibliothek. Lernfortschritte bleiben auch beim Wechsel erhalten.</p>
         </div>
         <div className="flex flex-wrap items-center gap-2">
-          {schoolId && <TeacherModuleBuilderModal classInstanceId={classId} schoolId={schoolId} />}
+          {schoolId && <TeacherModuleBuilderModal classInstanceId={classId} schoolId={schoolId} onCreated={() => { setCreatedMessage("Modul erstellt und in deiner Liste abgelegt – zunächst inaktiv."); router.refresh(); }} />}
           <button type="button" onClick={() => { setOpen(true); setError(""); }} className="inline-flex shrink-0 items-center gap-2 rounded-xl bg-violet-600 px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-violet-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-violet-400 focus-visible:ring-offset-2">
             <Plus className="h-4 w-4" /> Modul wählen
           </button>
@@ -95,6 +96,7 @@ export function ClassModuleLibrary({
       </div>
 
       <div className="bg-slate-50/60 p-3 sm:p-4">
+        {createdMessage && <p role="status" aria-live="polite" className="mb-3 rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm font-semibold text-emerald-800"><Check className="mr-2 inline h-4 w-4" />{createdMessage}</p>}
         {teacherModules.length > 0 && (
           <div className="mb-3 space-y-2">
             {teacherModules.map((module) => (
