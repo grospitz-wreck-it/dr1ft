@@ -106,6 +106,12 @@ export default async function TeacherHomePage() {
         .eq("role", "student")
         .is("left_at", null)
     : { data: [] as any[] };
+  const assignmentsByClass = new Map<string, any[]>();
+  (scenarioAssignments ?? []).forEach((row: any) => {
+    const current = assignmentsByClass.get(row.class_instance_id) ?? [];
+    if (row.scenarios) current.push(row.scenarios);
+    assignmentsByClass.set(row.class_instance_id, current);
+  });
   const candidateCounts = new Map<string, number>();
   (allSchoolStudents ?? []).forEach((row: any) => candidateCounts.set(row.class_instance_id, (candidateCounts.get(row.class_instance_id) ?? 0) + 1));
   const subscriptionIds = new Set((subscriptions ?? []).map((row: any) => row.class_instance_id));
@@ -132,12 +138,6 @@ export default async function TeacherHomePage() {
   const studentCount = studentMemberships?.length ?? 0;
   const studentsByClass = new Map<string, number>();
   (studentMemberships ?? []).forEach((row: any) => studentsByClass.set(row.class_instance_id, (studentsByClass.get(row.class_instance_id) ?? 0) + 1));
-  const assignmentsByClass = new Map<string, any[]>();
-  (scenarioAssignments ?? []).forEach((row: any) => {
-    const current = assignmentsByClass.get(row.class_instance_id) ?? [];
-    if (row.scenarios) current.push(row.scenarios);
-    assignmentsByClass.set(row.class_instance_id, current);
-  });
   const overviewClasses = classes.map((item: any) => {
     const school = schoolsById.get(item.school_id) as any;
     const thumbnailUrl = !item.class_visual_id && school?.school_image_path
