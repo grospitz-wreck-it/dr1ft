@@ -30,6 +30,101 @@ function TeacherModuleImage({ imagePath, alt }: { imagePath: string; alt: string
   </div>;
 }
 
+type TeacherModulePollResult = {
+  total: number;
+  results: Array<{ key: string; label: string; count: number }>;
+  myVote: { submitted: boolean; selected: string[] };
+  responseMode: string;
+};
+
+function TeacherModulePoll({ moduleId, post, classInstanceId, initialResult }: {
+  moduleId: string;
+  post: PlayerTeacherModule["posts"][number];
+  classInstanceId: string;
+  initialResult?: TeacherModulePollResult;
+}) {
+  const supabase = supabaseBrowserClient();
+  const config = post.interaction_data ?? {};
+  const responseMode = config.responseMode ?? "single";
+  const options = Array.isArray(config.options) ? config.options.filter((option: any) => typeof option === "string" && option.trim()) : [];
+  const [selected, setSelected] = useState<string[]>(initialResult?.myVote?.selected ?? []);
+  const [textAnswer, setTextAnswer] = useState("");
+  const [submitting, setSubmitting] = useState(false);
+  const [submitted, setSubmitted] = useState(initialResult?.myVote?.submitted === true);
+  const [errorMessage, setErrorMessage] = useState("");
+  const [result, setResult] = useState<TeacherModulePollResult | undefined>(initialResult);
+
+  useEffect(() => {
+    if (!initialResult) return;
+    setResult(initialResult);
+    setSubmitted(initialResult.myVote?.submitted === true);
+    setSelected(initialResult.myVote?.selected ?? []);
+  }, [initialResult]);
+
+  async function submit() {
+    if (responseMode === "free_text" ? !textAnswer.trim() : selected.length === 0) {
+      setErrorMessage("Bitte gib eine Antwort ein.");
+      return;
+    }
+    setSubmitting(true);
+    setErrorMessage("");
+    try {
+      const { error } = await (supabase as any).rpc("submit_teacher_module_poll_vote", {
+        p_post_id: post.id,
+        p_module_id: moduleId,
+        p_class_instance_id: classInstanceId,
+        p_selected_choices: selected,
+        p_text_answer: responseMode === "free_text" ? textAnswer.trim() : null,
+      });
+      if (error) throw error;
+      setSubmitted(true);
+      setSubmitting(false);
+      // The write is complete. Refresh the class aggregate in the background;
+      // do not make the student's success feedback wait for a second request.
+      void (supabase as any).rpc("get_teacher_module_poll_results", { p_post_id: post.id })
+        .then(({ data, error: refreshError }: any) => {
+          if (refreshError) console.error("[Player] poll results refresh failed", refreshError);
+          else if (data) setResult(data);
+        });
+    } catch (error) {
+      console.error("[Player] teacher module answer failed", error);
+      setErrorMessage("Deine Antwort konnte gerade nicht gespeichert werden. Bitte versuche es erneut.");
+      setSubmitting(false);
+    }
+  }
+
+  return <div className="teacher-module-poll space-y-3 px-4 pb-4 sm:px-5 sm:pb-5">
+    {responseMode === "free_text"
+      ? <textarea value={textAnswer} onChange={(event) => setTextAnswer(event.target.value)} disabled={submitted} rows={3} maxLength={3000} placeholder="Deine Antwort ..." className="w-full rounded-xl border border-violet-200 bg-white p-3 text-sm text-slate-800 outline-none focus:border-violet-400 focus:ring-2 focus:ring-violet-100 disabled:opacity-60"/>
+      : <div className="grid gap-2">{options.map((option: string, index: number) => {
+          const value = "option_" + (index + 1);
+          const active = selected.includes(value);
+          return <button key={value} type="button" disabled={submitted} aria-pressed={active}
+            onClick={() => setSelected((current) => responseMode === "multiple"
+              ? (active ? current.filter((item) => item !== value) : [...current, value])
+              : [value])}
+            className={"teacher-module-poll-option w-full rounded-xl border px-4 py-3 text-left text-sm font-medium transition " + (active
+              ? "border-violet-600 bg-gradient-to-r from-violet-600 via-fuchsia-600 to-violet-500 text-white shadow-lg shadow-violet-500/25 ring-2 ring-fuchsia-300 ring-offset-1"
+              : "border-violet-100 bg-white text-slate-700 hover:border-violet-300 hover:bg-violet-50")}>
+            {active && <span className="mr-2 inline-grid h-5 w-5 place-items-center rounded-full bg-white/20 text-xs">✓</span>}{option}
+          </button>;
+        })}</div>}
+    {errorMessage && <p role="alert" className="text-sm text-red-600">{errorMessage}</p>}
+    {submitted
+      ? <p role="status" className="text-sm font-semibold text-emerald-700">Antwort gespeichert. Danke!</p>
+      : <button type="button" disabled={submitting} onClick={() => void submit()} className="rounded-xl bg-gradient-to-r from-violet-600 to-fuchsia-600 px-5 py-3 text-sm font-bold text-white disabled:opacity-50">{submitting ? "Wird gespeichert …" : "Antwort senden"}</button>}
+    {result && result.total > 0 && <div className="mt-5 rounded-2xl border border-violet-100 bg-gradient-to-br from-violet-50 via-white to-cyan-50 p-4 sm:p-5">
+      <div className="mb-4 flex items-center justify-between gap-3"><h5 className="text-sm font-bold text-[#35264d]">Umfrageergebnis</h5><span className="rounded-full bg-violet-100 px-3 py-1 text-xs font-bold text-violet-700">{result.total} {result.total === 1 ? "Antwort" : "Antworten"}</span></div>
+      <div className="space-y-3">{result.results.map((entry) => {
+        const percentage = Math.round(entry.count / Math.max(result.total, 1) * 100);
+        return <div key={entry.key}><div className="mb-1.5 flex items-center justify-between gap-3 text-xs"><span className="font-semibold text-[#51476a]">{entry.label}</span><span className="shrink-0 font-bold tabular-nums text-violet-700">{entry.count} · {percentage}%</span></div><div className="h-3 overflow-hidden rounded-full bg-violet-100"><div className="h-full rounded-full bg-gradient-to-r from-violet-600 via-fuchsia-500 to-cyan-400 transition-all duration-500" style={{ width: percentage + "%" }}/></div></div>;
+      })}</div>
+      {result.responseMode === "multiple" && <p className="mt-3 text-[11px] text-[#746d89]">Mehrfachauswahl möglich – Prozentwerte beziehen sich auf die abgegebenen Antworten.</p>}
+      {result.responseMode === "free_text" && <p className="mt-2 text-xs text-[#746d89]">Freitextantworten werden hier nur anonym als Anzahl angezeigt.</p>}
+    </div>}
+  </div>;
+}
+
 type PlayerTeacherModule = {
   id: string; title: string; description: string | null; intro_title: string | null; intro_text: string | null;
   title_card_enabled: boolean;
@@ -48,71 +143,24 @@ export function FeedClient({ initialItems, teacherModules = [], userId, classIns
 }) {
   const supabase = supabaseBrowserClient();
   const [reflection, setReflection] = useState<{ missionId: string; contentItemId: string } | null>(null);
-  const [moduleSelections, setModuleSelections] = useState<Record<string, string[]>>({});
-  const [moduleFreeText, setModuleFreeText] = useState<Record<string, string>>({});
-  const [moduleSubmitting, setModuleSubmitting] = useState<Record<string, boolean>>({});
-  const [moduleSubmitted, setModuleSubmitted] = useState<Record<string, boolean>>({});
-  const [moduleVoteErrors, setModuleVoteErrors] = useState<Record<string, string>>({});
-  const [modulePollResults, setModulePollResults] = useState<Record<string, { total: number; results: Array<{ key: string; label: string; count: number }>; myVote: { submitted: boolean; selected: string[] }; responseMode: string }>>({});
+  const [modulePollResults, setModulePollResults] = useState<Record<string, TeacherModulePollResult>>({});
   useEffect(() => {
     let cancelled = false;
-    const pollPosts = teacherModules.flatMap((module) => module.posts
+    const pollPostIds = teacherModules.flatMap((module) => module.posts
       .filter((post) => post.post_type === "poll" || post.post_type === "true_false")
       .map((post) => post.id));
-    if (!pollPosts.length) return;
-    void Promise.all(pollPosts.map(async (postId) => {
-      const { data, error } = await (supabase as any).rpc("get_teacher_module_poll_results", { p_post_id: postId });
-      if (error) {
-        console.error("[Player] poll results could not be loaded", { postId, code: error.code, message: error.message });
-        return null;
-      }
-      return [postId, data] as const;
-    })).then((entries) => {
-      if (cancelled) return;
-      const next: typeof modulePollResults = {};
-      for (const entry of entries) if (entry) next[entry[0]] = entry[1];
-      setModulePollResults((current) => ({ ...current, ...next }));
-      for (const [postId, result] of Object.entries(next)) {
-        if (result.myVote?.submitted) {
-          setModuleSubmitted((current) => ({ ...current, [postId]: true }));
-          setModuleSelections((current) => ({ ...current, [postId]: result.myVote.selected ?? [] }));
+    if (!pollPostIds.length) return;
+    void (supabase as any).rpc("get_teacher_module_poll_results_batch", { p_post_ids: pollPostIds })
+      .then(({ data, error }: any) => {
+        if (cancelled) return;
+        if (error) {
+          console.error("[Player] poll results could not be loaded", { code: error.code, message: error.message });
+          return;
         }
-      }
-    });
+        setModulePollResults((data ?? {}) as Record<string, TeacherModulePollResult>);
+      });
     return () => { cancelled = true; };
   }, [teacherModules, supabase]);
-
-  async function submitTeacherModuleAnswer(moduleId: string, post: PlayerTeacherModule["posts"][number]) {
-    const config = post.interaction_data ?? {};
-    const responseMode = config.responseMode ?? "single";
-    const selected = moduleSelections[post.id] ?? [];
-    const textAnswer = (moduleFreeText[post.id] ?? "").trim();
-    if (responseMode === "free_text" ? !textAnswer : selected.length === 0) {
-      setModuleVoteErrors((current) => ({ ...current, [post.id]: "Bitte gib eine Antwort ein." }));
-      return;
-    }
-    setModuleSubmitting((current) => ({ ...current, [post.id]: true }));
-    setModuleVoteErrors((current) => ({ ...current, [post.id]: "" }));
-    try {
-      const { error } = await (supabase as any).rpc("submit_teacher_module_poll_vote", {
-        p_post_id: post.id,
-        p_module_id: moduleId,
-        p_class_instance_id: classInstanceId,
-        p_selected_choices: selected,
-        p_text_answer: responseMode === "free_text" ? textAnswer : null,
-      });
-      if (error) throw error;
-      setModuleSubmitted((current) => ({ ...current, [post.id]: true }));
-      const { data: result, error: resultError } = await (supabase as any).rpc("get_teacher_module_poll_results", { p_post_id: post.id });
-      if (resultError) console.error("[Player] poll results refresh failed", resultError);
-      else if (result) setModulePollResults((current) => ({ ...current, [post.id]: result }));
-    } catch (error) {
-      console.error("[Player] teacher module answer failed", error);
-      setModuleVoteErrors((current) => ({ ...current, [post.id]: "Deine Antwort konnte gerade nicht gespeichert werden. Bitte versuche es erneut." }));
-    } finally {
-      setModuleSubmitting((current) => ({ ...current, [post.id]: false }));
-    }
-  }
   const [scenarioStarted, setScenarioStarted] = useState(false);
   const [scenarioFinished, setScenarioFinished] = useState(false);
   const [scenarioStateLoaded, setScenarioStateLoaded] = useState(false);
@@ -298,11 +346,6 @@ export function FeedClient({ initialItems, teacherModules = [], userId, classIns
     </header>}
     {scenarioStarted&&<div className="space-y-5 p-4 sm:p-6">
       {module.posts.map((post,index)=>{
-        const config=post.interaction_data??{};
-        const options=Array.isArray(config.options)?config.options.filter((option:any)=>typeof option==="string"&&option.trim()):[];
-        const responseMode=config.responseMode??"single";
-        const selected=moduleSelections[post.id]??[];
-        const submitted=moduleSubmitted[post.id]===true;
         return <section key={post.id} className="overflow-hidden rounded-2xl border border-violet-100 bg-white">
           <div className="p-4 sm:p-5">
             <p className="text-[10px] font-bold uppercase tracking-[0.16em] text-violet-500">Beitrag {index+1}</p>
@@ -311,18 +354,7 @@ export function FeedClient({ initialItems, teacherModules = [], userId, classIns
           </div>
           {post.imagePath&&<TeacherModuleImage imagePath={post.imagePath} alt={post.title||"Bild zum Lernmodul"}/>}
           {post.embed_url&&<div className="px-4 pb-4"><a href={post.embed_url} target="_blank" rel="noreferrer" className="text-sm font-semibold text-violet-700 underline">Medieninhalt öffnen</a></div>}
-          {(post.post_type==="poll"||post.post_type==="true_false")&&<div className="space-y-3 px-4 pb-4 sm:px-5 sm:pb-5">
-            {responseMode==="free_text"?<textarea value={moduleFreeText[post.id]??""} onChange={event=>setModuleFreeText(current=>({...current,[post.id]:event.target.value}))} disabled={submitted} rows={3} maxLength={3000} placeholder="Deine Antwort ..." className="w-full rounded-xl border border-violet-200 bg-white p-3 text-sm text-slate-800 outline-none focus:border-violet-400 focus:ring-2 focus:ring-violet-100 disabled:opacity-60"/>:
-              <div className="grid gap-2">{options.map((option:string,optionIndex:number)=>{const value="option_"+(optionIndex+1);const active=selected.includes(value);return <button key={value} type="button" disabled={submitted} aria-pressed={active} onClick={()=>setModuleSelections(current=>({...current,[post.id]:responseMode==="multiple"?(active?(current[post.id]??[]).filter(item=>item!==value):[...(current[post.id]??[]),value]):[value]}))} className={"w-full rounded-xl border px-4 py-3 text-left text-sm font-medium transition "+(active?"border-violet-600 bg-gradient-to-r from-violet-600 via-fuchsia-600 to-violet-500 text-white shadow-lg shadow-violet-500/25 ring-2 ring-fuchsia-300 ring-offset-1":"border-violet-100 bg-white text-slate-700 hover:border-violet-300 hover:bg-violet-50")}>{active&&<span className="mr-2 inline-grid h-5 w-5 place-items-center rounded-full bg-white/20 text-xs">✓</span>}{option}</button>})}</div>}
-            {moduleVoteErrors[post.id]&&<p role="alert" className="text-sm text-red-600">{moduleVoteErrors[post.id]}</p>}
-            {submitted?<p role="status" className="text-sm font-semibold text-emerald-700">Antwort gespeichert. Danke!</p>:<button type="button" disabled={moduleSubmitting[post.id]} onClick={()=>void submitTeacherModuleAnswer(module.id,post)} className="rounded-xl bg-gradient-to-r from-violet-600 to-fuchsia-600 px-5 py-3 text-sm font-bold text-white disabled:opacity-50">{moduleSubmitting[post.id]?"Wird gespeichert …":"Antwort senden"}</button>}
-            {modulePollResults[post.id]&&modulePollResults[post.id].total>0&&<div className="mt-5 rounded-2xl border border-violet-100 bg-gradient-to-br from-violet-50 via-white to-cyan-50 p-4 sm:p-5">
-              <div className="mb-4 flex items-center justify-between gap-3"><h5 className="text-sm font-bold text-[#35264d]">Umfrageergebnis</h5><span className="rounded-full bg-violet-100 px-3 py-1 text-xs font-bold text-violet-700">{modulePollResults[post.id].total} {modulePollResults[post.id].total===1?"Antwort":"Antworten"}</span></div>
-              <div className="space-y-3">{modulePollResults[post.id].results.map((result)=>{const percentage=modulePollResults[post.id].responseMode==="multiple"?Math.round(result.count/Math.max(modulePollResults[post.id].total,1)*100):Math.round(result.count/Math.max(modulePollResults[post.id].total,1)*100);return <div key={result.key}><div className="mb-1.5 flex items-center justify-between gap-3 text-xs"><span className="font-semibold text-[#51476a]">{result.label}</span><span className="shrink-0 font-bold tabular-nums text-violet-700">{result.count} · {percentage}%</span></div><div className="h-3 overflow-hidden rounded-full bg-violet-100"><div className="h-full rounded-full bg-gradient-to-r from-violet-600 via-fuchsia-500 to-cyan-400 transition-all duration-500" style={{width:percentage+"%"}}/></div></div>})}</div>
-              {modulePollResults[post.id].responseMode==="multiple"&&<p className="mt-3 text-[11px] text-[#746d89]">Mehrfachauswahl möglich – Prozentwerte beziehen sich auf die abgegebenen Antworten.</p>}
-              {modulePollResults[post.id].responseMode==="free_text"&&<p className="mt-2 text-xs text-[#746d89]">Freitextantworten werden hier nur anonym als Anzahl angezeigt.</p>}
-            </div>}
-          </div>}
+          {(post.post_type==="poll"||post.post_type==="true_false")&&<TeacherModulePoll moduleId={module.id} post={post} classInstanceId={classInstanceId} initialResult={modulePollResults[post.id]}/>} 
         </section>;
       })}
     </div>}
