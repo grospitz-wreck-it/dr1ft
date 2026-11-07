@@ -82,6 +82,7 @@ export function TeacherNav() {
     let alive = true;
 
     async function loadAccountData(userId: string) {
+      const accountCoreStartedAt = Date.now();
       const [
         { data: profile },
         { data: memberships },
@@ -95,6 +96,7 @@ export function TeacherNav() {
           .eq("role", "teacher")
           .is("left_at", null),
       ]);
+      console.info("[teacher-nav-timing]", { stage: "profile-memberships-classes", ms: Date.now() - accountCoreStartedAt });
       if (!alive) return;
 
       setDisplayName(profile?.display_name?.trim() || null);
@@ -110,6 +112,7 @@ export function TeacherNav() {
       ].filter(Boolean)));
       const classIds = Array.from(new Set((teacherClasses ?? []).map((row) => row.class_instance_id)));
 
+      const accountSummaryStartedAt = Date.now();
       const [schoolResult, studentResult] = await Promise.all([
         schoolIds.length
           ? supabase.from("schools").select("id, name, region").in("id", schoolIds)
@@ -122,6 +125,7 @@ export function TeacherNav() {
               .is("left_at", null)
           : Promise.resolve({ count: 0 }),
       ]);
+      console.info("[teacher-nav-timing]", { stage: "school-and-student-summary", ms: Date.now() - accountSummaryStartedAt });
       if (!alive) return;
 
       const primarySchool = (schoolResult.data ?? []).find((row: any) => row.id === schoolIds[0]);
@@ -131,11 +135,17 @@ export function TeacherNav() {
     }
 
     async function refreshAccount() {
+      const authStartedAt = Date.now();
       const { data: { user } } = await supabase.auth.getUser();
+      console.info("[teacher-nav-timing]", { stage: "auth-user", ms: Date.now() - authStartedAt });
       if (!alive) return;
       setEmail(user?.email ?? null);
       setUserId(user?.id ?? null);
-      if (user) await loadAccountData(user.id);
+      if (user) {
+        const accountStartedAt = Date.now();
+        await loadAccountData(user.id);
+        console.info("[teacher-nav-timing]", { stage: "account-total", ms: Date.now() - accountStartedAt });
+      }
     }
 
     void refreshAccount();
@@ -165,23 +175,27 @@ export function TeacherNav() {
     setClassIdForCode(currentClassId);
 
     void (async () => {
+      const classLookupStartedAt = Date.now();
       const { data: classRow } = await supabase
         .from("class_instances")
         .select("id,access_code,school_id")
         .eq("id", currentClassId)
         .maybeSingle();
+      console.info("[teacher-nav-timing]", { stage: "class-access-code", ms: Date.now() - classLookupStartedAt });
       if (!alive) return;
       setClassAccessCode(classRow?.access_code ?? null);
       if (!classRow) {
         setCanRerollClassCode(false);
         return;
       }
+      const permissionsStartedAt = Date.now();
       const [{ data: isPlatformAdmin }, { data: canManageSchool }, { data: canManageStudents }, { data: subscription }] = await Promise.all([
         supabase.rpc("is_platform_admin"),
         classRow.school_id ? supabase.rpc("can_manage_school", { p_school_id: classRow.school_id }) : Promise.resolve({ data: false }),
         supabase.rpc("can_manage_student_accounts", { p_class_id: currentClassId }),
         supabase.from("teacher_class_subscriptions").select("id").eq("class_instance_id", currentClassId).eq("teacher_user_id", userId).eq("is_active", true).maybeSingle(),
       ]);
+      console.info("[teacher-nav-timing]", { stage: "class-permissions", ms: Date.now() - permissionsStartedAt });
       if (alive) setCanRerollClassCode(Boolean(isPlatformAdmin || canManageSchool || canManageStudents || subscription));
     })();
 
