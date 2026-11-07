@@ -242,7 +242,7 @@ export function FeedClient({ initialItems, teacherModules = [], userId, classIns
       <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-violet-600">Lernmodul</p>
       <h3 className="mt-1 font-display text-xl font-semibold text-[#27213d]">{module.title}</h3>
       {module.description&&<p className="mt-2 whitespace-pre-line text-sm leading-6 text-[#746d89]">{module.description}</p>}
-      {!scenarioStarted&&!scenarioFinished&&<div className="mt-4 flex justify-end"><button type="button" onClick={handleScenarioStart} className="inline-flex items-center gap-2 rounded-xl bg-gradient-to-r from-violet-600 to-fuchsia-600 px-5 py-3 text-sm font-bold text-white shadow-md">DR1FT starten <ArrowRight className="h-4 w-4"/></button></div>}
+      {!scenarioStarted&&!scenarioFinished&&!scenarioIntro&&!multipleScenarios&&<div className="mt-4 flex justify-end"><button type="button" onClick={handleScenarioStart} className="inline-flex items-center gap-2 rounded-xl bg-gradient-to-r from-violet-600 to-fuchsia-600 px-5 py-3 text-sm font-bold text-white shadow-md">DR1FT starten <ArrowRight className="h-4 w-4"/></button></div>}
     </header>}
     {scenarioStarted&&<div className="space-y-5 p-4 sm:p-6">
       {module.posts.map((post,index)=>{
