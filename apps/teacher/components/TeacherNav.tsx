@@ -200,7 +200,7 @@ export function TeacherNav() {
         <div className="relative flex items-center gap-3">
           {classAccessCode && (
             <div className="hidden items-center gap-2 rounded-xl border border-slate-200 bg-white px-3 py-1.5 sm:flex">
-              <span className="text-[10px] font-semibold uppercase tracking-[0.12em] text-slate-400">Klassencode</span>
+              <span className="bg-gradient-to-r from-violet-600 via-fuchsia-500 to-cyan-500 bg-clip-text text-[10px] font-extrabold uppercase tracking-[0.12em] text-transparent">Klassencode</span>
               <code className="font-mono text-sm font-semibold tracking-[0.14em] text-slate-800">{classAccessCode}</code>
               <button type="button" onClick={() => { void navigator.clipboard.writeText(classAccessCode).then(() => { setCopiedClassCode(true); window.setTimeout(() => setCopiedClassCode(false), 1400); }); }} aria-label="Klassencode kopieren" title="Klassencode kopieren" className="inline-flex h-8 w-8 items-center justify-center rounded-lg text-violet-700 transition hover:bg-violet-50">
                 {copiedClassCode ? <Check className="h-4 w-4" /> : <Copy className="h-4 w-4" />}
