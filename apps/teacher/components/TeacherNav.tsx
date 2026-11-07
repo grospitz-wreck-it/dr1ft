@@ -155,7 +155,7 @@ export function TeacherNav() {
             classRow.school_id ? supabase.from("school_memberships").select("role").eq("school_id", classRow.school_id).eq("user_id", user.id).eq("active", true).maybeSingle() : Promise.resolve({ data: null }),
             supabase.from("teacher_class_subscriptions").select("id").eq("class_instance_id", currentClassId).eq("teacher_user_id", user.id).eq("is_active", true).maybeSingle(),
           ]);
-          if (alive) setCanRerollClassCode(Boolean(isPlatformAdmin || canManageSchool || (teacherRole?.role === "teacher" && subscription)));
+          if (alive) setCanRerollClassCode(Boolean(isPlatformAdmin || canManageSchool || ((teacherRole?.role === "teacher" && subscription) || teacherRole?.role === "class_teacher")));
         } else if (alive) {
           setCanRerollClassCode(false);
         }
