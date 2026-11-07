@@ -58,6 +58,7 @@ Deno.serve(async (req) => {
   const { data: created, error: createError } = await adminClient.auth.admin.createUser({
     email, password, email_confirm: true,
     user_metadata: { display_name: displayName, username, class_instance_id: classId },
+    app_metadata: { require_password_change: true },
   });
   if (createError || !created.user) {
     const message = createError?.message ?? "Schüler-Account konnte nicht angelegt werden";
@@ -76,6 +77,16 @@ Deno.serve(async (req) => {
   if (membershipError) {
     await adminClient.auth.admin.deleteUser(studentId);
     return json({ error: membershipError.message }, 500);
+  }
+
+  const { data: callerData } = await callerClient.auth.getUser();
+  const { error: credentialError } = await adminClient.rpc("store_student_onboarding_credential", {
+    p_class_id: classId, p_student_user_id: studentId, p_username: username, p_password: password, p_created_by: callerData.user?.id,
+  });
+  if (credentialError) {
+    await adminClient.from("class_instance_memberships").delete().eq("class_instance_id", classId).eq("user_id", studentId);
+    await adminClient.auth.admin.deleteUser(studentId);
+    return json({ error: "Zugangsdaten konnten nicht sicher für den Druck hinterlegt werden" }, 500);
   }
 
   return json({ student: { id: studentId, displayName, username }, tempPassword: password });
