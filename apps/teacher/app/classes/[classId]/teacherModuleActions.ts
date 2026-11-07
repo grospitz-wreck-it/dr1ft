@@ -119,34 +119,17 @@ export async function saveTeacherCreatedModule(formData: FormData) {
 
   stage = "Schulmitgliedschaft prüfen";
   console.info("[teacher-module-publish] stage", stage, new Date().toISOString());
-  const { data: schoolMembership } = await supabase
-    .from("school_memberships")
-    .select("school_id,role")
-    .eq("school_id", schoolId)
-    .eq("user_id", user.id)
-    .eq("active", true)
-    .maybeSingle();
-
-  const isSchoolAdmin = ["school_admin"].includes(schoolMembership?.role ?? "");
-  let isClassTeacher = false;
-  if (!isSchoolAdmin) {
-    stage = "Lehrkraft-Berechtigung prüfen";
+  stage = "Lehrkraft-Berechtigung prüfen";
   console.info("[teacher-module-publish] stage", stage, new Date().toISOString());
-    const { data: membership, error: membershipError } = await supabase
-      .from("class_instance_memberships")
-      .select("id,role")
-      .eq("class_instance_id", classInstanceId)
-      .eq("user_id", user.id)
-      .eq("role", "teacher")
-      .is("left_at", null)
-      .maybeSingle();
-    isClassTeacher = !membershipError && Boolean(membership);
-  }
-
-  // A class teacher may be assigned directly to a class instance even if
-  // no separate school_memberships row exists (legacy/imported memberships).
-  // School admins and school leads are authorized at school scope.
-  if (!isSchoolAdmin && !isClassTeacher) {
+  const { data: canManageClass, error: permissionError } = await supabase.rpc(
+    "is_teacher_of_class_instance",
+    { target_instance_id: classInstanceId },
+  );
+  if (permissionError || !canManageClass) {
+    console.warn("[teacher-module-publish] permission denied", {
+      classInstanceId, schoolId, userId: user.id,
+      code: permissionError?.code, message: permissionError?.message,
+    });
     throw new Error("Du hast keine Berechtigung, Inhalte für diese Klasse zu erstellen.");
   }
 
@@ -257,13 +240,17 @@ export async function updateTeacherCreatedModule(formData: FormData) {
     .select("id,school_id,created_by")
     .eq("id", moduleId).eq("school_id", schoolId).maybeSingle();
   if (moduleError || !module) throw new Error("Das Modul wurde nicht gefunden.");
-  if (module.created_by !== user.id) throw new Error("Nur die erstellende Lehrkraft kann dieses Modul bearbeiten.");
-
   const { data: classInstance } = await supabase.from("class_instances").select("id,school_id").eq("id", classInstanceId).maybeSingle();
   if (!classInstance || classInstance.school_id !== schoolId) throw new Error("Die Klasse gehört nicht zu dieser Schule.");
-  const { data: admin } = await supabase.from("school_memberships").select("role").eq("school_id", schoolId).eq("user_id", user.id).eq("active", true).maybeSingle();
-  const { data: teacher } = await supabase.from("class_instance_memberships").select("id").eq("class_instance_id", classInstanceId).eq("user_id", user.id).eq("role", "teacher").is("left_at", null).maybeSingle();
-  if (admin?.role !== "school_admin" && !teacher) throw new Error("Du darfst dieses Modul nicht bearbeiten.");
+
+  const [{ data: canManageClass }, { data: canManageSchool }] = await Promise.all([
+    supabase.rpc("is_teacher_of_class_instance", { target_instance_id: classInstanceId }),
+    supabase.rpc("can_manage_school", { p_school_id: schoolId }),
+  ]);
+  if (!canManageClass) throw new Error("Du hast keine Berechtigung für diese Klasse.");
+  if (module.created_by !== user.id && !canManageSchool) {
+    throw new Error("Nur die erstellende Lehrkraft oder die Schul-/Plattformadministration kann dieses Modul bearbeiten.");
+  }
 
   const { data: currentPosts, error: currentError } = await supabase.rpc(
     "get_teacher_module_editor_posts",
