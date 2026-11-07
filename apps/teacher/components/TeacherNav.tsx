@@ -149,13 +149,13 @@ export function TeacherNav() {
           setClassAccessCode(classRow?.access_code ?? null);
         }
         if (classRow) {
-          const [{ data: isPlatformAdmin }, { data: canManageSchool }, { data: teacherRole }, { data: subscription }] = await Promise.all([
+          const [{ data: isPlatformAdmin }, { data: canManageSchool }, { data: canManageStudents }, { data: subscription }] = await Promise.all([
             supabase.rpc("is_platform_admin"),
             classRow.school_id ? supabase.rpc("can_manage_school", { p_school_id: classRow.school_id }) : Promise.resolve({ data: false }),
-            classRow.school_id ? supabase.from("school_memberships").select("role").eq("school_id", classRow.school_id).eq("user_id", user.id).eq("active", true).maybeSingle() : Promise.resolve({ data: null }),
+            supabase.rpc("can_manage_student_accounts", { p_class_id: currentClassId }),
             supabase.from("teacher_class_subscriptions").select("id").eq("class_instance_id", currentClassId).eq("teacher_user_id", user.id).eq("is_active", true).maybeSingle(),
           ]);
-          if (alive) setCanRerollClassCode(Boolean(isPlatformAdmin || canManageSchool || ((teacherRole?.role === "teacher" && subscription) || teacherRole?.role === "class_teacher")));
+          if (alive) setCanRerollClassCode(Boolean(isPlatformAdmin || canManageSchool || canManageStudents || subscription));
         } else if (alive) {
           setCanRerollClassCode(false);
         }
