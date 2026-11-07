@@ -1,16 +1,14 @@
 "use client";
 
 import { useState } from "react";
-import { CalendarDays, GraduationCap, Pencil, X, Palette, Check, RefreshCw } from "lucide-react";
+import { CalendarDays, GraduationCap, Pencil, X, Palette, Check } from "lucide-react";
 import { useRouter } from "next/navigation";
-import { setClassVisual, regenerateClassInstanceAccessCode } from "../actions";
+import { setClassVisual } from "../actions";
 import { CLASS_VISUALS, ClassVisual, getFallbackClassVisualId } from "./ClassVisual";
 
 type Props = {
   classId: string;
   className: string;
-  accessCode: string;
-  canRegenerateAccessCode: boolean;
   gradeLevel: number | null;
   schoolYear: string;
   heroImageUrl: string | null;
@@ -22,33 +20,16 @@ type Props = {
 };
 
 export default function ClassImageWorkspace({
-  classId, className, accessCode, canRegenerateAccessCode, gradeLevel, schoolYear, heroImageUrl,
+  classId, className, gradeLevel, schoolYear, heroImageUrl,
   heroPositionX, heroPositionY, heroZoom, classVisualId, canEditClassImage,
 }: Props) {
   const [editorOpen, setEditorOpen] = useState(false);
-  const [currentAccessCode, setCurrentAccessCode] = useState(accessCode);
-  const [regeneratingCode, setRegeneratingCode] = useState(false);
-  const [codeMessage, setCodeMessage] = useState("");
   const [pickerOpen, setPickerOpen] = useState(false);
   const [savingVisual, setSavingVisual] = useState(false);
   const [visualMessage, setVisualMessage] = useState("");
   const router = useRouter();
   const activeVisual = classVisualId ?? getFallbackClassVisualId(classId);
 
-  async function rerollAccessCode() {
-    if (!window.confirm("Neuen Klassencode generieren? Der bisherige Code wird sofort ungültig.")) return;
-    setRegeneratingCode(true);
-    setCodeMessage("");
-    try {
-      const nextCode = await regenerateClassInstanceAccessCode(classId);
-      setCurrentAccessCode(nextCode);
-      router.refresh();
-    } catch (error) {
-      setCodeMessage(error instanceof Error ? error.message : "Klassencode konnte nicht erneuert werden.");
-    } finally {
-      setRegeneratingCode(false);
-    }
-  }
   async function chooseVisual(visualId: string) {
     setSavingVisual(true);
     setVisualMessage("");
@@ -77,22 +58,11 @@ export default function ClassImageWorkspace({
         <div className="relative flex min-h-[270px] flex-col justify-between p-6 sm:min-h-[300px] sm:p-9">
           <div className="flex items-start justify-between gap-4">
             <p className="text-[10px] font-bold uppercase tracking-[0.28em] text-white/65">DR1FT <span className="text-cyan-300">✦</span> KLASSENRAUM</p>
-            <div className="flex items-center gap-2">
-              <div className="rounded-xl border border-white/25 bg-slate-950/25 px-3 py-2 text-right backdrop-blur-md">
-                <p className="text-[9px] font-bold uppercase tracking-[0.16em] text-white/60">Klassen-Code</p>
-                <p className="font-mono text-sm font-bold tracking-[0.16em] text-white">{currentAccessCode}</p>
-              </div>
-              {canRegenerateAccessCode && (
-                <button type="button" onClick={() => void rerollAccessCode()} disabled={regeneratingCode} aria-label="Klassencode neu generieren" title="Klassencode neu generieren" className="inline-flex h-10 w-10 items-center justify-center rounded-xl border border-white/35 bg-white/15 text-white shadow-[0_8px_30px_rgba(0,0,0,.18)] backdrop-blur-xl transition hover:border-white/60 hover:bg-white/25 disabled:opacity-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-300">
-                  <RefreshCw className={"h-4 w-4 " + (regeneratingCode ? "animate-spin" : "")} />
-                </button>
-              )}
-              {canEditClassImage && (
-                <button type="button" onClick={() => { setEditorOpen(true); setPickerOpen(false); setVisualMessage(""); }} aria-label="Klassenmotiv ändern" title="Klassenmotiv ändern" className="inline-flex h-10 w-10 items-center justify-center rounded-xl border border-white/35 bg-white/15 text-white shadow-[0_8px_30px_rgba(0,0,0,.18)] backdrop-blur-xl transition hover:border-white/60 hover:bg-white/25 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-300">
-                  <Pencil className="h-4 w-4" />
-                </button>
-              )}
-            </div>
+            {canEditClassImage && (
+              <button type="button" onClick={() => { setEditorOpen(true); setPickerOpen(false); setVisualMessage(""); }} aria-label="Klassenmotiv ändern" title="Klassenmotiv ändern" className="inline-flex h-10 w-10 items-center justify-center rounded-xl border border-white/35 bg-white/15 text-white shadow-[0_8px_30px_rgba(0,0,0,.18)] backdrop-blur-xl transition hover:border-white/60 hover:bg-white/25 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-300">
+                <Pencil className="h-4 w-4" />
+              </button>
+            )}
           </div>
           <div className="flex flex-col gap-5 sm:flex-row sm:items-end sm:justify-between">
             <div className="relative max-w-xl">
@@ -105,7 +75,6 @@ export default function ClassImageWorkspace({
             </div>
           </div>
         </div>
-        {codeMessage && <p role="alert" className="absolute bottom-3 right-6 rounded-lg bg-red-950/70 px-3 py-1.5 text-xs text-white">{codeMessage}</p>}
       </section>
 
       {editorOpen && canEditClassImage && (
