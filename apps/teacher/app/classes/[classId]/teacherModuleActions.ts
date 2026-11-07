@@ -71,7 +71,6 @@ export async function getTeacherModulePosts(classInstanceId: string, moduleId: s
         classInstanceId,
         moduleId,
         postId: post.id,
-        code: imageError.code ?? null,
         message: imageError.message,
       });
     }
