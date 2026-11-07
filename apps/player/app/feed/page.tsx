@@ -36,19 +36,33 @@ export default async function FeedPage() {
   const teacherModuleIds = Array.from(new Set((teacherModuleAssignments ?? []).map((row: any) => row.module_id).filter(Boolean)));
   // Module metadata and its published posts can both be fetched directly from
   // the assigned IDs. This removes another serial request without widening scope.
-  const [teacherModuleRows, teacherModulePostResult] = teacherModuleIds.length
-    ? await Promise.all([
-        supabase.from("teacher_modules")
-          .select("id,title,description,intro_title,intro_text,title_card_enabled")
-          .in("id", teacherModuleIds)
-          .eq("status", "published"),
-        supabase.from("teacher_module_posts")
-          .select("id,module_id,post_type,title,body,image_path,embed_provider,embed_url,interaction_data,sort_order")
-          .in("module_id", teacherModuleIds)
-          .eq("status", "published")
-          .order("sort_order", { ascending: true }),
-      ])
-    : [{ data: [] as any[] }, { data: [] as any[] }];
+  // Keep these policy-heavy reads sequential: the feed already performs many
+  // concurrent database reads, and parallel RLS evaluation can amplify load.
+  const teacherModuleRows = teacherModuleIds.length
+    ? await supabase.from("teacher_modules")
+        .select("id,title,description,intro_title,intro_text,title_card_enabled")
+        .in("id", teacherModuleIds)
+        .eq("status", "published")
+    : { data: [] as any[], error: null };
+  if (teacherModuleRows.error) {
+    console.error("[player-feed] teacher_modules query failed", {
+      code: teacherModuleRows.error.code,
+      message: teacherModuleRows.error.message,
+    });
+  }
+  const teacherModulePostResult = teacherModuleIds.length
+    ? await supabase.from("teacher_module_posts")
+        .select("id,module_id,post_type,title,body,image_path,embed_provider,embed_url,interaction_data,sort_order")
+        .in("module_id", teacherModuleIds)
+        .eq("status", "published")
+        .order("sort_order", { ascending: true })
+    : { data: [] as any[], error: null };
+  if (teacherModulePostResult.error) {
+    console.error("[player-feed] teacher_module_posts query failed", {
+      code: teacherModulePostResult.error.code,
+      message: teacherModulePostResult.error.message,
+    });
+  }
 
   const nowForModules = Date.now();
   const activeTeacherModuleIds = new Set((teacherModuleAssignments ?? [])
@@ -132,7 +146,7 @@ export default async function FeedPage() {
     { data: ambientCatalog },
     { data: ambientPreferences },
   ] = await Promise.all([
-    supabase.from("user_profiles").select("display_name, username, avatar_seed, birth_year").eq("id", user.id).maybeSingle(),
+    supabase.from("user_profiles").select("display_name, username, avatar_seed").eq("id", user.id).maybeSingle(),
     supabase.from("ambient_interests").select("key, parent_key").eq("is_active", true).eq("taxonomy_status", "active"),
     supabase.from("user_ambient_preferences").select("interest_keys").eq("user_id", user.id).maybeSingle(),
   ]);
@@ -199,7 +213,10 @@ export default async function FeedPage() {
     socialByContent.set(like.content_item_id, list);
   }
   const mappedPool: FeedItem[] = (pool ?? []).map((row: any) => ({ id: row.id, type: row.type, scenarioId: row.scenario_id, creatorId: row.creator_id, parentId: row.parent_id, title: row.title, body: row.body, mediaUrl: row.media_url, mediaType: row.media_type, manipulationTechniques: row.manipulation_techniques ?? [], targetCompetencies: row.target_competencies ?? [], difficulty: row.difficulty, ageRating: row.age_rating, sourceRefs: row.source_refs ?? [], status: row.status, reviewedBy: row.reviewed_by, reviewedAt: row.reviewed_at, reviewNotes: row.review_notes, extra: { ...(row.extra ?? {}), interestKeys: addInterestAncestors(row.extra?.interestKeys), classLikeCount: likeCounts.get(row.id) ?? 0, classLikeUsers: socialByContent.get(row.id) ?? [], classCommentCount: commentCounts.get(row.id) ?? 0 }, createdAt: row.created_at, updatedAt: row.updated_at, creator: mapCreatorRow(row.creators ?? creatorById.get(row.creator_id)) }));
-  const ageRating: FeedContext["userAgeRating"] = currentProfile?.birth_year && new Date().getFullYear() - currentProfile.birth_year >= 16 ? "16_plus" : "12_plus";
+  // birth_year is not part of the deployed user_profiles schema; until an
+  // age-rating source is defined, use the conservative default without a
+  // failing profile query.
+  const ageRating: FeedContext["userAgeRating"] = "12_plus";
   const progress = (competencyProgress ?? []).map((c) => ({ userId: c.user_id, competencyId: c.competency_id, evidence: c.evidence, level: c.level, updatedAt: c.updated_at }));
   const recentTechniques = mappedPool.filter((item) => recentlySeenContentIds.includes(item.id)).flatMap((item) => item.manipulationTechniques).slice(0, 12);
   const densityRank: Record<string, number> = { off: 0, low: 1, medium: 2, high: 3 };
