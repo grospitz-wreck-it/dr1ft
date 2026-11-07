@@ -49,13 +49,11 @@ function TeacherModuleImage({ imagePath, alt, priority = false }: { imagePath: s
   const [failed, setFailed] = useState(false);
   useEffect(() => {
     let cancelled = false;
-    void supabase.storage.from("teacher-module-assets").createSignedUrl(imagePath, 60 * 60)
-      .then(({ data, error }) => {
-        if (cancelled) return;
-        if (error || !data?.signedUrl) setFailed(true);
-        else setSrc(data.signedUrl);
-      })
-      .catch(() => { if (!cancelled) setFailed(true); });
+    void getTeacherModuleImageUrl(imagePath, supabase).then((url) => {
+      if (cancelled) return;
+      if (url) setSrc(url);
+      else setFailed(true);
+    });
     return () => { cancelled = true; };
   }, [imagePath, supabase]);
   return <div className="post-media-stage relative isolate mx-2 overflow-hidden rounded-[22px] sm:mx-3">
