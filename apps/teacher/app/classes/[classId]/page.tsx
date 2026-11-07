@@ -4,6 +4,7 @@ import { StudentRoster } from "./StudentRoster";
 import { ClassDashboardInsights } from "./ClassDashboardInsights";
 import { CollapsiblePanel } from "./CollapsiblePanel";
 import ClassImageWorkspace from "./ClassImageWorkspace";
+import { StudentOnboardingPrintButton } from "./StudentOnboardingPrintButton";
 
 async function timed<T>(timings: { name: string; ms: number }[], name: string, task: PromiseLike<T>): Promise<T> {
   const start = Date.now();
@@ -143,6 +144,7 @@ export default async function ClassDetailPage({
     : [{ data: false }, { data: false }, { data: false }];
 
   const hasActiveTeachingSubscription = Boolean(teacherMembershipResult.data);
+  const canPrintOnboarding = activeSchoolRole === "school_admin" || (activeSchoolRole === "teacher" && hasActiveTeachingSubscription);
   const mayUseTeacherModules =
     Boolean(canManageClassWorkspace) &&
     (activeSchoolRole !== "teacher" || hasActiveTeachingSubscription);
@@ -257,6 +259,7 @@ export default async function ClassDetailPage({
             reportingUnlocked={reportingUnlocked}
             canViewIndividualReports={canViewIndividualReports}
             canManageStudents={Boolean(canManageStudents)}
+            canPrintOnboarding={canPrintOnboarding}
           />
         </div>
         </CollapsiblePanel>
