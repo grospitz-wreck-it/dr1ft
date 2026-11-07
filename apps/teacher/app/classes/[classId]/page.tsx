@@ -261,7 +261,7 @@ export default async function ClassDetailPage({
             reportingUnlocked={reportingUnlocked}
             canViewIndividualReports={canViewIndividualReports}
             canManageStudents={Boolean(canManageStudents)}
-            canPrintOnboarding={canPrintOnboarding}
+            canPrintOnboarding={Boolean(canPrintOnboarding)}
           />
         </div>
         </CollapsiblePanel>
