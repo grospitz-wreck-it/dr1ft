@@ -61,6 +61,17 @@ begin
   or current_content_item_id in (select id from family_content)
   or pending_resume_content_id in (select id from family_content);
 
+  -- Remove interventions that were generated from assessments owned by this family.
+  delete from public.learner_interventions
+  where source_assessment_id in (
+    select id
+    from public.competency_assessments
+    where scenario_id = any(v_scenario_ids)
+       or learning_design_id in (
+         select id from public.learning_designs where scenario_id = any(v_scenario_ids)
+       )
+  );
+
   -- These event tables use SET NULL on ordinary scenario deletion. For an explicit
   -- permanent family deletion, remove their scenario-owned records as well.
   delete from public.competency_assessments
