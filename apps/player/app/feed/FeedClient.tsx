@@ -72,16 +72,13 @@ export function FeedClient({ initialItems, teacherModules = [], userId, classIns
     setModuleSubmitting((current) => ({ ...current, [post.id]: true }));
     setModuleVoteErrors((current) => ({ ...current, [post.id]: "" }));
     try {
-      const choice = selected[0] ?? null;
-      const { error } = await supabase.from("teacher_module_post_votes").upsert({
-        post_id: post.id,
-        module_id: moduleId,
-        class_instance_id: classInstanceId,
-        user_id: userId,
-        choice,
-        selected_choices: selected,
-        text_answer: responseMode === "free_text" ? textAnswer : null,
-      }, { onConflict: "post_id,user_id" });
+      const { error } = await (supabase as any).rpc("submit_teacher_module_poll_vote", {
+        p_post_id: post.id,
+        p_module_id: moduleId,
+        p_class_instance_id: classInstanceId,
+        p_selected_choices: selected,
+        p_text_answer: responseMode === "free_text" ? textAnswer : null,
+      });
       if (error) throw error;
       setModuleSubmitted((current) => ({ ...current, [post.id]: true }));\n      const { data: result, error: resultError } = await (supabase as any).rpc("get_teacher_module_poll_results", { p_post_id: post.id });\n      if (resultError) console.error("[Player] poll results refresh failed", resultError);\n      else if (result) setModulePollResults((current) => ({ ...current, [post.id]: result }));
     } catch (error) {
