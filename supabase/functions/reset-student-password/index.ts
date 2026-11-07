@@ -69,10 +69,19 @@ Deno.serve(async (req) => {
   if (!membership) return json({ error: "Person gehört nicht aktiv zu dieser Klasseninstanz" }, 403);
 
   const tempPassword = generateTempPassword();
+  const { data: targetUser, error: targetUserError } = await adminClient.auth.admin.getUserById(studentUserId);
+  if (targetUserError || !targetUser.user) return json({ error: "Schülerkonto konnte nicht geladen werden" }, 404);
+  const username = String(targetUser.user.user_metadata?.username ?? "");
   const { error: updateError } = await adminClient.auth.admin.updateUserById(studentUserId, {
     password: tempPassword,
+    app_metadata: { ...targetUser.user.app_metadata, require_password_change: true },
   });
   if (updateError) return json({ error: updateError.message }, 500);
+
+  const { error: credentialError } = await adminClient.rpc("store_student_onboarding_credential", {
+    p_class_id: classId, p_student_user_id: studentUserId, p_username: username, p_password: tempPassword, p_created_by: caller.id,
+  });
+  if (credentialError) return json({ error: "Passwort wurde geändert, konnte aber nicht sicher für den Druck hinterlegt werden. Bitte erneut zurücksetzen." }, 500);
 
   return json({ tempPassword });
 });
