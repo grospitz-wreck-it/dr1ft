@@ -80,7 +80,10 @@ export function FeedClient({ initialItems, teacherModules = [], userId, classIns
         p_text_answer: responseMode === "free_text" ? textAnswer : null,
       });
       if (error) throw error;
-      setModuleSubmitted((current) => ({ ...current, [post.id]: true }));\n      const { data: result, error: resultError } = await (supabase as any).rpc("get_teacher_module_poll_results", { p_post_id: post.id });\n      if (resultError) console.error("[Player] poll results refresh failed", resultError);\n      else if (result) setModulePollResults((current) => ({ ...current, [post.id]: result }));
+      setModuleSubmitted((current) => ({ ...current, [post.id]: true }));
+      const { data: result, error: resultError } = await (supabase as any).rpc("get_teacher_module_poll_results", { p_post_id: post.id });
+      if (resultError) console.error("[Player] poll results refresh failed", resultError);
+      else if (result) setModulePollResults((current) => ({ ...current, [post.id]: result }));
     } catch (error) {
       console.error("[Player] teacher module answer failed", error);
       setModuleVoteErrors((current) => ({ ...current, [post.id]: "Deine Antwort konnte gerade nicht gespeichert werden. Bitte versuche es erneut." }));
