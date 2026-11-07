@@ -71,7 +71,9 @@ Deno.serve(async (req) => {
   const tempPassword = generateTempPassword();
   const { data: targetUser, error: targetUserError } = await adminClient.auth.admin.getUserById(studentUserId);
   if (targetUserError || !targetUser.user) return json({ error: "Schülerkonto konnte nicht geladen werden" }, 404);
-  const username = String(targetUser.user.user_metadata?.username ?? "");
+  const { data: profile } = await adminClient.from("user_profiles").select("username").eq("id", studentUserId).maybeSingle();
+  const username = String(targetUser.user.user_metadata?.username ?? profile?.username ?? "").trim();
+  if (!username) return json({ error: "Für dieses Schülerkonto ist kein Nutzername hinterlegt." }, 409);
   const { error: updateError } = await adminClient.auth.admin.updateUserById(studentUserId, {
     password: tempPassword,
     app_metadata: { ...targetUser.user.app_metadata, require_password_change: true },
