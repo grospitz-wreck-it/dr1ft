@@ -3,6 +3,7 @@
 
 import { useState } from "react";
 import { createBrowserClient } from "@supabase/ssr";
+import { KeyRound } from "lucide-react";
 
 function supabaseBrowserClient() {
   return createBrowserClient(
@@ -24,32 +25,31 @@ export function ResetPasswordButton({
   const [pending, setPending] = useState(false);
 
   async function handleReset() {
+    if (!window.confirm("Das Passwort dieser Schüler:in wirklich zurücksetzen? Das bisherige Passwort wird sofort ungültig.")) return;
     setPending(true);
     setError(null);
-
-    const {
-      data: { session },
-    } = await supabase.auth.getSession();
-
-    const res = await fetch(
-      `${process.env.NEXT_PUBLIC_SUPABASE_URL}/functions/v1/reset-student-password`,
-      {
-        method: "POST",
-        headers: {
-          Authorization: `Bearer ${session?.access_token}`,
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({ studentUserId, classId }),
-      }
-    );
-    const data = await res.json();
-
-    if (!res.ok) {
-      setError(data.error ?? "Fehler beim Zurücksetzen");
-    } else {
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session?.access_token) throw new Error("Sitzung abgelaufen. Bitte erneut anmelden.");
+      const res = await fetch(
+        `${process.env.NEXT_PUBLIC_SUPABASE_URL}/functions/v1/reset-student-password`,
+        {
+          method: "POST",
+          headers: {
+            Authorization: `Bearer ${session.access_token}`,
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({ studentUserId, classId }),
+        }
+      );
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error ?? "Fehler beim Zurücksetzen");
       setTempPassword(data.tempPassword);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Fehler beim Zurücksetzen");
+    } finally {
+      setPending(false);
     }
-    setPending(false);
   }
 
   if (tempPassword) {
@@ -64,11 +64,14 @@ export function ResetPasswordButton({
   return (
     <div className="flex items-center gap-2">
       <button
+        type="button"
         onClick={handleReset}
         disabled={pending}
-        className="text-xs underline disabled:opacity-50"
+        aria-label="Passwort zurücksetzen"
+        title="Passwort zurücksetzen"
+        className="inline-flex h-8 w-8 items-center justify-center rounded-lg border border-slate-200 text-slate-500 transition hover:border-amber-300 hover:bg-amber-50 hover:text-amber-700 disabled:opacity-50"
       >
-        {pending ? "…" : "Passwort zurücksetzen"}
+        <KeyRound className="h-4 w-4" />
       </button>
       {error && <span className="text-xs text-red-500">{error}</span>}
     </div>
