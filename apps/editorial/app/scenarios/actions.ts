@@ -1041,16 +1041,45 @@ export async function updateScenarioBasics(scenarioId: string, formData: FormDat
   const supabase = supabaseServerClient();
   const title = String(formData.get("title") ?? "").trim();
   const description = String(formData.get("description") ?? "").trim();
+  const ageBand = String(formData.get("ageBand") ?? "").trim();
   if (!title) throw new Error("Titel darf nicht leer sein.");
+  if (!AGE_BANDS.includes(ageBand as (typeof AGE_BANDS)[number])) {
+    throw new Error("Bitte eine gültige Altersgruppe auswählen.");
+  }
 
+  const { data: currentScenario, error: currentScenarioError } = await supabase
+    .from("scenarios")
+    .select("scenario_group")
+    .eq("id", scenarioId)
+    .single();
+  if (currentScenarioError || !currentScenario) {
+    throw new Error(currentScenarioError?.message ?? "Szenario nicht gefunden.");
+  }
+
+  if (currentScenario.scenario_group) {
+    const { data: conflictingVariant, error: variantError } = await supabase
+      .from("scenarios")
+      .select("id")
+      .eq("scenario_group", currentScenario.scenario_group)
+      .eq("age_band", ageBand)
+      .neq("id", scenarioId)
+      .maybeSingle();
+    if (variantError) throw new Error(variantError.message);
+    if (conflictingVariant) {
+      throw new Error("In dieser Szenario-Familie gibt es bereits eine Variante für diese Altersgruppe.");
+    }
+  }
+
+  const ageRating = ageBand === "16_17" || ageBand === "18_plus" ? "16_plus" : "12_plus";
   const { error } = await supabase
     .from("scenarios")
-    .update({ title, description })
+    .update({ title, description, age_band: ageBand, age_rating: ageRating })
     .eq("id", scenarioId);
 
   if (error) throw new Error(error.message);
   revalidatePath(`/scenarios/${scenarioId}`);
   revalidatePath("/scenarios");
+  revalidatePath("/dashboard");
 }
 
 export async function updateScenarioAmbientDensity(scenarioId: string, formData: FormData) {
