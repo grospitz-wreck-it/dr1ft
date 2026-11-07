@@ -82,7 +82,7 @@ export async function deleteScenarioFamily(scenarioId: string, confirmationTitle
 
   const { data: selected, error: selectedError } = await supabase
     .from("scenarios")
-    .select("id, scenario_group, slug")
+    .select("id, scenario_group, slug, cover_image_url")
     .eq("id", scenarioId)
     .single();
   if (selectedError || !selected) throw new Error(selectedError?.message ?? "Szenario nicht gefunden.");
@@ -94,6 +94,11 @@ export async function deleteScenarioFamily(scenarioId: string, confirmationTitle
   const { data: variants, error: variantsError } = await variantsQuery;
   if (variantsError) throw new Error(variantsError.message);
   const scenarioIds = (variants ?? []).map((variant) => variant.id);
+  const coverPaths = Array.from(new Set((variants ?? [])
+    .map((variant) => variant.cover_image_url)
+    .filter((url): url is string => typeof url === "string")
+    .map((url) => url.match(/\\/storage\\/v1\\/object\\/public\\/ambient-assets\\/(.+)$/)?.[1] ?? null)
+    .filter((path): path is string => Boolean(path))));
 
   // Database deletion is atomic. Storage objects are removed only after it
   // succeeds, so a failed DB operation never destroys still-referenced media.
@@ -121,6 +126,15 @@ export async function deleteScenarioFamily(scenarioId: string, confirmationTitle
       if (removeError) {
         console.error("[scenario-delete] media cleanup failed", { scenarioId: id, error: removeError.message });
       }
+    }
+  }
+
+  // Scenario cover artwork is stored in ambient-assets under generated/date/.
+  // Only remove objects whose public URL was referenced by this family.
+  if (coverPaths.length) {
+    const { error: coverCleanupError } = await supabase.storage.from("ambient-assets").remove(coverPaths);
+    if (coverCleanupError) {
+      console.error("[scenario-delete] cover cleanup failed", { scenarioId, error: coverCleanupError.message });
     }
   }
 
