@@ -236,7 +236,7 @@ export async function saveTeacherCreatedModule(formData: FormData) {
     throw new Error("Klassenabonnement konnte nicht angelegt werden.");
   }
 
-  const { error: assignmentError } = await supabase.from("teacher_module_class_assignments").insert({
+  const { error: assignmentError } = await supabase.from("teacher_class_module_assignments").insert({
     subscription_id: subscription.id,
     school_id: schoolId,
     class_instance_id: classInstanceId,
