@@ -513,7 +513,7 @@ export async function setTeacherModuleAssignmentActive(classInstanceId: string, 
 
   const { data: assignment, error: assignmentError } = await supabase
     .from("teacher_class_module_assignments")
-    .select("id,school_id,class_instance_id")
+    .select("id,school_id,class_instance_id,module_id")
     .eq("id", assignmentId)
     .eq("class_instance_id", classInstanceId)
     .eq("teacher_user_id", user.id)
@@ -621,7 +621,7 @@ export async function updateTeacherModuleSchedule(classInstanceId: string, assig
 
   const { data: assignment, error: lookupError } = await supabase
     .from("teacher_class_module_assignments")
-    .select("id,school_id")
+    .select("id,school_id,module_id")
     .eq("id", assignmentId)
     .eq("class_instance_id", classInstanceId)
     .eq("teacher_user_id", user.id)
