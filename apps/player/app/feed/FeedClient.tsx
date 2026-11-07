@@ -228,7 +228,7 @@ export function FeedClient({ initialItems, teacherModules = [], userId, classIns
       </div>
     </div>
   )}
-  {!scenarioStarted && !scenarioFinished && <div className="mt-6 flex justify-end">
+  {!scenarioStarted && !scenarioFinished && teacherModules.length === 0 && <div className="mt-6 flex justify-end">
     <button type="button" onClick={handleScenarioStart} className="inline-flex items-center gap-2 rounded-2xl bg-gradient-to-r from-fuchsia-600 via-violet-600 to-blue-600 px-6 py-3.5 text-sm font-bold text-white shadow-lg shadow-violet-900/20 transition hover:-translate-y-0.5 hover:shadow-xl focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-violet-500 focus-visible:ring-offset-2">
       <span>DR1FT starten</span>
       <ArrowRight className="h-4 w-4 text-cyan-200" />
@@ -240,9 +240,9 @@ export function FeedClient({ initialItems, teacherModules = [], userId, classIns
   {teacherModules.map((module)=><article key={module.id} className="overflow-hidden rounded-[26px] border border-violet-100 bg-white/95 shadow-sm">
     {module.title_card_enabled!==false&&<header className="border-b border-violet-100 bg-gradient-to-r from-violet-50 via-white to-cyan-50 px-5 py-5 sm:px-6">
       <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-violet-600">Lernmodul</p>
-      <h3 className="mt-1 font-display text-xl font-semibold text-[#27213d]">{module.title}</h3>
-      {module.description&&<p className="mt-2 whitespace-pre-line text-sm leading-6 text-[#746d89]">{module.description}</p>}
-      {!scenarioStarted&&!scenarioFinished&&!scenarioIntro&&!multipleScenarios&&<div className="mt-4 flex justify-end"><button type="button" onClick={handleScenarioStart} className="inline-flex items-center gap-2 rounded-xl bg-gradient-to-r from-violet-600 to-fuchsia-600 px-5 py-3 text-sm font-bold text-white shadow-md">DR1FT starten <ArrowRight className="h-4 w-4"/></button></div>}
+      <h3 className="mt-1 break-words font-display text-xl font-semibold text-[#27213d] [overflow-wrap:anywhere]">{module.title}</h3>
+      {module.description&&<p className="mt-2 whitespace-pre-line break-words text-sm leading-6 text-[#746d89] [overflow-wrap:anywhere]">{module.description}</p>}
+      {!scenarioStarted&&!scenarioFinished&&<div className="mt-4 flex justify-end"><button type="button" onClick={handleScenarioStart} className="inline-flex items-center gap-2 rounded-xl bg-gradient-to-r from-violet-600 to-fuchsia-600 px-5 py-3 text-sm font-bold text-white shadow-md">DR1FT starten <ArrowRight className="h-4 w-4"/></button></div>}
     </header>}
     {scenarioStarted&&<div className="space-y-5 p-4 sm:p-6">
       {module.posts.map((post,index)=>{
@@ -255,7 +255,7 @@ export function FeedClient({ initialItems, teacherModules = [], userId, classIns
           <div className="p-4 sm:p-5">
             <p className="text-[10px] font-bold uppercase tracking-[0.16em] text-violet-500">Beitrag {index+1}</p>
             {post.title&&<h4 className="mt-1 text-lg font-semibold text-[#27213d]">{post.title}</h4>}
-            {post.body&&<p className="mt-2 whitespace-pre-line text-sm leading-6 text-[#51476a]">{post.body}</p>}
+            {post.body&&<p className="mt-2 whitespace-pre-line break-words text-sm leading-6 text-[#51476a] [overflow-wrap:anywhere]">{post.body}</p>}
           </div>
           {post.imageUrl&&<div className="post-media-stage relative isolate mx-2 overflow-hidden rounded-[22px] sm:mx-3"><div aria-hidden="true" className="post-media-pattern pointer-events-none absolute inset-0"/><img src={post.imageUrl} alt={post.title||"Bild zum Lernmodul"} loading="lazy" className="post-media-image relative z-[1] mx-auto block h-auto max-h-[75vh] w-auto max-w-full object-contain" onError={(event)=>{event.currentTarget.style.display="none";}}/></div>}
           {post.embed_url&&<div className="px-4 pb-4"><a href={post.embed_url} target="_blank" rel="noreferrer" className="text-sm font-semibold text-violet-700 underline">Medieninhalt öffnen</a></div>}
