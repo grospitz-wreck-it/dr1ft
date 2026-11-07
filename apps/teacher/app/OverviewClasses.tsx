@@ -72,12 +72,14 @@ export function OverviewClasses({ classes, searchableClasses = [], canCreateClas
       </div>
 
       <div className="mt-5 flex flex-col gap-3 border-b border-slate-200 pb-4 sm:flex-row sm:items-center sm:justify-between">
-        <div className="relative w-full sm:max-w-sm">
-          <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
-          <input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Klasse suchen …" className="w-full rounded-xl border border-slate-200 bg-white py-2.5 pl-9 pr-3 text-sm outline-none transition focus:border-violet-300 focus:ring-4 focus:ring-violet-100" />
+        <div className="flex w-full items-center gap-2 sm:max-w-md">
+          <div className="relative min-w-0 flex-1">
+            <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+            <input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Alle Schulklassen suchen …" className="w-full rounded-xl border border-slate-200 bg-white py-2.5 pl-9 pr-3 text-sm outline-none transition focus:border-violet-300 focus:ring-4 focus:ring-violet-100" />
+          </div>
+          {canCreateClasses && <button type="button" onClick={() => setShowCreate(true)} aria-label="Neue Klasse anlegen" title="Neue Klasse anlegen" className="relative inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-violet-200 bg-violet-50 text-violet-700 transition hover:border-violet-300 hover:bg-violet-100"><Users className="h-5 w-5" /><Plus className="absolute right-1 top-1 h-3.5 w-3.5 rounded-full bg-violet-50" /></button>}
         </div>
         <div className="flex items-center justify-between gap-3">
-          {canCreateClasses && <button type="button" onClick={() => setShowCreate(true)} aria-label="Neue Klasse anlegen" title="Neue Klasse anlegen" className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-violet-200 bg-violet-50 text-violet-700 transition hover:border-violet-300 hover:bg-violet-100"><Plus className="h-5 w-5" /><Users className="ml-[-5px] h-3.5 w-3.5" /></button>}
           <span className="text-xs text-slate-400">{query.trim() ? `${visible.length} Treffer in deiner Schule` : `${activeCount} aktive ${activeCount === 1 ? "Klasse" : "Klassen"} · ${classes.length} insgesamt`}</span>
           <button type="button" onClick={() => setShowInactive((value) => !value)} className="rounded-xl border border-violet-100 bg-violet-50/70 px-3 py-2 text-xs font-bold text-violet-700 transition hover:bg-violet-100">
             {showInactive ? "Nur aktive" : "Inaktive anzeigen"}
@@ -103,9 +105,9 @@ export function OverviewClasses({ classes, searchableClasses = [], canCreateClas
                 </div>
                 <div className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-0.5 text-[10px] font-semibold text-slate-500">
                   <span className="inline-flex items-center gap-1"><GraduationCap className="h-3.5 w-3.5 text-cyan-600"/>{item.studentCount} Schüler:innen</span>
-                  <span className="inline-flex items-center gap-1"><BookOpen className="h-3.5 w-3.5 text-violet-600"/>{item.missions.length} Missionen</span>
+                  <span className="inline-flex items-center gap-1"><BookOpen className="h-3.5 w-3.5 text-violet-600"/>{item.missions?.length ?? 0} Missionen</span>
                   <span className="sm:hidden">Jg. {item.gradeLevel ?? "—"} · {item.schoolYear}</span>
-                  {item.missions.length>0&&<span className="hidden max-w-[210px] truncate text-slate-400 lg:inline" title={item.missions.map(m=>m.title).join(", ")}>{item.missions[0].title}{item.missions.length>1?" +"+(item.missions.length-1):""}</span>}
+                  {(item.missions?.length ?? 0)>0&&<span className="hidden max-w-[210px] truncate text-slate-400 lg:inline" title={item.missions.map((m: Mission)=>m.title).join(", ")}>{item.missions[0].title}{item.missions.length>1?" +"+(item.missions.length-1):""}</span>}
                 </div>
               </div>
               <div className="flex shrink-0 items-center gap-1.5 sm:gap-2">
