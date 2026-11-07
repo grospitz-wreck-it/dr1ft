@@ -87,7 +87,7 @@ export async function deleteScenarioFamily(scenarioId: string, confirmationTitle
     .single();
   if (selectedError || !selected) throw new Error(selectedError?.message ?? "Szenario nicht gefunden.");
 
-  let variantsQuery = supabase.from("scenarios").select("id");
+  let variantsQuery = supabase.from("scenarios").select("id, cover_image_url");
   variantsQuery = selected.scenario_group
     ? variantsQuery.eq("scenario_group", selected.scenario_group)
     : variantsQuery.eq("slug", selected.slug);
@@ -97,7 +97,11 @@ export async function deleteScenarioFamily(scenarioId: string, confirmationTitle
   const coverPaths = Array.from(new Set((variants ?? [])
     .map((variant) => variant.cover_image_url)
     .filter((url): url is string => typeof url === "string")
-    .map((url) => url.match(/\\/storage\\/v1\\/object\\/public\\/ambient-assets\\/(.+)$/)?.[1] ?? null)
+    .map((url) => {
+      const marker = "/storage/v1/object/public/ambient-assets/";
+      const markerIndex = url.indexOf(marker);
+      return markerIndex >= 0 ? decodeURIComponent(url.slice(markerIndex + marker.length)) : null;
+    })
     .filter((path): path is string => Boolean(path))));
 
   // Database deletion is atomic. Storage objects are removed only after it
