@@ -171,7 +171,7 @@ export async function saveTeacherCreatedModule(formData: FormData) {
       console.info("[teacher-module-publish] image upload started", {
         index, sizeBytes: file.size, mimeType: file.type,
       });
-      const { error: uploadError } = await supabase.storage.from("teacher-module-assets").upload(imagePath, file, { contentType: file.type, upsert: true });
+      const { error: uploadError } = await supabase.storage.from("teacher-module-assets").upload(imagePath, file, { contentType: file.type });
       if (uploadError) {
         console.error("[teacher-module-publish] image upload failed", {
           index, durationMs: Date.now() - uploadStartedAt,
@@ -304,7 +304,7 @@ export async function updateTeacherCreatedModule(formData: FormData) {
     if (file instanceof File && file.size > 0) {
       if (file.type !== "image/webp" || file.size > 8 * 1024 * 1024) throw new Error("Bilder müssen vor dem Upload in WebP umgewandelt werden und dürfen maximal 8 MB groß sein.");
       imagePath = `${schoolId}/${moduleId}/${postId}.webp`;
-      const { error: uploadError } = await supabase.storage.from("teacher-module-assets").upload(imagePath, file, { contentType: file.type, upsert: true });
+      const { error: uploadError } = await supabase.storage.from("teacher-module-assets").upload(imagePath, file, { contentType: file.type });
       if (uploadError) throw new Error(uploadError.message);
     }
     rows.push({ id: postId, module_id: moduleId, post_type: post.postType, title: String(post.title ?? "").slice(0,180), body: String(post.body ?? "").slice(0,12000), image_path: imagePath, interaction_data: post.interactionData ?? {}, embed_provider: embed?.provider ?? null, embed_url: embed?.url ?? null, sort_order: index, status: "published" });
