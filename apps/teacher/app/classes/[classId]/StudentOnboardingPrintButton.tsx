@@ -43,6 +43,7 @@ export function StudentOnboardingPrintButton({ classId, students }: { classId: s
       if (printable.length !== students.length) throw new Error("Der Druckbogen ist unvollständig. Bitte erneut versuchen oder die Klassenliste aktualisieren.");
       setCards(printable);
       document.body.classList.add("printing-onboarding");
+      window.addEventListener("afterprint", () => document.body.classList.remove("printing-onboarding"), { once: true });
       window.setTimeout(() => window.print(), 250);
     } catch (cause) {
       setError(cause instanceof Error ? cause.message : "Druckbogen konnte nicht vorbereitet werden.");
@@ -96,8 +97,7 @@ export function StudentOnboardingPrintButton({ classId, students }: { classId: s
           .onboarding-card-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 7mm 7mm; }
           .onboarding-card {
             box-sizing: border-box; min-height: 58mm; padding: 5mm;
-            border: 1.5px dashed #6b7280; outline: 1px repeating-linear-gradient(135deg, transparent 0 3px, #d1d5db 3px 4px);
-            outline-offset: -2px; break-inside: avoid; page-break-inside: avoid;
+            border: 1.5px dashed #6b7280; background-image: repeating-linear-gradient(135deg, transparent 0 5px, rgba(107,114,128,.035) 5px 6px); break-inside: avoid; page-break-inside: avoid;
           }
           .onboarding-card-top { display:flex; justify-content:space-between; gap:3mm; align-items:center; margin-bottom:4mm; font-size:12pt; }
           .onboarding-card-top span { font-size:7pt; letter-spacing:.18em; color:#7c3aed; font-weight:700; }
