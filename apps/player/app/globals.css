@@ -579,3 +579,13 @@ body.dark-mode {
     outline-color: rgba(103,232,249,.72);
   }
 }
+
+
+/* Poll controls are interaction-critical: avoid the global glass blur on every
+   button so taps repaint immediately, even on image-heavy feed screens. */
+.teacher-module-poll-option {
+  -webkit-backdrop-filter: none !important;
+  backdrop-filter: none !important;
+  transition: background-color .12s ease, border-color .12s ease, box-shadow .12s ease !important;
+  touch-action: manipulation;
+}
