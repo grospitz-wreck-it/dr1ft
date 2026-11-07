@@ -151,7 +151,7 @@ export function TeacherNav() {
   // membership and student-count data just because the pathname changed.
   useEffect(() => {
     if (publicRoute || !userId) return;
-    const classMatch = pathname.match(/^\\/classes\\/([^/]+)$/);
+    const classMatch = pathname.match(/^\/classes\/([^/]+)$/);
     if (!classMatch) {
       setClassAccessCode(null);
       setClassIdForCode(null);
