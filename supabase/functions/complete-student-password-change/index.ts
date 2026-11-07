@@ -32,5 +32,7 @@ Deno.serve(async (req) => {
     app_metadata: { ...user.app_metadata, require_password_change: false },
   });
   if (error) return json({ error: error.message }, 400);
+  const { error: credentialCleanupError } = await admin.from("student_onboarding_credentials").delete().eq("student_user_id", user.id);
+  if (credentialCleanupError) return json({ error: "Passwort wurde geändert, aber die Einmal-Zugangsdaten konnten nicht aus dem Druckspeicher entfernt werden. Bitte den Support informieren." }, 500);
   return json({ success: true });
 });
