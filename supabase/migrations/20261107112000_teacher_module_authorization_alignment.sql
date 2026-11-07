@@ -300,3 +300,30 @@ using (
       and (m.created_by = (select auth.uid()) or public.can_manage_school(m.school_id))
   )
 );
+
+
+drop policy if exists teacher_modules_creator_manage on public.teacher_modules;
+create policy teacher_modules_creator_manage
+on public.teacher_modules for all to authenticated
+using (
+  public.can_manage_school(school_id)
+  or (
+    created_by = (select auth.uid())
+    and exists (
+      select 1 from public.class_instances ci
+      where ci.school_id = teacher_modules.school_id
+        and public.is_teacher_of_class_instance(ci.id)
+    )
+  )
+)
+with check (
+  created_by = (select auth.uid())
+  and (
+    public.can_manage_school(school_id)
+    or exists (
+      select 1 from public.class_instances ci
+      where ci.school_id = teacher_modules.school_id
+        and public.is_teacher_of_class_instance(ci.id)
+    )
+  )
+);
