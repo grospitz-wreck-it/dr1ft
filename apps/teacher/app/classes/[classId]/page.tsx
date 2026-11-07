@@ -128,6 +128,13 @@ export default async function ClassDetailPage({
   };
 
   const activeSchoolRole = schoolMembershipResult.data?.role ?? null;
+  const [{ data: canManageSchool }, { data: isPlatformAdmin }] = user && instance.school_id
+    ? await Promise.all([
+        supabase.rpc("can_manage_school", { p_school_id: instance.school_id }),
+        supabase.rpc("is_platform_admin"),
+      ])
+    : [{ data: false }, { data: false }];
+  const canRegenerateAccessCode = Boolean(teacherMembershipResult.data || canManageSchool || isPlatformAdmin);
   const isSchoolAdmin = activeSchoolRole === "school_admin" || activeSchoolRole === "school_lead";
   const { data: canViewIndividualReports } = user
     ? await supabase.rpc("can_view_class_individual_reports", { p_class_id: classId })
@@ -207,6 +214,8 @@ export default async function ClassDetailPage({
         <ClassImageWorkspace
           classId={classId}
           className={instance.name}
+          accessCode={instance.access_code}
+          canRegenerateAccessCode={canRegenerateAccessCode}
           gradeLevel={instance.grade_level}
           schoolYear={instance.school_year}
           heroImageUrl={heroImageUrl}
