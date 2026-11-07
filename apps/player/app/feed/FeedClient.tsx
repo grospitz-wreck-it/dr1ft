@@ -192,6 +192,31 @@ export function FeedClient({ initialItems, teacherModules = [], userId, classIns
       });
     return () => { cancelled = true; };
   }, [teacherModules, supabase]);
+
+  // Start downloading assigned module images as soon as the feed is mounted,
+  // while the module intro is visible. The same authenticated download helper
+  // and cache are used by TeacherModuleImage after the learner starts the module.
+  useEffect(() => {
+    const imagePaths = Array.from(new Set(teacherModules.flatMap((module) =>
+      module.posts.map((post) => post.imagePath).filter((path): path is string => typeof path === "string" && path.length > 0)
+    )));
+    if (!imagePaths.length) return;
+
+    let cancelled = false;
+    let nextIndex = 0;
+    const workerCount = Math.min(4, imagePaths.length);
+    const workers = Array.from({ length: workerCount }, async () => {
+      while (!cancelled) {
+        const imagePath = imagePaths[nextIndex++];
+        if (!imagePath) return;
+        await getTeacherModuleImageUrl(imagePath, supabase);
+      }
+    });
+    void Promise.all(workers);
+
+    return () => { cancelled = true; };
+  }, [teacherModules, supabase]);
+
   const [scenarioStarted, setScenarioStarted] = useState(false);
   const [scenarioFinished, setScenarioFinished] = useState(false);
   const [scenarioStateLoaded, setScenarioStateLoaded] = useState(false);
