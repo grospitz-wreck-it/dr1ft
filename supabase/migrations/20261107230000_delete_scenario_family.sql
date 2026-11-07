@@ -111,6 +111,11 @@ begin
   -- Scenario-specific NPCs are owned by the family; global/system creators are not.
   delete from public.creators where scenario_id = any(v_scenario_ids);
 
+  -- This generic teacher assignment table stores scenario IDs without a
+  -- foreign key, so remove its scenario-type rows explicitly.
+  delete from public.teacher_class_module_assignments
+  where module_type = 'scenario' and module_id = any(v_scenario_ids);
+
   -- Remaining owned records (arcs, designs, NPC dialogs, chats, assignments,
   -- message triggers, learner responses and their cascaded children) are removed
   -- by the scenario foreign keys.
