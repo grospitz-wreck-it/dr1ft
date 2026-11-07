@@ -102,7 +102,19 @@ export default async function ClassDetailPage({
   const user = userResult.user;
 
 
-  const [moduleLibraryResult, schoolMembershipResult, teacherMembershipResult] = await Promise.all([
+  // These class-scoped lookups are independent. Keep them in one parallel
+  // batch so opening the class and its module editor does not wait for a chain
+  // of sequential permission roundtrips.
+  const [
+    moduleLibraryResult,
+    schoolMembershipResult,
+    teacherMembershipResult,
+    canViewIndividualReportsResult,
+    canManageClassWorkspaceResult,
+    canManageClassImageResult,
+    canManageStudentsResult,
+    canPrintOnboardingResult,
+  ] = await Promise.all([
     user
       ? timed(timings, "teacher-module-library", supabase.rpc("get_teacher_module_library_for_class_v1", {
           p_class_id: classId,
@@ -116,6 +128,21 @@ export default async function ClassDetailPage({
       ? timed(timings, "teacher-subscription", supabase.from("teacher_class_subscriptions").select("id")
           .eq("class_instance_id", classId).eq("teacher_user_id", user.id).eq("is_active", true).maybeSingle())
       : Promise.resolve({ data: null, error: null }),
+    user
+      ? timed(timings, "can-view-individual-reports", supabase.rpc("can_view_class_individual_reports", { p_class_id: classId }))
+      : Promise.resolve({ data: false }),
+    user
+      ? timed(timings, "can-manage-class-workspace", supabase.rpc("is_teacher_of_class_instance", { target_instance_id: classId }))
+      : Promise.resolve({ data: false }),
+    user
+      ? timed(timings, "can-manage-class-image", supabase.rpc("can_manage_class_image", { object_name: `${classId}/class-image` }))
+      : Promise.resolve({ data: false }),
+    user
+      ? timed(timings, "can-manage-students", supabase.rpc("can_manage_student_accounts", { p_class_id: classId }))
+      : Promise.resolve({ data: false }),
+    user
+      ? timed(timings, "can-print-onboarding", supabase.rpc("can_print_class_onboarding_credentials", { p_class_id: classId }))
+      : Promise.resolve({ data: false }),
   ]);
 
   if (moduleLibraryResult.error) {
@@ -131,22 +158,13 @@ export default async function ClassDetailPage({
   const activeSchoolRole = schoolMembershipResult.data?.role ?? null;
 
   const isSchoolAdmin = activeSchoolRole === "school_admin" || activeSchoolRole === "school_lead";
-  const { data: canViewIndividualReports } = user
-    ? await supabase.rpc("can_view_class_individual_reports", { p_class_id: classId })
-    : { data: false };
-
-  const [{ data: canManageClassWorkspace }, { data: canManageClassImage }, { data: canManageStudents }] = user
-    ? await Promise.all([
-        supabase.rpc("is_teacher_of_class_instance", { target_instance_id: classId }),
-        supabase.rpc("can_manage_class_image", { object_name: `${classId}/class-image` }),
-        supabase.rpc("can_manage_student_accounts", { p_class_id: classId }),
-      ])
-    : [{ data: false }, { data: false }, { data: false }];
+  const canViewIndividualReports = canViewIndividualReportsResult.data;
+  const canManageClassWorkspace = canManageClassWorkspaceResult.data;
+  const canManageClassImage = canManageClassImageResult.data;
+  const canManageStudents = canManageStudentsResult.data;
 
   const hasActiveTeachingSubscription = Boolean(teacherMembershipResult.data);
-  const { data: canPrintOnboarding } = user
-    ? await supabase.rpc("can_print_class_onboarding_credentials", { p_class_id: classId })
-    : { data: false };
+  const canPrintOnboarding = canPrintOnboardingResult.data;
   const mayUseTeacherModules =
     Boolean(canManageClassWorkspace) &&
     (activeSchoolRole !== "teacher" || hasActiveTeachingSubscription);
