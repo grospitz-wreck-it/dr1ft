@@ -35,9 +35,17 @@ export async function middleware(request: NextRequest) {
     return NextResponse.redirect(loginUrl);
   }
 
+  const requiresPasswordChange = user.app_metadata?.require_password_change === true;
+  if (requiresPasswordChange && request.nextUrl.pathname !== "/change-password") {
+    return NextResponse.redirect(new URL("/change-password", request.url));
+  }
+  if (!requiresPasswordChange && request.nextUrl.pathname === "/change-password") {
+    return NextResponse.redirect(new URL("/feed", request.url));
+  }
+
   return response;
 }
 
 export const config = {
-  matcher: ["/feed/:path*", "/account/:path*", "/creator/:path*", "/messages/:path*", "/group-chat/:path*"],
+  matcher: ["/change-password", "/feed/:path*", "/account/:path*", "/creator/:path*", "/messages/:path*", "/group-chat/:path*"],
 };
