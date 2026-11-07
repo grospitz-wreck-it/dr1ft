@@ -64,7 +64,15 @@ export async function getTeacherModulePosts(classInstanceId: string, moduleId: s
       : { data: null, error: null };
 
     if (imageError) {
-      throw new Error("Ein Modulbild konnte nicht geladen werden.");
+      // A temporary Storage/signing problem must not prevent the complete
+      // editor from opening. Keep the post and its text editable; the image
+      // preview can be absent until the asset URL is available again.
+      console.warn("[teacher-module-posts] image preview unavailable", {
+        classInstanceId,
+        moduleId,
+        postId: post.id,
+        message: imageError.message,
+      });
     }
 
     return {

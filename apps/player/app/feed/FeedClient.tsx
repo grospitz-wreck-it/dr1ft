@@ -8,8 +8,14 @@ import { PostCard } from "../../components/PostCard";
 import { LearningCardFeedItem, type PlayerLearningCard } from "../../components/LearningCardFeedItem";
 import { ReflectionOverlay } from "../../components/ReflectionOverlay";
 
-export function FeedClient({ initialItems, userId, classInstanceId, likedContentIds, profile, scenarioIntro, scenarioSummaries = [], scenarioIds = [], scenarioMissionCount = 0, completedScenarioMissionCount = 0, learningCards = [] }: {
-  initialItems: FeedItem[]; userId: string; classInstanceId: string; likedContentIds: Set<string>;
+type PlayerTeacherModule = {
+  id: string; title: string; description: string | null; intro_title: string | null; intro_text: string | null;
+  title_card_enabled: boolean;
+  posts: Array<{ id: string; post_type: string; title: string | null; body: string | null; imageUrl: string | null; embed_provider: string | null; embed_url: string | null; interaction_data: Record<string, any> | null; sort_order: number }>;
+};
+
+export function FeedClient({ initialItems, teacherModules = [], userId, classInstanceId, likedContentIds, profile, scenarioIntro, scenarioSummaries = [], scenarioIds = [], scenarioMissionCount = 0, completedScenarioMissionCount = 0, learningCards = [] }: {
+  initialItems: FeedItem[]; teacherModules?: PlayerTeacherModule[]; userId: string; classInstanceId: string; likedContentIds: Set<string>;
   profile: { displayName: string; username: string; avatarSeed: string };
   scenarioIntro: { id: string; title: string; description: string | null } | null;
   scenarioSummaries?: Array<{ id: string; title: string; description: string | null; coverImageUrl?: string | null }>;
@@ -20,6 +26,71 @@ export function FeedClient({ initialItems, userId, classInstanceId, likedContent
 }) {
   const supabase = supabaseBrowserClient();
   const [reflection, setReflection] = useState<{ missionId: string; contentItemId: string } | null>(null);
+  const [moduleSelections, setModuleSelections] = useState<Record<string, string[]>>({});
+  const [moduleFreeText, setModuleFreeText] = useState<Record<string, string>>({});
+  const [moduleSubmitting, setModuleSubmitting] = useState<Record<string, boolean>>({});
+  const [moduleSubmitted, setModuleSubmitted] = useState<Record<string, boolean>>({});
+  const [moduleVoteErrors, setModuleVoteErrors] = useState<Record<string, string>>({});
+  const [modulePollResults, setModulePollResults] = useState<Record<string, { total: number; results: Array<{ key: string; label: string; count: number }>; myVote: { submitted: boolean; selected: string[] }; responseMode: string }>>({});
+  useEffect(() => {
+    let cancelled = false;
+    const pollPosts = teacherModules.flatMap((module) => module.posts
+      .filter((post) => post.post_type === "poll" || post.post_type === "true_false")
+      .map((post) => post.id));
+    if (!pollPosts.length) return;
+    void Promise.all(pollPosts.map(async (postId) => {
+      const { data, error } = await (supabase as any).rpc("get_teacher_module_poll_results", { p_post_id: postId });
+      if (error) {
+        console.error("[Player] poll results could not be loaded", { postId, code: error.code, message: error.message });
+        return null;
+      }
+      return [postId, data] as const;
+    })).then((entries) => {
+      if (cancelled) return;
+      const next: typeof modulePollResults = {};
+      for (const entry of entries) if (entry) next[entry[0]] = entry[1];
+      setModulePollResults((current) => ({ ...current, ...next }));
+      for (const [postId, result] of Object.entries(next)) {
+        if (result.myVote?.submitted) {
+          setModuleSubmitted((current) => ({ ...current, [postId]: true }));
+          setModuleSelections((current) => ({ ...current, [postId]: result.myVote.selected ?? [] }));
+        }
+      }
+    });
+    return () => { cancelled = true; };
+  }, [teacherModules, supabase]);
+
+  async function submitTeacherModuleAnswer(moduleId: string, post: PlayerTeacherModule["posts"][number]) {
+    const config = post.interaction_data ?? {};
+    const responseMode = config.responseMode ?? "single";
+    const selected = moduleSelections[post.id] ?? [];
+    const textAnswer = (moduleFreeText[post.id] ?? "").trim();
+    if (responseMode === "free_text" ? !textAnswer : selected.length === 0) {
+      setModuleVoteErrors((current) => ({ ...current, [post.id]: "Bitte gib eine Antwort ein." }));
+      return;
+    }
+    setModuleSubmitting((current) => ({ ...current, [post.id]: true }));
+    setModuleVoteErrors((current) => ({ ...current, [post.id]: "" }));
+    try {
+      const { error } = await (supabase as any).rpc("submit_teacher_module_poll_vote", {
+        p_post_id: post.id,
+        p_module_id: moduleId,
+        p_class_instance_id: classInstanceId,
+        p_selected_choices: selected,
+        p_text_answer: responseMode === "free_text" ? textAnswer : null,
+      });
+      if (error) throw error;
+      setModuleSubmitted((current) => ({ ...current, [post.id]: true }));
+      const { data: result, error: resultError } = await (supabase as any).rpc("get_teacher_module_poll_results", { p_post_id: post.id });
+      if (resultError) console.error("[Player] poll results refresh failed", resultError);
+      else if (result) setModulePollResults((current) => ({ ...current, [post.id]: result }));
+    } catch (error) {
+      console.error("[Player] teacher module answer failed", error);
+      setModuleVoteErrors((current) => ({ ...current, [post.id]: "Deine Antwort konnte gerade nicht gespeichert werden. Bitte versuche es erneut." }));
+    } finally {
+      setModuleSubmitting((current) => ({ ...current, [post.id]: false }));
+    }
+  }
   const [scenarioStarted, setScenarioStarted] = useState(false);
   const [scenarioFinished, setScenarioFinished] = useState(false);
   const [scenarioStateLoaded, setScenarioStateLoaded] = useState(false);
@@ -157,7 +228,7 @@ export function FeedClient({ initialItems, userId, classInstanceId, likedContent
     if (scenarioStarted) return;
     setScenarioStarted(true);
   }
-  return <main className="min-h-screen text-[#27213d]"><div className="max-w-4xl mx-auto"><div className="min-w-0 space-y-5"><section className="relative overflow-hidden rounded-[26px] border border-violet-100 bg-white/90 p-6 shadow-sm md:p-7">
+  return <main className="min-h-screen text-[#27213d]"><div className="max-w-4xl mx-auto"><div className="min-w-0 space-y-5">{(multipleScenarios || scenarioIntro) && <section className="relative overflow-hidden rounded-[26px] border border-violet-100 bg-white/90 p-6 shadow-sm md:p-7">
   {multipleScenarios ? (
     <>
       <div className="flex items-start gap-4">
@@ -185,11 +256,55 @@ export function FeedClient({ initialItems, userId, classInstanceId, likedContent
       </div>
     </div>
   )}
-  {!scenarioStarted && !scenarioFinished && <div className="mt-6 flex justify-end">
+  {!scenarioStarted && !scenarioFinished && teacherModules.length === 0 && <div className="mt-6 flex justify-end">
     <button type="button" onClick={handleScenarioStart} className="inline-flex items-center gap-2 rounded-2xl bg-gradient-to-r from-fuchsia-600 via-violet-600 to-blue-600 px-6 py-3.5 text-sm font-bold text-white shadow-lg shadow-violet-900/20 transition hover:-translate-y-0.5 hover:shadow-xl focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-violet-500 focus-visible:ring-offset-2">
       <span>DR1FT starten</span>
       <ArrowRight className="h-4 w-4 text-cyan-200" />
     </button>
   </div>}
-</section>{scenarioStarted&&!scenarioFinished&&learningCards.filter(card=>card.position==="before_feed").map(card=><LearningCardFeedItem key={card.id} card={card} classInstanceId={classInstanceId}/>)}{scenarioStarted&&!scenarioFinished&&initialItems.length===0&&<div className="rounded-[28px] bg-white/80 border border-dashed border-violet-200 p-12 text-center shadow-sm"><p className="font-display font-semibold">Noch ist es ruhig.</p><p className="text-sm text-[#746d89] mt-2">Für dich sind gerade keine Szenarien freigeschaltet.</p></div>}{scenarioStarted&&!scenarioFinished&&initialItems.slice(0,visibleCount).map((item,index)=><div key={item.id} className="space-y-3"><PostCard item={item} userId={userId} classInstanceId={classInstanceId} initiallyLiked={likedContentIds.has(item.id)} onView={()=>handleView(item)}/>{index===2&&<div className="h-px bg-gradient-to-r from-transparent via-violet-200 to-transparent"/>}</div>)}{scenarioStarted&&!scenarioFinished&&visibleCount<initialItems.length&&<div ref={loadMoreRef} className="flex justify-center py-6 text-violet-300" aria-label="Weitere Beiträge werden geladen"><ArrowDown className="w-5 h-5 animate-bounce"/></div>}{scenarioStarted&&!scenarioFinished&&visibleCount>=initialItems.length&&learningCards.filter(card=>card.position==="feed_end").map(card=><LearningCardFeedItem key={card.id} card={card} classInstanceId={classInstanceId}/>)}{scenarioFinished&&<section className="rounded-[26px] border border-violet-100 bg-white p-8 text-center shadow-sm"><span className="mx-auto grid h-12 w-12 place-items-center rounded-2xl bg-violet-50"><CheckCircle2 className="h-6 w-6 text-violet-600"/></span><h2 className="mt-4 font-display text-2xl font-semibold text-[#27213d]">{multipleScenarios ? "Lernlauf beendet" : "Szenario beendet"}</h2><p className="mt-2 text-sm text-[#746d89]">Du kannst jetzt aufhören. Nicht abgeschlossene Aufgaben bleiben offen.</p></section>}</div></div>{reflection&&<ReflectionOverlay contentItemId={reflection.contentItemId} onClose={()=>setReflection(null)}/>}</main>;
+</section>}{scenarioStarted&&!scenarioFinished&&learningCards.filter(card=>card.position==="before_feed").map(card=><LearningCardFeedItem key={card.id} card={card} classInstanceId={classInstanceId}/>)}
+{!scenarioFinished&&teacherModules.length>0&&<section className="space-y-5" aria-label="Lernmodule deiner Lehrkraft">
+  {!scenarioStarted&&<div className="flex justify-end"><button type="button" onClick={handleScenarioStart} className="inline-flex items-center gap-2 rounded-xl bg-gradient-to-r from-violet-600 to-fuchsia-600 px-5 py-3 text-sm font-bold text-white shadow-md">Lernmodul starten <ArrowRight className="h-4 w-4"/></button></div>}
+  {teacherModules.map((module)=><article key={module.id} className="overflow-hidden rounded-[26px] border border-violet-100 bg-white/95 shadow-sm">
+    {module.title_card_enabled!==false&&<header className="border-b border-violet-100 bg-gradient-to-r from-violet-50 via-white to-cyan-50 px-5 py-5 sm:px-6">
+      <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-violet-600">Lernmodul</p>
+      <h3 className="mt-1 break-words font-display text-xl font-semibold text-[#27213d] [overflow-wrap:anywhere]">{module.title}</h3>
+      <div className="mt-2 flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+        {module.description&&<p className="min-w-0 flex-1 whitespace-pre-line break-words text-sm leading-6 text-[#746d89] [overflow-wrap:anywhere]">{module.description}</p>}
+        {!scenarioStarted&&<button type="button" onClick={handleScenarioStart} className="inline-flex shrink-0 items-center justify-center gap-2 self-start rounded-xl bg-gradient-to-r from-violet-600 via-fuchsia-600 to-cyan-500 px-5 py-3 text-sm font-bold text-white shadow-lg shadow-violet-500/20 transition hover:-translate-y-0.5 hover:shadow-xl focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-violet-500 focus-visible:ring-offset-2 sm:self-auto">Lernmodul starten <ArrowRight className="h-4 w-4"/></button>}
+      </div>
+    </header>}
+    {scenarioStarted&&<div className="space-y-5 p-4 sm:p-6">
+      {module.posts.map((post,index)=>{
+        const config=post.interaction_data??{};
+        const options=Array.isArray(config.options)?config.options.filter((option:any)=>typeof option==="string"&&option.trim()):[];
+        const responseMode=config.responseMode??"single";
+        const selected=moduleSelections[post.id]??[];
+        const submitted=moduleSubmitted[post.id]===true;
+        return <section key={post.id} className="overflow-hidden rounded-2xl border border-violet-100 bg-white">
+          <div className="p-4 sm:p-5">
+            <p className="text-[10px] font-bold uppercase tracking-[0.16em] text-violet-500">Beitrag {index+1}</p>
+            {post.title&&<h4 className="mt-1 text-lg font-semibold text-[#27213d]">{post.title}</h4>}
+            {post.body&&<p className="mt-2 whitespace-pre-line break-words text-sm leading-6 text-[#51476a] [overflow-wrap:anywhere]">{post.body}</p>}
+          </div>
+          {post.imageUrl&&<div className="post-media-stage relative isolate mx-2 overflow-hidden rounded-[22px] sm:mx-3"><div aria-hidden="true" className="post-media-pattern pointer-events-none absolute inset-0"/><img src={post.imageUrl} alt={post.title||"Bild zum Lernmodul"} loading="lazy" className="post-media-image relative z-[1] mx-auto block h-auto max-h-[75vh] w-auto max-w-full object-contain" onError={(event)=>{event.currentTarget.style.display="none";}}/></div>}
+          {post.embed_url&&<div className="px-4 pb-4"><a href={post.embed_url} target="_blank" rel="noreferrer" className="text-sm font-semibold text-violet-700 underline">Medieninhalt öffnen</a></div>}
+          {(post.post_type==="poll"||post.post_type==="true_false")&&<div className="space-y-3 px-4 pb-4 sm:px-5 sm:pb-5">
+            {responseMode==="free_text"?<textarea value={moduleFreeText[post.id]??""} onChange={event=>setModuleFreeText(current=>({...current,[post.id]:event.target.value}))} disabled={submitted} rows={3} maxLength={3000} placeholder="Deine Antwort ..." className="w-full rounded-xl border border-violet-200 bg-white p-3 text-sm text-slate-800 outline-none focus:border-violet-400 focus:ring-2 focus:ring-violet-100 disabled:opacity-60"/>:
+              <div className="grid gap-2">{options.map((option:string,optionIndex:number)=>{const value="option_"+(optionIndex+1);const active=selected.includes(value);return <button key={value} type="button" disabled={submitted} aria-pressed={active} onClick={()=>setModuleSelections(current=>({...current,[post.id]:responseMode==="multiple"?(active?(current[post.id]??[]).filter(item=>item!==value):[...(current[post.id]??[]),value]):[value]}))} className={"w-full rounded-xl border px-4 py-3 text-left text-sm font-medium transition "+(active?"border-violet-600 bg-gradient-to-r from-violet-600 via-fuchsia-600 to-violet-500 text-white shadow-lg shadow-violet-500/25 ring-2 ring-fuchsia-300 ring-offset-1":"border-violet-100 bg-white text-slate-700 hover:border-violet-300 hover:bg-violet-50")}>{active&&<span className="mr-2 inline-grid h-5 w-5 place-items-center rounded-full bg-white/20 text-xs">✓</span>}{option}</button>})}</div>}
+            {moduleVoteErrors[post.id]&&<p role="alert" className="text-sm text-red-600">{moduleVoteErrors[post.id]}</p>}
+            {submitted?<p role="status" className="text-sm font-semibold text-emerald-700">Antwort gespeichert. Danke!</p>:<button type="button" disabled={moduleSubmitting[post.id]} onClick={()=>void submitTeacherModuleAnswer(module.id,post)} className="rounded-xl bg-gradient-to-r from-violet-600 to-fuchsia-600 px-5 py-3 text-sm font-bold text-white disabled:opacity-50">{moduleSubmitting[post.id]?"Wird gespeichert …":"Antwort senden"}</button>}
+            {modulePollResults[post.id]&&modulePollResults[post.id].total>0&&<div className="mt-5 rounded-2xl border border-violet-100 bg-gradient-to-br from-violet-50 via-white to-cyan-50 p-4 sm:p-5">
+              <div className="mb-4 flex items-center justify-between gap-3"><h5 className="text-sm font-bold text-[#35264d]">Umfrageergebnis</h5><span className="rounded-full bg-violet-100 px-3 py-1 text-xs font-bold text-violet-700">{modulePollResults[post.id].total} {modulePollResults[post.id].total===1?"Antwort":"Antworten"}</span></div>
+              <div className="space-y-3">{modulePollResults[post.id].results.map((result)=>{const percentage=modulePollResults[post.id].responseMode==="multiple"?Math.round(result.count/Math.max(modulePollResults[post.id].total,1)*100):Math.round(result.count/Math.max(modulePollResults[post.id].total,1)*100);return <div key={result.key}><div className="mb-1.5 flex items-center justify-between gap-3 text-xs"><span className="font-semibold text-[#51476a]">{result.label}</span><span className="shrink-0 font-bold tabular-nums text-violet-700">{result.count} · {percentage}%</span></div><div className="h-3 overflow-hidden rounded-full bg-violet-100"><div className="h-full rounded-full bg-gradient-to-r from-violet-600 via-fuchsia-500 to-cyan-400 transition-all duration-500" style={{width:percentage+"%"}}/></div></div>})}</div>
+              {modulePollResults[post.id].responseMode==="multiple"&&<p className="mt-3 text-[11px] text-[#746d89]">Mehrfachauswahl möglich – Prozentwerte beziehen sich auf die abgegebenen Antworten.</p>}
+              {modulePollResults[post.id].responseMode==="free_text"&&<p className="mt-2 text-xs text-[#746d89]">Freitextantworten werden hier nur anonym als Anzahl angezeigt.</p>}
+            </div>}
+          </div>}
+        </section>;
+      })}
+    </div>}
+  </article>)}
+</section>}
+{scenarioStarted&&!scenarioFinished&&initialItems.length===0&&teacherModules.length===0&&<div className="rounded-[28px] bg-white/80 border border-dashed border-violet-200 p-12 text-center shadow-sm"><p className="font-display font-semibold">Noch ist es ruhig.</p><p className="text-sm text-[#746d89] mt-2">Für dich sind gerade keine Szenarien freigeschaltet.</p></div>}{scenarioStarted&&!scenarioFinished&&initialItems.slice(0,visibleCount).map((item,index)=><div key={item.id} className="space-y-3"><PostCard item={item} userId={userId} classInstanceId={classInstanceId} initiallyLiked={likedContentIds.has(item.id)} onView={()=>handleView(item)}/>{index===2&&<div className="h-px bg-gradient-to-r from-transparent via-violet-200 to-transparent"/>}</div>)}{scenarioStarted&&!scenarioFinished&&visibleCount<initialItems.length&&<div ref={loadMoreRef} className="flex justify-center py-6 text-violet-300" aria-label="Weitere Beiträge werden geladen"><ArrowDown className="w-5 h-5 animate-bounce"/></div>}{scenarioStarted&&!scenarioFinished&&visibleCount>=initialItems.length&&learningCards.filter(card=>card.position==="feed_end").map(card=><LearningCardFeedItem key={card.id} card={card} classInstanceId={classInstanceId}/>)}{scenarioFinished&&<section className="rounded-[26px] border border-violet-100 bg-white p-8 text-center shadow-sm"><span className="mx-auto grid h-12 w-12 place-items-center rounded-2xl bg-violet-50"><CheckCircle2 className="h-6 w-6 text-violet-600"/></span><h2 className="mt-4 font-display text-2xl font-semibold text-[#27213d]">{multipleScenarios ? "Lernlauf beendet" : "Szenario beendet"}</h2><p className="mt-2 text-sm text-[#746d89]">Du kannst jetzt aufhören. Nicht abgeschlossene Aufgaben bleiben offen.</p></section>}</div></div>{reflection&&<ReflectionOverlay contentItemId={reflection.contentItemId} onClose={()=>setReflection(null)}/>}</main>;
 }
