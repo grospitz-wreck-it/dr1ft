@@ -77,18 +77,13 @@ export default async function FeedPage() {
   const eligibleTeacherModuleIds = new Set(eligibleTeacherModules.map((module: any) => module.id));
   const teacherModulePostRows = (teacherModulePostResult.data ?? []).filter((post: any) => eligibleTeacherModuleIds.has(post.module_id));
 
-  const teacherModules = await Promise.all(eligibleTeacherModules.map(async (module: any) => {
-    const posts = await Promise.all((teacherModulePostRows ?? [])
+  // Do not sign private image URLs during server rendering: Storage signing can
+  // be slow and must never delay the module text or voting controls.
+  const teacherModules = eligibleTeacherModules.map((module: any) => ({
+    ...module,
+    posts: teacherModulePostRows
       .filter((post: any) => post.module_id === module.id)
-      .map(async (post: any) => {
-        let imageUrl: string | null = null;
-        if (post.image_path) {
-          const { data } = await supabase.storage.from("teacher-module-assets").createSignedUrl(post.image_path, 60 * 60);
-          imageUrl = data?.signedUrl ?? null;
-        }
-        return { ...post, imageUrl };
-      }));
-    return { ...module, posts };
+      .map((post: any) => ({ ...post, imageUrl: null, imagePath: post.image_path ?? null })),
   }));
 
   const now = Date.now();
