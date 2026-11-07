@@ -53,6 +53,7 @@ export default async function TeacherHomePage() {
     { data: schoolMemberships },
     { data: studentMemberships },
     { data: scenarioAssignments },
+    { data: isPlatformAdmin },
   ] = await Promise.all([
     supabase
       .from("school_memberships")
@@ -73,10 +74,10 @@ export default async function TeacherHomePage() {
           .is("archived_at", null)
           .eq("is_active", true)
       : Promise.resolve({ data: [] as any[] }),
+    supabase.rpc("is_platform_admin"),
   ]);
 
-  mark("Schulmitgliedschaft + Schüler + Missionen", schoolStudentsMissionsStartedAt);
-  const { data: isPlatformAdmin } = await supabase.rpc("is_platform_admin");
+  mark("Schulmitgliedschaft + Schüler + Missionen + Adminrecht", schoolStudentsMissionsStartedAt);
   const canCreateClasses = Boolean(isPlatformAdmin) || (schoolMemberships ?? []).some((membership: any) => ["school_admin", "school_lead"].includes(membership.role));
 
   const schoolLookupStartedAt = Date.now();
@@ -84,28 +85,35 @@ export default async function TeacherHomePage() {
     ...classes.map((item: any) => item.school_id),
     ...(schoolMemberships ?? []).map((membership: any) => membership.school_id),
   ].filter(Boolean)));
-  const { data: schoolRows } = schoolIds.length
-    ? await supabase.from("schools").select("id,name,region,school_image_path,school_image_position_x,school_image_position_y,school_image_zoom").in("id", schoolIds)
-    : { data: [] as any[] };
-  mark("Schuldaten", schoolLookupStartedAt);
+  const [schoolRowsResult, schoolClassRows] = await Promise.all([
+    schoolIds.length
+      ? supabase.from("schools").select("id,name,region,school_image_path,school_image_position_x,school_image_position_y,school_image_zoom").in("id", schoolIds)
+      : Promise.resolve({ data: [] as any[] }),
+    schoolIds.length
+      ? supabase.from("class_instances")
+          .select("id,name,grade_level,school_year,school_id")
+          .in("school_id", schoolIds)
+          .eq("is_active", true)
+          .order("name")
+      : Promise.resolve({ data: [] as any[] }),
+  ]);
+  const schoolRows = schoolRowsResult.data ?? [];
+  mark("Schuldaten + Schulklassen", schoolLookupStartedAt);
   const schoolsById = new Map((schoolRows ?? []).map((school: any) => [school.id, school]));
   const linkedSchools = Array.from(schoolsById.values());
-  const schoolClassRows = schoolIds.length
-    ? await supabase.from("class_instances")
-        .select("id,name,grade_level,school_year,school_id")
-        .in("school_id", schoolIds)
-        .eq("is_active", true)
-        .order("name")
-    : { data: [] as any[] };
   const schoolClassItems = schoolClassRows.data ?? [];
   const searchableClassIds = Array.from(new Set([...classIds, ...schoolClassItems.map((item: any) => item.id)]));
-  const { data: allSchoolStudents } = searchableClassIds.length
+  const externalSearchClassIds = searchableClassIds.filter((id) => !classIds.includes(id));
+  const externalStudentsStartedAt = Date.now();
+  const { data: externalSchoolStudents } = externalSearchClassIds.length
     ? await supabase.from("class_instance_memberships")
         .select("class_instance_id")
-        .in("class_instance_id", searchableClassIds)
+        .in("class_instance_id", externalSearchClassIds)
         .eq("role", "student")
         .is("left_at", null)
     : { data: [] as any[] };
+  mark("Schülerzahlen zusätzlicher Schulklassen", externalStudentsStartedAt);
+  const allSchoolStudents = [...(studentMemberships ?? []), ...(externalSchoolStudents ?? [])];
   const assignmentsByClass = new Map<string, any[]>();
   (scenarioAssignments ?? []).forEach((row: any) => {
     const current = assignmentsByClass.get(row.class_instance_id) ?? [];
