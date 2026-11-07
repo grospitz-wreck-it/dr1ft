@@ -8,32 +8,31 @@ import { PostCard } from "../../components/PostCard";
 import { LearningCardFeedItem, type PlayerLearningCard } from "../../components/LearningCardFeedItem";
 import { ReflectionOverlay } from "../../components/ReflectionOverlay";
 
-// Keep signed URLs across feed remounts/navigation and deduplicate concurrent
-// requests. Use a conservative one-hour expiry compatible with Storage settings.
-const teacherModuleImageUrlCache = new Map<string, { url: string; expiresAt: number }>();
+// Download private module images with the student's authenticated session.
+// Storage RLS checks the active class assignment; no signed-URL round trip needed.
+// Keep Blob URLs across feed remounts and deduplicate concurrent downloads.
+const teacherModuleImageUrlCache = new Map<string, string>();
 const teacherModuleImageUrlPending = new Map<string, Promise<string | null>>();
 
 function getTeacherModuleImageUrl(imagePath: string, supabase: ReturnType<typeof supabaseBrowserClient>) {
   const cached = teacherModuleImageUrlCache.get(imagePath);
-  if (cached && cached.expiresAt > Date.now() + 60_000) return Promise.resolve(cached.url);
+  if (cached) return Promise.resolve(cached);
   const pending = teacherModuleImageUrlPending.get(imagePath);
   if (pending) return pending;
 
   const request = supabase.storage.from("teacher-module-assets")
-    .createSignedUrl(imagePath, 60 * 60)
+    .download(imagePath)
     .then(({ data, error }) => {
-      if (error || !data?.signedUrl) {
-        console.error("[Player] teacher module image URL failed", { imagePath, message: error?.message });
+      if (error || !data) {
+        console.error("[Player] teacher module image download failed", { imagePath, message: error?.message });
         return null;
       }
-      teacherModuleImageUrlCache.set(imagePath, {
-        url: data.signedUrl,
-        expiresAt: Date.now() + 55 * 60 * 1000,
-      });
-      return data.signedUrl;
+      const objectUrl = URL.createObjectURL(data);
+      teacherModuleImageUrlCache.set(imagePath, objectUrl);
+      return objectUrl;
     })
     .catch((error) => {
-      console.error("[Player] teacher module image URL failed", error);
+      console.error("[Player] teacher module image download failed", error);
       return null;
     })
     .finally(() => teacherModuleImageUrlPending.delete(imagePath));
