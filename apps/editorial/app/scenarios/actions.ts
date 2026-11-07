@@ -94,15 +94,9 @@ export async function deleteScenarioFamily(scenarioId: string, confirmationTitle
   const { data: variants, error: variantsError } = await variantsQuery;
   if (variantsError) throw new Error(variantsError.message);
   const scenarioIds = (variants ?? []).map((variant) => variant.id);
-  const coverPaths = Array.from(new Set((variants ?? [])
+  const coverUrls = Array.from(new Set((variants ?? [])
     .map((variant) => variant.cover_image_url)
-    .filter((url): url is string => typeof url === "string")
-    .map((url) => {
-      const marker = "/storage/v1/object/public/ambient-assets/";
-      const markerIndex = url.indexOf(marker);
-      return markerIndex >= 0 ? decodeURIComponent(url.slice(markerIndex + marker.length)) : null;
-    })
-    .filter((path): path is string => Boolean(path))));
+    .filter((url): url is string => typeof url === "string")));
 
   // Database deletion is atomic. Storage objects are removed only after it
   // succeeds, so a failed DB operation never destroys still-referenced media.
@@ -134,11 +128,30 @@ export async function deleteScenarioFamily(scenarioId: string, confirmationTitle
   }
 
   // Scenario cover artwork is stored in ambient-assets under generated/date/.
-  // Only remove objects whose public URL was referenced by this family.
-  if (coverPaths.length) {
-    const { error: coverCleanupError } = await supabase.storage.from("ambient-assets").remove(coverPaths);
-    if (coverCleanupError) {
-      console.error("[scenario-delete] cover cleanup failed", { scenarioId, error: coverCleanupError.message });
+  // Preserve any image URL that is still referenced by another scenario.
+  if (coverUrls.length) {
+    const { data: remainingCoverRefs, error: refsError } = await supabase
+      .from("scenarios")
+      .select("cover_image_url")
+      .in("cover_image_url", coverUrls);
+    if (refsError) {
+      console.error("[scenario-delete] cover reference check failed", { scenarioId, error: refsError.message });
+    } else {
+      const stillUsed = new Set((remainingCoverRefs ?? []).map((row) => row.cover_image_url));
+      const coverPaths = coverUrls
+        .filter((url) => !stillUsed.has(url))
+        .map((url) => {
+          const marker = "/storage/v1/object/public/ambient-assets/";
+          const markerIndex = url.indexOf(marker);
+          return markerIndex >= 0 ? decodeURIComponent(url.slice(markerIndex + marker.length)) : null;
+        })
+        .filter((path): path is string => Boolean(path));
+      if (coverPaths.length) {
+        const { error: coverCleanupError } = await supabase.storage.from("ambient-assets").remove(coverPaths);
+        if (coverCleanupError) {
+          console.error("[scenario-delete] cover cleanup failed", { scenarioId, error: coverCleanupError.message });
+        }
+      }
     }
   }
 
