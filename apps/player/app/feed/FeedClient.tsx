@@ -200,7 +200,7 @@ export function FeedClient({ initialItems, teacherModules = [], userId, classIns
     if (scenarioStarted) return;
     setScenarioStarted(true);
   }
-  return <main className="min-h-screen text-[#27213d]"><div className="max-w-4xl mx-auto"><div className="min-w-0 space-y-5"><section className="relative overflow-hidden rounded-[26px] border border-violet-100 bg-white/90 p-6 shadow-sm md:p-7">
+  return <main className="min-h-screen text-[#27213d]"><div className="max-w-4xl mx-auto"><div className="min-w-0 space-y-5">{(multipleScenarios || scenarioIntro) && <section className="relative overflow-hidden rounded-[26px] border border-violet-100 bg-white/90 p-6 shadow-sm md:p-7">
   {multipleScenarios ? (
     <>
       <div className="flex items-start gap-4">
@@ -234,14 +234,15 @@ export function FeedClient({ initialItems, teacherModules = [], userId, classIns
       <ArrowRight className="h-4 w-4 text-cyan-200" />
     </button>
   </div>}
-</section>{scenarioStarted&&!scenarioFinished&&learningCards.filter(card=>card.position==="before_feed").map(card=><LearningCardFeedItem key={card.id} card={card} classInstanceId={classInstanceId}/>)}
+</section>}{scenarioStarted&&!scenarioFinished&&learningCards.filter(card=>card.position==="before_feed").map(card=><LearningCardFeedItem key={card.id} card={card} classInstanceId={classInstanceId}/>)}
 {!scenarioFinished&&teacherModules.length>0&&(scenarioStarted||teacherModules.some(module=>module.title_card_enabled))&&<section className="space-y-5" aria-label="Lernmodule deiner Lehrkraft">
-  <div className="px-1"><p className="text-[10px] font-bold uppercase tracking-[0.2em] text-violet-600">Aus deinem Unterricht</p><h2 className="mt-1 font-display text-xl font-semibold text-[#27213d]">Lernmodule deiner Lehrkraft</h2></div>
+
   {teacherModules.map((module)=><article key={module.id} className="overflow-hidden rounded-[26px] border border-violet-100 bg-white/95 shadow-sm">
     {module.title_card_enabled!==false&&<header className="border-b border-violet-100 bg-gradient-to-r from-violet-50 via-white to-cyan-50 px-5 py-5 sm:px-6">
       <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-violet-600">Lernmodul</p>
-      <h3 className="mt-1 font-display text-xl font-semibold text-[#27213d]">{module.intro_title?.trim()||module.title}</h3>
-      {(module.intro_text?.trim()||module.description)&&<p className="mt-2 whitespace-pre-line text-sm leading-6 text-[#746d89]">{module.intro_text?.trim()||module.description}</p>}
+      <h3 className="mt-1 font-display text-xl font-semibold text-[#27213d]">{module.title}</h3>
+      {module.description&&<p className="mt-2 whitespace-pre-line text-sm leading-6 text-[#746d89]">{module.description}</p>}
+      {!scenarioStarted&&!scenarioFinished&&<div className="mt-4 flex justify-end"><button type="button" onClick={handleScenarioStart} className="inline-flex items-center gap-2 rounded-xl bg-gradient-to-r from-violet-600 to-fuchsia-600 px-5 py-3 text-sm font-bold text-white shadow-md">DR1FT starten <ArrowRight className="h-4 w-4"/></button></div>}
     </header>}
     {scenarioStarted&&<div className="space-y-5 p-4 sm:p-6">
       {module.posts.map((post,index)=>{
@@ -256,7 +257,7 @@ export function FeedClient({ initialItems, teacherModules = [], userId, classIns
             {post.title&&<h4 className="mt-1 text-lg font-semibold text-[#27213d]">{post.title}</h4>}
             {post.body&&<p className="mt-2 whitespace-pre-line text-sm leading-6 text-[#51476a]">{post.body}</p>}
           </div>
-          {post.imageUrl&&<img src={post.imageUrl} alt={post.title||"Bild zum Lernmodul"} loading="lazy" className="max-h-[520px] w-full bg-slate-50 object-contain"/>}
+          {post.imageUrl&&<div className="post-media-stage relative isolate mx-2 overflow-hidden rounded-[22px] sm:mx-3"><div aria-hidden="true" className="post-media-pattern pointer-events-none absolute inset-0"/><img src={post.imageUrl} alt={post.title||"Bild zum Lernmodul"} loading="lazy" className="post-media-image relative z-[1] mx-auto block h-auto max-h-[75vh] w-auto max-w-full object-contain" onError={(event)=>{event.currentTarget.style.display="none";}}/></div>}
           {post.embed_url&&<div className="px-4 pb-4"><a href={post.embed_url} target="_blank" rel="noreferrer" className="text-sm font-semibold text-violet-700 underline">Medieninhalt öffnen</a></div>}
           {(post.post_type==="poll"||post.post_type==="true_false")&&<div className="space-y-3 px-4 pb-4 sm:px-5 sm:pb-5">
             {responseMode==="free_text"?<textarea value={moduleFreeText[post.id]??""} onChange={event=>setModuleFreeText(current=>({...current,[post.id]:event.target.value}))} disabled={submitted} rows={3} maxLength={3000} placeholder="Deine Antwort ..." className="w-full rounded-xl border border-violet-200 bg-white p-3 text-sm text-slate-800 outline-none focus:border-violet-400 focus:ring-2 focus:ring-violet-100 disabled:opacity-60"/>:
