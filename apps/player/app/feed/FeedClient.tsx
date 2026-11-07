@@ -43,7 +43,7 @@ function getTeacherModuleImageUrl(imagePath: string, supabase: ReturnType<typeof
   return request;
 }
 
-function TeacherModuleImage({ imagePath, alt }: { imagePath: string; alt: string }) {
+function TeacherModuleImage({ imagePath, alt, priority = false }: { imagePath: string; alt: string; priority?: boolean }) {
   const supabase = supabaseBrowserClient();
   const [src, setSrc] = useState<string | null>(null);
   const [failed, setFailed] = useState(false);
@@ -60,7 +60,7 @@ function TeacherModuleImage({ imagePath, alt }: { imagePath: string; alt: string
   }, [imagePath, supabase]);
   return <div className="post-media-stage relative isolate mx-2 overflow-hidden rounded-[22px] sm:mx-3">
     <div aria-hidden="true" className="post-media-pattern pointer-events-none absolute inset-0"/>
-    {src ? <img src={src} alt={alt} loading="eager" fetchPriority="high" decoding="async" className="post-media-image relative z-[1] mx-auto block h-auto max-h-[75vh] w-auto max-w-full object-contain" onError={() => setFailed(true)}/> :
+    {src ? <img src={src} alt={alt} loading={priority ? "eager" : "lazy"} fetchPriority={priority ? "high" : "auto"} decoding="async" className="post-media-image relative z-[1] mx-auto block h-auto max-h-[75vh] w-auto max-w-full object-contain" onError={() => setFailed(true)}/> :
       <div className="relative z-[1] grid min-h-56 w-full place-items-center text-sm font-medium text-violet-500">{failed ? "Bild konnte nicht geladen werden" : "Bild wird geladen …"}</div>}
   </div>;
 }
@@ -387,7 +387,7 @@ export function FeedClient({ initialItems, teacherModules = [], userId, classIns
             {post.title&&<h4 className="mt-1 text-lg font-semibold text-[#27213d]">{post.title}</h4>}
             {post.body&&<p className="mt-2 whitespace-pre-line break-words text-sm leading-6 text-[#51476a] [overflow-wrap:anywhere]">{post.body}</p>}
           </div>
-          {post.imagePath&&<TeacherModuleImage imagePath={post.imagePath} alt={post.title||"Bild zum Lernmodul"}/>}
+          {post.imagePath&&<TeacherModuleImage imagePath={post.imagePath} alt={post.title||"Bild zum Lernmodul"} priority={index===0}/>}
           {post.embed_url&&<div className="px-4 pb-4"><a href={post.embed_url} target="_blank" rel="noreferrer" className="text-sm font-semibold text-violet-700 underline">Medieninhalt öffnen</a></div>}
           {(post.post_type==="poll"||post.post_type==="true_false")&&<TeacherModulePoll moduleId={module.id} post={post} classInstanceId={classInstanceId} initialResult={modulePollResults[post.id]}/>} 
         </section>;
