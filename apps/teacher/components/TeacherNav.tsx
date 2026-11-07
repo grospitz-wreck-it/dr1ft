@@ -10,6 +10,7 @@ import {
   RefreshCw,
   Check,
 } from "lucide-react";
+import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { createBrowserClient } from "@supabase/ssr";
@@ -32,7 +33,7 @@ type NavItemProps = {
 
 function NavItem({ href, label, icon, active, count }: NavItemProps) {
   return (
-    <a
+    <Link
       href={href}
       className={`flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition ${
         active ? "bg-violet-50 text-violet-700" : "text-slate-600 hover:bg-slate-50"
@@ -45,7 +46,7 @@ function NavItem({ href, label, icon, active, count }: NavItemProps) {
           {count}
         </span>
       )}
-    </a>
+    </Link>
   );
 }
 
@@ -53,6 +54,7 @@ export function TeacherNav() {
   const pathname = usePathname();
   const router = useRouter();
   const [email, setEmail] = useState<string | null>(null);
+  const [userId, setUserId] = useState<string | null>(null);
   const [displayName, setDisplayName] = useState<string | null>(null);
   const [role, setRole] = useState("Lehrkraft");
   const [school, setSchool] = useState<string | null>(null);
@@ -72,17 +74,31 @@ export function TeacherNav() {
     pathname.startsWith("/reset-password") ||
     pathname.startsWith("/update-password");
 
+  // Account data is independent of the current route. Load it once and refresh
+  // only after an explicit profile-updated event, not on every navigation.
   useEffect(() => {
     if (publicRoute) return;
     const supabase = client();
     let alive = true;
 
     async function loadAccountData(userId: string) {
-      const [{ data: profile }, { data: memberships }] = await Promise.all([
+      const accountCoreStartedAt = Date.now();
+      const [
+        { data: profile },
+        { data: memberships },
+        { data: teacherClasses },
+      ] = await Promise.all([
         supabase.from("user_profiles").select("display_name").eq("id", userId).maybeSingle(),
         supabase.from("school_memberships").select("school_id, role, created_at").eq("user_id", userId).eq("active", true).order("created_at", { ascending: true }),
+        supabase.from("class_instance_memberships")
+          .select("class_instance_id, class_instances(school_id)")
+          .eq("user_id", userId)
+          .eq("role", "teacher")
+          .is("left_at", null),
       ]);
+      console.info("[teacher-nav-timing]", { stage: "profile-memberships-classes", ms: Date.now() - accountCoreStartedAt });
       if (!alive) return;
+
       setDisplayName(profile?.display_name?.trim() || null);
       const membership = memberships?.[0];
       setRole(
@@ -90,94 +106,101 @@ export function TeacherNav() {
         membership?.role === "school_lead" ? "Schulleitung" : "Lehrkraft"
       );
 
-      const { data: teacherClasses } = await supabase
-        .from("class_instance_memberships")
-        .select("class_instance_id, class_instances(school_id)")
-        .eq("user_id", userId)
-        .eq("role", "teacher")
-        .is("left_at", null);
-
       const schoolIds = Array.from(new Set([
         ...(memberships ?? []).map((row) => row.school_id),
         ...(teacherClasses ?? []).map((row: any) => row.class_instances?.school_id),
       ].filter(Boolean)));
-
-      if (schoolIds.length) {
-        const { data: schoolData } = await supabase
-          .from("schools")
-          .select("id, name, region")
-          .in("id", schoolIds);
-        if (!alive) return;
-        const primarySchool = (schoolData ?? []).find((row) => row.id === schoolIds[0]);
-        setSchool(primarySchool?.name ?? null);
-        setRegion(primarySchool?.region ?? null);
-      } else {
-        setSchool(null);
-        setRegion(null);
-      }
-
       const classIds = Array.from(new Set((teacherClasses ?? []).map((row) => row.class_instance_id)));
-      if (classIds.length) {
-        const { count } = await supabase
-          .from("class_instance_memberships")
-          .select("user_id", { count: "exact", head: true })
-          .in("class_instance_id", classIds)
-          .eq("role", "student")
-          .is("left_at", null);
-        if (alive) setStudentCount(count ?? 0);
-      } else if (alive) {
-        setStudentCount(0);
-      }
+
+      const accountSummaryStartedAt = Date.now();
+      const [schoolResult, studentResult] = await Promise.all([
+        schoolIds.length
+          ? supabase.from("schools").select("id, name, region").in("id", schoolIds)
+          : Promise.resolve({ data: [] as any[] }),
+        classIds.length
+          ? supabase.from("class_instance_memberships")
+              .select("user_id", { count: "exact", head: true })
+              .in("class_instance_id", classIds)
+              .eq("role", "student")
+              .is("left_at", null)
+          : Promise.resolve({ count: 0 }),
+      ]);
+      console.info("[teacher-nav-timing]", { stage: "school-and-student-summary", ms: Date.now() - accountSummaryStartedAt });
+      if (!alive) return;
+
+      const primarySchool = (schoolResult.data ?? []).find((row: any) => row.id === schoolIds[0]);
+      setSchool(primarySchool?.name ?? null);
+      setRegion(primarySchool?.region ?? null);
+      setStudentCount(studentResult.count ?? 0);
     }
 
-    (async () => {
+    async function refreshAccount() {
+      const authStartedAt = Date.now();
       const { data: { user } } = await supabase.auth.getUser();
+      console.info("[teacher-nav-timing]", { stage: "auth-user", ms: Date.now() - authStartedAt });
       if (!alive) return;
       setEmail(user?.email ?? null);
-      if (!user) return;
-
-      const classMatch = pathname.match(/^\/classes\/([^/]+)$/);
-      if (classMatch) {
-        const currentClassId = classMatch[1];
-        const { data: classRow } = await supabase
-          .from("class_instances")
-          .select("id,access_code,school_id")
-          .eq("id", currentClassId)
-          .maybeSingle();
-        if (alive) {
-          setClassIdForCode(currentClassId);
-          setClassAccessCode(classRow?.access_code ?? null);
-        }
-        if (classRow) {
-          const [{ data: isPlatformAdmin }, { data: canManageSchool }, { data: canManageStudents }, { data: subscription }] = await Promise.all([
-            supabase.rpc("is_platform_admin"),
-            classRow.school_id ? supabase.rpc("can_manage_school", { p_school_id: classRow.school_id }) : Promise.resolve({ data: false }),
-            supabase.rpc("can_manage_student_accounts", { p_class_id: currentClassId }),
-            supabase.from("teacher_class_subscriptions").select("id").eq("class_instance_id", currentClassId).eq("teacher_user_id", user.id).eq("is_active", true).maybeSingle(),
-          ]);
-          if (alive) setCanRerollClassCode(Boolean(isPlatformAdmin || canManageSchool || canManageStudents || subscription));
-        } else if (alive) {
-          setCanRerollClassCode(false);
-        }
-      } else {
-        setClassAccessCode(null);
-        setClassIdForCode(null);
-        setCanRerollClassCode(false);
+      setUserId(user?.id ?? null);
+      if (user) {
+        const accountStartedAt = Date.now();
+        await loadAccountData(user.id);
+        console.info("[teacher-nav-timing]", { stage: "account-total", ms: Date.now() - accountStartedAt });
       }
-      await loadAccountData(user.id);
-    })();
-
-    function handleProfileUpdate() {
-      void supabase.auth.getUser().then(({ data: { user } }) => {
-        if (user) void loadAccountData(user.id);
-      });
     }
+
+    void refreshAccount();
+    function handleProfileUpdate() { void refreshAccount(); }
     window.addEventListener("drift:profile-updated", handleProfileUpdate);
     return () => {
       alive = false;
       window.removeEventListener("drift:profile-updated", handleProfileUpdate);
     };
-  }, [publicRoute, pathname]);
+  }, [publicRoute]);
+
+  // Class-code permissions are route-specific; do not reload profile, school,
+  // membership and student-count data just because the pathname changed.
+  useEffect(() => {
+    if (publicRoute || !userId) return;
+    const classMatch = pathname.match(/^\/classes\/([^/]+)$/);
+    if (!classMatch) {
+      setClassAccessCode(null);
+      setClassIdForCode(null);
+      setCanRerollClassCode(false);
+      return;
+    }
+
+    const supabase = client();
+    let alive = true;
+    const currentClassId = classMatch[1];
+    setClassIdForCode(currentClassId);
+
+    void (async () => {
+      const classLookupStartedAt = Date.now();
+      const { data: classRow } = await supabase
+        .from("class_instances")
+        .select("id,access_code,school_id")
+        .eq("id", currentClassId)
+        .maybeSingle();
+      console.info("[teacher-nav-timing]", { stage: "class-access-code", ms: Date.now() - classLookupStartedAt });
+      if (!alive) return;
+      setClassAccessCode(classRow?.access_code ?? null);
+      if (!classRow) {
+        setCanRerollClassCode(false);
+        return;
+      }
+      const permissionsStartedAt = Date.now();
+      const [{ data: isPlatformAdmin }, { data: canManageSchool }, { data: canManageStudents }, { data: subscription }] = await Promise.all([
+        supabase.rpc("is_platform_admin"),
+        classRow.school_id ? supabase.rpc("can_manage_school", { p_school_id: classRow.school_id }) : Promise.resolve({ data: false }),
+        supabase.rpc("can_manage_student_accounts", { p_class_id: currentClassId }),
+        supabase.from("teacher_class_subscriptions").select("id").eq("class_instance_id", currentClassId).eq("teacher_user_id", userId).eq("is_active", true).maybeSingle(),
+      ]);
+      console.info("[teacher-nav-timing]", { stage: "class-permissions", ms: Date.now() - permissionsStartedAt });
+      if (alive) setCanRerollClassCode(Boolean(isPlatformAdmin || canManageSchool || canManageStudents || subscription));
+    })();
+
+    return () => { alive = false; };
+  }, [publicRoute, pathname, userId]);
 
   if (publicRoute) return null;
   const overviewActive = pathname === "/";
@@ -234,7 +257,7 @@ export function TeacherNav() {
                 <p className="mt-1 truncate text-xs text-slate-500">{school ?? "Noch keine Schule zugeordnet"}{region ? " · " + region : ""}</p>
               </div>
               <div className="border-b border-slate-100 px-4 py-2 text-[11px] font-medium text-slate-500">{role}</div>
-              <div className="p-1.5"><a href="/account" className="flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-sm text-slate-700 transition hover:bg-slate-50"><Settings className="h-4 w-4 text-slate-400" />Einstellungen</a></div>
+              <div className="p-1.5"><Link href="/account" className="flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-sm text-slate-700 transition hover:bg-slate-50"><Settings className="h-4 w-4 text-slate-400" />Einstellungen</Link></div>
               <div className="border-t border-slate-200 p-1.5"><button type="button" onClick={logout} className="flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium text-red-600 transition hover:bg-red-50"><LogOut className="h-4 w-4" />Abmelden</button></div>
             </div>
           )}
@@ -242,13 +265,13 @@ export function TeacherNav() {
       </header>
       <div className="editorial-sidebar fixed left-0 top-0 z-40 hidden h-screen w-[252px] overflow-y-auto lg:block">
         <aside className="flex min-h-full w-full flex-col">
-          <a href="/" className="editorial-brand">
+          <Link href="/" className="editorial-brand">
             <img src="/branding/drift-logo-appstore-transparent.webp" alt="" aria-hidden="true" className="h-12 w-12 shrink-0 rounded-xl object-contain" />
             <span className="min-w-0">
               <span className="block text-[15px] font-bold tracking-tight text-slate-950">DR1FT</span>
               <span className="mt-0.5 block text-[10px] font-semibold uppercase tracking-[0.19em] text-slate-500">Lehrkraft Studio</span>
             </span>
-          </a>
+          </Link>
           <div className="px-4 pb-2 pt-6 text-[10px] font-bold uppercase tracking-[0.16em] text-slate-400">Arbeitsbereiche</div>
           <nav aria-label="Hauptnavigation" className="px-3">
             <NavItem href="/" label="Übersicht" icon={<LayoutDashboard className="h-4 w-4" />} active={overviewActive} />

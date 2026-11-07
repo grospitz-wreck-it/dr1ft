@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { supabaseServerClient } from "../../../lib/supabaseServerClient";
 import { ClassModuleLibrary } from "./ClassModuleLibrary";
 import { StudentRoster } from "./StudentRoster";
@@ -42,12 +43,12 @@ export default async function ClassDetailPage({
     return (
       <main className="min-h-screen bg-canvas">
         <div className="mx-auto max-w-7xl px-6 py-10 lg:px-8">
-          <a
+          <Link
             href="/classes"
             className="text-sm text-slate-500 hover:text-slate-900"
           >
             ← Meine Klassen
-          </a>
+          </Link>
 
           <div className="mt-6 rounded-2xl border border-border bg-white p-8">
             <h1 className="text-lg font-semibold text-slate-950">
@@ -129,24 +130,27 @@ export default async function ClassDetailPage({
   };
 
   const activeSchoolRole = schoolMembershipResult.data?.role ?? null;
-
   const isSchoolAdmin = activeSchoolRole === "school_admin" || activeSchoolRole === "school_lead";
-  const { data: canViewIndividualReports } = user
-    ? await supabase.rpc("can_view_class_individual_reports", { p_class_id: classId })
-    : { data: false };
 
-  const [{ data: canManageClassWorkspace }, { data: canManageClassImage }, { data: canManageStudents }] = user
+  // These capability checks are independent. Run them together to avoid two
+  // additional sequential network roundtrips while preserving every check.
+  const [
+    { data: canViewIndividualReports },
+    { data: canManageClassWorkspace },
+    { data: canManageClassImage },
+    { data: canManageStudents },
+    { data: canPrintOnboarding },
+  ] = user
     ? await Promise.all([
+        supabase.rpc("can_view_class_individual_reports", { p_class_id: classId }),
         supabase.rpc("is_teacher_of_class_instance", { target_instance_id: classId }),
         supabase.rpc("can_manage_class_image", { object_name: `${classId}/class-image` }),
         supabase.rpc("can_manage_student_accounts", { p_class_id: classId }),
+        supabase.rpc("can_print_class_onboarding_credentials", { p_class_id: classId }),
       ])
-    : [{ data: false }, { data: false }, { data: false }];
+    : [{ data: false }, { data: false }, { data: false }, { data: false }, { data: false }];
 
   const hasActiveTeachingSubscription = Boolean(teacherMembershipResult.data);
-  const { data: canPrintOnboarding } = user
-    ? await supabase.rpc("can_print_class_onboarding_credentials", { p_class_id: classId })
-    : { data: false };
   const mayUseTeacherModules =
     Boolean(canManageClassWorkspace) &&
     (activeSchoolRole !== "teacher" || hasActiveTeachingSubscription);
@@ -185,12 +189,12 @@ export default async function ClassDetailPage({
   return (
     <main className="min-h-screen bg-canvas">
       <div className="mx-auto w-full max-w-7xl px-6 pb-12 pt-8 lg:px-8">
-        <a
+        <Link
           href="/classes"
           className="inline-flex items-center text-sm text-slate-500 transition hover:text-slate-900"
         >
           ← Meine Klassen
-        </a>
+        </Link>
 
         {searchParams?.debug === "timing" && (
           <section className="mt-4 rounded-xl border border-amber-300 bg-amber-50 p-4 text-sm text-slate-800">

@@ -29,9 +29,11 @@ export async function middleware(request: NextRequest) {
   );
 
   // Löst bei Bedarf einen Token-Refresh aus
+  const authStartedAt = Date.now();
   const {
     data: { user },
   } = await supabase.auth.getUser();
+  console.info("[teacher-middleware-timing]", { stage: "auth-user", ms: Date.now() - authStartedAt });
 
   if (!user && !request.nextUrl.pathname.startsWith("/login") && !request.nextUrl.pathname.startsWith("/signup")) {
     const loginUrl = new URL("/login", request.url);
