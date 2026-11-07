@@ -73,6 +73,23 @@ export async function toggleScenarioActive(scenarioId: string, nextActive: boole
 }
 
 /**
+ * Löscht eine komplette Szenario-Familie inklusive aller Varianten und
+ * der zugehörigen Lern-, Interaktions- und Fortschrittsdaten.
+ * Die eigentliche Löschung läuft atomar über eine abgesicherte DB-Funktion.
+ */
+export async function deleteScenarioFamily(scenarioId: string, confirmationTitle: string) {
+  const supabase = supabaseServerClient();
+  const { error } = await supabase.rpc("delete_scenario_family", {
+    p_scenario_id: scenarioId,
+    p_confirmation_title: confirmationTitle,
+  });
+
+  if (error) throw new Error(error.message || "Szenario konnte nicht vollständig gelöscht werden.");
+  revalidatePath("/scenarios");
+  revalidatePath("/dashboard");
+}
+
+/**
  * Legt ein neues Content-Item als Draft an. Manipulationstechniken und
  * Ziel-Kompetenzen kommen als kommagetrennte Strings/IDs aus dem Formular.
  */
