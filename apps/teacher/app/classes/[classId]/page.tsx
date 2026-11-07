@@ -134,7 +134,7 @@ export default async function ClassDetailPage({
         supabase.rpc("is_platform_admin"),
       ])
     : [{ data: false }, { data: false }];
-  const canRegenerateAccessCode = Boolean(teacherMembershipResult.data || canManageSchool || isPlatformAdmin);
+  const canRegenerateAccessCode = Boolean((activeSchoolRole === "teacher" && teacherMembershipResult.data) || canManageSchool || isPlatformAdmin);
   const isSchoolAdmin = activeSchoolRole === "school_admin" || activeSchoolRole === "school_lead";
   const { data: canViewIndividualReports } = user
     ? await supabase.rpc("can_view_class_individual_reports", { p_class_id: classId })
