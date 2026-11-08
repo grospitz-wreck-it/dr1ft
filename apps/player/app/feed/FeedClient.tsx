@@ -181,10 +181,26 @@ function TeacherModulePoll({ moduleId, post, classInstanceId, initialResult }: {
       ? <p role="status" className="text-sm font-semibold text-emerald-700">Antwort gespeichert. Danke!</p>
       : <button type="button" disabled={submitting} onClick={() => void submit()} className="teacher-module-poll-submit mt-3 rounded-xl bg-gradient-to-r from-violet-700 to-fuchsia-700 px-5 py-3 text-sm font-bold text-white shadow-md disabled:opacity-50">{submitting ? "Wird gespeichert …" : "Antwort senden"}</button>}
     {result && result.total > 0 && <div className="mt-5 rounded-2xl border border-violet-100 bg-gradient-to-br from-violet-50 via-white to-cyan-50 p-4 sm:p-5">
-      <div className="mb-4 flex items-center justify-between gap-3"><h5 className="text-sm font-bold text-[#35264d]">Umfrageergebnis</h5><span className="rounded-full bg-violet-100 px-3 py-1 text-xs font-bold text-violet-700">{result.total} {result.total === 1 ? "Antwort" : "Antworten"}</span></div>
+      <div className="mb-4 flex items-center justify-between gap-3"><h5 className="text-sm font-bold text-[#35264d]">Umfrageergebnis</h5><div className="flex items-center gap-2">
+        <button type="button" onClick={() => void refreshResults()} disabled={refreshing} aria-label="Umfragestatus aktualisieren" title="Status aktualisieren" className="teacher-module-poll-refresh inline-flex h-8 w-8 items-center justify-center rounded-full border border-violet-200 bg-white text-violet-700"><RefreshCw className={"h-4 w-4 " + (refreshing ? "animate-spin" : "")}/></button>
+        <span className="rounded-full bg-violet-100 px-3 py-1 text-xs font-bold text-violet-700">{result.total} {result.total === 1 ? "Antwort" : "Antworten"}</span>
+      </div></div>
+      {showPieChart && result.results.length > 0 && <div className="mb-5 flex flex-col items-center gap-4 sm:flex-row sm:justify-center">
+        <div role="img" aria-label={"Kreisdiagramm mit " + result.total + " Antworten"} className="teacher-module-poll-pie h-44 w-44 shrink-0 rounded-full" style={{ background: "conic-gradient(" + result.results.map((entry, index) => {
+          const palette = ["#7c3aed", "#db2777", "#0891b2", "#f59e0b", "#16a34a", "#6366f1", "#ea580c", "#0d9488"];
+          const start = result.results.slice(0, index).reduce((sum, item) => sum + item.count, 0) / Math.max(result.total, 1) * 100;
+          const end = start + entry.count / Math.max(result.total, 1) * 100;
+          return palette[index % palette.length] + " " + start + "% " + end + "%";
+        }).join(", ") + ")" }}/>
+        <div className="grid gap-2 text-xs">{result.results.map((entry, index) => {
+          const palette = ["#7c3aed", "#db2777", "#0891b2", "#f59e0b", "#16a34a", "#6366f1", "#ea580c", "#0d9488"];
+          const percentage = Math.round(entry.count / Math.max(result.total, 1) * 100);
+          return <div key={entry.key} className="flex items-center gap-2"><span className="h-2.5 w-2.5 shrink-0 rounded-sm" style={{ backgroundColor: palette[index % palette.length] }}/><span className="font-semibold text-[#51476a]">{entry.label}</span><span className="font-bold tabular-nums text-violet-700">{percentage}%</span></div>;
+        })}</div>
+      </div>}
       <div className="space-y-3">{result.results.map((entry) => {
         const percentage = Math.round(entry.count / Math.max(result.total, 1) * 100);
-        return <div key={entry.key}><div className="mb-1.5 flex items-center justify-between gap-3 text-xs"><span className="font-semibold text-[#51476a]">{entry.label}</span><span className="shrink-0 font-bold tabular-nums text-violet-700">{entry.count} · {percentage}%</span></div><div className="h-3 overflow-hidden rounded-full bg-violet-100"><div className="h-full rounded-full bg-gradient-to-r from-violet-600 via-fuchsia-500 to-cyan-400 transition-all duration-500" style={{ width: percentage + "%" }}/></div></div>;
+        return <div key={entry.key}><div className="mb-1.5 flex items-center justify-between gap-3 text-xs"><span className="font-semibold text-[#51476a]">{entry.label}</span><span className="shrink-0 font-bold tabular-nums text-violet-700">{entry.count} · {percentage}%</span></div>{!showPieChart&&<div className="h-3 overflow-hidden rounded-full bg-violet-100"><div className="h-full rounded-full bg-gradient-to-r from-violet-600 via-fuchsia-500 to-cyan-400 transition-all duration-500" style={{ width: percentage + "%" }}/></div>}</div>;
       })}</div>
       {result.responseMode === "multiple" && <p className="mt-3 text-[11px] text-[#746d89]">Mehrfachauswahl möglich – Prozentwerte beziehen sich auf die abgegebenen Antworten.</p>}
       {result.responseMode === "free_text" && <p className="mt-2 text-xs text-[#746d89]">Freitextantworten werden hier nur anonym als Anzahl angezeigt.</p>}
