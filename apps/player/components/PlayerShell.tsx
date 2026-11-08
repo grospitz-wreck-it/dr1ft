@@ -506,7 +506,7 @@ export function PlayerShell({ children }: { children: React.ReactNode }) {
             </div>
             <div className="relative p-3 mt-auto border-t border-white/[.06]">
               <Link href="/profile" className="flex items-center gap-3 p-3 rounded-2xl hover:bg-white/[.07] transition-colors">
-                <span className="relative h-11 w-11 overflow-hidden rounded-[13px] bg-gradient-to-br from-fuchsia-400 via-violet-400 to-cyan-300 p-[2px]"><img src={avatarUrl(user.avatarSeed, 80)} alt="" className="h-full w-full scale-[1.12] rounded-[11px] bg-shell-surface object-cover" /></span>
+                <span className="relative h-11 w-11 overflow-hidden rounded-[13px] bg-gradient-to-br from-fuchsia-400 via-violet-400 to-cyan-300 p-[2px]"><img src={avatarUrl(user.avatarSeed, 80)} alt="" className="h-full w-full scale-[1.22] rounded-[11px] bg-shell-surface object-cover" /></span>
                 <div className="min-w-0 flex-1"><div className="font-medium text-sm truncate">{user.displayName}</div><div className="text-[11px] text-white/40 truncate">@{user.username}</div></div>
                 <span className="text-white/35">•••</span>
               </Link>
@@ -525,8 +525,8 @@ export function PlayerShell({ children }: { children: React.ReactNode }) {
             </nav>
             <button type="button" onClick={() => setActivityOpen((value) => !value)} aria-label={`Aktivitätsfeed${liveActivity.length ? `, ${liveActivity.length} Aktivitäten` : ""}`} aria-expanded={activityOpen} aria-haspopup="dialog" className={`relative grid h-10 w-10 shrink-0 place-items-center rounded-xl transition ${activityOpen ? "bg-violet-100 text-violet-800 dark:bg-violet-500/20 dark:text-violet-200" : "text-slate-600 hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-white/10"}`}><Activity className="h-5 w-5" />{liveActivity.length > 0 && <span className="absolute right-1 top-1 h-2 w-2 rounded-full bg-cyan-500 ring-2 ring-white dark:bg-cyan-400 dark:ring-[#171126]" />}</button>
             <button type="button" onClick={toggleTheme} aria-label={darkMode ? "Hellmodus aktivieren" : "Dunkelmodus aktivieren"} className="grid h-10 w-10 shrink-0 place-items-center rounded-xl text-violet-700 hover:bg-violet-100 dark:text-violet-200 dark:hover:bg-white/10">{darkMode ? <Sun className="h-5 w-5" /> : <Moon className="h-5 w-5" />}</button>
-            <Link href="/profile" aria-label="Mein Profil" className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-gradient-to-br from-fuchsia-400 via-violet-400 to-cyan-300 p-[2px]">
-              <img src={avatarUrl(user.avatarSeed, 80)} alt="" className="h-full w-full scale-[1.12] rounded-[10px] bg-white object-cover" />
+            <Link href="/profile" aria-label="Mein Profil" className="grid h-10 w-10 shrink-0 place-items-center overflow-hidden rounded-xl bg-gradient-to-br from-fuchsia-400 via-violet-400 to-cyan-300 p-[2px]">
+              <img src={avatarUrl(user.avatarSeed, 80)} alt="" className="h-full w-full scale-[1.22] rounded-[10px] bg-white object-cover" />
             </Link>
           </div>
         </div>
