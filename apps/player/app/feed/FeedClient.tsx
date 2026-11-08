@@ -420,22 +420,22 @@ export function FeedClient({ initialItems, teacherModules = [], userId, classIns
   </div>}
 </section>}{scenarioStarted&&!scenarioFinished&&learningCards.filter(card=>card.position==="before_feed").map(card=><LearningCardFeedItem key={card.id} card={card} classInstanceId={classInstanceId}/>)}
 {!scenarioFinished&&teacherModules.length>0&&<section className="space-y-5" aria-label="Lernmodule deiner Lehrkraft">
-  {teacherModules.map((module)=><article key={module.id} className="overflow-hidden rounded-[26px] border border-violet-100 bg-white/95 shadow-sm">
-    {module.title_card_enabled!==false&&<header className="border-b border-violet-100 bg-gradient-to-r from-violet-50 via-white to-cyan-50 px-5 py-5 sm:px-6">
-      <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-violet-600">Lernmodul</p>
-      <h3 className="mt-1 break-words font-display text-xl font-semibold text-[#27213d] [overflow-wrap:anywhere]">{module.title}</h3>
+  {teacherModules.map((module)=><article key={module.id} className="teacher-module-feed overflow-hidden rounded-[26px] border border-violet-100 bg-white/95 shadow-sm">
+    {module.title_card_enabled!==false&&<header className="teacher-module-header border-b border-violet-100 bg-gradient-to-r from-violet-50 via-white to-cyan-50 px-5 py-5 sm:px-6">
+      <p className="teacher-module-eyebrow text-[10px] font-bold uppercase tracking-[0.18em] text-violet-600">Lernmodul</p>
+      <h3 className="teacher-module-heading mt-1 break-words font-display text-xl font-semibold text-[#27213d] [overflow-wrap:anywhere]">{module.title}</h3>
       <div className="mt-2 flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
-        {module.description&&<p className="min-w-0 flex-1 whitespace-pre-line break-words text-sm leading-6 text-[#746d89] [overflow-wrap:anywhere]">{module.description}</p>}
+        {module.description&&<p className="teacher-module-description min-w-0 flex-1 whitespace-pre-line break-words text-sm leading-6 text-[#746d89] [overflow-wrap:anywhere]">{module.description}</p>}
         {!scenarioStarted&&<button type="button" onClick={handleScenarioStart} className="inline-flex shrink-0 items-center justify-center gap-2 self-start rounded-xl bg-gradient-to-r from-violet-600 via-fuchsia-600 to-cyan-500 px-5 py-3 text-sm font-bold text-white shadow-lg shadow-violet-500/20 transition hover:-translate-y-0.5 hover:shadow-xl focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-violet-500 focus-visible:ring-offset-2 sm:self-auto">Lernmodul starten <ArrowRight className="h-4 w-4"/></button>}
       </div>
     </header>}
     {scenarioStarted&&<div className="space-y-5 p-4 sm:p-6">
       {module.posts.map((post,index)=>{
-        return <section key={post.id} className="overflow-hidden rounded-2xl border border-violet-100 bg-white">
+        return <section key={post.id} className="teacher-module-post overflow-hidden rounded-2xl border border-violet-100 bg-white">
           <div className="p-4 sm:p-5">
-            <p className="text-[10px] font-bold uppercase tracking-[0.16em] text-violet-500">Beitrag {index+1}</p>
-            {post.title&&<h4 className="mt-1 text-lg font-semibold text-[#27213d]">{post.title}</h4>}
-            {post.body&&<p className="mt-2 whitespace-pre-line break-words text-sm leading-6 text-[#51476a] [overflow-wrap:anywhere]">{post.body}</p>}
+            <p className="teacher-module-post-eyebrow text-[10px] font-bold uppercase tracking-[0.16em] text-violet-500">Beitrag {index+1}</p>
+            {post.title&&<h4 className="teacher-module-post-title mt-1 text-lg font-semibold text-[#27213d]">{post.title}</h4>}
+            {post.body&&<p className="teacher-module-post-body mt-2 whitespace-pre-line break-words text-sm leading-6 text-[#51476a] [overflow-wrap:anywhere]">{post.body}</p>}
           </div>
           {post.imagePath&&<TeacherModuleImage imagePath={post.imagePath} alt={post.title||"Bild zum Lernmodul"} priority={index===0}/>}
           {post.embed_url&&<div className="px-4 pb-4"><a href={post.embed_url} target="_blank" rel="noreferrer" className="text-sm font-semibold text-violet-700 underline">Medieninhalt öffnen</a></div>}
