@@ -174,7 +174,7 @@ export function PlayerShell({ children }: { children: React.ReactNode }) {
     }
 
     function queueCompletedIntervals() {
-      for (const [key, pending] of pendingMs) {
+      for (const [key, pending] of Array.from(pendingMs.entries())) {
         const wholeSeconds = Math.min(60, Math.floor(pending.milliseconds / 1000));
         if (wholeSeconds < 1) continue;
         const eventId = createEventId();
