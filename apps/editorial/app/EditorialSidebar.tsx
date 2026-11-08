@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Building2, Gauge, LayoutGrid, Library, MessageSquare, MessagesSquare, Sparkles, Users } from "lucide-react";
+import { Building2, Gauge, LayoutGrid, Library, MessageSquare, MessagesSquare, ShieldCheck, Sparkles, Users } from "lucide-react";
 
 const NAV_ITEMS = [
   { href: "/", label: "Dashboard", icon: Gauge },
@@ -13,6 +13,7 @@ const NAV_ITEMS = [
   { href: "/ambient-content", label: "Ambient-Generator", icon: Sparkles },
   { href: "/staff", label: "Redaktionsteam", icon: Users },
   { href: "/schools", label: "Schulen", icon: Building2 },
+  { href: "/performance", label: "Performance & Security", icon: ShieldCheck },
 ];
 
 export function EditorialSidebar() {
