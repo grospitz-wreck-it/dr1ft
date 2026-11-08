@@ -762,3 +762,39 @@ body.dark-mode {
 .dark-mode .teacher-module-poll .teacher-module-poll-option.is-wrong {
   color: #fff !important;
 }
+
+
+/* Teacher-module title card and post headings: explicit dark-mode contrast. */
+.dark-mode .teacher-module-feed {
+  border-color: #49345f !important;
+  background: #1c172b !important;
+}
+.dark-mode .teacher-module-header {
+  border-color: #49345f !important;
+  background: linear-gradient(115deg,#29203e 0%,#211a32 58%,#18303a 100%) !important;
+}
+.dark-mode .teacher-module-eyebrow,
+.dark-mode .teacher-module-post-eyebrow {
+  color: #c4b5fd !important;
+}
+.dark-mode .teacher-module-heading,
+.dark-mode .teacher-module-post-title {
+  color: #faf5ff !important;
+  opacity: 1 !important;
+  text-shadow: 0 1px 0 rgba(0,0,0,.18);
+}
+.dark-mode .teacher-module-description {
+  color: #e2d8f0 !important;
+  opacity: 1 !important;
+}
+.dark-mode .teacher-module-post {
+  border-color: #493b60 !important;
+  background: #211a32 !important;
+}
+.dark-mode .teacher-module-post-body {
+  color: #e5dcef !important;
+  opacity: 1 !important;
+}
+.dark-mode .teacher-module-header button {
+  color: #fff !important;
+}
