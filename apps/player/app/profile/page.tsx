@@ -39,8 +39,8 @@ export default function ProfilePage() {
       <div className="mt-3 grid grid-cols-4 sm:grid-cols-5 md:grid-cols-7 gap-2">
         {AVATAR_CATEGORIES.filter((category) => category.key === avatarCategory).flatMap((category) => Array.from({ length: 50 }, (_, index) => `DR1FT-${category.id}-${String(index + 1).padStart(3, "0")}`)).filter((id) => !avatarSearch.trim() || id.toLowerCase().includes(avatarSearch.trim().toLowerCase())).map((id) => {
           const selected = avatarSeed === id;
-          return <button key={id} type="button" onClick={() => setAvatarSeed(id)} aria-label={`Avatar ${id} auswählen`} aria-pressed={selected} className={`rounded-2xl border p-1.5 transition ${selected ? "border-[#8b55e8] bg-[#f2edff] ring-2 ring-[#8b55e8]/20" : "border-[#e5e8ef] bg-white hover:border-[#c9b8ee]"}`}>
-            <img src={avatarUrl(id, 88)} alt="" loading="lazy" className="w-full aspect-square rounded-xl object-cover bg-[#f4f2fb]" /><span className={`mt-1 block truncate text-[9px] font-medium ${selected ? "text-[#6540b3]" : "text-[#8992a3]"}`}>{id.slice(-3)}</span>
+          return <button key={id} type="button" onClick={() => setAvatarSeed(id)} aria-label={`Avatar ${id} auswählen`} aria-pressed={selected} className={`overflow-hidden rounded-2xl border p-1.5 transition ${selected ? "border-[#8b55e8] bg-[#f2edff] ring-2 ring-[#8b55e8]/20" : "border-[#e5e8ef] bg-white hover:border-[#c9b8ee]"}`}>
+            <img src={avatarUrl(id, 88)} alt="" loading="lazy" className="w-full aspect-square scale-[1.04] rounded-xl object-cover bg-[#f4f2fb]" /><span className={`mt-1 block truncate text-[9px] font-medium ${selected ? "text-[#6540b3]" : "text-[#8992a3]"}`}>{id.slice(-3)}</span>
           </button>;
         })}
       </div>
