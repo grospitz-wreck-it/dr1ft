@@ -42,6 +42,26 @@ function getTeacherModuleImageUrl(imagePath: string, supabase: ReturnType<typeof
   return request;
 }
 
+function TeacherModuleImage({ imagePath, alt, priority = false }: { imagePath: string; alt: string; priority?: boolean }) {
+  const supabase = supabaseBrowserClient();
+  const [src, setSrc] = useState<string | null>(null);
+  const [failed, setFailed] = useState(false);
+  useEffect(() => {
+    let cancelled = false;
+    void getTeacherModuleImageUrl(imagePath, supabase).then((url) => {
+      if (cancelled) return;
+      if (url) setSrc(url);
+      else setFailed(true);
+    });
+    return () => { cancelled = true; };
+  }, [imagePath, supabase]);
+  return <div className="post-media-stage relative isolate mx-2 overflow-hidden rounded-[22px] sm:mx-3">
+    <div aria-hidden="true" className="post-media-pattern pointer-events-none absolute inset-0"/>
+    {src ? <img src={src} alt={alt} loading={priority ? "eager" : "lazy"} fetchPriority={priority ? "high" : "auto"} decoding="async" className="post-media-image relative z-[1] mx-auto block h-auto max-h-[75vh] w-auto max-w-full object-contain" onError={() => setFailed(true)}/> :
+      <div className="relative z-[1] grid min-h-56 w-full place-items-center text-sm font-medium text-violet-500">{failed ? "Bild konnte nicht geladen werden" : "Bild wird geladen …"}</div>}
+  </div>;
+}
+
 type TeacherModulePollResult = {
   total: number;
   results: Array<{ key: string; label: string; count: number }>;
