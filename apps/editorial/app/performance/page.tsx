@@ -10,7 +10,8 @@ async function probeUrl(name: string, url: string | undefined): Promise<ProbeRes
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), 5000);
   try {
-    const response = await fetch(url, { method: "GET", cache: "no-store", signal: controller.signal, redirect: "manual" });
+    // Follow normal login/locale redirects and evaluate the final response.
+    const response = await fetch(url, { method: "GET", cache: "no-store", signal: controller.signal });
     const latencyMs = Date.now() - started;
     return { name, status: response.ok ? "ok" : response.status >= 500 ? "error" : "warning", latencyMs, detail: `HTTP ${response.status}` };
   } catch (error) {
