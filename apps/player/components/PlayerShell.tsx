@@ -396,34 +396,66 @@ export function PlayerShell({ children }: { children: React.ReactNode }) {
 
     let currentUserId = "";
     let channel: ReturnType<typeof supabase.channel> | null = null;
+    let realtimeConnected = false;
+    let refreshInFlight = false;
+    let refreshQueued = false;
+
+    async function requestRefresh() {
+      if (!currentUserId || !mounted || document.visibilityState !== "visible") return;
+      if (refreshInFlight) {
+        refreshQueued = true;
+        return;
+      }
+      refreshInFlight = true;
+      try {
+        do {
+          refreshQueued = false;
+          await loadLiveActivity(currentUserId);
+        } while (refreshQueued && mounted && document.visibilityState === "visible");
+      } finally {
+        refreshInFlight = false;
+      }
+    }
+
+    function handleVisibilityChange() {
+      if (document.visibilityState === "visible") void requestRefresh();
+    }
+
     const poll = window.setInterval(() => {
-      if (currentUserId) void loadLiveActivity(currentUserId);
+      // Realtime is the primary update path. Poll only while it is unavailable.
+      if (!realtimeConnected && document.visibilityState === "visible") void requestRefresh();
     }, 5000);
+
+    document.addEventListener("visibilitychange", handleVisibilityChange);
 
     void (async () => {
       const { data: { user: authUser } } = await supabase.auth.getUser();
       if (!authUser || !mounted) return;
       currentUserId = authUser.id;
-      void loadLiveActivity(currentUserId);
+      void requestRefresh();
 
       channel = supabase
         .channel("player-live-class-activity")
         .on("postgres_changes", { event: "INSERT", schema: "public", table: "content_items" }, () => {
-          void loadLiveActivity(currentUserId);
+          void requestRefresh();
         })
         .on("postgres_changes", { event: "INSERT", schema: "public", table: "user_interactions" }, () => {
-          void loadLiveActivity(currentUserId);
+          void requestRefresh();
         })
         .subscribe((status) => {
-          const connected = status === "SUBSCRIBED";
-          setActivityRealtime(connected);
-          if (!connected && currentUserId) void loadLiveActivity(currentUserId);
+          if (!mounted) return;
+          realtimeConnected = status === "SUBSCRIBED";
+          setActivityRealtime(realtimeConnected);
+          // Refresh once on connect or disconnect; fallback polling takes over
+          // only when Realtime is not subscribed.
+          void requestRefresh();
         });
     })();
 
     return () => {
       mounted = false;
       window.clearInterval(poll);
+      document.removeEventListener("visibilitychange", handleVisibilityChange);
       setActivityRealtime(false);
       if (channel) void supabase.removeChannel(channel);
     };
