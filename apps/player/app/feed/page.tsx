@@ -10,12 +10,82 @@ export default async function FeedPage() {
   if (!user) return <main className="min-h-screen flex items-center justify-center text-ash font-body">Bitte einloggen.</main>;
   const { data: classInstanceId, error: classInstanceError } = await supabase.rpc("get_current_class_instance_id");
   if (classInstanceError || !classInstanceId) return <main className="min-h-screen flex items-center justify-center text-ash font-body px-6 text-center">Du bist aktuell keiner DR1FT-Klasse zugeordnet.</main>;
-  const { data: assignments } = await supabase
-    .from("class_instance_scenario_assignments")
-    .select("scenario_id,scheduled_start_at,scheduled_end_at,is_active,archived_at")
-    .eq("class_instance_id", classInstanceId)
-    .eq("is_active", true)
-    .is("archived_at", null);
+  // Teacher-created modules are delivered through their own assignment tables,
+  // independently from scenario content_items.
+  // The teacher-module assignment lookup and scenario assignment lookup are
+  // independent. Fetch both together to avoid adding a serial network roundtrip
+  // to the already data-heavy player feed.
+  const [
+    { data: teacherModuleAssignments },
+    { data: assignments },
+  ] = await Promise.all([
+    supabase
+      .from("teacher_module_class_assignments")
+      .select("module_id,scheduled_start_at,scheduled_end_at")
+      .eq("class_instance_id", classInstanceId)
+      .eq("is_active", true)
+      .is("archived_at", null),
+    supabase
+      .from("class_instance_scenario_assignments")
+      .select("scenario_id,scheduled_start_at,scheduled_end_at,is_active,archived_at")
+      .eq("class_instance_id", classInstanceId)
+      .eq("is_active", true)
+      .is("archived_at", null),
+  ]);
+
+  const teacherModuleIds = Array.from(new Set((teacherModuleAssignments ?? []).map((row: any) => row.module_id).filter(Boolean)));
+  // Module metadata and its published posts can both be fetched directly from
+  // the assigned IDs. This removes another serial request without widening scope.
+  // Keep these policy-heavy reads sequential: the feed already performs many
+  // concurrent database reads, and parallel RLS evaluation can amplify load.
+  const [{ data: teacherModuleRowsData, error: teacherModuleRowsError }, { data: teacherModulePostsData, error: teacherModulePostsError }] = teacherModuleIds.length
+    ? await Promise.all([
+        supabase.from("teacher_modules")
+          .select("id,title,description,intro_title,intro_text,title_card_enabled")
+          .in("id", teacherModuleIds)
+          .eq("status", "published"),
+        supabase.from("teacher_module_posts")
+          .select("id,module_id,post_type,title,body,image_path,embed_provider,embed_url,interaction_data,sort_order")
+          .in("module_id", teacherModuleIds)
+          .eq("status", "published")
+          .order("sort_order", { ascending: true }),
+      ])
+    : [{ data: [] as any[], error: null }, { data: [] as any[], error: null }];
+  const teacherModuleRows = { data: teacherModuleRowsData, error: teacherModuleRowsError };
+  const teacherModulePostResult = { data: teacherModulePostsData, error: teacherModulePostsError };
+  if (teacherModuleRows.error) {
+    console.error("[player-feed] teacher_modules query failed", {
+      code: teacherModuleRows.error.code, message: teacherModuleRows.error.message,
+    });
+  }
+  if (teacherModulePostResult.error) {
+    console.error("[player-feed] teacher_module_posts query failed", {
+      code: teacherModulePostResult.error.code, message: teacherModulePostResult.error.message,
+    });
+  }
+
+  const nowForModules = Date.now();
+  const activeTeacherModuleIds = new Set((teacherModuleAssignments ?? [])
+    .filter((assignment: any) => {
+      const start = assignment.scheduled_start_at ? new Date(assignment.scheduled_start_at).getTime() : null;
+      const end = assignment.scheduled_end_at ? new Date(assignment.scheduled_end_at).getTime() : null;
+      return (start === null || start <= nowForModules) && (end === null || end > nowForModules);
+    })
+    .map((assignment: any) => assignment.module_id));
+
+  const eligibleTeacherModules = (teacherModuleRows.data ?? []).filter((module: any) => activeTeacherModuleIds.has(module.id));
+  const eligibleTeacherModuleIds = new Set(eligibleTeacherModules.map((module: any) => module.id));
+  const teacherModulePostRows = (teacherModulePostResult.data ?? []).filter((post: any) => eligibleTeacherModuleIds.has(post.module_id));
+
+  // Do not sign private image URLs during server rendering: Storage signing can
+  // be slow and must never delay the module text or voting controls.
+  const teacherModules = eligibleTeacherModules.map((module: any) => ({
+    ...module,
+    posts: teacherModulePostRows
+      .filter((post: any) => post.module_id === module.id)
+      .map((post: any) => ({ ...post, imageUrl: null, imagePath: post.image_path ?? null })),
+  }));
+
   const now = Date.now();
   const availableAssignments = (assignments ?? []).filter((assignment: any) => {
     const startsAt = assignment.scheduled_start_at ? new Date(assignment.scheduled_start_at).getTime() : null;
@@ -23,23 +93,42 @@ export default async function FeedPage() {
     return (startsAt === null || startsAt <= now) && (endsAt === null || endsAt > now);
   });
   const assignedScenarioIds: string[] = Array.from(new Set<string>(availableAssignments.map((a: any) => a.scenario_id)));
-  const { data: assignedScenarios } = assignedScenarioIds.length
-    ? await supabase.from("scenarios").select("id, title, description, ambient_density, cover_image_url").in("id", assignedScenarioIds).order("created_at", { ascending: true })
-    : { data: [] as { id: string; title: string; description: string | null; ambient_density: string | null }[] };
-  const scenarioIntros = assignedScenarios ?? [];
-  const { data: scenarioLearningCardRows } = assignedScenarioIds.length
-    ? await supabase.from("scenarios").select("id,title,learning_cards").in("id", assignedScenarioIds)
-    : { data: [] as { id: string; title: string; learning_cards: unknown }[] };
-  const scenarioLearningCards = (scenarioLearningCardRows ?? []).flatMap((scenario: any) =>
+  const scenarioFilter = assignedScenarioIds.length > 0 ? `scenario_id.in.(${assignedScenarioIds.join(",")}),scenario_id.is.null` : "scenario_id.is.null";
+  // Independent feed data is fetched together. The previous implementation
+  // serialized most of these network roundtrips even though none depended on
+  // the result of another query.
+  const [
+    scenarioResult,
+    scenarioMissionResult,
+    competencyProgressResult,
+    competenciesResult,
+    profileResult,
+    ambientCatalogResult,
+    ambientPreferencesResult,
+    recentInteractionsResult,
+    poolResult,
+  ] = await Promise.all([
+    assignedScenarioIds.length
+      ? supabase.from("scenarios").select("id, title, description, ambient_density, cover_image_url, learning_cards").in("id", assignedScenarioIds).order("created_at", { ascending: true })
+      : Promise.resolve({ data: [] as any[], error: null }),
+    assignedScenarioIds.length
+      ? supabase.from("missions").select("id").in("scenario_id", assignedScenarioIds).eq("status", "live")
+      : Promise.resolve({ data: [] as any[], error: null }),
+    supabase.from("user_competency_progress").select("*").eq("user_id", user.id).eq("class_instance_id", classInstanceId),
+    supabase.from("competencies").select("id, title"),
+    supabase.from("user_profiles").select("display_name, username, avatar_seed").eq("id", user.id).maybeSingle(),
+    supabase.from("ambient_interests").select("key, parent_key").eq("is_active", true).eq("taxonomy_status", "active"),
+    supabase.from("user_ambient_preferences").select("interest_keys").eq("user_id", user.id).maybeSingle(),
+    supabase.from("user_interactions").select("content_item_id, interaction_type").eq("user_id", user.id).eq("class_instance_id", classInstanceId).order("created_at", { ascending: false }).limit(200),
+    supabase.from("content_items").select("*, creators(id, display_name, handle, avatar_url)").eq("status", "live").eq("type", "post").or(scenarioFilter).or(`class_instance_id.eq.${classInstanceId},class_instance_id.is.null`),
+  ]);
+  const scenarioIntros = scenarioResult.data ?? [];
+  const scenarioLearningCards = scenarioIntros.flatMap((scenario: any) =>
     (Array.isArray(scenario.learning_cards) ? scenario.learning_cards : [])
       .filter((card: any) => card && typeof card.id === "string" && typeof card.title === "string" && typeof card.prompt === "string" && Array.isArray(card.options))
       .map((card: any) => ({
-        id: card.id,
-        scenarioId: scenario.id,
-        scenarioTitle: scenario.title,
-        type: String(card.type ?? "decision"),
-        title: card.title,
-        prompt: card.prompt,
+        id: card.id, scenarioId: scenario.id, scenarioTitle: scenario.title,
+        type: String(card.type ?? "decision"), title: card.title, prompt: card.prompt,
         position: card.position === "before_feed" ? "before_feed" as const : "feed_end" as const,
         objective: typeof card.objective === "string" ? card.objective : "",
         objectiveId: typeof card.objectiveId === "string" ? card.objectiveId : "",
@@ -55,27 +144,19 @@ export default async function FeedPage() {
   const scenarioIntroDescription = scenarioIntros.length > 1
     ? "In deinem Feed begegnen dir Inhalte aus mehreren Szenarien. Die Themen und Perspektiven wechseln sich ab – dazwischen erscheinen ganz normale Beiträge. Schau genau hin, verknüpfe Hinweise und bilde dir deine eigene Meinung. Nicht jeder Beitrag gehört zum selben Zusammenhang."
     : scenarioIntro?.description ?? null;
-  const { data: scenarioMissions } = assignedScenarioIds.length
-    ? await supabase.from("missions").select("id").in("scenario_id", assignedScenarioIds).eq("status", "live")
-    : { data: [] as { id: string }[] };
-  const scenarioMissionIds = (scenarioMissions ?? []).map((mission) => mission.id);
+  const scenarioMissions = scenarioMissionResult.data ?? [];
+  const scenarioMissionIds = scenarioMissions.map((mission: any) => mission.id);
   const { data: completedScenarioMissions } = scenarioMissionIds.length
     ? await supabase.from("user_mission_progress").select("mission_id").eq("user_id", user.id).eq("class_instance_id", classInstanceId).eq("status", "completed").in("mission_id", scenarioMissionIds)
     : { data: [] as { mission_id: string }[] };
-  const { data: competencyProgress } = await supabase.from("user_competency_progress").select("*").eq("user_id", user.id).eq("class_instance_id", classInstanceId);
-  const { data: allCompetencies } = await supabase.from("competencies").select("id, title");
-  const progressByCompetency = new Map((competencyProgress ?? []).map((c) => [c.competency_id, c.level]));
-  const competencyDisplay = (allCompetencies ?? []).map((c) => ({ id: c.id, title: c.title, level: progressByCompetency.get(c.id) ?? 1 }));
-  const [
-    { data: currentProfile },
-    { data: ambientCatalog },
-    { data: ambientPreferences },
-  ] = await Promise.all([
-    supabase.from("user_profiles").select("display_name, username, avatar_seed, birth_year").eq("id", user.id).maybeSingle(),
-    supabase.from("ambient_interests").select("key, parent_key").eq("is_active", true).eq("taxonomy_status", "active"),
-    supabase.from("user_ambient_preferences").select("interest_keys").eq("user_id", user.id).maybeSingle(),
-  ]);
-  const interestParentByKey = new Map((ambientCatalog ?? []).map((interest) => [interest.key, interest.parent_key]));
+  const competencyProgress = competencyProgressResult.data ?? [];
+  const allCompetencies = competenciesResult.data ?? [];
+  const progressByCompetency = new Map(competencyProgress.map((item: any) => [item.competency_id, item.level]));
+  const competencyDisplay = allCompetencies.map((item: any) => ({ id: item.id, title: item.title, level: progressByCompetency.get(item.id) ?? 1 }));
+  const currentProfile = profileResult.data;
+  const ambientCatalog = ambientCatalogResult.data ?? [];
+  const ambientPreferences = ambientPreferencesResult.data;
+  const interestParentByKey = new Map(ambientCatalog.map((interest: any) => [interest.key, interest.parent_key]));
   const selectedInterestKeys: string[] = Array.isArray(ambientPreferences?.interest_keys)
     ? ambientPreferences.interest_keys.filter((key: unknown): key is string => typeof key === "string")
     : [];
@@ -94,27 +175,30 @@ export default async function FeedPage() {
     }
     return Array.from(expanded);
   };
-  const { data: recentInteractions } = await supabase.from("user_interactions").select("content_item_id, interaction_type").eq("user_id", user.id).eq("class_instance_id", classInstanceId).order("created_at", { ascending: false }).limit(200);
-  const recentlySeenContentIds = (recentInteractions ?? []).filter((i) => i.interaction_type === "view").map((i) => i.content_item_id);
-  const scenarioFilter = assignedScenarioIds.length > 0 ? `scenario_id.in.(${assignedScenarioIds.join(",")}),scenario_id.is.null` : "scenario_id.is.null";
-  const { data: pool } = await supabase.from("content_items").select("*, creators(id, display_name, handle, avatar_url)").eq("status", "live").eq("type", "post").or(scenarioFilter).or(`class_instance_id.eq.${classInstanceId},class_instance_id.is.null`);
-  const contentIds = (pool ?? []).map((row: any) => row.id);
-  const creatorIds = Array.from(new Set((pool ?? []).map((row: any) => row.creator_id).filter((id: unknown): id is string => typeof id === "string")));
-  const { data: creatorRows } = creatorIds.length ? await supabase.from("creators").select("id, display_name, handle, avatar_url").in("id", creatorIds) : { data: [] as { id: string; display_name: string; handle: string; avatar_url: string | null }[] };
-  const creatorById = new Map((creatorRows ?? []).map((creator) => [creator.id, creator]));
-  const { data: instanceLikes } = contentIds.length
-    ? await supabase.rpc("get_class_instance_post_likes", {
-        p_class_instance_id: classInstanceId,
-        p_content_item_ids: contentIds,
-      })
-    : { data: [] as { content_item_id: string; user_id: string; display_name: string; username: string; avatar_seed: string }[] };
-  const { data: npcLikes } = contentIds.length ? await supabase.from("npc_social_interactions").select("content_item_id").eq("class_instance_id", classInstanceId).eq("interaction_type", "like").in("content_item_id", contentIds) : { data: [] as { content_item_id: string }[] };
-  const { data: classComments } = contentIds.length
-    ? await supabase.from("content_items").select("id, parent_id").eq("class_instance_id", classInstanceId).eq("type", "comment").eq("status", "live").in("parent_id", contentIds)
-    : { data: [] as { id: string; parent_id: string | null }[] };
-  const { data: scenarioComments } = contentIds.length && assignedScenarioIds.length
-    ? await supabase.from("content_items").select("id, parent_id").is("class_instance_id", null).in("scenario_id", assignedScenarioIds).eq("type", "comment").eq("status", "live").in("parent_id", contentIds)
-    : { data: [] as { id: string; parent_id: string | null }[] };
+  const recentInteractions = recentInteractionsResult.data ?? [];
+  const recentlySeenContentIds = recentInteractions.filter((item: any) => item.interaction_type === "view").map((item: any) => item.content_item_id);
+  const pool = poolResult.data ?? [];
+  const contentIds = pool.map((row: any) => row.id);
+  const creatorIds = Array.from(new Set(pool.map((row: any) => row.creator_id).filter((id: unknown): id is string => typeof id === "string")));
+  const [
+    creatorRowsResult,
+    instanceLikesResult,
+    npcLikesResult,
+    classCommentsResult,
+    scenarioCommentsResult,
+  ] = await Promise.all([
+    creatorIds.length ? supabase.from("creators").select("id, display_name, handle, avatar_url").in("id", creatorIds) : Promise.resolve({ data: [] as any[], error: null }),
+    contentIds.length ? supabase.rpc("get_class_instance_post_likes", { p_class_instance_id: classInstanceId, p_content_item_ids: contentIds }) : Promise.resolve({ data: [] as any[], error: null }),
+    contentIds.length ? supabase.from("npc_social_interactions").select("content_item_id").eq("class_instance_id", classInstanceId).eq("interaction_type", "like").in("content_item_id", contentIds) : Promise.resolve({ data: [] as any[], error: null }),
+    contentIds.length ? supabase.from("content_items").select("id, parent_id").eq("class_instance_id", classInstanceId).eq("type", "comment").eq("status", "live").in("parent_id", contentIds) : Promise.resolve({ data: [] as any[], error: null }),
+    contentIds.length && assignedScenarioIds.length ? supabase.from("content_items").select("id, parent_id").is("class_instance_id", null).in("scenario_id", assignedScenarioIds).eq("type", "comment").eq("status", "live").in("parent_id", contentIds) : Promise.resolve({ data: [] as any[], error: null }),
+  ]);
+  const creatorRows = creatorRowsResult.data ?? [];
+  const creatorById = new Map(creatorRows.map((creator: any) => [creator.id, creator]));
+  const instanceLikes = instanceLikesResult.data ?? [];
+  const npcLikes = npcLikesResult.data ?? [];
+  const classComments = classCommentsResult.data ?? [];
+  const scenarioComments = scenarioCommentsResult.data ?? [];
   const likeCounts = new Map<string, number>(); const commentCounts = new Map<string, number>();
   for (const like of instanceLikes ?? []) likeCounts.set(like.content_item_id, (likeCounts.get(like.content_item_id) ?? 0) + 1);
   for (const like of npcLikes ?? []) likeCounts.set(like.content_item_id, (likeCounts.get(like.content_item_id) ?? 0) + 1);
@@ -138,7 +222,10 @@ export default async function FeedPage() {
     socialByContent.set(like.content_item_id, list);
   }
   const mappedPool: FeedItem[] = (pool ?? []).map((row: any) => ({ id: row.id, type: row.type, scenarioId: row.scenario_id, creatorId: row.creator_id, parentId: row.parent_id, title: row.title, body: row.body, mediaUrl: row.media_url, mediaType: row.media_type, manipulationTechniques: row.manipulation_techniques ?? [], targetCompetencies: row.target_competencies ?? [], difficulty: row.difficulty, ageRating: row.age_rating, sourceRefs: row.source_refs ?? [], status: row.status, reviewedBy: row.reviewed_by, reviewedAt: row.reviewed_at, reviewNotes: row.review_notes, extra: { ...(row.extra ?? {}), interestKeys: addInterestAncestors(row.extra?.interestKeys), classLikeCount: likeCounts.get(row.id) ?? 0, classLikeUsers: socialByContent.get(row.id) ?? [], classCommentCount: commentCounts.get(row.id) ?? 0 }, createdAt: row.created_at, updatedAt: row.updated_at, creator: mapCreatorRow(row.creators ?? creatorById.get(row.creator_id)) }));
-  const ageRating: FeedContext["userAgeRating"] = currentProfile?.birth_year && new Date().getFullYear() - currentProfile.birth_year >= 16 ? "16_plus" : "12_plus";
+  // birth_year is not part of the deployed user_profiles schema; until an
+  // age-rating source is defined, use the conservative default without a
+  // failing profile query.
+  const ageRating: FeedContext["userAgeRating"] = "12_plus";
   const progress = (competencyProgress ?? []).map((c) => ({ userId: c.user_id, competencyId: c.competency_id, evidence: c.evidence, level: c.level, updatedAt: c.updated_at }));
   const recentTechniques = mappedPool.filter((item) => recentlySeenContentIds.includes(item.id)).flatMap((item) => item.manipulationTechniques).slice(0, 12);
   const densityRank: Record<string, number> = { off: 0, low: 1, medium: 2, high: 3 };
@@ -292,5 +379,5 @@ export default async function FeedPage() {
   }));
   const likedContentIds = new Set((recentInteractions ?? []).filter((i) => i.interaction_type === "like").map((i) => i.content_item_id));
 
-  return <FeedClient learningCards={scenarioLearningCards} scenarioSummaries={scenarioIntros.map((scenario) => ({ id: scenario.id, title: scenario.title, description: scenario.description, coverImageUrl: scenario.cover_image_url ?? null }))} initialItems={items} userId={user.id} classInstanceId={classInstanceId} likedContentIds={likedContentIds} scenarioIntro={scenarioIntro ? { ...scenarioIntro, title: scenarioIntroTitle ?? scenarioIntro.title, description: scenarioIntroDescription } : null} scenarioIds={assignedScenarioIds} scenarioMissionCount={scenarioMissionIds.length} completedScenarioMissionCount={new Set((completedScenarioMissions ?? []).map((mission) => mission.mission_id)).size} profile={{ displayName: currentProfile?.display_name ?? "DR1FT User", username: currentProfile?.username ?? "user", avatarSeed: currentProfile?.avatar_seed ?? user.id }} />;
+  return <FeedClient teacherModules={teacherModules} learningCards={scenarioLearningCards} scenarioSummaries={scenarioIntros.map((scenario) => ({ id: scenario.id, title: scenario.title, description: scenario.description, coverImageUrl: scenario.cover_image_url ?? null }))} initialItems={items} userId={user.id} classInstanceId={classInstanceId} likedContentIds={likedContentIds} scenarioIntro={scenarioIntro ? { ...scenarioIntro, title: scenarioIntroTitle ?? scenarioIntro.title, description: scenarioIntroDescription } : null} scenarioIds={assignedScenarioIds} scenarioMissionCount={scenarioMissionIds.length} completedScenarioMissionCount={new Set((completedScenarioMissions ?? []).map((mission) => mission.mission_id)).size} profile={{ displayName: currentProfile?.display_name ?? "DR1FT User", username: currentProfile?.username ?? "user", avatarSeed: currentProfile?.avatar_seed ?? user.id }} />;
 }
