@@ -38,8 +38,8 @@ export default async function FeedPage() {
   // the assigned IDs. This removes another serial request without widening scope.
   // Keep these policy-heavy reads sequential: the feed already performs many
   // concurrent database reads, and parallel RLS evaluation can amplify load.
-  const [{ data: teacherModuleRowsData, error: teacherModuleRowsError }, { data: teacherModulePostsData, error: teacherModulePostsError }] = teacherModuleIds.length
-    ? await Promise.all([
+  const teacherModuleDataPromise = teacherModuleIds.length
+    ? Promise.all([
         supabase.from("teacher_modules")
           .select("id,title,description,intro_title,intro_text,title_card_enabled")
           .in("id", teacherModuleIds)
@@ -50,42 +50,7 @@ export default async function FeedPage() {
           .eq("status", "published")
           .order("sort_order", { ascending: true }),
       ])
-    : [{ data: [] as any[], error: null }, { data: [] as any[], error: null }];
-  const teacherModuleRows = { data: teacherModuleRowsData, error: teacherModuleRowsError };
-  const teacherModulePostResult = { data: teacherModulePostsData, error: teacherModulePostsError };
-  if (teacherModuleRows.error) {
-    console.error("[player-feed] teacher_modules query failed", {
-      code: teacherModuleRows.error.code, message: teacherModuleRows.error.message,
-    });
-  }
-  if (teacherModulePostResult.error) {
-    console.error("[player-feed] teacher_module_posts query failed", {
-      code: teacherModulePostResult.error.code, message: teacherModulePostResult.error.message,
-    });
-  }
-
-  const nowForModules = Date.now();
-  const activeTeacherModuleIds = new Set((teacherModuleAssignments ?? [])
-    .filter((assignment: any) => {
-      const start = assignment.scheduled_start_at ? new Date(assignment.scheduled_start_at).getTime() : null;
-      const end = assignment.scheduled_end_at ? new Date(assignment.scheduled_end_at).getTime() : null;
-      return (start === null || start <= nowForModules) && (end === null || end > nowForModules);
-    })
-    .map((assignment: any) => assignment.module_id));
-
-  const eligibleTeacherModules = (teacherModuleRows.data ?? []).filter((module: any) => activeTeacherModuleIds.has(module.id));
-  const eligibleTeacherModuleIds = new Set(eligibleTeacherModules.map((module: any) => module.id));
-  const teacherModulePostRows = (teacherModulePostResult.data ?? []).filter((post: any) => eligibleTeacherModuleIds.has(post.module_id));
-
-  // Do not sign private image URLs during server rendering: Storage signing can
-  // be slow and must never delay the module text or voting controls.
-  const teacherModules = eligibleTeacherModules.map((module: any) => ({
-    ...module,
-    posts: teacherModulePostRows
-      .filter((post: any) => post.module_id === module.id)
-      .map((post: any) => ({ ...post, imageUrl: null, imagePath: post.image_path ?? null })),
-  }));
-
+    : Promise.resolve([{ data: [] as any[], error: null }, { data: [] as any[], error: null }]);
   const now = Date.now();
   const availableAssignments = (assignments ?? []).filter((assignment: any) => {
     const startsAt = assignment.scheduled_start_at ? new Date(assignment.scheduled_start_at).getTime() : null;
@@ -122,6 +87,44 @@ export default async function FeedPage() {
     supabase.from("user_interactions").select("content_item_id, interaction_type").eq("user_id", user.id).eq("class_instance_id", classInstanceId).order("created_at", { ascending: false }).limit(200),
     supabase.from("content_items").select("*, creators(id, display_name, handle, avatar_url)").eq("status", "live").eq("type", "post").or(scenarioFilter).or(`class_instance_id.eq.${classInstanceId},class_instance_id.is.null`),
   ]);
+
+  const [{ data: teacherModuleRowsData, error: teacherModuleRowsError }, { data: teacherModulePostsData, error: teacherModulePostsError }] = await teacherModuleDataPromise;
+  const teacherModuleRows = { data: teacherModuleRowsData, error: teacherModuleRowsError };
+  const teacherModulePostResult = { data: teacherModulePostsData, error: teacherModulePostsError };
+  if (teacherModuleRows.error) {
+    console.error("[player-feed] teacher_modules query failed", {
+      code: teacherModuleRows.error.code, message: teacherModuleRows.error.message,
+    });
+  }
+  if (teacherModulePostResult.error) {
+    console.error("[player-feed] teacher_module_posts query failed", {
+      code: teacherModulePostResult.error.code, message: teacherModulePostResult.error.message,
+    });
+  }
+
+  const nowForModules = Date.now();
+  const activeTeacherModuleIds = new Set((teacherModuleAssignments ?? [])
+    .filter((assignment: any) => {
+      const start = assignment.scheduled_start_at ? new Date(assignment.scheduled_start_at).getTime() : null;
+      const end = assignment.scheduled_end_at ? new Date(assignment.scheduled_end_at).getTime() : null;
+      return (start === null || start <= nowForModules) && (end === null || end > nowForModules);
+    })
+    .map((assignment: any) => assignment.module_id));
+
+  const eligibleTeacherModules = (teacherModuleRows.data ?? []).filter((module: any) => activeTeacherModuleIds.has(module.id));
+  const eligibleTeacherModuleIds = new Set(eligibleTeacherModules.map((module: any) => module.id));
+  const teacherModulePostRows = (teacherModulePostResult.data ?? []).filter((post: any) => eligibleTeacherModuleIds.has(post.module_id));
+
+  // Do not sign private image URLs during server rendering: Storage signing can
+  // be slow and must never delay the module text or voting controls.
+  const teacherModules = eligibleTeacherModules.map((module: any) => ({
+    ...module,
+    posts: teacherModulePostRows
+      .filter((post: any) => post.module_id === module.id)
+      .map((post: any) => ({ ...post, imageUrl: null, imagePath: post.image_path ?? null })),
+  }));
+
+
   const scenarioIntros = scenarioResult.data ?? [];
   const scenarioLearningCards = scenarioIntros.flatMap((scenario: any) =>
     (Array.isArray(scenario.learning_cards) ? scenario.learning_cards : [])
