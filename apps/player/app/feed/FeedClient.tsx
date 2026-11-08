@@ -108,15 +108,17 @@ function TeacherModulePoll({ moduleId, post, classInstanceId, initialResult }: {
     }
   }
 
-  const correctRaw = config.correctAnswer ?? config.correct_answer ?? config.correctOption ?? config.correct_option ?? config.correctAnswerKey ?? config.correct_answer_key ?? config.correctOptionId ?? config.correct_option_id ?? config.correctAnswerIndex ?? config.correct_answer_index;
-  const highlightCorrect = post.post_type === "true_false" || config.highlightCorrectAnswer === true || config.highlight_correct_answer === true || config.showCorrectAnswer === true || config.show_correct_answer === true;
+  const correctRaw = config.correctOption ?? config.correct_option ?? config.correctOptionId ?? config.correct_option_id ?? config.correctAnswerKey ?? config.correct_answer_key ?? config.correctAnswerIndex ?? config.correct_answer_index ?? config.correctAnswer ?? config.correct_answer;
+  const resultDisplay = String(config.resultDisplay ?? config.result_display ?? "bar").toLowerCase();
+  const highlightCorrect = post.post_type === "true_false" || resultDisplay === "highlight" || config.highlightCorrectAnswer === true || config.highlight_correct_answer === true || config.showCorrectAnswer === true || config.show_correct_answer === true;
   const correctValue = typeof correctRaw === "number"
     ? "option_" + (correctRaw >= 0 && correctRaw < options.length ? correctRaw + 1 : correctRaw)
     : typeof correctRaw === "string"
       ? (/^option_\d+$/i.test(correctRaw) ? correctRaw : options.includes(correctRaw) ? "option_" + (options.indexOf(correctRaw) + 1) : null)
       : typeof correctRaw === "boolean" ? (correctRaw ? "option_1" : "option_2") : null;
-  const chartMode = String(config.resultVisualization ?? config.result_visualization ?? config.chartType ?? config.chart_type ?? config.visualization ?? config.resultDisplay ?? "bar").toLowerCase();
-  const showPieChart = ["pie", "circle", "circular", "kreis", "kreisdiagramm", "pie_chart"].includes(chartMode);
+  const chartMode = String(config.resultVisualization ?? config.result_visualization ?? config.chartType ?? config.chart_type ?? config.visualization ?? resultDisplay).toLowerCase();
+  const showPieChart = !highlightCorrect && ["pie", "circle", "circular", "kreis", "kreisdiagramm", "pie_chart"].includes(chartMode);
+  const showBarChart = !highlightCorrect && !showPieChart;
 
   async function submit() {
     if (responseMode === "free_text" ? !textAnswer.trim() : selected.length === 0) {
@@ -181,7 +183,7 @@ function TeacherModulePoll({ moduleId, post, classInstanceId, initialResult }: {
       ? <p role="status" className="text-sm font-semibold text-emerald-700">Antwort gespeichert. Danke!</p>
       : <button type="button" disabled={submitting} onClick={() => void submit()} className="teacher-module-poll-submit mt-3 rounded-xl bg-gradient-to-r from-violet-700 to-fuchsia-700 px-5 py-3 text-sm font-bold text-white shadow-md disabled:opacity-50">{submitting ? "Wird gespeichert …" : "Antwort senden"}</button>}
     {result && result.total > 0 && <div className="mt-5 rounded-2xl border border-violet-100 bg-gradient-to-br from-violet-50 via-white to-cyan-50 p-4 sm:p-5">
-      <div className="mb-4 flex items-center justify-between gap-3"><h5 className="text-sm font-bold text-[#35264d]">Umfrageergebnis</h5><div className="flex items-center gap-2">
+      <div className="mb-4 flex items-center justify-between gap-3"><h5 className="text-sm font-bold text-[#35264d]">{highlightCorrect ? "Antwortauswertung" : "Umfrageergebnis"}</h5><div className="flex items-center gap-2">
         <button type="button" onClick={() => void refreshResults()} disabled={refreshing} aria-label="Umfragestatus aktualisieren" title="Status aktualisieren" className="teacher-module-poll-refresh inline-flex h-8 w-8 items-center justify-center rounded-full border border-violet-200 bg-white text-violet-700"><RefreshCw className={"h-4 w-4 " + (refreshing ? "animate-spin" : "")}/></button>
         <span className="rounded-full bg-violet-100 px-3 py-1 text-xs font-bold text-violet-700">{result.total} {result.total === 1 ? "Antwort" : "Antworten"}</span>
       </div></div>
@@ -200,8 +202,9 @@ function TeacherModulePoll({ moduleId, post, classInstanceId, initialResult }: {
       </div>}
       <div className="space-y-3">{result.results.map((entry) => {
         const percentage = Math.round(entry.count / Math.max(result.total, 1) * 100);
-        return <div key={entry.key}><div className="mb-1.5 flex items-center justify-between gap-3 text-xs"><span className="font-semibold text-[#51476a]">{entry.label}</span><span className="shrink-0 font-bold tabular-nums text-violet-700">{entry.count} · {percentage}%</span></div>{!showPieChart&&<div className="h-3 overflow-hidden rounded-full bg-violet-100"><div className="h-full rounded-full bg-gradient-to-r from-violet-600 via-fuchsia-500 to-cyan-400 transition-all duration-500" style={{ width: percentage + "%" }}/></div>}</div>;
+        return <div key={entry.key}><div className="mb-1.5 flex items-center justify-between gap-3 text-xs"><span className="font-semibold text-[#51476a]">{entry.label}</span><span className="shrink-0 font-bold tabular-nums text-violet-700">{entry.count} · {percentage}%</span></div>{showBarChart&&<div className="h-3 overflow-hidden rounded-full bg-violet-100"><div className="h-full rounded-full bg-gradient-to-r from-violet-600 via-fuchsia-500 to-cyan-400 transition-all duration-500" style={{ width: percentage + "%" }}/></div>}</div>;
       })}</div>
+      {highlightCorrect && <p className="mt-3 text-xs font-semibold text-emerald-700">Die richtige Antwort ist grün markiert.</p>}
       {result.responseMode === "multiple" && <p className="mt-3 text-[11px] text-[#746d89]">Mehrfachauswahl möglich – Prozentwerte beziehen sich auf die abgegebenen Antworten.</p>}
       {result.responseMode === "free_text" && <p className="mt-2 text-xs text-[#746d89]">Freitextantworten werden hier nur anonym als Anzahl angezeigt.</p>}
     </div>}
@@ -417,22 +420,22 @@ export function FeedClient({ initialItems, teacherModules = [], userId, classIns
   </div>}
 </section>}{scenarioStarted&&!scenarioFinished&&learningCards.filter(card=>card.position==="before_feed").map(card=><LearningCardFeedItem key={card.id} card={card} classInstanceId={classInstanceId}/>)}
 {!scenarioFinished&&teacherModules.length>0&&<section className="space-y-5" aria-label="Lernmodule deiner Lehrkraft">
-  {teacherModules.map((module)=><article key={module.id} className="overflow-hidden rounded-[26px] border border-violet-100 bg-white/95 shadow-sm">
-    {module.title_card_enabled!==false&&<header className="border-b border-violet-100 bg-gradient-to-r from-violet-50 via-white to-cyan-50 px-5 py-5 sm:px-6">
-      <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-violet-600">Lernmodul</p>
-      <h3 className="mt-1 break-words font-display text-xl font-semibold text-[#27213d] [overflow-wrap:anywhere]">{module.title}</h3>
+  {teacherModules.map((module)=><article key={module.id} className="teacher-module-feed overflow-hidden rounded-[26px] border border-violet-100 bg-white/95 shadow-sm">
+    {module.title_card_enabled!==false&&<header className="teacher-module-header border-b border-violet-100 bg-gradient-to-r from-violet-50 via-white to-cyan-50 px-5 py-5 sm:px-6">
+      <p className="teacher-module-eyebrow text-[10px] font-bold uppercase tracking-[0.18em] text-violet-600">Lernmodul</p>
+      <h3 className="teacher-module-heading mt-1 break-words font-display text-xl font-semibold text-[#27213d] [overflow-wrap:anywhere]">{module.title}</h3>
       <div className="mt-2 flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
-        {module.description&&<p className="min-w-0 flex-1 whitespace-pre-line break-words text-sm leading-6 text-[#746d89] [overflow-wrap:anywhere]">{module.description}</p>}
+        {module.description&&<p className="teacher-module-description min-w-0 flex-1 whitespace-pre-line break-words text-sm leading-6 text-[#746d89] [overflow-wrap:anywhere]">{module.description}</p>}
         {!scenarioStarted&&<button type="button" onClick={handleScenarioStart} className="inline-flex shrink-0 items-center justify-center gap-2 self-start rounded-xl bg-gradient-to-r from-violet-600 via-fuchsia-600 to-cyan-500 px-5 py-3 text-sm font-bold text-white shadow-lg shadow-violet-500/20 transition hover:-translate-y-0.5 hover:shadow-xl focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-violet-500 focus-visible:ring-offset-2 sm:self-auto">Lernmodul starten <ArrowRight className="h-4 w-4"/></button>}
       </div>
     </header>}
     {scenarioStarted&&<div className="space-y-5 p-4 sm:p-6">
       {module.posts.map((post,index)=>{
-        return <section key={post.id} className="overflow-hidden rounded-2xl border border-violet-100 bg-white">
+        return <section key={post.id} className="teacher-module-post overflow-hidden rounded-2xl border border-violet-100 bg-white">
           <div className="p-4 sm:p-5">
-            <p className="text-[10px] font-bold uppercase tracking-[0.16em] text-violet-500">Beitrag {index+1}</p>
-            {post.title&&<h4 className="mt-1 text-lg font-semibold text-[#27213d]">{post.title}</h4>}
-            {post.body&&<p className="mt-2 whitespace-pre-line break-words text-sm leading-6 text-[#51476a] [overflow-wrap:anywhere]">{post.body}</p>}
+            <p className="teacher-module-post-eyebrow text-[10px] font-bold uppercase tracking-[0.16em] text-violet-500">Beitrag {index+1}</p>
+            {post.title&&<h4 className="teacher-module-post-title mt-1 text-lg font-semibold text-[#27213d]">{post.title}</h4>}
+            {post.body&&<p className="teacher-module-post-body mt-2 whitespace-pre-line break-words text-sm leading-6 text-[#51476a] [overflow-wrap:anywhere]">{post.body}</p>}
           </div>
           {post.imagePath&&<TeacherModuleImage imagePath={post.imagePath} alt={post.title||"Bild zum Lernmodul"} priority={index===0}/>}
           {post.embed_url&&<div className="px-4 pb-4"><a href={post.embed_url} target="_blank" rel="noreferrer" className="text-sm font-semibold text-violet-700 underline">Medieninhalt öffnen</a></div>}
