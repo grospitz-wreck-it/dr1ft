@@ -36,8 +36,7 @@ export default async function FeedPage() {
   const teacherModuleIds = Array.from(new Set((teacherModuleAssignments ?? []).map((row: any) => row.module_id).filter(Boolean)));
   // Module metadata and its published posts can both be fetched directly from
   // the assigned IDs. This removes another serial request without widening scope.
-  // Keep these policy-heavy reads sequential: the feed already performs many
-  // concurrent database reads, and parallel RLS evaluation can amplify load.
+  // Start both reads immediately; they now overlap with the independent feed queries below.
   const teacherModuleDataPromise = teacherModuleIds.length
     ? Promise.all([
         supabase.from("teacher_modules")
