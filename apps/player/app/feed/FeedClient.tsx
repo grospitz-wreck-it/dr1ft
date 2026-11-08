@@ -1,6 +1,6 @@
 "use client";
 import { useEffect, useRef, useState } from "react";
-import { ArrowDown, ArrowRight, CheckCircle2, Sparkles } from "lucide-react";
+import { ArrowDown, ArrowRight, CheckCircle2, RefreshCw, Sparkles } from "lucide-react";
 import { recordInteraction, startRealtimeEventBridge, eventBus } from "@dr1ft/engine-core";
 import type { FeedItem } from "../../lib/types";
 import { supabaseBrowserClient } from "../../lib/supabaseBrowserClient";
@@ -85,6 +85,7 @@ function TeacherModulePoll({ moduleId, post, classInstanceId, initialResult }: {
   const [submitted, setSubmitted] = useState(initialResult?.myVote?.submitted === true);
   const [errorMessage, setErrorMessage] = useState("");
   const [result, setResult] = useState<TeacherModulePollResult | undefined>(initialResult);
+  const [refreshing, setRefreshing] = useState(false);
 
   useEffect(() => {
     if (!initialResult) return;
@@ -92,6 +93,30 @@ function TeacherModulePoll({ moduleId, post, classInstanceId, initialResult }: {
     setSubmitted(initialResult.myVote?.submitted === true);
     setSelected(initialResult.myVote?.selected ?? []);
   }, [initialResult]);
+
+  async function refreshResults() {
+    setRefreshing(true);
+    try {
+      const { data, error } = await (supabase as any).rpc("get_teacher_module_poll_results", { p_post_id: post.id });
+      if (error) throw error;
+      if (data) setResult(data as TeacherModulePollResult);
+    } catch (error) {
+      console.error("[Player] poll results refresh failed", error);
+      setErrorMessage("Der Umfragestatus konnte gerade nicht aktualisiert werden.");
+    } finally {
+      setRefreshing(false);
+    }
+  }
+
+  const correctRaw = config.correctAnswer ?? config.correct_answer ?? config.correctOption ?? config.correct_option ?? config.correctAnswerKey ?? config.correct_answer_key ?? config.correctOptionId ?? config.correct_option_id ?? config.correctAnswerIndex ?? config.correct_answer_index;
+  const highlightCorrect = post.post_type === "true_false" || config.highlightCorrectAnswer === true || config.highlight_correct_answer === true || config.showCorrectAnswer === true || config.show_correct_answer === true;
+  const correctValue = typeof correctRaw === "number"
+    ? "option_" + (correctRaw >= 0 && correctRaw < options.length ? correctRaw + 1 : correctRaw)
+    : typeof correctRaw === "string"
+      ? (/^option_\d+$/i.test(correctRaw) ? correctRaw : options.includes(correctRaw) ? "option_" + (options.indexOf(correctRaw) + 1) : null)
+      : typeof correctRaw === "boolean" ? (correctRaw ? "option_1" : "option_2") : null;
+  const chartMode = String(config.resultVisualization ?? config.result_visualization ?? config.chartType ?? config.chart_type ?? config.visualization ?? config.resultDisplay ?? "bar").toLowerCase();
+  const showPieChart = ["pie", "circle", "circular", "kreis", "kreisdiagramm", "pie_chart"].includes(chartMode);
 
   async function submit() {
     if (responseMode === "free_text" ? !textAnswer.trim() : selected.length === 0) {
@@ -128,28 +153,54 @@ function TeacherModulePoll({ moduleId, post, classInstanceId, initialResult }: {
   return <div className="teacher-module-poll space-y-3 px-4 pb-4 sm:px-5 sm:pb-5">
     {responseMode === "free_text"
       ? <textarea value={textAnswer} onChange={(event) => setTextAnswer(event.target.value)} disabled={submitted} rows={3} maxLength={3000} placeholder="Deine Antwort ..." className="w-full rounded-xl border border-violet-200 bg-white p-3 text-sm text-slate-800 outline-none focus:border-violet-400 focus:ring-2 focus:ring-violet-100 disabled:opacity-60"/>
-      : <div className="grid gap-2">{options.map((option: string, index: number) => {
+      : <div className="grid gap-2 pt-3">{options.map((option: string, index: number) => {
           const value = "option_" + (index + 1);
           const active = selected.includes(value);
+          const isCorrect = highlightCorrect && submitted && correctValue === value;
+          const isWrong = highlightCorrect && submitted && active && correctValue !== null && correctValue !== value;
+          const tone = isCorrect
+            ? "is-correct border-emerald-600 bg-emerald-600 text-white shadow-md"
+            : isWrong
+              ? "is-wrong border-rose-600 bg-rose-600 text-white shadow-md"
+              : active
+                ? "is-selected border-violet-700 bg-violet-700 text-white shadow-md ring-2 ring-violet-300 ring-offset-1"
+                : "border-violet-200 bg-white text-slate-700 hover:border-violet-400 hover:bg-violet-50";
           return <button key={value} type="button" disabled={submitted} aria-pressed={active}
             onClick={() => setSelected((current) => responseMode === "multiple"
               ? (active ? current.filter((item) => item !== value) : [...current, value])
               : [value])}
-            className={"teacher-module-poll-option w-full rounded-xl border px-4 py-3 text-left text-sm font-medium transition " + (active
-              ? "border-violet-600 bg-gradient-to-r from-violet-600 via-fuchsia-600 to-violet-500 text-white shadow-lg shadow-violet-500/25 ring-2 ring-fuchsia-300 ring-offset-1"
-              : "border-violet-100 bg-white text-slate-700 hover:border-violet-300 hover:bg-violet-50")}>
-            {active && <span className="mr-2 inline-grid h-5 w-5 place-items-center rounded-full bg-white/20 text-xs">✓</span>}{option}
+            className={"teacher-module-poll-option w-full rounded-xl border px-4 py-3.5 text-left text-sm font-semibold " + tone}>
+            <span className="mr-3 inline-grid h-6 w-6 shrink-0 align-middle place-items-center rounded-full border border-current/30 text-xs">{isCorrect ? "✓" : isWrong ? "×" : String.fromCharCode(65 + index)}</span>
+            <span className="align-middle">{option}</span>
+            {isCorrect && <span className="float-right text-xs font-bold">Richtig</span>}
+            {isWrong && <span className="float-right text-xs font-bold">Deine Antwort</span>}
           </button>;
         })}</div>}
     {errorMessage && <p role="alert" className="text-sm text-red-600">{errorMessage}</p>}
     {submitted
       ? <p role="status" className="text-sm font-semibold text-emerald-700">Antwort gespeichert. Danke!</p>
-      : <button type="button" disabled={submitting} onClick={() => void submit()} className="rounded-xl bg-gradient-to-r from-violet-600 to-fuchsia-600 px-5 py-3 text-sm font-bold text-white disabled:opacity-50">{submitting ? "Wird gespeichert …" : "Antwort senden"}</button>}
+      : <button type="button" disabled={submitting} onClick={() => void submit()} className="teacher-module-poll-submit mt-3 rounded-xl bg-gradient-to-r from-violet-700 to-fuchsia-700 px-5 py-3 text-sm font-bold text-white shadow-md disabled:opacity-50">{submitting ? "Wird gespeichert …" : "Antwort senden"}</button>}
     {result && result.total > 0 && <div className="mt-5 rounded-2xl border border-violet-100 bg-gradient-to-br from-violet-50 via-white to-cyan-50 p-4 sm:p-5">
-      <div className="mb-4 flex items-center justify-between gap-3"><h5 className="text-sm font-bold text-[#35264d]">Umfrageergebnis</h5><span className="rounded-full bg-violet-100 px-3 py-1 text-xs font-bold text-violet-700">{result.total} {result.total === 1 ? "Antwort" : "Antworten"}</span></div>
+      <div className="mb-4 flex items-center justify-between gap-3"><h5 className="text-sm font-bold text-[#35264d]">Umfrageergebnis</h5><div className="flex items-center gap-2">
+        <button type="button" onClick={() => void refreshResults()} disabled={refreshing} aria-label="Umfragestatus aktualisieren" title="Status aktualisieren" className="teacher-module-poll-refresh inline-flex h-8 w-8 items-center justify-center rounded-full border border-violet-200 bg-white text-violet-700"><RefreshCw className={"h-4 w-4 " + (refreshing ? "animate-spin" : "")}/></button>
+        <span className="rounded-full bg-violet-100 px-3 py-1 text-xs font-bold text-violet-700">{result.total} {result.total === 1 ? "Antwort" : "Antworten"}</span>
+      </div></div>
+      {showPieChart && result.results.length > 0 && <div className="mb-5 flex flex-col items-center gap-4 sm:flex-row sm:justify-center">
+        <div role="img" aria-label={"Kreisdiagramm mit " + result.total + " Antworten"} className="teacher-module-poll-pie h-44 w-44 shrink-0 rounded-full" style={{ background: "conic-gradient(" + result.results.map((entry, index) => {
+          const palette = ["#7c3aed", "#db2777", "#0891b2", "#f59e0b", "#16a34a", "#6366f1", "#ea580c", "#0d9488"];
+          const start = result.results.slice(0, index).reduce((sum, item) => sum + item.count, 0) / Math.max(result.total, 1) * 100;
+          const end = start + entry.count / Math.max(result.total, 1) * 100;
+          return palette[index % palette.length] + " " + start + "% " + end + "%";
+        }).join(", ") + ")" }}/>
+        <div className="grid gap-2 text-xs">{result.results.map((entry, index) => {
+          const palette = ["#7c3aed", "#db2777", "#0891b2", "#f59e0b", "#16a34a", "#6366f1", "#ea580c", "#0d9488"];
+          const percentage = Math.round(entry.count / Math.max(result.total, 1) * 100);
+          return <div key={entry.key} className="flex items-center gap-2"><span className="h-2.5 w-2.5 shrink-0 rounded-sm" style={{ backgroundColor: palette[index % palette.length] }}/><span className="font-semibold text-[#51476a]">{entry.label}</span><span className="font-bold tabular-nums text-violet-700">{percentage}%</span></div>;
+        })}</div>
+      </div>}
       <div className="space-y-3">{result.results.map((entry) => {
         const percentage = Math.round(entry.count / Math.max(result.total, 1) * 100);
-        return <div key={entry.key}><div className="mb-1.5 flex items-center justify-between gap-3 text-xs"><span className="font-semibold text-[#51476a]">{entry.label}</span><span className="shrink-0 font-bold tabular-nums text-violet-700">{entry.count} · {percentage}%</span></div><div className="h-3 overflow-hidden rounded-full bg-violet-100"><div className="h-full rounded-full bg-gradient-to-r from-violet-600 via-fuchsia-500 to-cyan-400 transition-all duration-500" style={{ width: percentage + "%" }}/></div></div>;
+        return <div key={entry.key}><div className="mb-1.5 flex items-center justify-between gap-3 text-xs"><span className="font-semibold text-[#51476a]">{entry.label}</span><span className="shrink-0 font-bold tabular-nums text-violet-700">{entry.count} · {percentage}%</span></div>{!showPieChart&&<div className="h-3 overflow-hidden rounded-full bg-violet-100"><div className="h-full rounded-full bg-gradient-to-r from-violet-600 via-fuchsia-500 to-cyan-400 transition-all duration-500" style={{ width: percentage + "%" }}/></div>}</div>;
       })}</div>
       {result.responseMode === "multiple" && <p className="mt-3 text-[11px] text-[#746d89]">Mehrfachauswahl möglich – Prozentwerte beziehen sich auf die abgegebenen Antworten.</p>}
       {result.responseMode === "free_text" && <p className="mt-2 text-xs text-[#746d89]">Freitextantworten werden hier nur anonym als Anzahl angezeigt.</p>}

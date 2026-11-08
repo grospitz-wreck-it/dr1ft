@@ -589,3 +589,83 @@ body.dark-mode {
   transition: background-color .12s ease, border-color .12s ease, box-shadow .12s ease !important;
   touch-action: manipulation;
 }
+
+
+/* Poll controls: keep semantic contrast above the app-wide glass button layer. */
+.teacher-module-poll .teacher-module-poll-option {
+  display: block;
+  min-height: 3.25rem;
+  color: #51476a;
+  background: #fff;
+  border-color: #ddd5ee;
+  text-align: left;
+  -webkit-backdrop-filter: none !important;
+  backdrop-filter: none !important;
+  transition: background-color .16s ease, border-color .16s ease, box-shadow .16s ease, color .16s ease !important;
+}
+.teacher-module-poll .teacher-module-poll-option:hover:not(:disabled) {
+  color: #3b245f !important;
+  background: #f3edff !important;
+  border-color: #8b5cf6 !important;
+}
+.teacher-module-poll .teacher-module-poll-option.is-selected,
+.teacher-module-poll .teacher-module-poll-option.is-selected:hover:not(:disabled) {
+  color: #fff !important;
+  background: #6d28d9 !important;
+  border-color: #6d28d9 !important;
+}
+.teacher-module-poll .teacher-module-poll-option.is-correct,
+.teacher-module-poll .teacher-module-poll-option.is-correct:hover {
+  color: #fff !important;
+  background: #059669 !important;
+  border-color: #047857 !important;
+}
+.teacher-module-poll .teacher-module-poll-option.is-wrong,
+.teacher-module-poll .teacher-module-poll-option.is-wrong:hover {
+  color: #fff !important;
+  background: #e11d48 !important;
+  border-color: #be123c !important;
+}
+.teacher-module-poll .teacher-module-poll-submit {
+  margin-top: 1rem;
+  color: #fff !important;
+}
+.teacher-module-poll .teacher-module-poll-submit:hover:not(:disabled) {
+  color: #fff !important;
+  background: linear-gradient(110deg,#6d28d9,#a21caf) !important;
+  border-color: #7e22ce !important;
+}
+.teacher-module-poll .teacher-module-poll-refresh {
+  color: #6d28d9 !important;
+  background: #fff !important;
+  border-color: #ddd5ee !important;
+  padding: 0 !important;
+}
+.teacher-module-poll .teacher-module-poll-refresh:hover:not(:disabled) {
+  color: #fff !important;
+  background: #6d28d9 !important;
+  border-color: #6d28d9 !important;
+}
+.teacher-module-poll-pie {
+  border: 1px solid rgba(124,58,237,.12);
+  box-shadow: 0 8px 24px rgba(76,29,149,.12), inset 0 0 0 1px rgba(255,255,255,.35);
+}
+.dark-mode .teacher-module-poll .teacher-module-poll-option:not(.is-selected):not(.is-correct):not(.is-wrong) {
+  color: #eee7f7 !important;
+  background: #211a32 !important;
+  border-color: #554568 !important;
+}
+.dark-mode .teacher-module-poll .teacher-module-poll-option:hover:not(:disabled):not(.is-selected):not(.is-correct):not(.is-wrong) {
+  color: #fff !important;
+  background: #392650 !important;
+  border-color: #b794f6 !important;
+}
+.dark-mode .teacher-module-poll .teacher-module-poll-refresh {
+  color: #d8b4fe !important;
+  background: #211a32 !important;
+  border-color: #554568 !important;
+}
+.dark-mode .teacher-module-poll .teacher-module-poll-refresh:hover:not(:disabled) {
+  color: #fff !important;
+  background: #6d28d9 !important;
+}
