@@ -1,6 +1,6 @@
 "use client";
 import { useEffect, useRef, useState } from "react";
-import { ArrowDown, ArrowRight, CheckCircle2, Sparkles } from "lucide-react";
+import { ArrowDown, ArrowRight, CheckCircle2, RefreshCw, Sparkles } from "lucide-react";
 import { recordInteraction, startRealtimeEventBridge, eventBus } from "@dr1ft/engine-core";
 import type { FeedItem } from "../../lib/types";
 import { supabaseBrowserClient } from "../../lib/supabaseBrowserClient";
@@ -85,6 +85,7 @@ function TeacherModulePoll({ moduleId, post, classInstanceId, initialResult }: {
   const [submitted, setSubmitted] = useState(initialResult?.myVote?.submitted === true);
   const [errorMessage, setErrorMessage] = useState("");
   const [result, setResult] = useState<TeacherModulePollResult | undefined>(initialResult);
+  const [refreshing, setRefreshing] = useState(false);
 
   useEffect(() => {
     if (!initialResult) return;
@@ -92,6 +93,30 @@ function TeacherModulePoll({ moduleId, post, classInstanceId, initialResult }: {
     setSubmitted(initialResult.myVote?.submitted === true);
     setSelected(initialResult.myVote?.selected ?? []);
   }, [initialResult]);
+
+  async function refreshResults() {
+    setRefreshing(true);
+    try {
+      const { data, error } = await (supabase as any).rpc("get_teacher_module_poll_results", { p_post_id: post.id });
+      if (error) throw error;
+      if (data) setResult(data as TeacherModulePollResult);
+    } catch (error) {
+      console.error("[Player] poll results refresh failed", error);
+      setErrorMessage("Der Umfragestatus konnte gerade nicht aktualisiert werden.");
+    } finally {
+      setRefreshing(false);
+    }
+  }
+
+  const correctRaw = config.correctAnswer ?? config.correct_answer ?? config.correctOption ?? config.correct_option ?? config.correctAnswerKey ?? config.correct_answer_key ?? config.correctOptionId ?? config.correct_option_id ?? config.correctAnswerIndex ?? config.correct_answer_index;
+  const highlightCorrect = post.post_type === "true_false" || config.highlightCorrectAnswer === true || config.highlight_correct_answer === true || config.showCorrectAnswer === true || config.show_correct_answer === true;
+  const correctValue = typeof correctRaw === "number"
+    ? "option_" + (correctRaw >= 0 && correctRaw < options.length ? correctRaw + 1 : correctRaw)
+    : typeof correctRaw === "string"
+      ? (/^option_\d+$/i.test(correctRaw) ? correctRaw : options.includes(correctRaw) ? "option_" + (options.indexOf(correctRaw) + 1) : null)
+      : typeof correctRaw === "boolean" ? (correctRaw ? "option_1" : "option_2") : null;
+  const chartMode = String(config.resultVisualization ?? config.result_visualization ?? config.chartType ?? config.chart_type ?? config.visualization ?? config.resultDisplay ?? "bar").toLowerCase();
+  const showPieChart = ["pie", "circle", "circular", "kreis", "kreisdiagramm", "pie_chart"].includes(chartMode);
 
   async function submit() {
     if (responseMode === "free_text" ? !textAnswer.trim() : selected.length === 0) {
