@@ -669,3 +669,96 @@ body.dark-mode {
   color: #fff !important;
   background: #6d28d9 !important;
 }
+
+/* Teacher-module reactions follow the same high-contrast dark treatment as
+   scenario learning cards. Keep all text readable against the dark surfaces. */
+.dark-mode .teacher-module-poll {
+  color: #f1edf9;
+}
+.dark-mode .teacher-module-poll textarea {
+  color: #f8f5ff !important;
+  caret-color: #e9d5ff;
+  background: #211a32 !important;
+  border-color: #554568 !important;
+}
+.dark-mode .teacher-module-poll textarea::placeholder {
+  color: #b8a9ca !important;
+  opacity: 1;
+}
+.dark-mode .teacher-module-poll .teacher-module-poll-option:not(.is-selected):not(.is-correct):not(.is-wrong) {
+  color: #f1edf9 !important;
+  background: #211a32 !important;
+  border-color: #554568 !important;
+}
+.dark-mode .teacher-module-poll .teacher-module-poll-option:not(.is-selected):not(.is-correct):not(.is-wrong):hover:not(:disabled) {
+  color: #fff !important;
+  background: #392650 !important;
+  border-color: #b794f6 !important;
+}
+.dark-mode .teacher-module-poll .teacher-module-poll-option.is-selected,
+.dark-mode .teacher-module-poll .teacher-module-poll-option.is-selected:hover:not(:disabled),
+.dark-mode .teacher-module-poll .teacher-module-poll-option.is-correct,
+.dark-mode .teacher-module-poll .teacher-module-poll-option.is-correct:hover,
+.dark-mode .teacher-module-poll .teacher-module-poll-option.is-wrong,
+.dark-mode .teacher-module-poll .teacher-module-poll-option.is-wrong:hover {
+  color: #fff !important;
+}
+.dark-mode .teacher-module-poll .teacher-module-poll-option:disabled {
+  opacity: 1 !important;
+}
+.dark-mode .teacher-module-poll [role="status"] {
+  color: #5eead4 !important;
+}
+.dark-mode .teacher-module-poll [role="alert"] {
+  color: #fda4af !important;
+}
+.dark-mode .teacher-module-poll .teacher-module-poll-submit {
+  color: #fff !important;
+  background: linear-gradient(100deg,#7c3aed,#a21caf) !important;
+  border-color: rgba(216,180,254,.48) !important;
+}
+.dark-mode .teacher-module-poll .teacher-module-poll-submit:disabled {
+  color: #fff !important;
+  opacity: .58;
+}
+.dark-mode .teacher-module-poll > div:has(> div > h5) {
+  color: #f1edf9;
+  background: linear-gradient(135deg,#211a32,#29213d 58%,#172b3a) !important;
+  border-color: #554568 !important;
+}
+.dark-mode .teacher-module-poll h5 {
+  color: #f5edff !important;
+}
+.dark-mode .teacher-module-poll .teacher-module-poll-refresh {
+  color: #e9d5ff !important;
+  background: #302342 !important;
+  border-color: #725b8d !important;
+}
+.dark-mode .teacher-module-poll .teacher-module-poll-refresh:hover:not(:disabled) {
+  color: #fff !important;
+  background: #6d28d9 !important;
+  border-color: #a78bfa !important;
+}
+.dark-mode .teacher-module-poll .teacher-module-poll-refresh + span {
+  color: #f3e8ff !important;
+  background: #49306a !important;
+}
+.dark-mode .teacher-module-poll .teacher-module-poll-pie {
+  border-color: rgba(216,180,254,.35);
+  box-shadow: 0 8px 24px rgba(0,0,0,.28), inset 0 0 0 1px rgba(255,255,255,.12);
+}
+.dark-mode .teacher-module-poll .teacher-module-poll-pie + div,
+.dark-mode .teacher-module-poll .teacher-module-poll-pie + div span,
+.dark-mode .teacher-module-poll .teacher-module-poll-pie ~ div {
+  color: #eee7f7 !important;
+}
+.dark-mode .teacher-module-poll .teacher-module-poll-pie ~ div span:last-child {
+  color: #d8b4fe !important;
+}
+.dark-mode .teacher-module-poll p {
+  color: #d8cce8;
+}
+.dark-mode .teacher-module-poll .teacher-module-poll-option.is-correct,
+.dark-mode .teacher-module-poll .teacher-module-poll-option.is-wrong {
+  color: #fff !important;
+}
