@@ -52,7 +52,7 @@ function outcomeScore(outcome: ScenarioAnswer["outcome"]) {
 }
 
 function avatarUrl(seed: string | null | undefined, size = 160) {
-  if (seed && /^DR1FT-(COL|POP|ANI|MOV|MON|JOB)-\\d{3}$/.test(seed)) {
+  if (seed && /^DR1FT-(COL|POP|ANI|MOV|MON|JOB)-\d{3}$/.test(seed)) {
     const category = ({ COL: "collectible", POP: "popculture", ANI: "animals", MOV: "movies", MON: "monsters", JOB: "professions" } as Record<string, string>)[seed.slice(6, 9)] ?? "collectible";
     return `/avatars/${category}/${seed}.webp`;
   }
