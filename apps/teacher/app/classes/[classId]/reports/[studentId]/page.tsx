@@ -52,13 +52,17 @@ function outcomeScore(outcome: ScenarioAnswer["outcome"]) {
 }
 
 function avatarUrl(seed: string | null | undefined, size = 160) {
+  if (seed && /^DR1FT-(COL|POP|ANI|MOV|MON|JOB)-\\d{3}$/.test(seed)) {
+    const category = ({ COL: "collectible", POP: "popculture", ANI: "animals", MOV: "movies", MON: "monsters", JOB: "professions" } as Record<string, string>)[seed.slice(6, 9)] ?? "collectible";
+    return `/avatars/${category}/${seed}.webp`;
+  }
   const styles = ["voxel-art", "adventurer", "adventurer-neutral", "avataaars", "bottts", "fun-emoji", "lorelei", "micah", "miniavs", "personas", "pixel-art-neutral", "thumbs"];
   const value = seed || "dr1ft";
   const separator = value.indexOf("::");
   const candidate = separator > 0 ? value.slice(0, separator) : "";
   const style = styles.includes(candidate) ? candidate : "voxel-art";
   const avatarSeed = separator > 0 && styles.includes(candidate) ? value.slice(separator + 2) || "dr1ft" : value;
-  return `https://api.dicebear.com/10.x/${style}/svg?seed=${encodeURIComponent(avatarSeed)}&size=${size}&borderRadius=18`;
+  return `https://api.dicebear.com/10.x/${style}/svg?seed=${encodeURIComponent(avatarSeed)}&size=${size}&animationVariant=medium&borderRadius=18`;
 }
 
 function dateLabel(value: string) {
