@@ -3,6 +3,12 @@
 -- New Player clients call this overload so every new student account has
 -- a durable username in user_profiles before the class membership is added.
 
+-- Prevent different display spellings from collapsing to the same synthetic login.
+-- A read-only production check found no existing normalized username collisions.
+create unique index if not exists uq_user_profiles_normalized_login_username
+  on public.user_profiles (regexp_replace(lower(username), '[^a-z0-9]', '', 'g'))
+  where username is not null;
+
 create or replace function public.join_class_as_student(
   p_access_code text,
   p_display_name text,
@@ -74,7 +80,7 @@ begin
   from public.user_profiles up
   where up.id = v_user_id;
 
-  if v_existing_username is not null and lower(v_existing_username) <> lower(v_username) then
+  if v_existing_username is not null and regexp_replace(lower(v_existing_username), '[^a-z0-9]', '', 'g') <> lower(v_username) then
     raise exception 'Für dieses Konto ist bereits ein anderer Nutzername hinterlegt.'
       using errcode = '23505';
   end if;
