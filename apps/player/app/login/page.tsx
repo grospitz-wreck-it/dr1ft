@@ -5,7 +5,12 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { supabaseBrowserClient } from "../../lib/supabaseBrowserClient";
 
-function buildSyntheticEmail(username: string, accessCode: string): string {
+function buildSyntheticEmail(username: string): string {
+  const cleanUser = username.toLowerCase().replace(/[^a-z0-9]/g, "");
+  return `${cleanUser}@dr1ft.local`;
+}
+
+function buildLegacySyntheticEmail(username: string, accessCode: string): string {
   const cleanUser = username.toLowerCase().replace(/[^a-z0-9]/g, "");
   const cleanCode = accessCode.toLowerCase().replace(/[^a-z0-9]/g, "");
   return `${cleanUser}.${cleanCode}@dr1ft.local`;
@@ -16,7 +21,7 @@ export default function LoginPage() {
   const router = useRouter();
 
   const [checkingSession, setCheckingSession] = useState(true);
-  const [accessCode, setAccessCode] = useState("");
+  const [legacyAccessCode, setLegacyAccessCode] = useState("");
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
@@ -42,11 +47,29 @@ export default function LoginPage() {
     setError(null);
     setPending(true);
 
-    const email = buildSyntheticEmail(username, accessCode);
-    const { error: signInError } = await supabase.auth.signInWithPassword({ email, password });
+    const stableEmail = buildSyntheticEmail(username);
+    let { error: signInError } = await supabase.auth.signInWithPassword({
+      email: stableEmail,
+      password,
+    });
+
+    // Compatibility path for accounts created before stable username login.
+    // A successful legacy login is upgraded server-side without changing the user ID or password.
+    if (signInError && legacyAccessCode.trim()) {
+      const legacyEmail = buildLegacySyntheticEmail(username, legacyAccessCode);
+      const legacyResult = await supabase.auth.signInWithPassword({
+        email: legacyEmail,
+        password,
+      });
+      signInError = legacyResult.error;
+
+      if (!signInError) {
+        await supabase.functions.invoke("migrate-student-login-identity");
+      }
+    }
 
     if (signInError) {
-      setError("Zugangscode, Nutzername oder Passwort stimmen nicht.");
+      setError("Nutzername oder Passwort stimmen nicht. Bei älteren Konten benötigst du einmalig den bisherigen Klassencode.");
       setPending(false);
       return;
     }
@@ -87,22 +110,29 @@ export default function LoginPage() {
                 Willkommen bei DR1FT
               </h1>
               <p className="mt-1.5 text-xs leading-5 text-white/65 sm:text-sm">
-                Melde dich mit deinem Klassencode an.
+                Melde dich mit deinem DR1FT-Nutzernamen an.
               </p>
             </div>
 
-            <label className="block space-y-1.5">
-              <span className="text-xs font-semibold text-white/85">Klassencode</span>
-              <input
-                value={accessCode}
-                onChange={(e) => setAccessCode(e.target.value.toUpperCase())}
-                placeholder="z. B. UV4JZJ"
-                autoCapitalize="characters"
-                autoComplete="off"
-                required
-                className="dr1ft-login-input w-full rounded-xl px-4 py-3 text-base outline-none transition sm:py-3.5"
-              />
-            </label>
+            <details className="rounded-xl border border-white/10 bg-white/[0.035] px-3 py-2.5">
+              <summary className="cursor-pointer text-xs font-semibold text-white/65">
+                Älteres Konto? Bisherigen Klassencode einmalig eingeben
+              </summary>
+              <label className="mt-3 block space-y-1.5">
+                <span className="text-xs font-semibold text-white/85">Bisheriger Klassencode</span>
+                <input
+                  value={legacyAccessCode}
+                  onChange={(e) => setLegacyAccessCode(e.target.value.toUpperCase())}
+                  placeholder="z. B. UV4JZJ"
+                  autoCapitalize="characters"
+                  autoComplete="off"
+                  className="dr1ft-login-input w-full rounded-xl px-4 py-3 text-base outline-none transition sm:py-3.5"
+                />
+                <span className="block text-[11px] leading-4 text-white/50">
+                  Nach erfolgreicher Anmeldung wird dein Konto auf den Login ohne Klassencode umgestellt.
+                </span>
+              </label>
+            </details>
 
             <label className="block space-y-1.5">
               <span className="text-xs font-semibold text-white/85">Name</span>
