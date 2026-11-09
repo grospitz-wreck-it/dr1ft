@@ -129,7 +129,7 @@ export default function LoginPage() {
                   className="dr1ft-login-input w-full rounded-xl px-4 py-3 text-base outline-none transition sm:py-3.5"
                 />
                 <span className="block text-[11px] leading-4 text-white/50">
-                  Nach erfolgreicher Anmeldung wird dein Konto auf den Login ohne Klassencode umgestellt.
+                  DR1FT versucht nach erfolgreicher Anmeldung, dein Konto automatisch auf den Login ohne Klassencode umzustellen.
                 </span>
               </label>
             </details>
