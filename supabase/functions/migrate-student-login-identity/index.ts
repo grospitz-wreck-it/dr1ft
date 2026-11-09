@@ -28,7 +28,7 @@ Deno.serve(async (req) => {
   const serviceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
   if (!url || !serviceKey) return json({ error: "Supabase Server-Konfiguration fehlt" }, 500);
 
-  const token = authorization.replace(/^Bearer\\s+/i, "").trim();
+  const token = authorization.replace(/^Bearer\s+/i, "").trim();
   const admin = createClient(url, serviceKey);
   const { data: { user }, error: userError } = await admin.auth.getUser(token);
   if (userError || !user) return json({ error: "Ungültige oder abgelaufene Sitzung" }, 401);
