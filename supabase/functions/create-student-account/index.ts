@@ -30,7 +30,7 @@ Deno.serve(async (req) => {
   const body = await req.json().catch(() => null);
   const classId = body?.classId?.trim();
   const displayName = body?.displayName?.trim();
-  const username = body?.username?.trim();
+  const username = cleanPart(typeof body?.username === "string" ? body.username : "");
   if (!classId || !displayName || !username) return json({ error: "Klasse, Anzeigename und Nutzername sind erforderlich" }, 400);
   if (username.length < 2 || username.length > 32) return json({ error: "Der Nutzername muss 2–32 Zeichen lang sein" }, 400);
   if (displayName.length > 80) return json({ error: "Der Anzeigename darf höchstens 80 Zeichen lang sein" }, 400);
