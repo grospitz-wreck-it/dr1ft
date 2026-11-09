@@ -191,6 +191,9 @@ export default function JoinPage() {
                   onChange={(e) => setUsername(e.target.value.replace(/[^a-zA-Z0-9]/g, "").slice(0, 32))}
                   placeholder="Dein Login-Name"
                   autoComplete="username"
+                  minLength={2}
+                  maxLength={32}
+                  pattern="[A-Za-z0-9]{2,32}"
                   required
                   className="touch-target w-full rounded-2xl border border-[#ddd8ec] bg-white/90 px-4 py-3.5 text-sm text-paper outline-none transition placeholder:text-ash/60 focus:border-fuchsia-400 focus:ring-4 focus:ring-fuchsia-100"
                 />
