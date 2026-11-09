@@ -48,9 +48,8 @@ Deno.serve(async (req) => {
   if (!classRow.is_active) return json({ error: "Diese Klasseninstanz ist nicht aktiv" }, 400);
 
   const cleanUsername = cleanPart(username);
-  const cleanCode = cleanPart(classRow.access_code);
   if (!cleanUsername) return json({ error: "Nutzername enthält keine gültigen Zeichen" }, 400);
-  const email = `${cleanUsername}.${cleanCode}@dr1ft.local`;
+  const email = `${cleanUsername}@dr1ft.local`;
   const password = generateTempPassword();
 
   const adminClient = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!);
