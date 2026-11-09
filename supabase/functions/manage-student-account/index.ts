@@ -97,14 +97,7 @@ Deno.serve(async (req) => {
       .maybeSingle();
     if (duplicate) return json({ error: "Dieser Nutzername ist bereits vergeben." }, 409);
 
-    const { data: classRow, error: classError } = await admin
-      .from("class_instances")
-      .select("access_code")
-      .eq("id", classId)
-      .maybeSingle();
-    if (classError || !classRow) return json({ error: "Klasseninstanz nicht gefunden" }, 404);
-
-    const email = `${username}.${String(classRow.access_code).toLowerCase().replace(/[^a-z0-9]/g, "")}@dr1ft.local`;
+    const email = `${username}@dr1ft.local`;
     const { error: authUpdateError } = await admin.auth.admin.updateUserById(studentUserId, {
       email,
       user_metadata: { display_name: displayName, username, class_instance_id: classId },
