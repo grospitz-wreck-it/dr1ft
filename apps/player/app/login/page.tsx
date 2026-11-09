@@ -135,7 +135,7 @@ export default function LoginPage() {
             </details>
 
             <label className="block space-y-1.5">
-              <span className="text-xs font-semibold text-white/85">Name</span>
+              <span className="text-xs font-semibold text-white/85">Nutzername</span>
               <input
                 value={username}
                 onChange={(e) => setUsername(e.target.value)}
