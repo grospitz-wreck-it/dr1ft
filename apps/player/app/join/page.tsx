@@ -188,7 +188,7 @@ export default function JoinPage() {
                 </span>
                 <input
                   value={username}
-                  onChange={(e) => setUsername(e.target.value)}
+                  onChange={(e) => setUsername(e.target.value.replace(/[^a-zA-Z0-9]/g, "").slice(0, 32))}
                   placeholder="Dein Login-Name"
                   autoComplete="username"
                   required
