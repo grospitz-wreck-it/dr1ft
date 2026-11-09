@@ -50,7 +50,7 @@ export default function JoinPage() {
     if (signUpError) {
       setError(
         signUpError.message.includes("already registered")
-          ? "Dieser Nutzername ist in dieser Klasse schon vergeben."
+          ? "Dieser Nutzername ist bereits vergeben."
           : signUpError.message
       );
       setPending(false);
