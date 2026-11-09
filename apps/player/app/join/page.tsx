@@ -4,10 +4,9 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { supabaseBrowserClient } from "../../lib/supabaseBrowserClient";
 
-function buildSyntheticEmail(username: string, accessCode: string): string {
+function buildSyntheticEmail(username: string): string {
   const cleanUser = username.toLowerCase().replace(/[^a-z0-9]/g, "");
-  const cleanCode = accessCode.toLowerCase().replace(/[^a-z0-9]/g, "");
-  return `${cleanUser}.${cleanCode}@dr1ft.local`;
+  return `${cleanUser}@dr1ft.local`;
 }
 
 export default function JoinPage() {
@@ -38,11 +37,14 @@ export default function JoinPage() {
     setError(null);
     setPending(true);
 
-    const email = buildSyntheticEmail(username, accessCode);
+    const email = buildSyntheticEmail(username);
 
     const { data: signUpData, error: signUpError } = await supabase.auth.signUp({
       email,
       password,
+      options: {
+        data: { username: username.trim() },
+      },
     });
 
     if (signUpError) {
@@ -77,6 +79,7 @@ export default function JoinPage() {
     const { error: joinError } = await supabase.rpc("join_class_as_student", {
       p_access_code: accessCode,
       p_display_name: displayName,
+      p_username: username.trim(),
     });
 
     if (joinError) {
