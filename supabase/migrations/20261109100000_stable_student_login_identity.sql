@@ -93,7 +93,7 @@ begin
   values (v_user_id, trim(p_display_name), v_username)
   on conflict (id) do update
     set display_name = excluded.display_name,
-        username = coalesce(public.user_profiles.username, excluded.username);
+        username = coalesce(user_profiles.username, excluded.username);
 
   insert into public.class_instance_memberships (
     class_instance_id,
