@@ -4,9 +4,10 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { supabaseBrowserClient } from "../../lib/supabaseBrowserClient";
 
-function buildSyntheticEmail(username: string): string {
+function buildSyntheticEmail(username: string, accessCode: string): string {
   const cleanUser = username.toLowerCase().replace(/[^a-z0-9]/g, "");
-  return `${cleanUser}@dr1ft.local`;
+  const cleanCode = accessCode.toLowerCase().replace(/[^a-z0-9]/g, "");
+  return `${cleanUser}.${cleanCode}@dr1ft.local`;
 }
 
 export default function JoinPage() {
@@ -37,20 +38,17 @@ export default function JoinPage() {
     setError(null);
     setPending(true);
 
-    const email = buildSyntheticEmail(username);
+    const email = buildSyntheticEmail(username, accessCode);
 
     const { data: signUpData, error: signUpError } = await supabase.auth.signUp({
       email,
       password,
-      options: {
-        data: { username: username.trim() },
-      },
     });
 
     if (signUpError) {
       setError(
         signUpError.message.includes("already registered")
-          ? "Dieser Nutzername ist bereits vergeben."
+          ? "Dieser Nutzername ist in dieser Klasse schon vergeben."
           : signUpError.message
       );
       setPending(false);
@@ -79,7 +77,6 @@ export default function JoinPage() {
     const { error: joinError } = await supabase.rpc("join_class_as_student", {
       p_access_code: accessCode,
       p_display_name: displayName,
-      p_username: username.trim(),
     });
 
     if (joinError) {
@@ -188,12 +185,9 @@ export default function JoinPage() {
                 </span>
                 <input
                   value={username}
-                  onChange={(e) => setUsername(e.target.value.replace(/[^a-zA-Z0-9]/g, "").slice(0, 32))}
+                  onChange={(e) => setUsername(e.target.value)}
                   placeholder="Dein Login-Name"
                   autoComplete="username"
-                  minLength={2}
-                  maxLength={32}
-                  pattern="[A-Za-z0-9]{2,32}"
                   required
                   className="touch-target w-full rounded-2xl border border-[#ddd8ec] bg-white/90 px-4 py-3.5 text-sm text-paper outline-none transition placeholder:text-ash/60 focus:border-fuchsia-400 focus:ring-4 focus:ring-fuchsia-100"
                 />
