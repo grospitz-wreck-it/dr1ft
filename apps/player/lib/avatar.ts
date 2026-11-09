@@ -29,8 +29,8 @@ const AVATAR_IDS = AVATAR_CATEGORIES.flatMap((category) =>
   Array.from({ length: 50 }, (_, index) => `DR1FT-${category.id}-${String(index + 1).padStart(3, "0")}`)
 );
 
-export function isDr1ftAvatarId(value: string | null | undefined): value is string {
-  return Boolean(value && /^DR1FT-(COL|POP|ANI|MOV|MON|JOB)-\\d{3}$/.test(value));
+export function isDr1ftAvatarId(value: string | null | undefined): boolean {
+  return Boolean(value && /^DR1FT-(COL|POP|ANI|MOV|MON|JOB)-\d{3}$/.test(value));
 }
 export function avatarCategoryFromId(id: string): AvatarCategory {
   return AVATAR_CATEGORIES.find((item) => id.startsWith(`DR1FT-${item.id}-`))?.key ?? "collectible";
