@@ -11,6 +11,10 @@ function supabaseBrowserClient() { return createBrowserClient(process.env.NEXT_P
 type Student = { user_id: string; display_name: string | null; username: string | null; avatar_seed: string | null };
 
 function studentAvatarUrl(seed: string | null | undefined, size = 96) {
+  if (seed && /^DR1FT-(COL|POP|ANI|MOV|MON|JOB)-\\d{3}$/.test(seed)) {
+    const category = ({ COL: "collectible", POP: "popculture", ANI: "animals", MOV: "movies", MON: "monsters", JOB: "professions" } as Record<string, string>)[seed.slice(6, 9)] ?? "collectible";
+    return `/avatars/${category}/${seed}.webp`;
+  }
   const styles = ["voxel-art", "adventurer", "adventurer-neutral", "avataaars", "bottts", "fun-emoji", "lorelei", "micah", "miniavs", "personas", "pixel-art-neutral", "thumbs"];
   const value = seed || "dr1ft";
   const separator = value.indexOf("::");
