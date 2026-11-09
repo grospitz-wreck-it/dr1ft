@@ -30,7 +30,7 @@ Deno.serve(async (req) => {
   const body = await req.json().catch(() => null);
   const classId = body?.classId?.trim();
   const displayName = body?.displayName?.trim();
-  const username = cleanPart(typeof body?.username === "string" ? body.username : "");
+  const username = body?.username?.trim();
   if (!classId || !displayName || !username) return json({ error: "Klasse, Anzeigename und Nutzername sind erforderlich" }, 400);
   if (username.length < 2 || username.length > 32) return json({ error: "Der Nutzername muss 2–32 Zeichen lang sein" }, 400);
   if (displayName.length > 80) return json({ error: "Der Anzeigename darf höchstens 80 Zeichen lang sein" }, 400);
@@ -48,8 +48,9 @@ Deno.serve(async (req) => {
   if (!classRow.is_active) return json({ error: "Diese Klasseninstanz ist nicht aktiv" }, 400);
 
   const cleanUsername = cleanPart(username);
+  const cleanCode = cleanPart(classRow.access_code);
   if (!cleanUsername) return json({ error: "Nutzername enthält keine gültigen Zeichen" }, 400);
-  const email = `${cleanUsername}@dr1ft.local`;
+  const email = `${cleanUsername}.${cleanCode}@dr1ft.local`;
   const password = generateTempPassword();
 
   const adminClient = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!);
