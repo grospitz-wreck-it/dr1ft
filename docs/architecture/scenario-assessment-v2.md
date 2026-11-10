@@ -302,3 +302,14 @@ Für ein Szenario soll die Redaktion nicht jede Interaktion einzeln bewerten mü
 - Der Szenario-Prozentwert wird nicht in eine Kompetenzstufe umgerechnet.
 - Eine spätere Editorial-Änderung verändert keinen bereits erstellten Assignment-Snapshot.
 - Ein Szenario-Snapshot aktualisiert nicht ungeprüft den Legacy-Kompetenzfortschritt.
+
+
+## Teacher-controlled student result visibility
+
+- Each subscribed scenario assignment has a separate `student_reports_enabled` flag.
+- The flag is added by `20261110130000_teacher_controlled_student_scenario_reports.sql` and defaults to `false`, including for existing assignments.
+- The Teacher dashboard exposes the setting directly on the assigned scenario card, next to the student and eye icons. It remains available for inactive subscriptions.
+- The existing `show_reports_at_end` field is deliberately unchanged; it controls teacher-facing report timing and is not reused for student visibility.
+- Student finalization always calculates and persists the result. The public student RPC returns only `status: hidden` until the teacher enables the flag. The internal finalizer is no longer executable by authenticated clients.
+- The results table remains inaccessible directly to students. Teacher report access is unchanged.
+- Changing the flag later affects the next result retrieval; it does not recalculate or mutate stored results.
