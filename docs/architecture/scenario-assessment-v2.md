@@ -311,5 +311,6 @@ Für ein Szenario soll die Redaktion nicht jede Interaktion einzeln bewerten mü
 - The Teacher dashboard exposes the setting directly on the assigned scenario card, next to the student and eye icons. It remains available for inactive subscriptions.
 - The existing `show_reports_at_end` field is deliberately unchanged; it controls teacher-facing report timing and is not reused for student visibility.
 - Student finalization always calculates and persists the result. The public student RPC returns only `status: hidden` until the teacher enables the flag. The internal finalizer is no longer executable by authenticated clients.
-- The results table remains inaccessible directly to students. Teacher report access is unchanged.
+- Direct access to the results table is granted only to authenticated users covered by the teacher-scoped RLS policy. Students cannot read it directly.
+- The existing individual student report in the Teacher dashboard now includes the persisted scenario requirement result. Teacher access remains independent of the student visibility toggle.
 - Changing the flag later affects the next result retrieval; it does not recalculate or mutate stored results.
