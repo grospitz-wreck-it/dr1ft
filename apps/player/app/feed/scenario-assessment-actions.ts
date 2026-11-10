@@ -3,7 +3,7 @@
 import { supabaseServerClient } from "../../lib/supabaseServerClient";
 
 export type ScenarioAssessmentResult = {
-  status: "assessed" | "not_assessable" | "snapshot_missing" | string;
+  status: "assessed" | "not_assessable" | "snapshot_missing" | "hidden" | string;
   percentage: number | null;
   required_count?: number;
   completed_count?: number;
