@@ -145,7 +145,7 @@ export function ScenarioToggle({
           <p className="mt-1 line-clamp-2 text-xs leading-4 text-slate-600">{description?.trim() || "Für dieses Szenario liegt noch keine Kurzbeschreibung vor."}</p>
           {selected && moduleReport && <p className="mt-1 line-clamp-1 text-[10px] text-slate-500">{moduleReport}</p>}
           {selected && hasSchedule && <p className="mt-1 text-[10px] text-slate-500">{scheduledStartAt ? new Date(scheduledStartAt).toLocaleString("de-DE") : "Sofort"}{scheduledEndAt ? " – " + new Date(scheduledEndAt).toLocaleString("de-DE") : ""}</p>}
-          {selected && <div className="mt-2 flex flex-wrap items-center gap-2">
+          {<div className="mt-2 flex flex-wrap items-center gap-2">
             <span className="inline-flex items-center gap-1.5 text-[11px] font-medium text-slate-600"><Users className="h-3.5 w-3.5" />Schüler</span>
             <Eye className="h-3.5 w-3.5 text-slate-500" aria-hidden="true" />
             <span className="text-[11px] text-slate-600">Reporting sichtbar</span>
