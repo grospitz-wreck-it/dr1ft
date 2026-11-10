@@ -657,6 +657,10 @@ export async function updateContentLearningTask(
     .filter((id): id is string => typeof id === "string")
     .map((id) => id.trim())
     .filter((id) => assessedActions.includes(id)))).slice(0, 20);
+  const requirementMode = task.assessment?.requirementMode === "all_acceptable" ? "all_acceptable" : "any";
+  if (assessedActions.length > 0 && acceptableActions.length === 0) {
+    throw new Error("Bitte markiere mindestens eine bewertete Aktion auch als passend.");
+  }
   const normalizedTask: ContentLearningTask = {
     purpose: String(task.purpose || "").trim().slice(0, 1000),
     learnerAction: String(task.learnerAction || "").trim().slice(0, 1500),
@@ -670,7 +674,7 @@ export async function updateContentLearningTask(
       assessedActions,
       acceptableActions,
       evidenceKey: String(task.assessment?.evidenceKey || "in_feed_decision").trim().slice(0, 120) || "in_feed_decision",
-      requirementMode: task.assessment?.requirementMode === "all_acceptable" ? "all_acceptable" : "any",
+      requirementMode,
     },
     competencyIds: Array.from(new Set((task.competencyIds ?? []).filter((id): id is string => typeof id === "string").map((id) => id.trim()).filter(Boolean))).slice(0, 12),
   };
