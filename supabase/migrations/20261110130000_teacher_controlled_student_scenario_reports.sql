@@ -75,6 +75,9 @@ create policy scenario_assessment_results_teacher_read
   on public.scenario_assessment_results
   for select
   to authenticated
-  using (public.is_teacher_of_class_instance(class_instance_id));
+  using (
+    public.is_teacher_of_class_instance(class_instance_id)
+    or public.can_view_class_individual_reports(class_instance_id)
+  );
 
 grant select on table public.scenario_assessment_results to authenticated;
