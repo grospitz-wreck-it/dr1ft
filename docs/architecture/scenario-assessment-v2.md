@@ -84,6 +84,8 @@ Bevor Evidence Indicators numerisch in die Szenarioberechnung eingehen, müssen 
 
 Bis diese Regeln implementiert und getestet sind, werden Evidence Indicators im Assessment-Katalog geführt, aber nicht durch heuristische Interpretation in Punkte umgerechnet.
 
+Das pädagogische Framework kennt außerdem die qualitative Evidence-Quality-Skala `Emerging`, `Developing`, `Secure`, `Advanced` und nennt optional interne Modellwerte von 0.00–1.00 (0.00–0.24 / 0.25–0.49 / 0.50–0.74 / 0.75–1.00). Diese Skala beschreibt die Qualität bzw. Einordnung von Evidenz. Sie ist ausdrücklich keine Schulnote und darf nicht automatisch mit dem Szenario-Abschluss-Prozentwert gleichgesetzt werden. Ebenso bleibt Confidence eine separate Größe.
+
 ## 4. Berechnungsmodell für den Szenario-Abschluss
 
 ### 4.1 Anforderungspunkte
