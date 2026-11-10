@@ -233,8 +233,10 @@ Diese Quellen dürfen nicht durch doppelte Inserts künstlich vereinheitlicht we
 - Die Migration enthält Regressionstests für 1 von 2 erfüllten Anforderungen = 50 %, Teil-Erfüllung = 50 %, optionale Anforderungen, den letzten Versuch und den Fall ohne Pflichtanforderungen.
 - Editorial kann für Feed-Aktionen zwischen einer genügenden Alternative und mehreren einzeln erforderlichen akzeptierten Aktionen unterscheiden.
 - Die neue RPC-Migration erhält die bisherige Semantik für Bestandsinhalte ohne `requirementMode` (`any`).
+- Neue bzw. ausdrücklich reaktivierte Szenario-Zuweisungen erhalten einen unveränderlichen Requirement-Snapshot. Pflicht-Lernkarten und Feed-Anforderungen werden beim Zuweisungszeitpunkt eingefroren.
+- `finalize_scenario_assessment_v1` führt die letzten Feed- und Lernkartenversuche gegen diesen Snapshot zusammen und speichert ein idempotent aktualisierbares Szenario-Ergebnis. Das Ergebnis verändert keinen langfristigen Kompetenzstand.
 
-**Noch nicht umgesetzt:** Die gemeinsame Auswertung, die Lernkarten, Feed-Anforderungen und Assignment-Snapshots zusammenführt, ist noch nicht angeschlossen. Die vier Kompetenzstufen und Confidence werden noch nicht aus Ereignissen berechnet. Die neuen SQL-Migrationen liegen nur auf dem Arbeitsbranch und wurden nicht auf Supabase angewendet.
+**Noch nicht umgesetzt:** Die Player-Oberfläche ruft die neue Abschluss-RPC noch nicht auf und zeigt das gespeicherte Szenario-Ergebnis noch nicht an. Die vier Kompetenzstufen und Confidence werden noch nicht aus Ereignissen berechnet. Bestehende aktive Zuweisungen werden bewusst nicht rückwirkend mit einem Snapshot versehen, weil ihre historische Editorial-Konfiguration nicht sicher rekonstruierbar ist. Die neuen SQL-Migrationen liegen nur auf dem Arbeitsbranch und wurden nicht auf Supabase angewendet.
 
 ## 10. Zielbild der technischen Zusammenführung
 
