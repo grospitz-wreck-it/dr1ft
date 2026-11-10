@@ -293,10 +293,11 @@ export function FeedClient({ initialItems, teacherModules = [], userId, classIns
       finalizeScenarioAssessment({ classInstanceId, scenarioId })
     )).then((entries) => {
       if (cancelled) return;
-      const failed = entries.find((entry) => !entry.ok);
-      if (failed && !failed.ok) {
-        setScenarioFinishError(failed.error);
-        return;
+      for (const entry of entries) {
+        if (entry.ok === false) {
+          setScenarioFinishError(entry.error);
+          return;
+        }
       }
       setScenarioAssessmentResults(entries.flatMap((entry) =>
         entry.ok ? [{ scenarioId: entry.scenarioId, result: entry.result }] : []
@@ -438,10 +439,11 @@ export function FeedClient({ initialItems, teacherModules = [], userId, classIns
       const finalized = await Promise.all(ids.map((scenarioId) =>
         finalizeScenarioAssessment({ classInstanceId, scenarioId })
       ));
-      const failed = finalized.find((entry) => !entry.ok);
-      if (failed && !failed.ok) {
-        setScenarioFinishError(failed.error);
-        return;
+      for (const entry of finalized) {
+        if (entry.ok === false) {
+          setScenarioFinishError(entry.error);
+          return;
+        }
       }
 
       const results = finalized.flatMap((entry) =>
