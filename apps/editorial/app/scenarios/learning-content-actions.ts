@@ -611,7 +611,7 @@ export type ContentLearningTask = {
   successCriteria: string;
   feedback: string;
   interactions?: Array<{ id: string; label: string; instruction?: string; custom?: boolean; discoveryTitle?: string; discoveryMessage?: string; discoveryCompetency?: string }>;
-  assessment?: { assessedActions?: string[]; acceptableActions?: string[]; evidenceKey?: string };
+  assessment?: { assessedActions?: string[]; acceptableActions?: string[]; evidenceKey?: string; requirementMode?: "any" | "all_acceptable" };
   competencyIds?: string[];
 };
 
@@ -670,6 +670,7 @@ export async function updateContentLearningTask(
       assessedActions,
       acceptableActions,
       evidenceKey: String(task.assessment?.evidenceKey || "in_feed_decision").trim().slice(0, 120) || "in_feed_decision",
+      requirementMode: task.assessment?.requirementMode === "all_acceptable" ? "all_acceptable" : "any",
     },
     competencyIds: Array.from(new Set((task.competencyIds ?? []).filter((id): id is string => typeof id === "string").map((id) => id.trim()).filter(Boolean))).slice(0, 12),
   };
