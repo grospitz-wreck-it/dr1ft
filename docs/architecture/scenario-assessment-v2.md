@@ -116,9 +116,14 @@ Formula:
 
 A missing required action contributes zero. A card's best recorded outcome contributes its mapped points. No required assessable requirements means `score = null`, not 0 or 100.
 
-### Completion signal
+### Completion signal and early finish
 
-Do not trust the existing sessionStorage `scenarioFinished` flag as proof of completion. The backend completion predicate should be based on persisted activity: all live scenario feed posts viewed in the assigned class context and all required scoreable learning cards attempted. Required feed actions themselves need not all be successful or even performed; missing actions remain zero in the final denominator. This allows a learner who performs one of two required actions to receive 50%, not 100%.
+- A learner may explicitly finish a scenario at any time; do not require every post, mission, or card to be completed before the finish action is available.
+- Preserve the explicit finish confirmation when there are unfinished tasks. The confirmation must accurately show remaining work and allow the learner to cancel.
+- Finishing early is a valid finalization path, not a failed or invalid session. Uncompleted required requirements remain in the denominator and score zero.
+- The current `FeedClient.tsx` on `main` does not render a finish button or confirmation. Git history confirms that a manual finish handler once existed: commit `bfb28821a7b9faf3f778f81323af863eb3674ffc` added it; commit `56d3bbe57e27189d755d5c90284413125d826b77` removed it as unused. The old handler only showed a generic browser confirmation based on unfinished mission count; it did not implement three aggregate result responses.
+- The existing three card outcomes (`success`, `partial`, `not_yet`) are per-answer feedback and must not be confused with the three scenario-finish responses the user refers to. The exact existing scenario-level response copy/thresholds still need to be located and preserved; do not replace them with invented bands.
+- The backend finalization call should accept an explicit learner finish request, calculate the score from persisted attempts and the assignment snapshot, and return the appropriate existing scenario-level response. It must be idempotent and must not depend on a client-side `sessionStorage` flag.
 
 ## Compatibility
 
@@ -134,7 +139,7 @@ Do not trust the existing sessionStorage `scenarioFinished` flag as proof of com
 3. Scoring tests: two independent requirements with one completed = 50%; two alternatives within one requirement = at most one requirement; unperformed required actions = zero; optional requirements excluded.
 4. Retry tests: not-yet then success = best success; success then not-yet remains success; repeated attempts never inflate the denominator or numerator.
 5. Card tests: success/partial/not-yet = 1/0.5/0; retries retain raw rows and count the best.
-6. Completion tests: unviewed feed post or unattempted required card means interim result; all posts viewed and required cards attempted means final result.
+6. Completion tests: learner can finish early; confirmation appears when unfinished work remains; cancelling leaves the scenario active; confirming finalizes once; incomplete requirements remain zero in the denominator; all three existing scenario-level responses and their thresholds/copy are preserved.
 7. Authorization tests: active student membership and active class assignment required; no cross-class or cross-student reads.
 8. Build Editorial and Player; inspect preview deployments only. No Production deployment or Supabase production migration without explicit approval.
 
