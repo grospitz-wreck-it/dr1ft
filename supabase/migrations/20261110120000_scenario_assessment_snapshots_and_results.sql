@@ -46,7 +46,7 @@ create or replace function public.capture_scenario_assessment_snapshot_v1()
 returns trigger
 language plpgsql
 security definer
-set search_path = public, pg_temp
+set search_path = pg_catalog, public, pg_temp
 as $function$
 declare
   v_should_capture boolean := false;
@@ -235,7 +235,7 @@ create or replace function public.finalize_scenario_assessment_v1(
 returns jsonb
 language plpgsql
 security definer
-set search_path = public, pg_temp
+set search_path = pg_catalog, public, pg_temp
 as $function$
 declare
   v_user_id uuid := auth.uid();
