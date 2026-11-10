@@ -51,16 +51,20 @@ begin
   loop
     if jsonb_typeof(v_requirement.value) is distinct from 'object'
        or nullif(btrim(v_requirement.value ->> 'id'), '') is null
-       or jsonb_typeof(v_requirement.value -> 'required') is distinct from 'boolean'
-       or (
-         v_requirement.value ? 'weight'
-         and (
-           jsonb_typeof(v_requirement.value -> 'weight') is distinct from 'number'
-           or (v_requirement.value ->> 'weight')::numeric <= 0
-         )
-       ) then
+       or jsonb_typeof(v_requirement.value -> 'required') is distinct from 'boolean' then
       raise exception 'Invalid requirement definition'
         using errcode = '22023';
+    end if;
+
+    if v_requirement.value ? 'weight' then
+      if jsonb_typeof(v_requirement.value -> 'weight') is distinct from 'number' then
+        raise exception 'Requirement weight must be a positive number'
+          using errcode = '22023';
+      end if;
+      if (v_requirement.value ->> 'weight')::numeric <= 0 then
+        raise exception 'Requirement weight must be a positive number'
+          using errcode = '22023';
+      end if;
     end if;
   end loop;
 
