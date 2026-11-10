@@ -1,222 +1,285 @@
 # DR1FT Scenario Assessment v2
 
-Status: fachlicher und technischer Berechnungsvertrag auf Branch `fix/scenario-assessment-v2`. Dieser Stand beschreibt die Berechnungsgrundlage; es wurden keine funktionalen Änderungen und keine Supabase-Schreiboperationen vorgenommen.
+Status: verbindlicher fachlicher Integrationsvertrag auf Branch `fix/scenario-assessment-v2`.
+Stand: 10.11.2026. Dieses Dokument führt Learning Design, Editorial-Konfiguration, Player-Ereignisse und Kompetenzbewertung zusammen. Es beschreibt den Zielvertrag; funktionale Änderungen und Supabase-Schreiboperationen sind davon getrennt.
 
-## 1. Verbindliche Grundlagen und Abgrenzung
+## 1. Verbindliche pädagogische Entscheidungen
 
-Dieses Dokument konkretisiert die vorhandene DR1FT-Basis:
+### 1.1 Vier Kompetenzstufen
 
-- `DR1FT_Learning_Design_Assessment_Framework_v1.0.md`
-- `DR1FT_Tracking_und_Auswertungsstruktur_v0.1.md`
-- vorhandene Learning-Design- und Assessment-Strukturen in Editorial, Player und Supabase.
+Jede im Szenario tatsächlich beurteilbare Zielkompetenz erhält genau eine qualitative Stufe:
 
-Die pädagogischen Grundsätze bleiben maßgeblich:
+| Stufe | Bedeutung |
+|---|---|
+| Emerging | Erste Ansätze erkennbar, aber noch keine verlässliche Anwendung |
+| Developing | Grundverständnis vorhanden, Anwendung noch nicht stabil |
+| Secure | Selbstständige, nachvollziehbare Anwendung |
+| Advanced | Auch bei komplexen oder neuen Situationen sicher und differenziert |
 
-- Learning Evidence ist multidimensional: Behaviour, Reasoning, Reflection, Creation und Transfer.
-- Ein Klick, eine Sichtung, ein Like, ein Report oder ein Missionsabschluss ist für sich allein kein Kompetenznachweis.
-- Ein einzelnes Szenario ist ein Messpunkt, keine endgültige Kompetenzdiagnose.
-- Evidenzsicherheit (Confidence) und Kompetenzstand sind getrennt zu behandeln.
-- Fehlende Daten bedeuten zunächst „nicht beobachtet/nicht gespeichert“, nicht automatisch „nicht gekonnt“.
+Die vier Stufen beschreiben die im Szenario beobachtete Kompetenzleistung. Sie sind weder Schulnoten noch Prozentbänder. Sie dürfen nicht durch eine pauschale Umrechnung des Szenario-Erfüllungsprozents erzeugt werden.
 
-**Wichtige Abgrenzung:** Das Szenario-Abschlussergebnis ist eine Bewertung der im konkreten Szenario nachgewiesenen, redaktionell festgelegten Anforderungen. Es ist weder Schulnote noch Kompetenzlevel und darf nicht direkt in `user_competency_progress` geschrieben werden.
+### 1.2 Confidence ist unabhängig
 
-## 2. Was zählt als Berechnungseinheit?
+| Confidence | Bedeutung |
+|---|---|
+| Niedrig | Nur wenige oder schwache Nachweise |
+| Mittel | Mehrere passende Beobachtungen |
+| Hoch | Unterschiedliche, übereinstimmende Nachweise |
 
-Nicht Lernabschnitte, Posts oder Klicks pauschal zählen. Bewertet werden nur explizit konfigurierte, einzeln identifizierbare **Szenario-Anforderungen**.
+Confidence beschreibt die Belastbarkeit der Einstufung, nicht die Leistungshöhe. Wiederholungen derselben Aktion sind keine unterschiedlichen Nachweise. Die konkrete technische Schwellenlogik wird erst nach einem Testdatensatz verbindlich festgelegt; es werden keine unbelegten Zahlenwerte angenommen.
 
-Eine Anforderung ist eine pädagogisch begründete, beobachtbare Leistung, die einem Lernziel zugeordnet und durch einen zulässigen Nachweis erfüllt werden kann.
+### 1.3 Nicht ausreichend beurteilbar
 
-### 2.1 Scorebare Anforderungstypen im aktuellen System
+„Nicht ausreichend beurteilbar“ ist ein eigener Ergebniszustand, keine fünfte Kompetenzstufe. Er wird verwendet, wenn zu einer Zielkompetenz keine oder zu wenige aussagekräftige Nachweise vorliegen. Fehlende oder nicht gespeicherte Daten dürfen nicht als Emerging oder als mangelnde Kompetenz interpretiert werden.
 
-**A. Szenario-Lernkarten**
+### 1.4 Drei getrennte Ergebnisse
 
-- Eine Lernkarte kann eine Anforderung bilden, wenn sie scorebar und verpflichtend konfiguriert ist.
-- Die vorhandenen Antwortausgänge sind `success`, `partial` und `not_yet`.
-- Die vorhandene Player-Rückmeldung und die Datenbank-RPC kennen diese drei Ausgänge.
-- Die vorhandene semantische Punktzuordnung ist: `success = 1.0`, `partial = 0.5`, `not_yet = 0.0`.
-- Reflexionskarten sind laut bestehender RPC keine scorebare Kompetenz-Evidenz.
-- `required = false` darf nicht in den Nenner eingehen.
-- Bei Bestandskarten mit `required = null` ist die frühere Absicht nicht eindeutig nachgewiesen. Sie dürfen nicht stillschweigend als verpflichtend oder optional interpretiert werden. Vor einer produktiven Bewertung braucht es eine explizite Legacy-Regel oder redaktionelle Klärung.
+DR1FT darf diese Ergebnisse nicht vermischen:
 
-**B. Bewertete Feed-Aktionen**
+1. **Anforderungserfüllung im Szenario:** Welche konkret definierten Pflichtanforderungen wurden erfüllt? Hier ist ein Prozentwert zulässig.
+2. **Kompetenzprofil des Szenarios:** Welche der vier Stufen ist je Zielkompetenz durch die Nachweise begründet, und wie hoch ist die Confidence?
+3. **Langfristige Kompetenzentwicklung:** Welche Entwicklung zeigt sich über mehrere Szenarien, Lerngelegenheiten und Kontexte?
 
-- Die vorhandene Konfiguration `content_items.extra.learningTask.assessment` mit `assessedActions` und `acceptableActions` definiert einen bewerteten Aktionsbereich.
-- Die bestehende RPC leitet das Ergebnis serverseitig ab: akzeptierte Aktion = `success`, andere konfigurierte Aktion = `not_yet`.
-- Bei Legacy-Konfigurationen bilden `assessedActions` und `acceptableActions` zusammen zunächst **eine** Anforderung mit mehreren möglichen Aktionen. Die einzelnen Alternativen dürfen nicht als mehrere Anforderungen gezählt werden.
-- Der aktuelle Fallback `evidenceKey = 'in_feed_decision'` kann verschiedene Aktionen zusammenfallen lassen. Für neue Konfigurationen braucht jede unabhängige Anforderung eine stabile, eigene ID.
-- Die Client-Anfrage darf niemals selbst das Ergebnis oder die Punktzahl bestimmen.
+Ein Szenario-Prozentwert ist kein Kompetenzlevel. Ein Szenario-Kompetenzprofil ist noch keine dauerhafte Diagnose.
 
-### 2.2 Daten, die allein keine scorebare Anforderung bilden
+## 2. Gemeinsamer Datenfluss
 
-Diese Daten bleiben pädagogisch und analytisch wichtig, werden aber nicht automatisch in den Szenario-Prozentwert eingerechnet:
+Der verbindliche Ablauf lautet:
 
-- Learning Step / Lernabschnitt: strukturiert den Lernweg, ist aber nicht selbst der Nachweis.
-- `learning_step_content.required`: sagt aus, dass Content zum Lernschritt gehört; es beweist nicht, dass ein Lernziel erreicht wurde.
-- `learning_steps.required`: strukturelle Pflichtangabe, keine Schülerleistung.
-- Views, Likes, Kommentare, Reports und Prüf-Klicks: beobachtbare Rohhandlungen; ohne zugeordnetes und fachlich geprüftes Erfolgskriterium keine Punkte.
-- Mission-Abschluss: belegt zunächst den Aufgabenabschluss, nicht automatisch die Erreichung aller zugeordneten Lernziele.
-- Bloom-Level, Lernphase, pädagogische Funktion und geschätzte Dauer: Design-Metadaten, keine Leistungswerte.
+```
+Learning Design
+  Lernziel + Zielkompetenz
+        |
+        v
+Editorial Assessment Design
+  stabile Anforderungen + Evidence Indicators + Kriterien
+        |
+        v
+Assignment Snapshot
+  unveränderliche Bewertungsgrundlage für diese Zuweisung
+        |
+        v
+Player Events / Antworten
+  Feed-Aktionen, Lernkarten, Reflexion, Creation, Transfer
+        |
+        v
+Normalisierte Evidence
+  Quelle + Requirement/Indicator + Wert + Kontext + Zeitpunkt
+        |
+        v
+Szenario-Auswertung
+  Anforderungserfüllung + Kompetenzstufe + Confidence
+        |
+        +--------------------+
+        v                    v
+Player Abschluss         Langfristige Entwicklung
+Botschaft + Profil       über mehrere Szenarien
+```
 
-Diese Trennung verhindert, dass DR1FT Aktivität mit Lernerfolg verwechselt.
+Jede Bewertung muss vom Ergebnis bis zum konkreten Lernziel, Indikator und gespeicherten Nachweis zurückverfolgbar sein.
 
-## 3. Evidence Indicators: wichtige Grundlage, aber noch keine fertige Punkteskala
+## 3. Was ist eine Anforderung und was ist ein Nachweis?
 
-Die Tabelle `evidence_indicators` enthält unter anderem:
+Eine **Anforderung** ist eine einzeln identifizierbare, beobachtbare Schülerleistung. Sie wird einem Lernziel und mindestens einer Zielkompetenz zugeordnet.
 
-- `learning_step_id`, `objective_id`, `competency_id`
-- `positive_signal`, `negative_signal`
-- `evidence_type`, `dimension`
-- `confidence_weight`
-- `required`
+Ein **Evidence Indicator** beschreibt, woran die relevante Leistung erkannt wird. Er verbindet Lernschritt, Lernziel, Kompetenz, Evidenzdimension und beobachtbare Kriterien.
 
-Diese Indikatoren sind die fachlich richtige Verbindung zwischen Lernschritt, Lernziel und beobachtbarem Nachweis. Die vorhandenen JSON-Signale beschreiben jedoch noch keine vollständig standardisierte numerische Bewertungsfunktion.
+Ein **Rohereignis** ist zunächst nur eine gespeicherte Aktion oder Antwort. Es wird erst dann zu bewertbarer Evidence, wenn eine redaktionell definierte Regel es einem Indikator zuordnet und die Kriterien erfüllt sind.
 
-**Insbesondere ist `confidence_weight` nicht automatisch das Gewicht einer Szenario-Punktzahl.** Es beschreibt die Bedeutung bzw. Sicherheit eines Evidenzindikators für die Interpretation. Es darf nicht ungeprüft als Multiplikator im Szenario-Prozentwert verwendet werden.
+### 3.1 Mehrere erwartete Handlungen müssen getrennte Anforderungen sein
 
-Bevor Evidence Indicators numerisch in die Szenarioberechnung eingehen, müssen je Indikator bzw. Indikatortyp festgelegt sein:
+Wenn ein Beitrag zwei unterschiedliche Handlungen fördern soll und beide erwartet werden, sind es zwei Requirement-IDs.
 
-1. welches gespeicherte Ereignis als Quelle gilt;
-2. wie das Ereignis eindeutig diesem Indikator zugeordnet wird;
-3. welche beobachtbaren Bedingungen ein positives, negatives oder uneindeutiges Signal ergeben;
-4. ob die Bewertung binär oder abgestuft ist;
-5. ob der Indikator verpflichtend ist;
-6. ob mehrere Ereignisse Wiederholungen desselben Nachweises oder unabhängige Nachweise darstellen.
+Beispiel:
+- Requirement A: Quelle prüfen.
+- Requirement B: Kontext prüfen.
 
-Bis diese Regeln implementiert und getestet sind, werden Evidence Indicators im Assessment-Katalog geführt, aber nicht durch heuristische Interpretation in Punkte umgerechnet.
+Erfüllt der Schüler nur A, ist die Anforderungserfüllung bei gleicher Gewichtung 1 von 2 = 50 %. Der Beitrag darf nicht als vollständig erfüllt gelten.
 
-Das pädagogische Framework kennt außerdem die qualitative Evidence-Quality-Skala `Emerging`, `Developing`, `Secure`, `Advanced` und nennt optional interne Modellwerte von 0.00–1.00 (0.00–0.24 / 0.25–0.49 / 0.50–0.74 / 0.75–1.00). Diese Skala beschreibt die Qualität bzw. Einordnung von Evidenz. Sie ist ausdrücklich keine Schulnote und darf nicht automatisch mit dem Szenario-Abschluss-Prozentwert gleichgesetzt werden. Ebenso bleibt Confidence eine separate Größe.
+**Wichtig: Alternativen sind etwas anderes als mehrere Pflichtanforderungen.**
+- Mehrere Handlungen, die alle erforderlich sind: mehrere Requirement-IDs.
+- Mehrere mögliche Handlungen, von denen eine genügt: eine Requirement-ID mit mehreren akzeptierten Alternativen.
 
-## 4. Berechnungsmodell für den Szenario-Abschluss
+Die bisherige Feed-Konfiguration `assessedActions` / `acceptableActions` bildet derzeit nur einen gemeinsamen Bewertungsbereich ab. Sie kann nicht zuverlässig ausdrücken, dass mehrere Aktionen unabhängig voneinander Pflicht sind. Dafür ist eine neue explizite Requirement-Struktur nötig.
 
-### 4.1 Anforderungspunkte
+### 3.2 Pflicht, optional und nicht beobachtet
 
-Jede scorebare Anforderung erhält einen erreichten Wert (p_i) zwischen 0 und 1:
+- Pflichtanforderungen zählen in Zähler und Nenner der Szenario-Anforderungserfüllung.
+- Optionale Anforderungen zählen weder in Zähler noch Nenner.
+- Eine nicht ausgeführte Pflichtanforderung erhält im Szenario-Erfüllungswert 0 Punkte.
+- Im Kompetenzprofil bleibt „nicht beobachtet“ von „beobachtet und nicht erfüllt“ unterscheidbar.
+- Wenn es keine Pflichtanforderungen gibt, lautet der Erfüllungswert „nicht bewertbar“ und nicht 0 % oder 100 %.
 
-| Nachweisstatus | Wert |
+## 4. Bewertungsregeln für die Anforderungserfüllung
+
+### 4.1 Werte
+
+| Status | Wert |
 |---|---:|
 | Vollständig erfüllt | 1.0 |
 | Teilweise erfüllt | 0.5 |
 | Explizit nicht erfüllt | 0.0 |
-| Noch kein Nachweis / nicht bearbeitet | 0.0 für den Szenario-Abschlusswert |
+| Keine Beobachtung / nicht bearbeitet | 0.0 für Pflichtanforderungen im Szenario-Erfüllungswert |
 
-Die letzte Zeile gilt ausdrücklich für den **Abschlusswert**, nicht als Kompetenzdiagnose. In Berichten muss „kein Nachweis vorhanden“ von „negativer Nachweis“ unterscheidbar bleiben.
+Die Werte 1.0 / 0.5 / 0.0 sind für bestehende Learning-Card-Outcomes `success`, `partial`, `not_yet` bereits vorhanden. Andere Quelltypen dürfen diese Werte erst verwenden, wenn ihre Bewertungsregel explizit definiert ist.
 
-Für bestehende Lernkarten sind die drei Werte durch die gespeicherten Outcomes bereits belegt. Für andere Anforderungstypen darf die Skala erst nach Definition der fachlichen Bewertungsregel verwendet werden.
-
-### 4.2 Gewichtung
-
-Jede verpflichtende Anforderung erhält ein positives Gewicht (w_i).
-
-- Wenn keine redaktionelle Gewichtung definiert ist, gilt zunächst Gewicht 1 für jede verpflichtende, scorebare Anforderung.
-- Unterschiedliche Gewichte dürfen erst verwendet werden, wenn Editorial sie ausdrücklich und nachvollziehbar konfigurieren kann.
-- `confidence_weight` aus `evidence_indicators` ist dafür nicht der Ersatz.
-- Optionale Anforderungen tragen weder zum Zähler noch zum Nenner bei.
-
-### 4.3 Formel
+### 4.2 Formel
 
 ```
-Szenario-Ergebnis (%) =
+Anforderungserfüllung (%) =
   100 * SUM(Gewicht_i * erreichte_Punkte_i)
-      / SUM(Gewicht_i aller verpflichtenden scorebaren Anforderungen)
+      / SUM(Gewicht_i aller Pflichtanforderungen)
 ```
 
-Der Wert wird intern mit ausreichender Präzision gespeichert. Rundung erfolgt nur für die Anzeige. Ergebnisstufen werden anhand des ungerundeten Wertes ausgewählt.
+- Standardgewicht ist 1.
+- Abweichende Gewichte müssen ausdrücklich im Editorial konfiguriert werden.
+- `evidence_indicators.confidence_weight` ist kein Ersatz für das Gewicht einer Pflichtanforderung.
+- Rundung erfolgt nur bei der Anzeige.
 
-Wenn keine verpflichtenden scorebaren Anforderungen existieren, ist das Ergebnis `null` bzw. „nicht bewertbar“ – niemals automatisch 0 % oder 100 %.
+### 4.3 Wiederholungen
 
-### 4.4 Wiederholte Versuche
+- Alle Versuche bleiben als Rohereignisse nachvollziehbar.
+- Pro Requirement wird für den Szenario-Abschluss der **letzte gültige Versuch** berücksichtigt. Das entspricht dem bestehenden Learning-Card-Reporting, das die letzte Antwort pro Schüler und Karte auswählt.
+- Mehrere Versuche erzeugen keine zusätzlichen Requirements und erhöhen nicht automatisch die Confidence.
+- Eine spätere Änderung dieser Regel braucht eine bewusste pädagogische Entscheidung und Tests gegen die Feedback- und Retry-Interaktion.
 
-Alle Versuche bleiben als unveränderliche Rohereignisse erhalten.
+## 5. Kompetenzstufe aus Evidence ableiten
 
-Für die Szenario-Abschlussberechnung wird pro Anforderung nur ein Ergebnis berücksichtigt; mehrere Versuche dürfen Zähler oder Nenner nicht künstlich vervielfachen. Als Arbeitsregel wird der beste nachweislich erreichte Wert pro Anforderung vorgeschlagen. Das muss gegen die vorhandenen Lernkarten- und Feedbackabläufe getestet werden, damit Wiederholungen nicht durch bloßes Raten zu einer Kompetenzdiagnose führen.
+Die Kompetenzstufe wird pro Zielkompetenz aus den zugeordneten Evidence Indicators und deren qualitativen Kriterien abgeleitet – nicht aus dem Szenario-Prozentwert.
 
-Die Auswertung muss zusätzlich Anzahl und Verlauf der Versuche getrennt ausweisen können. Ein hoher Szenario-Abschlusswert allein ist keine Aussage über stabile, kontextübergreifende Kompetenz.
+### 5.1 Evidence-Dimensionen
 
-## 5. Früher Abschluss und fehlende Nachweise
+Das DR1FT-Framework unterscheidet:
+- Behaviour: Was hat die Person getan?
+- Reasoning: Wie wurde eine Entscheidung begründet?
+- Reflection: Was erkennt die Person über ihr Verhalten?
+- Creation: Was hat sie erstellt?
+- Transfer: Kann sie eine Erkenntnis in einer neuen Situation anwenden?
 
-- Lernende dürfen ein Szenario jederzeit ausdrücklich beenden.
-- Vor dem Beenden kann der Player auf noch offene Anforderungen bzw. Aufgaben hinweisen und eine Abbruchbestätigung anbieten.
-- Wird vorzeitig beendet, bleiben alle nicht nachgewiesenen verpflichtenden Anforderungen im Nenner und erhalten für den Szenario-Abschlusswert 0 Punkte.
-- Nicht bearbeitete optionale Anforderungen bleiben ausgeschlossen.
-- Der Abschluss ist ein gültiger Zustand, auch wenn Anforderungen offenbleiben.
-- Abbrechen der Bestätigung verändert den Zustand nicht.
-- Die finale Berechnung erfolgt serverseitig aus gespeicherten Nachweisen und einer unveränderlichen Bewertungsgrundlage; ein Client-Flag in `sessionStorage` ist kein Abschlussnachweis.
+Nicht jedes Szenario muss alle fünf Dimensionen abdecken. Die ausgewählten Dimensionen müssen zum Lernziel passen.
 
-## 6. Drei pädagogische Abschlussrückmeldungen
+### 5.2 Mindestanforderungen an einen Indikator
 
-Der Nutzer erinnert drei unterschiedliche Rückmeldungen abhängig davon, wie viele Anforderungen erfüllt wurden. Die genaue historische Formulierung und die damaligen Schwellenwerte sind bisher nicht zweifelsfrei im aktuellen Player-Code oder in den geprüften Datenbankobjekten nachgewiesen.
+Jeder bewertete Indikator muss festlegen:
+1. zugehöriges Lernziel und Kompetenz;
+2. Evidenzdimension und Evidenztyp;
+3. zulässige Ereignisquelle(n);
+4. eindeutige Requirement-/Indicator-ID;
+5. positive, teilweise, negative und uneindeutige Beobachtungskriterien;
+6. ob der Indikator verpflichtend oder ergänzend ist;
+7. wie Wiederholungen und unabhängige Beobachtungen unterschieden werden;
+8. welche qualitative Beschreibung die vier Stufen in diesem Kontext konkret belegt.
 
-Daher gilt:
+Ein einzelner Klick oder eine einzelne Feed-Aktion kann einen eng begrenzten Behaviour-Nachweis liefern. Sie belegt für sich allein keine differenzierte Begründung, Reflexionsfähigkeit oder Transferkompetenz.
 
-- Es werden keine Texte erfunden oder durch die drei Learning-Card-Einzelrückmeldungen ersetzt.
-- Es werden keine Schwellenwerte wie 50/70/90 % oder andere Prozentgrenzen als bestehende DR1FT-Regel ausgegeben.
-- Die drei Stufen bleiben als redaktionell konfigurierbare Ergebnisbänder vorgesehen.
-- Schwellenwerte müssen lückenlos, überschneidungsfrei und vollständig sein.
-- Die Auswahl nutzt den ungerundeten Szenario-Wert.
-- Wenn die historische Logik nicht wiedergefunden wird, müssen Schwellen und Texte als neue pädagogische Entscheidung ausdrücklich festgelegt werden.
+### 5.3 Stufenzuordnung
 
-Die bestehenden Learning-Card-Texte `Stark erkannt!`, `Guter Ansatz!` und `Hier steckt eine Lernchance.` sind Antworten auf einzelne Karten. Sie sind nicht automatisch die drei Szenario-Abschlussrückmeldungen.
+Die Stufenbeschreibungen aus Abschnitt 1.1 sind die gemeinsame Sprache. Für jede Zielkompetenz müssen die konkreten Indikatoren und Rubrikbeschreibungen diese Stufen operationalisieren.
 
-## 7. Einheitliche Datenbasis und Snapshot
+- **Emerging:** erste passende Ansätze sind tatsächlich beobachtet.
+- **Developing:** Grundverständnis ist durch passende Nachweise erkennbar, Anwendung bleibt instabil.
+- **Secure:** selbstständige und nachvollziehbare Anwendung ist durch ausreichende Nachweise belegt.
+- **Advanced:** sichere, differenzierte Anwendung ist auch bei komplexen oder neuen Situationen belegt.
+- **Nicht ausreichend beurteilbar:** die Datenbasis trägt keine faire Stufenzuordnung.
 
-Die Bewertungsgrundlage muss für alle Lernenden einer konkreten Klassen-Szenario-Zuweisung identisch sein.
+Eine Prozentgrenze für die vier Stufen wird nicht aus dem Szenario-Erfüllungswert abgeleitet. Die Framework-internen optionalen Modellwerte 0.00–1.00 sind nicht automatisch eine verbindliche DR1FT-Szenario-Punkteskala.
 
-Vorgesehen ist ein unveränderlicher Snapshot pro `class_instance_scenario_assignments.id`, der mindestens enthält:
+## 6. Confidence bestimmen
 
-- Scoring-Version;
-- Szenario- und Zuweisungs-ID;
-- alle verpflichtenden und optionalen scorebaren Anforderungen;
-- stabile Requirement-IDs und Quellreferenzen;
-- Lernzielbezug;
-- Punkteskala und Gewicht;
-- die zum Zeitpunkt der Zuweisung gültigen Ergebnisbänder und Texte, sobald diese fachlich geklärt sind.
+Confidence wird separat pro Kompetenzbewertung ermittelt. Maßgeblich sind:
+- Anzahl eigenständiger, relevanter Nachweise;
+- Qualität und Eindeutigkeit der Nachweise;
+- Vielfalt der Quellen, Aufgaben oder Evidenzdimensionen;
+- Übereinstimmung bzw. Widerspruch zwischen den Nachweisen;
+- Kontextnähe zum Lernziel.
 
-Redaktionelle Änderungen nach Beginn einer Zuweisung dürfen bereits laufende Bewertungen nicht rückwirkend verändern. Eine neue Zuweisung erhält einen neuen Snapshot.
+Mehrere Events derselben Handlung oder mehrere Retries derselben Karte sind keine unabhängigen Nachweise. Die exakten technischen Grenzwerte werden anhand realer bzw. synthetischer Testfälle kalibriert und dokumentiert, bevor sie produktiv eingesetzt werden.
 
-## 8. Bestehende technische Lücken / Risiken
+## 7. Datenquellen und derzeitige Trennung
 
-1. `record_discrete_action_assessment` nutzt bei fehlender Konfiguration einen gemeinsamen `evidence_key` (`in_feed_decision`). Dadurch können unabhängige Anforderungen in Aggregationen zusammenfallen.
-2. Feed-Aktionsbewertungen (`learning_result_events`) und Lernkartenantworten (`scenario_learning_card_responses`) liegen in getrennten Tabellen und haben bisher keine gemeinsame Szenario-Prozentberechnung.
-3. `get_class_student_learning_evidence_v1` aggregiert Ereignisse nach `user_id`, `content_item_id` und `evidence_key`; die aktuelle Gruppierung kann unabhängige Aktionen vermischen.
-4. Learning-Card-Insights verwenden den jeweils letzten Versuch, während andere Evidence-Auswertungen teils „irgendein Erfolg“ berücksichtigen. Retry-Semantik ist nicht einheitlich.
-5. `learning_evidence_events` ist für explizite lernzielbezogene Evidenz vorgesehen; der bisher untersuchte Player-Pfad schreibt nicht automatisch alle Learning-Card- oder Feed-Aktionsnachweise dorthin.
-6. Die Datenbank enthält Bestandskarten mit fehlenden `type`-, `position`- oder `required`-Angaben. Diese Werte brauchen eine definierte Legacy-Behandlung.
-7. Die Remote-Migrationshistorie weist Drift gegenüber vorhandenen Learning-Assessment-Objekten auf. Vor jeder Schemaänderung muss diese Abweichung exakt abgeglichen werden.
+Die aktuelle Implementierung besitzt mehrere getrennte Quellen:
 
-Bestehende Teacher-Report-RPCs und Teacher-App bleiben außerhalb dieses Vorhabens unverändert.
+| Quelle | Aktuelle Speicherung | Aktueller Stand |
+|---|---|---|
+| Bewertete Feed-Aktionen | `learning_result_events` | Server leitet `success` / `not_yet` aus `learningTask.assessment` ab |
+| Szenario-Lernkarten | `scenario_learning_card_responses` | Antwort und Outcome werden gespeichert; aktuelle RPC schreibt keine `learning_evidence_events` |
+| Learning-Design-Indikatoren | `evidence_indicators` | Struktur vorhanden, aber keine vollständig standardisierte Rubrik- und Quellenzuordnung |
+| Normalisierte Lern-Evidence | `learning_evidence_events` | Tabelle vorhanden; muss als gemeinsame Evidenzbasis sauber angebunden werden |
+| Kompetenz-Snapshots | `competency_assessments` | Schema vorhanden, derzeit keine Datensätze |
+| Legacy-Kompetenzfortschritt | `user_competency_progress` | Altes numerisches Level-Modell; nicht ungeprüft für die vier Stufen weiterverwenden |
 
-## 9. Implementierungsreihenfolge
+Diese Quellen dürfen nicht durch doppelte Inserts künstlich vereinheitlicht werden. Ziel ist ein gemeinsamer serverseitiger Assessment-Read- und Calculation-Pfad, der Quellereignisse normalisiert und ihre Herkunft beibehält.
 
-1. Historische Drei-Stufen-Texte und Schwellenwerte in Repository-Historie, Editorial-Konfiguration und Datenbestand weiter suchen.
-2. Scorebare Requirement-Typen und Legacy-Regeln finalisieren.
-3. Editorial-Konfiguration für stabile IDs, Pflichtstatus und optionale Gewichte definieren.
-4. Gemeinsame serverseitige Berechnungsfunktion als reine, testbare Logik spezifizieren.
-5. Snapshot- und Ergebnisdatenspeicherung entwerfen; Migration-History-Drift vorher klären.
-6. Bestehende RPCs kompatibel anbinden und unabhängige Anforderungen sauber identifizieren.
-7. Player-Abschluss und Rückmeldungen erst danach anschließen.
+## 8. Festgestellte Implementierungslücken
 
-## 10. Verifikationsfälle
+1. `record_discrete_action_assessment` verwendet bei fehlender Editorial-ID den Fallback `in_feed_decision`. Dadurch können unabhängige Anforderungen zusammenfallen.
+2. `assessedActions` / `acceptableActions` kann mehrere akzeptierte Alternativen für eine Anforderung abbilden, aber nicht mehrere unabhängig erforderliche Handlungen.
+3. `get_class_student_learning_evidence_v1` gruppiert nach User, Content und Evidence-Key und nutzt `bool_or(success)`. Bei kollidierenden Keys kann ein einzelner Erfolg eine zusammengefasste Gruppe erfolgreich erscheinen lassen.
+4. Lernkarten und Feed-Aktionen liegen in getrennten Tabellen und fließen nicht in eine gemeinsame Szenario-Berechnung ein.
+5. Die aktuelle `submit_scenario_learning_card`-RPC speichert Antworten in `scenario_learning_card_responses` und gibt `evidence_events_created = 0` zurück. Eine ältere Migration hatte Indikatoren in `learning_evidence_events` geschrieben; eine spätere Migration hat diesen Pfad durch das getrennte Antwort-Logging ersetzt.
+6. Die Learning-Card-Insights verwenden die letzte Antwort; die ältere Evidence-Aggregation nutzte teilweise „irgendein Erfolg“. Die Retry-Semantik muss einheitlich sein.
+7. Der Player zeigt noch ein numerisches Kompetenzlevel 1–5. Ein Missionsabschluss kann über `update_competency_progress_after_mission` den Legacy-Fortschritt erhöhen. Das ist nicht das vereinbarte vierstufige Assessment.
+8. `evidence_indicators` und die Event-Tabellen haben im aktuell abgefragten Supabase-Projekt jeweils 0 Datensätze. Vorhanden sind 2 Learning Designs und 7 Lernziele. Es gibt daher keine vorhandenen Evidence-Daten, aus denen ein belastbarer historischer Kompetenzverlauf rekonstruiert werden könnte.
+9. Die Remote-Migrationshistorie weicht von den im Repository vorhandenen Learning-Assessment-Migrationen ab. Vor jeder Schemaänderung ist ein exakter Drift-Abgleich zwingend.
 
-- Keine Anforderungen: Ergebnis `null`.
-- Eine verpflichtende Anforderung vollständig erfüllt: 100 %.
-- Eine verpflichtende Anforderung teilweise erfüllt: 50 %.
-- Eine verpflichtende Anforderung ohne Nachweis: 0 %.
-- Zwei gleich gewichtete Anforderungen, eine erfüllt: 50 %.
-- Eine Lernkartenfrage mit mehreren Antwortoptionen zählt genau einmal.
-- Mehrere akzeptierte Feed-Aktionen innerhalb einer Legacy-Anforderung zählen maximal einmal.
-- Zwei unabhängige Feed-Anforderungen bleiben getrennt.
-- Optionale Anforderungen verändern den Nenner nicht.
-- Ein früher Abschluss lässt offene verpflichtende Anforderungen im Nenner.
-- Wiederholungen vervielfachen weder Anforderungen noch Punkte.
-- Rundung verändert nicht die Ergebnisband-Auswahl.
-- Fehlende Daten werden nicht als negative Kompetenzdiagnose ausgegeben.
-- Szenario-Ergebnis verändert keine Kompetenzstände.
-- Ein Snapshot bleibt nach späteren Editorial-Änderungen unverändert.
+## 9. Zielbild der technischen Zusammenführung
 
-## 11. Sicherheits- und Änderungsgrenzen
+Die Implementierung soll diese Verantwortlichkeiten trennen:
 
+1. **Editorial:** erstellt und validiert Anforderungen, Indikatoren, Rubriken und Ergebnisformulierungen. Wiederverwendbare Vorlagen minimieren den Pflegeaufwand.
+2. **Assignment Snapshot:** friert die für eine konkrete Klassen-Szenario-Zuweisung gültige Bewertungsgrundlage ein. Spätere Editorial-Änderungen verändern laufende Bewertungen nicht rückwirkend.
+3. **Player:** sendet nur IDs und tatsächlich ausgeführte Aktionen/Antworten. Er bestimmt niemals selbst Outcome, Punktzahl, Kompetenzstufe oder Confidence.
+4. **Supabase:** validiert Aktionen und Zuweisung, speichert Rohereignisse append-only und stellt eine gemeinsame serverseitige Auswertung bereit.
+5. **Szenario-Ergebnis:** speichert Anforderungserfüllung und je Kompetenz Stufe, Confidence, Begründung und Quellenverweise als nachvollziehbaren Snapshot.
+6. **Langfristiger Fortschritt:** aggregiert mehrere Szenario-Snapshots und Kontexte. Ein einzelnes Szenario oder ein Missionsabschluss aktualisiert nicht automatisch einen dauerhaften Kompetenzstand.
+
+Ein möglicher Snapshot muss mindestens Scoring-Version, Assignment-ID, Szenario-/Design-Version, Requirement-IDs, Objective-/Competency-Bezug, Pflichtstatus, Gewicht, Quellenreferenzen, Rubrikversion und Ergebnis enthalten.
+
+Die bestehende `competency_assessments`-Tabelle ist zu prüfen, bevor sie für das neue vierstufige Modell verwendet wird. Das Feld `level smallint` und die Legacy-Tabelle `user_competency_progress` dürfen nicht ohne Kompatibilitätsprüfung umgedeutet werden.
+
+## 10. Redaktioneller Aufwand: verbindlicher Minimalansatz
+
+Für ein Szenario soll die Redaktion nicht jede Interaktion einzeln bewerten müssen.
+
+- Pro Szenario werden wenige zentrale Lernziele und Zielkompetenzen ausgewählt.
+- Für jede Zielkompetenz werden nur die tatsächlich relevanten Indikatoren aktiviert.
+- Ein Indikator kann durch mehrere zulässige Quellen belegt werden, wenn diese dieselbe pädagogische Aussage stützen.
+- Pflichtanforderungen und optionale Vertiefungen sind klar getrennt.
+- Für strukturierte Antworten erfolgt die Bewertung regelbasiert.
+- Freitext, Reflexion und Creation benötigen transparente Rubriken; KI darf unterstützen, aber die Kriterien müssen nachvollziehbar und überprüfbar bleiben.
+- Vorlagen für häufige Kompetenzen und Evidence Indicators reduzieren den redaktionellen Aufwand.
+
+## 11. Implementierungsreihenfolge und Änderungsgrenzen
+
+1. Die vier Stufen, Confidence und „nicht ausreichend beurteilbar“ sind fachlich festgelegt.
+2. Die bestehende Feed- und Lernkarten-Semantik wird gegen das Requirement-Modell abgeglichen.
+3. Die neue Editorial-Konfiguration für unabhängige Requirements und Indicator-Rubriken wird spezifiziert.
+4. Eine reine, testbare Berechnungslogik wird mit Testfällen implementiert.
+5. Supabase-Migrationsdrift wird abgeglichen; erst danach wird eine additive, versionierte Datenbankänderung vorbereitet.
+6. Assignment-Snapshot und serverseitige Auswertung werden implementiert.
+7. Player-Abschlussbotschaft und aufklappbares Kompetenzprofil werden angeschlossen.
+8. Langfristige Kompetenzentwicklung wird erst nach Validierung der Szenario-Snapshots angebunden.
+
+Änderungsgrenzen:
 - Nur `apps/player`, `apps/editorial` und notwendige Supabase-Objekte.
 - Keine Änderungen an Teacher oder anderen Apps.
-- Keine Änderungen an `main`, kein Merge und kein Deployment ohne ausdrückliche Freigabe.
-- Keine Produktionsmigration, kein `db push`, kein `apply_migration`, keine Datenänderung im Rahmen dieser Spezifikation.
-- Rohereignisse bleiben erhalten; keine rückwirkende Erfolgsermittlung aus unvollständigen historischen Daten.
+- Keine Änderungen an `main`, kein Merge und kein Deployment in Produktion ohne ausdrückliche Freigabe.
+- Keine Supabase-Produktionsmigration, kein `db push`, keine Datenänderung während der Analyse-/Spezifikationsphase.
+- Keine rückwirkende Erfindung von Evidenz aus fehlenden historischen Daten.
+
+## 12. Verifikationsfälle
+
+- Ein Beitrag verlangt zwei unabhängige Aktionen; eine ausgeführte Aktion ergibt 1/2 = 50 % Anforderungserfüllung.
+- Zwei akzeptierte Alternativen für dieselbe pädagogische Anforderung zählen zusammen maximal einmal.
+- Eine Learning Card zählt unabhängig von der Anzahl ihrer Antwortoptionen genau einmal als Requirement.
+- Pflichtanforderung ohne Nachweis bleibt im Nenner; optionale Anforderung nicht.
+- „Nicht beobachtet“ wird nicht als negative Kompetenzdiagnose interpretiert.
+- Ein einzelner Klick oder ein Like erzeugt keine Kompetenzstufe.
+- Wiederholte Events derselben Handlung erhöhen nicht automatisch Confidence.
+- Eine Kompetenz kann „nicht ausreichend beurteilbar“ sein, obwohl das Szenario abgeschlossen wurde.
+- Secure setzt selbstständige, nachvollziehbare Anwendung voraus.
+- Advanced setzt Nachweise in komplexen oder neuen Situationen voraus.
+- Confidence hoch setzt unterschiedliche, übereinstimmende Nachweise voraus.
+- Der Szenario-Prozentwert wird nicht in eine Kompetenzstufe umgerechnet.
+- Eine spätere Editorial-Änderung verändert keinen bereits erstellten Assignment-Snapshot.
+- Ein Szenario-Snapshot aktualisiert nicht ungeprüft den Legacy-Kompetenzfortschritt.
