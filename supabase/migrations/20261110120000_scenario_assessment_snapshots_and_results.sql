@@ -11,6 +11,7 @@ create table if not exists public.scenario_assessment_snapshots (
   snapshot_version integer not null check (snapshot_version > 0),
   scoring_version smallint not null default 1 check (scoring_version > 0),
   status text not null check (status in ('ready', 'not_assessable')),
+  capture_reason text not null check (capture_reason in ('assignment_created', 'assignment_reactivated', 'migration_cutover')),
   requirements jsonb not null default '[]'::jsonb,
   created_at timestamptz not null default now(),
   unique (assignment_id, snapshot_version),
@@ -50,6 +51,7 @@ set search_path = pg_catalog, public, pg_temp
 as $function$
 declare
   v_should_capture boolean := false;
+  v_capture_reason text;
   v_cards jsonb := '[]'::jsonb;
   v_card jsonb;
   v_content record;
@@ -65,6 +67,7 @@ declare
 begin
   if tg_op = 'INSERT' then
     v_should_capture := new.is_active = true and new.archived_at is null;
+    v_capture_reason := 'assignment_created';
   else
     v_should_capture :=
       new.is_active = true
@@ -72,7 +75,18 @@ begin
       and (
         old.is_active is distinct from true
         or old.archived_at is not null
+        or not exists (
+          select 1
+          from public.scenario_assessment_snapshots existing
+          where existing.assignment_id = new.id
+        )
       );
+
+    if old.is_active is distinct from true or old.archived_at is not null then
+      v_capture_reason := 'assignment_reactivated';
+    else
+      v_capture_reason := 'migration_cutover';
+    end if;
   end if;
 
   if not v_should_capture then
@@ -203,12 +217,14 @@ begin
     snapshot_version,
     scoring_version,
     status,
+    capture_reason,
     requirements
   ) values (
     new.id,
     v_snapshot_version,
     1,
     v_status,
+    v_capture_reason,
     v_requirements
   );
 
@@ -227,6 +243,32 @@ after insert or update of is_active, archived_at
 on public.class_instance_scenario_assignments
 for each row
 execute function public.capture_scenario_assessment_snapshot_v1();
+
+-- Safely establish a cutover snapshot for already-active assignments only when
+-- no scored learning events exist for that class/scenario yet. If any scored
+-- history exists, leave the assignment unsnapshotted rather than pretending
+-- today's editorial configuration was the original assigned configuration.
+update public.class_instance_scenario_assignments a
+set is_active = a.is_active
+where a.is_active = true
+  and a.archived_at is null
+  and not exists (
+    select 1
+    from public.scenario_assessment_snapshots snap
+    where snap.assignment_id = a.id
+  )
+  and not exists (
+    select 1
+    from public.learning_result_events lre
+    where lre.class_instance_id = a.class_instance_id
+      and lre.scenario_id = a.scenario_id
+  )
+  and not exists (
+    select 1
+    from public.scenario_learning_card_responses response
+    where response.class_instance_id = a.class_instance_id
+      and response.scenario_id = a.scenario_id
+  );
 
 create or replace function public.finalize_scenario_assessment_v1(
   p_class_instance_id uuid,
@@ -397,7 +439,7 @@ grant execute on function public.finalize_scenario_assessment_v1(uuid, uuid)
   to authenticated;
 
 comment on table public.scenario_assessment_snapshots is
-  'Immutable requirement configuration captured when a scenario is assigned or explicitly reactivated. Existing assignments are not backfilled because historical editorial configuration cannot be reconstructed safely.';
+  'Immutable requirement configuration captured on assignment, reactivation, or safe migration cutover. Existing assignments with prior scored events are not backfilled because their historical editorial configuration cannot be reconstructed safely.';
 comment on table public.scenario_assessment_results is
   'Per-student scenario requirement result calculated from append-only feed assessment and scenario learning-card attempts against one immutable assignment snapshot.';
 comment on function public.finalize_scenario_assessment_v1(uuid, uuid) is
