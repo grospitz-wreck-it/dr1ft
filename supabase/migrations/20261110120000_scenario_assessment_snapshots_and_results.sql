@@ -178,7 +178,8 @@ begin
       for v_action_id in
         select jsonb_array_elements_text(v_acceptable_actions)
       loop
-        if v_assessed_actions @> jsonb_build_array(v_action_id) then
+        if nullif(btrim(v_action_id), '') is not null
+           and v_assessed_actions @> jsonb_build_array(v_action_id) then
           v_requirements := v_requirements || jsonb_build_array(
             jsonb_build_object(
               'id', 'feed:' || v_content.id::text || ':' || v_base_key || ':' || v_action_id,
@@ -207,10 +208,16 @@ begin
   from public.scenario_assessment_snapshots snap
   where snap.assignment_id = new.id;
 
-  v_status := case
-    when jsonb_array_length(v_requirements) > 0 then 'ready'
-    else 'not_assessable'
-  end;
+  if jsonb_array_length(v_requirements) = 0 or exists (
+    select 1
+    from jsonb_array_elements(v_requirements) as requirement(value)
+    group by requirement.value ->> 'id'
+    having count(*) > 1
+  ) then
+    v_status := 'not_assessable';
+  else
+    v_status := 'ready';
+  end if;
 
   insert into public.scenario_assessment_snapshots (
     assignment_id,
