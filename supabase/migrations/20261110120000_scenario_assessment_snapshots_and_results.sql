@@ -131,9 +131,13 @@ begin
       'in_feed_decision'
     );
 
-    if jsonb_typeof(v_assessed_actions) <> 'array'
-       or jsonb_typeof(v_acceptable_actions) <> 'array'
-       or jsonb_array_length(v_acceptable_actions) = 0 then
+    if jsonb_typeof(v_assessed_actions) is distinct from 'array' then
+      continue;
+    end if;
+    if jsonb_typeof(v_acceptable_actions) is distinct from 'array' then
+      continue;
+    end if;
+    if jsonb_array_length(v_acceptable_actions) = 0 then
       continue;
     end if;
 
