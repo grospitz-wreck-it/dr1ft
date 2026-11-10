@@ -1,148 +1,220 @@
 # DR1FT Scenario Assessment v2
 
-Status: implementation contract for the isolated `fix/scenario-assessment-v2` branch. No production schema or data has been changed.
+Status: fachlicher und technischer Berechnungsvertrag auf Branch `fix/scenario-assessment-v2`. Dieser Stand beschreibt die Berechnungsgrundlage; es wurden keine funktionalen Änderungen und keine Supabase-Schreiboperationen vorgenommen.
 
-## Scope and guardrails
+## 1. Verbindliche Grundlagen und Abgrenzung
 
-- Change only `apps/editorial`, `apps/player`, and the Supabase schema/functions required by those two apps.
-- Do not modify Teacher, other applications, existing teacher-report RPCs, or teacher-report UI.
-- Keep `main` and production untouched until a reviewed pull request is explicitly approved.
-- Preserve all existing raw interaction and response records. No destructive migration, data rewrite, or retroactive success inference.
-- Keep existing legacy assessment configurations readable and operational.
+Dieses Dokument konkretisiert die vorhandene DR1FT-Basis:
 
-## Current defects confirmed
+- `DR1FT_Learning_Design_Assessment_Framework_v1.0.md`
+- `DR1FT_Tracking_und_Auswertungsstruktur_v0.1.md`
+- vorhandene Learning-Design- und Assessment-Strukturen in Editorial, Player und Supabase.
 
-1. In-feed assessments currently write multiple distinct actions with the same `evidence_key` (usually `in_feed_decision`). Aggregation groups by learner, content, and that key, so independent requirements collapse into one.
-2. In-feed actions and scenario learning-card answers are stored in separate event tables and do not share a percentage calculation.
-3. Learning-card reporting currently uses the latest answer per learner/card, while in-feed aggregation uses best-success semantics. Retry handling is inconsistent.
-4. The Player's current scenario-finished UI state is sessionStorage-backed and is not a trusted backend completion signal.
-5. The remote Supabase migration history does not contain several local learning-assessment migration versions even though the corresponding tables/functions exist. Migration history must be reconciled before applying any schema change.
+Die pädagogischen Grundsätze bleiben maßgeblich:
 
-## Editorial contract
+- Learning Evidence ist multidimensional: Behaviour, Reasoning, Reflection, Creation und Transfer.
+- Ein Klick, eine Sichtung, ein Like, ein Report oder ein Missionsabschluss ist für sich allein kein Kompetenznachweis.
+- Ein einzelnes Szenario ist ein Messpunkt, keine endgültige Kompetenzdiagnose.
+- Evidenzsicherheit (Confidence) und Kompetenzstand sind getrennt zu behandeln.
+- Fehlende Daten bedeuten zunächst „nicht beobachtet/nicht gespeichert“, nicht automatisch „nicht gekonnt“.
 
-### Independent feed requirements
+**Wichtige Abgrenzung:** Das Szenario-Abschlussergebnis ist eine Bewertung der im konkreten Szenario nachgewiesenen, redaktionell festgelegten Anforderungen. Es ist weder Schulnote noch Kompetenzlevel und darf nicht direkt in `user_competency_progress` geschrieben werden.
 
-New configurations use `content_items.extra.learningTask.assessment` version 2:
+## 2. Was zählt als Berechnungseinheit?
 
-```json
-{
-  "version": 2,
-  "requirements": [
-    {
-      "id": "report_decision",
-      "title": "Problematischen Beitrag melden",
-      "actions": ["report"],
-      "acceptedActions": ["report"],
-      "weight": 1,
-      "required": true
-    },
-    {
-      "id": "source_check",
-      "title": "Quelle überprüfen",
-      "actions": ["inspect_source", "inspect_context"],
-      "acceptedActions": ["inspect_source", "inspect_context"],
-      "weight": 1,
-      "required": true
-    }
-  ]
-}
+Nicht Lernabschnitte, Posts oder Klicks pauschal zählen. Bewertet werden nur explizit konfigurierte, einzeln identifizierbare **Szenario-Anforderungen**.
+
+Eine Anforderung ist eine pädagogisch begründete, beobachtbare Leistung, die einem Lernziel zugeordnet und durch einen zulässigen Nachweis erfüllt werden kann.
+
+### 2.1 Scorebare Anforderungstypen im aktuellen System
+
+**A. Szenario-Lernkarten**
+
+- Eine Lernkarte kann eine Anforderung bilden, wenn sie scorebar und verpflichtend konfiguriert ist.
+- Die vorhandenen Antwortausgänge sind `success`, `partial` und `not_yet`.
+- Die vorhandene Player-Rückmeldung und die Datenbank-RPC kennen diese drei Ausgänge.
+- Die vorhandene semantische Punktzuordnung ist: `success = 1.0`, `partial = 0.5`, `not_yet = 0.0`.
+- Reflexionskarten sind laut bestehender RPC keine scorebare Kompetenz-Evidenz.
+- `required = false` darf nicht in den Nenner eingehen.
+- Bei Bestandskarten mit `required = null` ist die frühere Absicht nicht eindeutig nachgewiesen. Sie dürfen nicht stillschweigend als verpflichtend oder optional interpretiert werden. Vor einer produktiven Bewertung braucht es eine explizite Legacy-Regel oder redaktionelle Klärung.
+
+**B. Bewertete Feed-Aktionen**
+
+- Die vorhandene Konfiguration `content_items.extra.learningTask.assessment` mit `assessedActions` und `acceptableActions` definiert einen bewerteten Aktionsbereich.
+- Die bestehende RPC leitet das Ergebnis serverseitig ab: akzeptierte Aktion = `success`, andere konfigurierte Aktion = `not_yet`.
+- Bei Legacy-Konfigurationen bilden `assessedActions` und `acceptableActions` zusammen zunächst **eine** Anforderung mit mehreren möglichen Aktionen. Die einzelnen Alternativen dürfen nicht als mehrere Anforderungen gezählt werden.
+- Der aktuelle Fallback `evidenceKey = 'in_feed_decision'` kann verschiedene Aktionen zusammenfallen lassen. Für neue Konfigurationen braucht jede unabhängige Anforderung eine stabile, eigene ID.
+- Die Client-Anfrage darf niemals selbst das Ergebnis oder die Punktzahl bestimmen.
+
+### 2.2 Daten, die allein keine scorebare Anforderung bilden
+
+Diese Daten bleiben pädagogisch und analytisch wichtig, werden aber nicht automatisch in den Szenario-Prozentwert eingerechnet:
+
+- Learning Step / Lernabschnitt: strukturiert den Lernweg, ist aber nicht selbst der Nachweis.
+- `learning_step_content.required`: sagt aus, dass Content zum Lernschritt gehört; es beweist nicht, dass ein Lernziel erreicht wurde.
+- `learning_steps.required`: strukturelle Pflichtangabe, keine Schülerleistung.
+- Views, Likes, Kommentare, Reports und Prüf-Klicks: beobachtbare Rohhandlungen; ohne zugeordnetes und fachlich geprüftes Erfolgskriterium keine Punkte.
+- Mission-Abschluss: belegt zunächst den Aufgabenabschluss, nicht automatisch die Erreichung aller zugeordneten Lernziele.
+- Bloom-Level, Lernphase, pädagogische Funktion und geschätzte Dauer: Design-Metadaten, keine Leistungswerte.
+
+Diese Trennung verhindert, dass DR1FT Aktivität mit Lernerfolg verwechselt.
+
+## 3. Evidence Indicators: wichtige Grundlage, aber noch keine fertige Punkteskala
+
+Die Tabelle `evidence_indicators` enthält unter anderem:
+
+- `learning_step_id`, `objective_id`, `competency_id`
+- `positive_signal`, `negative_signal`
+- `evidence_type`, `dimension`
+- `confidence_weight`
+- `required`
+
+Diese Indikatoren sind die fachlich richtige Verbindung zwischen Lernschritt, Lernziel und beobachtbarem Nachweis. Die vorhandenen JSON-Signale beschreiben jedoch noch keine vollständig standardisierte numerische Bewertungsfunktion.
+
+**Insbesondere ist `confidence_weight` nicht automatisch das Gewicht einer Szenario-Punktzahl.** Es beschreibt die Bedeutung bzw. Sicherheit eines Evidenzindikators für die Interpretation. Es darf nicht ungeprüft als Multiplikator im Szenario-Prozentwert verwendet werden.
+
+Bevor Evidence Indicators numerisch in die Szenarioberechnung eingehen, müssen je Indikator bzw. Indikatortyp festgelegt sein:
+
+1. welches gespeicherte Ereignis als Quelle gilt;
+2. wie das Ereignis eindeutig diesem Indikator zugeordnet wird;
+3. welche beobachtbaren Bedingungen ein positives, negatives oder uneindeutiges Signal ergeben;
+4. ob die Bewertung binär oder abgestuft ist;
+5. ob der Indikator verpflichtend ist;
+6. ob mehrere Ereignisse Wiederholungen desselben Nachweises oder unabhängige Nachweise darstellen.
+
+Bis diese Regeln implementiert und getestet sind, werden Evidence Indicators im Assessment-Katalog geführt, aber nicht durch heuristische Interpretation in Punkte umgerechnet.
+
+## 4. Berechnungsmodell für den Szenario-Abschluss
+
+### 4.1 Anforderungspunkte
+
+Jede scorebare Anforderung erhält einen erreichten Wert (p_i) zwischen 0 und 1:
+
+| Nachweisstatus | Wert |
+|---|---:|
+| Vollständig erfüllt | 1.0 |
+| Teilweise erfüllt | 0.5 |
+| Explizit nicht erfüllt | 0.0 |
+| Noch kein Nachweis / nicht bearbeitet | 0.0 für den Szenario-Abschlusswert |
+
+Die letzte Zeile gilt ausdrücklich für den **Abschlusswert**, nicht als Kompetenzdiagnose. In Berichten muss „kein Nachweis vorhanden“ von „negativer Nachweis“ unterscheidbar bleiben.
+
+Für bestehende Lernkarten sind die drei Werte durch die gespeicherten Outcomes bereits belegt. Für andere Anforderungstypen darf die Skala erst nach Definition der fachlichen Bewertungsregel verwendet werden.
+
+### 4.2 Gewichtung
+
+Jede verpflichtende Anforderung erhält ein positives Gewicht (w_i).
+
+- Wenn keine redaktionelle Gewichtung definiert ist, gilt zunächst Gewicht 1 für jede verpflichtende, scorebare Anforderung.
+- Unterschiedliche Gewichte dürfen erst verwendet werden, wenn Editorial sie ausdrücklich und nachvollziehbar konfigurieren kann.
+- `confidence_weight` aus `evidence_indicators` ist dafür nicht der Ersatz.
+- Optionale Anforderungen tragen weder zum Zähler noch zum Nenner bei.
+
+### 4.3 Formel
+
+```
+Szenario-Ergebnis (%) =
+  100 * SUM(Gewicht_i * erreichte_Punkte_i)
+      / SUM(Gewicht_i aller verpflichtenden scorebaren Anforderungen)
 ```
 
-- Every requirement has its own stable ID.
-- `actions` lists the observed actions that belong to this requirement.
-- `acceptedActions` is a subset of `actions`; accepted alternatives fulfil this one requirement.
-- An action ID may belong to only one requirement within a content item. This prevents one action from fulfilling two independent requirements.
-- Each required requirement contributes its weight to the denominator, even when the learner never performs it.
-- Optional requirements do not contribute to the denominator.
-- The Editorial save action continues writing the legacy flattened `assessedActions` and `acceptableActions` arrays as compatibility fields so the existing Player call path can remain stable while the RPC is upgraded.
+Der Wert wird intern mit ausreichender Präzision gespeichert. Rundung erfolgt nur für die Anzeige. Ergebnisstufen werden anhand des ungerundeten Wertes ausgewählt.
 
-### Learning cards
+Wenn keine verpflichtenden scorebaren Anforderungen existieren, ist das Ergebnis `null` bzw. „nicht bewertbar“ – niemals automatisch 0 % oder 100 %.
 
-- A required, scoreable learning card contributes one requirement identified by its stable card ID.
-- Reflection cards are not scoreable requirements.
-- Existing option outcomes map to points: `success = 1`, `partial = 0.5`, `not_yet = 0`.
-- Optional cards do not enter the denominator.
-- Repeated answers are retained as raw attempts; the best points achieved for that requirement count.
+### 4.4 Wiederholte Versuche
 
-### Scenario result feedback
+Alle Versuche bleiben als unveränderliche Rohereignisse erhalten.
 
-Store five editorially authored result bands on the scenario:
+Für die Szenario-Abschlussberechnung wird pro Anforderung nur ein Ergebnis berücksichtigt; mehrere Versuche dürfen Zähler oder Nenner nicht künstlich vervielfachen. Als Arbeitsregel wird der beste nachweislich erreichte Wert pro Anforderung vorgeschlagen. Das muss gegen die vorhandenen Lernkarten- und Feedbackabläufe getestet werden, damit Wiederholungen nicht durch bloßes Raten zu einer Kompetenzdiagnose führen.
 
-- 0–25 inclusive
-- greater than 25 through 50 inclusive
-- greater than 50 through 75 inclusive
-- greater than 75 and below 100
-- exactly 100
+Die Auswertung muss zusätzlich Anzahl und Verlauf der Versuche getrennt ausweisen können. Ein hoher Szenario-Abschlusswert allein ist keine Aussage über stabile, kontextübergreifende Kompetenz.
 
-Band selection uses the unrounded score. The Player displays the backend-provided title and text; it does not calculate the score or choose a band.
+## 5. Früher Abschluss und fehlende Nachweise
 
-## Backend contract
+- Lernende dürfen ein Szenario jederzeit ausdrücklich beenden.
+- Vor dem Beenden kann der Player auf noch offene Anforderungen bzw. Aufgaben hinweisen und eine Abbruchbestätigung anbieten.
+- Wird vorzeitig beendet, bleiben alle nicht nachgewiesenen verpflichtenden Anforderungen im Nenner und erhalten für den Szenario-Abschlusswert 0 Punkte.
+- Nicht bearbeitete optionale Anforderungen bleiben ausgeschlossen.
+- Der Abschluss ist ein gültiger Zustand, auch wenn Anforderungen offenbleiben.
+- Abbrechen der Bestätigung verändert den Zustand nicht.
+- Die finale Berechnung erfolgt serverseitig aus gespeicherten Nachweisen und einer unveränderlichen Bewertungsgrundlage; ein Client-Flag in `sessionStorage` ist kein Abschlussnachweis.
 
-### Immutable assignment snapshot
+## 6. Drei pädagogische Abschlussrückmeldungen
 
-Create one assessment snapshot per `class_instance_scenario_assignments.id`. The snapshot contains:
+Der Nutzer erinnert drei unterschiedliche Rückmeldungen abhängig davon, wie viele Anforderungen erfüllt wurden. Die genaue historische Formulierung und die damaligen Schwellenwerte sind bisher nicht zweifelsfrei im aktuellen Player-Code oder in den geprüften Datenbankobjekten nachgewiesen.
 
-- scoring version;
-- the complete required and optional requirement catalog for the assigned scenario;
-- source identifiers (content item or learning card);
-- requirement IDs, titles, weights, action alternatives, and card point mappings;
-- the five result bands as authored when the snapshot is created.
+Daher gilt:
 
-The first Player assessment request creates the snapshot under a row lock if it does not yet exist. All students in the same assignment then use the same snapshot. Later Editorial changes do not silently alter an already-started class assignment. A newly created assignment gets a new snapshot.
+- Es werden keine Texte erfunden oder durch die drei Learning-Card-Einzelrückmeldungen ersetzt.
+- Es werden keine Schwellenwerte wie 50/70/90 % oder andere Prozentgrenzen als bestehende DR1FT-Regel ausgegeben.
+- Die drei Stufen bleiben als redaktionell konfigurierbare Ergebnisbänder vorgesehen.
+- Schwellenwerte müssen lückenlos, überschneidungsfrei und vollständig sein.
+- Die Auswahl nutzt den ungerundeten Szenario-Wert.
+- Wenn die historische Logik nicht wiedergefunden wird, müssen Schwellen und Texte als neue pädagogische Entscheidung ausdrücklich festgelegt werden.
 
-### Raw attempts
+Die bestehenden Learning-Card-Texte `Stark erkannt!`, `Guter Ansatz!` und `Hier steckt eine Lernchance.` sind Antworten auf einzelne Karten. Sie sind nicht automatisch die drei Szenario-Abschlussrückmeldungen.
 
-Keep `learning_result_events` and `scenario_learning_card_responses` append-only. Add nullable snapshot/requirement references and points metadata without rewriting old rows. Legacy rows without a snapshot remain historical evidence and are not retroactively scored under v2.
+## 7. Einheitliche Datenbasis und Snapshot
 
-- In-feed RPC derives the requirement and outcome from the saved snapshot; the client never submits an outcome.
-- Learning-card RPC validates the assigned scenario, card, option, and snapshot before recording the attempt.
-- A retry appends another raw attempt. It never increases the score by itself.
+Die Bewertungsgrundlage muss für alle Lernenden einer konkreten Klassen-Szenario-Zuweisung identisch sein.
 
-### One scoring projection for Player
+Vorgesehen ist ein unveränderlicher Snapshot pro `class_instance_scenario_assignments.id`, der mindestens enthält:
 
-A new Player-scoped RPC returns:
+- Scoring-Version;
+- Szenario- und Zuweisungs-ID;
+- alle verpflichtenden und optionalen scorebaren Anforderungen;
+- stabile Requirement-IDs und Quellreferenzen;
+- Lernzielbezug;
+- Punkteskala und Gewicht;
+- die zum Zeitpunkt der Zuweisung gültigen Ergebnisbänder und Texte, sobald diese fachlich geklärt sind.
 
-- scenario and assignment identifiers;
-- scoring version;
-- required requirement count and attempted count;
-- earned weighted points and possible weighted points;
-- precise percentage (nullable when there are no assessable requirements);
-- completion state;
-- result-band ID, title, and feedback text when the scenario is complete.
+Redaktionelle Änderungen nach Beginn einer Zuweisung dürfen bereits laufende Bewertungen nicht rückwirkend verändern. Eine neue Zuweisung erhält einen neuen Snapshot.
 
-Formula:
+## 8. Bestehende technische Lücken / Risiken
 
-`100 * SUM(requirement_weight * best_points_for_requirement) / SUM(required_requirement_weights)`
+1. `record_discrete_action_assessment` nutzt bei fehlender Konfiguration einen gemeinsamen `evidence_key` (`in_feed_decision`). Dadurch können unabhängige Anforderungen in Aggregationen zusammenfallen.
+2. Feed-Aktionsbewertungen (`learning_result_events`) und Lernkartenantworten (`scenario_learning_card_responses`) liegen in getrennten Tabellen und haben bisher keine gemeinsame Szenario-Prozentberechnung.
+3. `get_class_student_learning_evidence_v1` aggregiert Ereignisse nach `user_id`, `content_item_id` und `evidence_key`; die aktuelle Gruppierung kann unabhängige Aktionen vermischen.
+4. Learning-Card-Insights verwenden den jeweils letzten Versuch, während andere Evidence-Auswertungen teils „irgendein Erfolg“ berücksichtigen. Retry-Semantik ist nicht einheitlich.
+5. `learning_evidence_events` ist für explizite lernzielbezogene Evidenz vorgesehen; der bisher untersuchte Player-Pfad schreibt nicht automatisch alle Learning-Card- oder Feed-Aktionsnachweise dorthin.
+6. Die Datenbank enthält Bestandskarten mit fehlenden `type`-, `position`- oder `required`-Angaben. Diese Werte brauchen eine definierte Legacy-Behandlung.
+7. Die Remote-Migrationshistorie weist Drift gegenüber vorhandenen Learning-Assessment-Objekten auf. Vor jeder Schemaänderung muss diese Abweichung exakt abgeglichen werden.
 
-A missing required action contributes zero. A card's best recorded outcome contributes its mapped points. No required assessable requirements means `score = null`, not 0 or 100.
+Bestehende Teacher-Report-RPCs und Teacher-App bleiben außerhalb dieses Vorhabens unverändert.
 
-### Completion signal and early finish
+## 9. Implementierungsreihenfolge
 
-- A learner may explicitly finish a scenario at any time; do not require every post, mission, or card to be completed before the finish action is available.
-- Preserve the explicit finish confirmation when there are unfinished tasks. The confirmation must accurately show remaining work and allow the learner to cancel.
-- Finishing early is a valid finalization path, not a failed or invalid session. Uncompleted required requirements remain in the denominator and score zero.
-- The current `FeedClient.tsx` on `main` does not render a finish button or confirmation. Git history confirms that a manual finish handler once existed: commit `bfb28821a7b9faf3f778f81323af863eb3674ffc` added it; commit `56d3bbe57e27189d755d5c90284413125d826b77` removed it as unused. The old handler only showed a generic browser confirmation based on unfinished mission count; it did not implement three aggregate result responses.
-- The existing three card outcomes (`success`, `partial`, `not_yet`) are per-answer feedback and must not be confused with the three scenario-finish responses the user refers to. The exact existing scenario-level response copy/thresholds still need to be located and preserved; do not replace them with invented bands.
-- The backend finalization call should accept an explicit learner finish request, calculate the score from persisted attempts and the assignment snapshot, and return the appropriate existing scenario-level response. It must be idempotent and must not depend on a client-side `sessionStorage` flag.
+1. Historische Drei-Stufen-Texte und Schwellenwerte in Repository-Historie, Editorial-Konfiguration und Datenbestand weiter suchen.
+2. Scorebare Requirement-Typen und Legacy-Regeln finalisieren.
+3. Editorial-Konfiguration für stabile IDs, Pflichtstatus und optionale Gewichte definieren.
+4. Gemeinsame serverseitige Berechnungsfunktion als reine, testbare Logik spezifizieren.
+5. Snapshot- und Ergebnisdatenspeicherung entwerfen; Migration-History-Drift vorher klären.
+6. Bestehende RPCs kompatibel anbinden und unabhängige Anforderungen sauber identifizieren.
+7. Player-Abschluss und Rückmeldungen erst danach anschließen.
 
-## Compatibility
+## 10. Verifikationsfälle
 
-- Keep the existing RPC signatures and return shapes used by Player where practical.
-- Legacy `assessedActions` / `acceptableActions` configurations are interpreted as one legacy requirement, preserving their original alternative-action meaning. Do not reinterpret every legacy action as a separate requirement.
-- Do not change `get_class_student_learning_evidence_v1`, `get_class_aggregate_learning_report_v1`, `get_teacher_student_learning_journey_v1`, or any Teacher consumer in this work.
-- No changes to competency levels or competency evidence semantics are implied by a scenario percentage.
+- Keine Anforderungen: Ergebnis `null`.
+- Eine verpflichtende Anforderung vollständig erfüllt: 100 %.
+- Eine verpflichtende Anforderung teilweise erfüllt: 50 %.
+- Eine verpflichtende Anforderung ohne Nachweis: 0 %.
+- Zwei gleich gewichtete Anforderungen, eine erfüllt: 50 %.
+- Eine Lernkartenfrage mit mehreren Antwortoptionen zählt genau einmal.
+- Mehrere akzeptierte Feed-Aktionen innerhalb einer Legacy-Anforderung zählen maximal einmal.
+- Zwei unabhängige Feed-Anforderungen bleiben getrennt.
+- Optionale Anforderungen verändern den Nenner nicht.
+- Ein früher Abschluss lässt offene verpflichtende Anforderungen im Nenner.
+- Wiederholungen vervielfachen weder Anforderungen noch Punkte.
+- Rundung verändert nicht die Ergebnisband-Auswahl.
+- Fehlende Daten werden nicht als negative Kompetenzdiagnose ausgegeben.
+- Szenario-Ergebnis verändert keine Kompetenzstände.
+- Ein Snapshot bleibt nach späteren Editorial-Änderungen unverändert.
 
-## Verification gates
+## 11. Sicherheits- und Änderungsgrenzen
 
-1. Validate Editorial configuration: unique IDs, non-empty action arrays, accepted actions subset, no duplicate action ownership, positive finite weights.
-2. SQL tests: 0%, 25%, 25.01%, 50%, 50.01%, 75%, 75.01%, 99.99%, 100%.
-3. Scoring tests: two independent requirements with one completed = 50%; two alternatives within one requirement = at most one requirement; unperformed required actions = zero; optional requirements excluded.
-4. Retry tests: not-yet then success = best success; success then not-yet remains success; repeated attempts never inflate the denominator or numerator.
-5. Card tests: success/partial/not-yet = 1/0.5/0; retries retain raw rows and count the best.
-6. Completion tests: learner can finish early; confirmation appears when unfinished work remains; cancelling leaves the scenario active; confirming finalizes once; incomplete requirements remain zero in the denominator; all three existing scenario-level responses and their thresholds/copy are preserved.
-7. Authorization tests: active student membership and active class assignment required; no cross-class or cross-student reads.
-8. Build Editorial and Player; inspect preview deployments only. No Production deployment or Supabase production migration without explicit approval.
-
-## Migration safety note
-
-The remote migration history currently ends at `20261107213509`, while several local learning-assessment migrations (including the learning-results foundation and scenario-card migrations) are absent from that history even though the associated database objects exist. Treat this as migration-history drift. Before any `apply_migration` / `db push`, reconcile the exact remote schema and migration ledger; do not replay older migrations or apply this change to production as a shortcut.
+- Nur `apps/player`, `apps/editorial` und notwendige Supabase-Objekte.
+- Keine Änderungen an Teacher oder anderen Apps.
+- Keine Änderungen an `main`, kein Merge und kein Deployment ohne ausdrückliche Freigabe.
+- Keine Produktionsmigration, kein `db push`, kein `apply_migration`, keine Datenänderung im Rahmen dieser Spezifikation.
+- Rohereignisse bleiben erhalten; keine rückwirkende Erfolgsermittlung aus unvollständigen historischen Daten.
