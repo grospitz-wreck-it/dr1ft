@@ -63,3 +63,18 @@ grant execute on function public.finalize_scenario_assessment_v1(uuid, uuid)
 
 comment on function public.finalize_scenario_assessment_v1(uuid, uuid) is
   'Persists the authenticated student scenario result but returns detailed results only when the teacher enabled student_reports_enabled for the assignment.';
+
+
+-- Teachers can inspect the persisted result in the existing individual report.
+-- Students receive no direct table privileges; the student RPC applies the
+-- assignment-level visibility gate independently.
+drop policy if exists scenario_assessment_results_teacher_read
+  on public.scenario_assessment_results;
+
+create policy scenario_assessment_results_teacher_read
+  on public.scenario_assessment_results
+  for select
+  to authenticated
+  using (public.is_teacher_of_class_instance(class_instance_id));
+
+grant select on table public.scenario_assessment_results to authenticated;
