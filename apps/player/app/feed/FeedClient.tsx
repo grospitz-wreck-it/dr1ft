@@ -281,6 +281,34 @@ export function FeedClient({ initialItems, teacherModules = [], userId, classIns
     if (!scenarioStateLoaded) return;
     window.sessionStorage.setItem(scenarioStateKey, JSON.stringify({ started: scenarioStarted, finished: scenarioFinished }));
   }, [scenarioStateKey, scenarioStateLoaded, scenarioStarted, scenarioFinished]);
+
+  useEffect(() => {
+    if (!scenarioStateLoaded || !scenarioFinished || scenarioAssessmentResults.length > 0) return;
+    const ids = Array.from(new Set(
+      scenarioIds.length > 0 ? scenarioIds : scenarioIntro?.id ? [scenarioIntro.id] : []
+    ));
+    if (ids.length === 0) return;
+    let cancelled = false;
+    void Promise.all(ids.map((scenarioId) =>
+      finalizeScenarioAssessment({ classInstanceId, scenarioId })
+    )).then((entries) => {
+      if (cancelled) return;
+      const failed = entries.find((entry) => !entry.ok);
+      if (failed && !failed.ok) {
+        setScenarioFinishError(failed.error);
+        return;
+      }
+      setScenarioAssessmentResults(entries.flatMap((entry) =>
+        entry.ok ? [{ scenarioId: entry.scenarioId, result: entry.result }] : []
+      ));
+    }).catch((error) => {
+      if (!cancelled) {
+        console.error("[FeedClient] Scenario result restore failed", error);
+        setScenarioFinishError("Das gespeicherte Szenario-Ergebnis konnte nicht geladen werden.");
+      }
+    });
+    return () => { cancelled = true; };
+  }, [scenarioStateLoaded, scenarioFinished, scenarioAssessmentResults.length, scenarioIdsKey, scenarioIntro?.id, classInstanceId]);
   useEffect(() => {
     if (!scenarioStateLoaded || !scenarioStarted || scenarioFinished) return;
     const timer = window.setTimeout(() => window.dispatchEvent(new CustomEvent("dr1ft:scenario-started", {
@@ -416,9 +444,9 @@ export function FeedClient({ initialItems, teacherModules = [], userId, classIns
         return;
       }
 
-      const results = finalized
-        .filter((entry): entry is Extract<typeof entry, { ok: true }> => entry.ok)
-        .map(({ scenarioId, result }) => ({ scenarioId, result }));
+      const results = finalized.flatMap((entry) =>
+        entry.ok ? [{ scenarioId: entry.scenarioId, result: entry.result }] : []
+      );
       setScenarioAssessmentResults(results);
       setScenarioFinished(true);
       window.dispatchEvent(new CustomEvent("dr1ft:scenario-completed", {
