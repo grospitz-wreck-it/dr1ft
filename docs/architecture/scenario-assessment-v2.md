@@ -216,15 +216,15 @@ Diese Quellen dürfen nicht durch doppelte Inserts künstlich vereinheitlicht we
 
 ## 8. Festgestellte Implementierungslücken
 
-1. `record_discrete_action_assessment` verwendet bei fehlender Editorial-ID den Fallback `in_feed_decision`. Dadurch können unabhängige Anforderungen zusammenfallen.
-2. `assessedActions` / `acceptableActions` kann mehrere akzeptierte Alternativen für eine Anforderung abbilden, aber nicht mehrere unabhängig erforderliche Handlungen.
-3. `get_class_student_learning_evidence_v1` gruppiert nach User, Content und Evidence-Key und nutzt `bool_or(success)`. Bei kollidierenden Keys kann ein einzelner Erfolg eine zusammengefasste Gruppe erfolgreich erscheinen lassen.
-4. Lernkarten und Feed-Aktionen liegen in getrennten Tabellen und fließen nicht in eine gemeinsame Szenario-Berechnung ein.
-5. Die aktuelle `submit_scenario_learning_card`-RPC speichert Antworten in `scenario_learning_card_responses` und gibt `evidence_events_created = 0` zurück. Eine ältere Migration hatte Indikatoren in `learning_evidence_events` geschrieben; eine spätere Migration hat diesen Pfad durch das getrennte Antwort-Logging ersetzt.
-6. Die Learning-Card-Insights verwenden die letzte Antwort; die ältere Evidence-Aggregation nutzte teilweise „irgendein Erfolg“. Die Retry-Semantik muss einheitlich sein.
+1. Legacy-Inhalte ohne `requirementMode` nutzen weiterhin den Fallback `in_feed_decision` und die bisherige „eine passende Alternative genügt“-Semantik. Neue Inhalte können mit `all_acceptable` einzelne Evidence-Keys je erwarteter Aktion erzeugen.
+2. Die Editorial-Oberfläche kann jetzt zwischen `any` und `all_acceptable` unterscheiden. Eine weitergehende freie Zuordnung beliebiger Requirement-Gruppen ist noch nicht umgesetzt.
+3. `get_class_student_learning_evidence_v1` bleibt unverändert und gruppiert nach User, Content und Evidence-Key mit `bool_or(success)`. Diese ältere Teacher-Auswertung ist nicht die neue Szenario-Abschlussberechnung und wird in diesem Arbeitsschritt nicht verändert.
+4. Lernkarten und Feed-Aktionen bleiben in getrennten Rohdatentabellen. Die neue Abschluss-RPC führt sie für einen konkreten Assignment-Snapshot zusammen, ohne Rohereignisse zu verschieben oder doppelt zu schreiben.
+5. Die aktuelle `submit_scenario_learning_card`-RPC speichert Antworten in `scenario_learning_card_responses` und gibt `evidence_events_created = 0` zurück. Die neue Auswertung liest diese Antworten direkt; sie schreibt keine zusätzlichen `learning_evidence_events`.
+6. Die neue Szenario-Auswertung verwendet den letzten Versuch je Requirement. Die bestehenden Teacher-Insights bleiben unverändert.
 7. Der Player zeigt noch ein numerisches Kompetenzlevel 1–5. Ein Missionsabschluss kann über `update_competency_progress_after_mission` den Legacy-Fortschritt erhöhen. Das ist nicht das vereinbarte vierstufige Assessment.
-8. `evidence_indicators` und die Event-Tabellen haben im aktuell abgefragten Supabase-Projekt jeweils 0 Datensätze. Vorhanden sind 2 Learning Designs und 7 Lernziele. Es gibt daher keine vorhandenen Evidence-Daten, aus denen ein belastbarer historischer Kompetenzverlauf rekonstruiert werden könnte.
-9. Die Remote-Migrationshistorie weicht von den im Repository vorhandenen Learning-Assessment-Migrationen ab. Vor jeder Schemaänderung ist ein exakter Drift-Abgleich zwingend.
+8. `evidence_indicators`, `learning_evidence_events`, `learning_result_events`, `scenario_learning_card_responses` und `competency_assessments` hatten zum Prüfzeitpunkt jeweils 0 Datensätze. Vorhanden sind 2 Learning Designs und 7 Lernziele. Es gibt daher keine vorhandenen Evidence-Daten, aus denen ein belastbarer historischer Kompetenzverlauf rekonstruiert werden könnte.
+9. Die Remote-Migrationshistorie enthält keine Ledger-Einträge zu den im Repository vorhandenen Learning-Assessment-Migrationen (u. a. `20261027180000`, `20261031170000`, `20261102090000` bis `20261102130000`), obwohl die zugehörigen Tabellen und Funktionen live vorhanden sind. Das ist ein Quellen-/Ledger-Drift und kein Beleg dafür, dass die Objekte nie angewendet wurden. Vor jedem `db push` oder Migration-Replay ist ein eigener Abgleich zwingend.
 
 ## 9. Bereits umgesetzte Bausteine auf dem Arbeitsbranch
 
