@@ -100,7 +100,11 @@ Erfüllt der Schüler nur A, ist die Anforderungserfüllung bei gleicher Gewicht
 - Mehrere Handlungen, die alle erforderlich sind: mehrere Requirement-IDs.
 - Mehrere mögliche Handlungen, von denen eine genügt: eine Requirement-ID mit mehreren akzeptierten Alternativen.
 
-Die bisherige Feed-Konfiguration `assessedActions` / `acceptableActions` bildet derzeit nur einen gemeinsamen Bewertungsbereich ab. Sie kann nicht zuverlässig ausdrücken, dass mehrere Aktionen unabhängig voneinander Pflicht sind. Dafür ist eine neue explizite Requirement-Struktur nötig.
+Die Editorial-Oberfläche bietet jetzt `requirementMode`:
+- `any`: Eine akzeptierte Aktion genügt. Das bleibt der Standard für Bestandsinhalte.
+- `all_acceptable`: Jede als passend markierte Aktion ist eine eigene Pflichtanforderung. Werden zwei passende Aktionen erwartet und nur eine ausgeführt, ist eine von zwei Anforderungen erfüllt.
+
+Im Modus `all_acceptable` schreibt die neue RPC-Migration für jede Aktion einen stabil getrennten Evidence-Key. Akzeptierte Aktionen werden als Requirement-Erfüllung gespeichert; nicht akzeptierte Aktionen bleiben Interaktionssignale und werden nicht als fehlgeschlagene Pflichtanforderung gezählt. Der Server leitet das Outcome weiterhin aus der gespeicherten Editorial-Konfiguration ab.
 
 ### 3.2 Pflicht, optional und nicht beobachtet
 
@@ -222,7 +226,17 @@ Diese Quellen dürfen nicht durch doppelte Inserts künstlich vereinheitlicht we
 8. `evidence_indicators` und die Event-Tabellen haben im aktuell abgefragten Supabase-Projekt jeweils 0 Datensätze. Vorhanden sind 2 Learning Designs und 7 Lernziele. Es gibt daher keine vorhandenen Evidence-Daten, aus denen ein belastbarer historischer Kompetenzverlauf rekonstruiert werden könnte.
 9. Die Remote-Migrationshistorie weicht von den im Repository vorhandenen Learning-Assessment-Migrationen ab. Vor jeder Schemaänderung ist ein exakter Drift-Abgleich zwingend.
 
-## 9. Zielbild der technischen Zusammenführung
+## 9. Bereits umgesetzte Bausteine auf dem Arbeitsbranch
+
+- `calculate_scenario_requirement_score_v1(jsonb, jsonb)` ist als reine, unveränderliche SQL-Funktion ergänzt. Sie liest und schreibt keine Anwendungstabellen.
+- Die Funktion zählt nur explizit verpflichtende Requirements, ignoriert optionale Requirements, behandelt fehlende Pflichtnachweise als 0 Punkte bei gleichzeitigem Status `unobserved` und verwendet den letzten Versuch in der übergebenen chronologischen Reihenfolge.
+- Die Migration enthält Regressionstests für 1 von 2 erfüllten Anforderungen = 50 %, Teil-Erfüllung = 50 %, optionale Anforderungen, den letzten Versuch und den Fall ohne Pflichtanforderungen.
+- Editorial kann für Feed-Aktionen zwischen einer genügenden Alternative und mehreren einzeln erforderlichen akzeptierten Aktionen unterscheiden.
+- Die neue RPC-Migration erhält die bisherige Semantik für Bestandsinhalte ohne `requirementMode` (`any`).
+
+**Noch nicht umgesetzt:** Die gemeinsame Auswertung, die Lernkarten, Feed-Anforderungen und Assignment-Snapshots zusammenführt, ist noch nicht angeschlossen. Die vier Kompetenzstufen und Confidence werden noch nicht aus Ereignissen berechnet. Die neuen SQL-Migrationen liegen nur auf dem Arbeitsbranch und wurden nicht auf Supabase angewendet.
+
+## 10. Zielbild der technischen Zusammenführung
 
 Die Implementierung soll diese Verantwortlichkeiten trennen:
 
