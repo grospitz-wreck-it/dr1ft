@@ -109,17 +109,17 @@ export function ScenarioCompletionFeedbackEditor({
             <div className="rounded-lg border border-amber-100 bg-amber-50 p-3">
               <p className="text-[10px] font-bold uppercase tracking-wide text-amber-700">Wenig entdeckt</p>
               <p className="mt-1 text-sm font-semibold text-amber-900">Unter {lowThreshold}%</p>
-              <p className="mt-1 text-xs text-amber-800">Bis {counts.low} von {requiredRequirementCount} Abfragen</p>
+              <p className="mt-1 text-xs text-amber-800">Grenze bei ca. {counts.low} von {requiredRequirementCount} vollständig erfüllten Abfragen</p>
             </div>
             <div className="rounded-lg border border-sky-100 bg-sky-50 p-3">
               <p className="text-[10px] font-bold uppercase tracking-wide text-sky-700">Noch Hinweise offen</p>
               <p className="mt-1 text-sm font-semibold text-sky-900">{lowThreshold}% bis unter {middleThreshold}%</p>
-              <p className="mt-1 text-xs text-sky-800">Bis {counts.middle} von {requiredRequirementCount} Abfragen</p>
+              <p className="mt-1 text-xs text-sky-800">Grenze bei ca. {counts.middle} von {requiredRequirementCount} vollständig erfüllten Abfragen</p>
             </div>
             <div className="rounded-lg border border-emerald-100 bg-emerald-50 p-3">
               <p className="text-[10px] font-bold uppercase tracking-wide text-emerald-700">Gut erfasst</p>
               <p className="mt-1 text-sm font-semibold text-emerald-900">Ab {middleThreshold}%</p>
-              <p className="mt-1 text-xs text-emerald-800">Ab {counts.middle + 1} von {requiredRequirementCount} Abfragen</p>
+              <p className="mt-1 text-xs text-emerald-800">Ab ca. {counts.middle} von {requiredRequirementCount} vollständig erfüllten Abfragen</p>
             </div>
           </div>
 
