@@ -18,6 +18,10 @@ declare
   v_attempts jsonb;
   v_result jsonb;
   v_feedback jsonb;
+  v_percentage numeric;
+  v_low_threshold numeric;
+  v_middle_threshold numeric;
+  v_message text;
 begin
   if v_user_id is null then
     raise exception 'Authentication required' using errcode = '28000';
@@ -61,19 +65,13 @@ begin
   if v_snapshot_id is null then
     return jsonb_build_object(
       'status', 'snapshot_missing',
-      'percentage', null,
-      'required_count', 0,
-      'completed_count', 0,
-      'completion_feedback', v_feedback
+      'completion_message', 'Für dieses Szenario liegt noch keine auswertbare Bewertungsgrundlage vor. Du kannst es trotzdem beenden; deine Lehrkraft sieht den entsprechenden Hinweis.'
     );
   end if;
   if v_snapshot_status <> 'ready' then
     return jsonb_build_object(
       'status', 'not_assessable',
-      'percentage', null,
-      'required_count', 0,
-      'completed_count', 0,
-      'completion_feedback', v_feedback
+      'completion_message', 'Für dieses Szenario sind aktuell keine bewertbaren Pflichtabfragen hinterlegt. Du kannst es trotzdem beenden.'
     );
   end if;
 
@@ -110,7 +108,26 @@ begin
   );
 
   v_result := public.calculate_scenario_requirement_score_v1(v_requirements, v_attempts);
-  return v_result || jsonb_build_object('completion_feedback', v_feedback);
+  v_percentage := nullif(v_result ->> 'percentage', '')::numeric;
+  v_low_threshold := coalesce((v_feedback ->> 'low_threshold_percent')::numeric, 25);
+  v_middle_threshold := coalesce((v_feedback ->> 'middle_threshold_percent')::numeric, 75);
+
+  if v_percentage is null then
+    v_message := 'Für dieses Szenario sind aktuell keine bewertbaren Pflichtabfragen hinterlegt. Du kannst es trotzdem beenden.';
+  elsif v_percentage < v_low_threshold then
+    v_message := coalesce(v_feedback ->> 'low_message', 'Bist du sicher? Du hast bisher kaum etwas entdeckt. Schau dich noch einmal um.');
+  elsif v_percentage < v_middle_threshold then
+    v_message := coalesce(v_feedback ->> 'middle_message', 'Willst du DR1FT wirklich schon beenden? Es gibt noch Hinweise zu finden.');
+  else
+    v_message := coalesce(v_feedback ->> 'high_message', 'Du hast das Thema bereits gut erfasst. Deine Auswertung wird jetzt erstellt.');
+  end if;
+
+  -- Do not return the numeric score or report details here: the teacher's
+  -- student_reports_enabled gate applies to the final report, not this nudge.
+  return jsonb_build_object(
+    'status', 'preview',
+    'completion_message', v_message
+  );
 end;
 $function$;
 
