@@ -178,7 +178,7 @@ This list includes both historical files that may have been applied under a diff
 20261110130000_teacher_controlled_student_scenario_reports.sql
 ```
 
-## Direct production observations
+## Direct production observations at initial audit (historical snapshot; superseded by the live refresh below)
 
 Read-only schema inspection confirmed:
 
@@ -262,7 +262,7 @@ Restoration preserves history; it does not authorize replay. In particular:
 
 None of those statements or functions was executed as part of this source recovery. Do not replay these historical migrations.
 
-## Updated inventory after source recovery
+## Inventory at source-recovery milestone (historical snapshot before migration 20261111184418)
 
 - Repository SQL migration files: **186**
 - Remote migration ledger entries: **138**
@@ -274,7 +274,7 @@ The three remaining name mismatches are not evidence of missing SQL. The next un
 
 
 
-## Review of the 50 repository-only migration files
+## Initial review of the 50 repository-only migration files (superseded by the live refresh below)
 
 A follow-up read-only review compared the 50 listed files with current production tables, columns, indexes, functions, policies, triggers, grants, publication membership, and selected row counts.
 
@@ -291,3 +291,59 @@ This review did not execute SQL or modify Supabase. The Realtime publication and
 
 The current operational checklist, including SQL-Editor-applied changes, verified production corrections, ledger status, and remaining repair steps, is maintained in [supabase-production-migration-status.md](./supabase-production-migration-status.md).
 
+
+## Live reconciliation refresh – 11.11.2026
+
+This section supersedes earlier point-in-time counts and production observations above. It was checked against the live branch and the live Supabase project immediately before this documentation update.
+
+### Current Git and ledger counts
+
+- Repository: `grospitz-wreck-it/dr1ft`
+- Branch: `fix/scenario-assessment-v2`
+- Inspected code HEAD: `3b580fc4f76d031ccf07d678a437f7330bba360f`
+- The earlier source-recovery commit `d429def2606d3969455581ec44b2b252b7c3d878` is an ancestor; the current branch is 31 commits ahead.
+- Active migration directory: **187 SQL files**, with **181 distinct version prefixes**.
+- Production ledger: **139 entries**.
+- After normalizing the `_manual_reconcile...` and `_reconciled...` suffixes: **50 repository files** have no same-name ledger entry, and **3 ledger entries** have no same-name repository file.
+- Those three ledger entries are already content-matched to existing repository SQL; they are not missing SQL sources and must not be duplicated:
+  - `20261105062315_allow_school_image_as_class_visual` → `20261105113000_set_class_instance_visual_rpc.sql`
+  - `20261105201549_archive_school_class_instance_and_skip_archived_rollover` → `20261105200000_archive_school_class_instance.sql`
+  - `20261106105610_pin_unlock_mission_delay_search_path_actual_overload_20261106` → `20261106160000_pin_function_search_paths.sql`
+- The 21 remote source files listed in the source-recovery section remain present in the current branch.
+- The four Scenario Assessment versions `20261110100000` through `20261110130000` are absent from the ledger, while their database effects are present.
+- There are no ledger entries with a `202610` version prefix. The presence of 202610-era objects in Production does not by itself establish which historical SQL file introduced them.
+
+### Duplicate local version prefixes
+
+The current active migration directory contains six extra files sharing five version prefixes:
+
+| Version prefix | Files sharing it |
+|---|---|
+| `20260930130000` | `enforce_one_active_class_module`, `teacher_workspace_hardening` |
+| `20261104230000` | `restrict_class_membership_and_instance_grants`, `teacher_module_editor_posts_rpc` |
+| `20261106150000` | `grant_admin_scoped_report_rpcs`, `guard_school_protected_fields` |
+| `20261106170000` | `allow_class_teachers_individual_reports`, `revoke_client_trigger_references`, `role_scope_security_alignment` |
+| `20261106171000` | `include_class_teachers_in_class_reporting`, `tighten_teacher_class_assignment_scope` |
+
+The nine files in the last four groups were compared with their corresponding remote ledger statements. Their SQL matches the remote source after comment/whitespace normalization, but the remote versions differ. The two `20260930130000` files are already classified as superseded in the 50-file review. These duplicate-prefix files must not be pushed as-is. They should be retained outside the active migration directory only after the archive move is reviewed; do not delete or renumber them to pretend they ran under another version.
+
+### Live verification of Scenario Assessment V2
+
+Read-only production queries confirm:
+
+- `scenario_assessment_snapshots` and `scenario_assessment_results` exist and both have RLS enabled.
+- `calculate_scenario_requirement_score_v1(jsonb,jsonb)`, `record_discrete_action_assessment(uuid,uuid,text)`, `capture_scenario_assessment_snapshot_v1()`, `finalize_scenario_assessment_internal_v1(uuid,uuid)` and `finalize_scenario_assessment_v1(uuid,uuid)` exist.
+- Trigger `trg_capture_scenario_assessment_snapshot` exists.
+- `class_instance_scenario_assignments.student_reports_enabled` exists with default `false`.
+- The discrete-action RPC contains `all_acceptable`; the finalizer wrapper checks the teacher-controlled switch.
+- A read-only scoring smoke test returned **50 %** for one fulfilled out of two required requirements.
+- At the time of the check, there was one snapshot and zero stored assessment results. This does not constitute a complete end-to-end assessment test.
+
+### Safety decision
+
+- No SQL was replayed.
+- No migration-ledger entry was inserted, updated, or deleted.
+- No production schema or data was changed during this refresh.
+- No merge to `main` and no production deployment occurred.
+- `supabase db push` remains blocked until duplicate version prefixes and the remaining historical mappings have an explicit, evidence-backed disposition.
+- The four Scenario Assessment versions are the only currently identified, specifically documented candidates for a later targeted `migration repair --status applied`; this was not run as part of this refresh.
