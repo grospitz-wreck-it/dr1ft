@@ -318,3 +318,40 @@ Für ein Szenario soll die Redaktion nicht jede Interaktion einzeln bewerten mü
 - Direct access to the results table is granted only to authenticated users covered by the teacher-scoped RLS policy. Students cannot read it directly.
 - The existing individual student report in the Teacher dashboard now includes the persisted scenario requirement result. Teacher access remains independent of the student visibility toggle.
 - Changing the flag later affects the next result retrieval; it does not recalculate or mutate stored results.
+
+## 13. Verbindlicher Ablauf des Szenarioabschlusses (Entscheidung 11.11.2026)
+
+Die Kompetenzdiagnose wird **ausschließlich beim endgültigen Szenarioabschluss** berechnet. Während der Bearbeitung sammelt DR1FT relevante Ereignisse und Antworten; es wird keine laufend aktualisierte oder scheinbar endgültige Kompetenzstufe angezeigt.
+
+Der Abschluss hat zwei getrennte Schritte:
+
+1. **Abschlussprüfung vor der Bestätigung:** Der Player ermittelt den aktuellen Bearbeitungsstand aus den zum Assignment-Snapshot gehörenden Pflichtanforderungen und zeigt eine passende, redaktionell gepflegte Abschlussrückmeldung. Diese Rückmeldung ist eine Entscheidungshilfe und noch keine Kompetenzdiagnose.
+2. **Endgültiger Abschluss nach Bestätigung:** Erst nach der Bestätigung wird die Szenarioauswertung serverseitig finalisiert und gespeichert. Sie umfasst die Anforderungserfüllung sowie – sobald die Kompetenz-Rubrik implementiert ist – das qualitative Kompetenzprofil mit Confidence und Evidenzbezug.
+
+### 13.1 Drei scenario-level Abschlussrückmeldungen
+
+Die drei Rückmeldungen gehören ausschließlich zur **Szenarioebene**. Sie sind keine Felder eines einzelnen Feed-Posts und verändern nicht dessen bestehende Aktionsbewertung.
+
+- **Wenig Evidenz entdeckt:** sinngemäß „Bist du sicher? Du hast bisher kaum etwas gefunden …“
+- **Noch Hinweise offen:** sinngemäß „Willst du DR1FT wirklich schon beenden? Es gibt noch Hinweise zu finden.“
+- **Szenario gut erfasst:** sinngemäß „Du hast das Thema bereits gut erfasst …“
+
+Die Texte werden im Editorial auf Szenarioebene gepflegt. Die Zuordnung zu den drei Bearbeitungsständen erfolgt anhand der tatsächlichen Requirement-Ergebnisse des aktuellen Assignment-Snapshots – nicht anhand einer Kompetenzstufe und nicht anhand eines frei erfundenen Prozentbands.
+
+**Noch zu kalibrieren:** Die exakten Auswahlgrenzen zwischen „wenig Evidenz“ und „noch Hinweise offen“ werden vor der Implementierung anhand konkreter Szenario-Testfälle festgelegt. Bis dahin dürfen keine willkürlichen Prozentgrenzen eingeführt werden. Der Zustand „alle Pflichtanforderungen erfüllt“ kann eindeutig der dritten Rückmeldung zugeordnet werden.
+
+### 13.2 Ergebnisdarstellung
+
+Nach dem endgültigen Abschluss erhält der Schüler zuerst eine verständliche Gesamtbotschaft. Darunter liegt ein aufklappbares Kompetenzprofil mit je Kompetenz:
+
+- Stufe: Emerging, Developing, Secure oder Advanced;
+- Confidence: niedrig, mittel oder hoch;
+- „Nicht ausreichend beurteilbar“ als eigener Zustand;
+- kurze Begründung und konkrete zugehörige Nachweise;
+- nächster Lernschritt, sofern redaktionell hinterlegt.
+
+Die Detailtiefe darf die verständliche Gesamtbotschaft nicht verdrängen. Die Lehrkraft erhält das vollständige Szenario-Ergebnis unabhängig davon, ob die zusätzliche Schüleransicht über `student_reports_enabled` freigegeben ist.
+
+### 13.3 Mehrere Szenarien in einem Lernlauf
+
+Wenn ein Lernlauf mehrere Szenarien enthält, bleibt die Bewertung je Szenario getrennt. Die Abschlussprüfung muss deshalb die betroffenen Szenarien berücksichtigen; ein gemeinsamer Prozentwert darf unterschiedliche Kompetenzprofile nicht zusammenziehen. Eine übergreifende Lernlauf-Zusammenfassung ist eine zusätzliche Darstellung, kein Ersatz für die einzelnen Szenario-Snapshots.
