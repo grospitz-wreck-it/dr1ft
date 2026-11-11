@@ -16,9 +16,10 @@ This document records observed facts and intentionally does not guess historical
 
 ## Counts and matching method
 
-- Repository migration files on the audited branch: **165**
+- Repository migration files on the audited branch before recovery: **165**
+- Repository migration files after source recovery: **186**
 - Remote ledger entries: **138**
-- Remote ledger entries with no repository file matching the normalized migration name: **24**
+- Remote ledger entries with no repository file matching the normalized migration name: **3** (after recovery)
 - Repository files with no remote ledger entry matching the normalized migration name: **50**
 
 Name matching strips the numeric version prefix and the suffixes `_manual_reconcile...` and `_reconciled...`. It does not compare SQL semantics. Therefore the 24 and 50 lists are **name mismatches**, not counts of unapplied/applied migrations.
@@ -118,7 +119,7 @@ The following rows have exactly one repository file with the same normalized mig
 | 20261107174714 | batch_teacher_module_poll_results |
 | 20261107203837 | optimize_teacher_module_asset_storage_rls |
 
-The exact SQL for these entries is retained in `supabase_migrations.schema_migrations`. Before restoring any source file, compare its stored SQL with all plausible repository candidates. Do not create a second migration file merely because the filename differs.
+The exact SQL for these entries is retained in `supabase_migrations.schema_migrations`. The follow-up source-recovery pass restored 21 entries as original-version files and matched the remaining three to existing repository SQL files; details follow below.
 
 ## Repository files without a same-name remote ledger entry
 
@@ -203,3 +204,71 @@ The existing assessment-related objects prove that some SQL from the unmatched r
 
 - Initial read-only inventory added on 2026-11-11.
 - No Supabase migration ledger, schema, policy, function, table, or data was modified.
+
+
+## Source recovery completed (read-only with respect to Supabase)
+
+On 2026-11-11, **21 missing migration source files** were reconstructed from the exact `statements` arrays stored in `supabase_migrations.schema_migrations` and committed to this branch under their original remote version and migration name.
+
+Every restored file was fetched back from GitHub and compared with the corresponding remote statement array after whitespace normalization. **All 21 comparisons matched exactly.** No SQL was executed during recovery.
+
+Restored files:
+
+```text
+supabase/migrations/20261104222042_save_teacher_module_editor_rpc.sql
+supabase/migrations/20261105071625_teacher_class_module_self_service_assignments.sql
+supabase/migrations/20261105071638_school_staff_class_discovery_and_class_teacher_roles.sql
+supabase/migrations/20261105073339_scope_individual_reports_to_teacher_module_assignments.sql
+supabase/migrations/20261105073800_make_scoped_student_report_independent_of_legacy_rpc.sql
+supabase/migrations/20261105073903_allow_subscribed_teachers_to_read_class_rosters.sql
+supabase/migrations/20261105074036_add_role_aware_aggregate_class_reporting.sql
+supabase/migrations/20261105074706_backfill_teacher_scoped_assignments_from_legacy_assigners.sql
+supabase/migrations/20261105074750_add_fast_scoped_teacher_module_library_rpc.sql
+supabase/migrations/20261105074853_backfill_legacy_assignments_with_original_teacher_attribution.sql
+supabase/migrations/20261105074930_restrict_individual_module_reports_to_teacher_role.sql
+supabase/migrations/20261105075630_allow_school_leadership_to_teach_subscribed_classes.sql
+supabase/migrations/20261105190518_platform_admin_teacher_class_assignments.sql
+supabase/migrations/20261105201824_delete_empty_school_class_instance.sql
+supabase/migrations/20261107131730_allow_students_to_read_assigned_teacher_module_assets.sql
+supabase/migrations/20261107143243_optimize_teacher_module_posts_rls.sql
+supabase/migrations/20261107145017_optimize_teacher_module_vote_write_and_aggregate_results.sql
+supabase/migrations/20261107145026_fix_teacher_module_poll_results_rpc.sql
+supabase/migrations/20261107145122_add_secure_teacher_module_poll_vote_rpc.sql
+supabase/migrations/20261107174714_batch_teacher_module_poll_results.sql
+supabase/migrations/20261107203837_optimize_teacher_module_asset_storage_rls.sql
+```
+
+### Three remote entries already represented by other repository files
+
+These were not duplicated as new files because the remote SQL is already contained in the indicated repository migration:
+
+| Remote version | Remote ledger name | Existing repository file | Verification |
+|---|---|---|---|
+| 20261105062315 | allow_school_image_as_class_visual | `20261105113000_set_class_instance_visual_rpc.sql` | Full remote statement contained in source |
+| 20261105201549 | archive_school_class_instance_and_skip_archived_rollover | `20261105200000_archive_school_class_instance.sql` | Full remote statement contained in source |
+| 20261106105610 | pin_unlock_mission_delay_search_path_actual_overload_20261106 | `20261106160000_pin_function_search_paths.sql` | Full remote statement contained in source |
+
+These are content matches with different version/name registrations, not files to execute again.
+
+### Historical SQL requiring special care
+
+Restoration preserves history; it does not authorize replay. In particular:
+
+- `20261105074706_backfill_teacher_scoped_assignments_from_legacy_assigners.sql` contains data backfill/upsert statements.
+- `20261105074853_backfill_legacy_assignments_with_original_teacher_attribution.sql` contains data backfill/upsert statements and trigger changes.
+- `20261105074930_restrict_individual_module_reports_to_teacher_role.sql` includes two hard-coded `DELETE` statements for specific class/teacher IDs in addition to function changes.
+- `20261105190518_platform_admin_teacher_class_assignments.sql` defines functions that insert/update class memberships when called.
+- `20261105201824_delete_empty_school_class_instance.sql` defines a privileged deletion function.
+
+None of those statements or functions was executed as part of this source recovery. Do not replay these historical migrations.
+
+## Updated inventory after source recovery
+
+- Repository SQL migration files: **186**
+- Remote migration ledger entries: **138**
+- Remote entries now represented by a same-name repository file: **135**
+- Remote entries still lacking a same-name file: **3**, each content-matched to a differently named repository file above.
+- Repository files without a same-name remote ledger entry: **50**. This includes pending scenario-assessment migrations and historical migrations whose production application status still requires semantic reconciliation.
+
+The three remaining name mismatches are not evidence of missing SQL. The next unresolved work is the 50 repository-only migrations: compare them with remote SQL and live database definitions to determine which are applied under alternate versions, superseded, or genuinely pending.
+
