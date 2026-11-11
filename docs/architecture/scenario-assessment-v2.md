@@ -355,3 +355,13 @@ Die Detailtiefe darf die verständliche Gesamtbotschaft nicht verdrängen. Die L
 ### 13.3 Mehrere Szenarien in einem Lernlauf
 
 Wenn ein Lernlauf mehrere Szenarien enthält, bleibt die Bewertung je Szenario getrennt. Die Abschlussprüfung muss deshalb die betroffenen Szenarien berücksichtigen; ein gemeinsamer Prozentwert darf unterschiedliche Kompetenzprofile nicht zusammenziehen. Eine übergreifende Lernlauf-Zusammenfassung ist eine zusätzliche Darstellung, kein Ersatz für die einzelnen Szenario-Snapshots.
+
+### 13.4 Redaktionelle Threshold-Konfiguration und Live-Vorschau
+
+- Die drei Abschlussformulierungen werden auf Szenarioebene im Editorial gepflegt.
+- Zwei Regler definieren die Grenze zwischen den drei Rückmeldungen. Gespeichert werden Prozentwerte; die Oberfläche rechnet sie unmittelbar anhand der aktuell konfigurierten, auswertbaren Pflichtanforderungen in ungefähre Anzahlen um.
+- Der Nenner entspricht der Snapshot-Logik: explizit verpflichtende, bewertbare Lernkarten (keine Reflexionskarten) plus aktive Feed-Anforderungen. Bei `all_acceptable` zählt jede als erforderlich konfigurierte akzeptierte Aktion separat; bei `any` zählt die Aktionseinheit einmal. Optionale und nicht bewertbare Inhalte zählen nicht.
+- Die Schwellen beziehen sich auf die Szenario-Anforderungserfüllung. Teilweise erfüllte Anforderungen zählen gemäß Scoring mit 0,5; deshalb sind die angezeigten absoluten Abfragezahlen ausdrücklich Näherungswerte, während die Prozentgrenze maßgeblich bleibt.
+- Vor dem endgültigen Abschluss ruft der Player `preview_scenario_assessment_v1` auf. Diese RPC prüft die aktive Schülerzuweisung, liest den unveränderlichen Assignment-Snapshot und die dazugehörigen Ereignisse und berechnet das Ergebnis ohne Schreiboperation. Sie liefert außerdem die drei Texte und Schwellen des Szenarios.
+- Erst wenn der Schüler nach Anzeige der passenden Rückmeldung ausdrücklich „Jetzt abschließen“ wählt, wird `finalize_scenario_assessment_v1` aufgerufen und das Ergebnis gespeichert.
+- Die neue Preview-RPC und das Szenariofeld werden in separaten, additiven Migrationen angelegt. Sie sind auf dem Arbeitsbranch vorbereitet, aber noch nicht in Supabase-Produktion angewendet. Kein DB-Push und kein Produktionsdeployment erfolgte im Rahmen dieser Änderung.
