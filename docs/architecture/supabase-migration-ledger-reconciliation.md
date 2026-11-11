@@ -2,7 +2,7 @@
 
 **Status:** inventory only; no database changes made  
 **Audited branch:** `fix/scenario-assessment-v2`  
-**Audited branch HEAD:** `7e33e1af2a627351c86c44c618c2546fbb9a4bc7`  
+**Audited branch HEAD at initial inventory:** `7e33e1af2a627351c86c44c618c2546fbb9a4bc7`  
 **Supabase project:** `oegshknzeqmjmkraxozr`  
 **Audit date:** 2026-11-11
 
@@ -272,3 +272,16 @@ None of those statements or functions was executed as part of this source recove
 
 The three remaining name mismatches are not evidence of missing SQL. The next unresolved work is the 50 repository-only migrations: compare them with remote SQL and live database definitions to determine which are applied under alternate versions, superseded, or genuinely pending.
 
+
+
+## Review of the 50 repository-only migration files
+
+A follow-up read-only review compared the 50 listed files with current production tables, columns, indexes, functions, policies, triggers, grants, publication membership, and selected row counts.
+
+The detailed per-file findings are maintained in [supabase-migration-50-review.md](./supabase-migration-50-review.md).
+
+Summary: 34 files have effects represented in the current database, 9 have been superseded by later architecture or migrations, 1 is partially represented (the `is_active` column exists but its named index does not), 1 data backfill has no observable source or target rows, 1 Realtime publication change is absent, and the 4 new scenario-assessment migrations are expected to remain pending.
+
+This review did not execute SQL or modify Supabase. The Realtime publication and missing index are recorded as review items, not approved changes. The old one-active-module model must not be replayed.
+
+- Follow-up review committed on 2026-11-11.
