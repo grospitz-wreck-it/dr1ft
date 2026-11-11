@@ -12,6 +12,8 @@ type Task = {
   interactions: Interaction[];
   feedback: string;
   successCriteria: string;
+  expectedResponse: string;
+  evaluationMethod: "completion" | "criteria" | "choice" | "reflection" | "discussion";
   assessment: InteractionAssessment;
   competencyIds: string[];
 };
@@ -39,6 +41,8 @@ export function ContentLearningTaskEditor({ scenarioId, contentItemId, initialTa
       interactions: DEFAULT_INTERACTIONS.map(base => { const prior = (saved.interactions ?? []).find(entry => entry.id === base.id || (base.id === "inspect_context" && entry.id === "fact_check")); return { ...base, discoveryMessage: prior?.discoveryMessage ?? "" }; }),
       feedback: saved.feedback ?? "",
       successCriteria: saved.successCriteria ?? "",
+      expectedResponse: typeof (saved as any).expectedResponse === "string" ? (saved as any).expectedResponse : "",
+      evaluationMethod: ["completion", "criteria", "choice", "reflection", "discussion"].includes((saved as any).evaluationMethod) ? (saved as any).evaluationMethod : "criteria",
       competencyIds: Array.isArray((saved as any).competencyIds) ? (saved as any).competencyIds.filter((id: unknown) => typeof id === "string") : [],
       assessment: {
         assessedActions: Array.isArray((saved as any).assessment?.assessedActions) ? (saved as any).assessment.assessedActions : [],
@@ -98,8 +102,8 @@ export function ContentLearningTaskEditor({ scenarioId, contentItemId, initialTa
           ...task,
           interactions: task.interactions,
           interactionType: "reflect",
-          expectedResponse: "",
-          evaluationMethod: "criteria",
+          expectedResponse: task.expectedResponse,
+          evaluationMethod: task.evaluationMethod,
           assessment: task.assessment,
         } as any);
         setMessage("Gespeichert");
@@ -133,6 +137,46 @@ export function ContentLearningTaskEditor({ scenarioId, contentItemId, initialTa
               <button type="button" onClick={() => setOpen(false)} className="rounded-xl p-2 text-slate-400 transition hover:bg-slate-100 hover:text-slate-700" aria-label="Schließen"><X className="h-5 w-5" /></button>
             </div>
             <form onSubmit={submit} className="space-y-5 p-4 sm:p-5">
+          <section className="rounded-2xl border border-slate-200 bg-slate-50/70 p-4 sm:p-5">
+            <div className="mb-3">
+              <h3 className="text-sm font-bold text-slate-900">Antwort &amp; Auswertung</h3>
+              <p className="mt-1 text-xs leading-relaxed text-slate-500">Lege fest, was Lernende als Antwort liefern sollen und nach welcher Methode diese Antwort ausgewertet wird. Diese Angaben werden gespeichert; eine automatische KI-Auswertung von Freitext ist damit noch nicht aktiviert.</p>
+            </div>
+            <div className="grid gap-4 sm:grid-cols-2">
+              <label className="block text-xs font-semibold text-slate-700">
+                Lernziel / Zweck
+                <textarea className="mt-1.5 w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm font-normal outline-none transition focus:border-violet-400 focus:ring-4 focus:ring-violet-100" rows={2} maxLength={1000} value={task.purpose} onChange={event => update("purpose", event.target.value)} placeholder="Was sollen die Lernenden verstehen oder erkennen?" />
+              </label>
+              <label className="block text-xs font-semibold text-slate-700">
+                Erwartete Handlung
+                <textarea className="mt-1.5 w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm font-normal outline-none transition focus:border-violet-400 focus:ring-4 focus:ring-violet-100" rows={2} maxLength={1500} value={task.learnerAction} onChange={event => update("learnerAction", event.target.value)} placeholder="Was sollen die Lernenden konkret tun?" />
+              </label>
+              <label className="block text-xs font-semibold text-slate-700 sm:col-span-2">
+                Erwartete Antwort / Nachweis
+                <textarea className="mt-1.5 w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm font-normal outline-none transition focus:border-violet-400 focus:ring-4 focus:ring-violet-100" rows={3} maxLength={1500} value={task.expectedResponse} onChange={event => update("expectedResponse", event.target.value)} placeholder="Welche Antwort, Begründung oder welches Ergebnis soll ein Schüler liefern?" />
+                <span className="mt-1 block font-normal text-slate-500">Beschreibe möglichst konkret, woran eine inhaltlich passende Antwort erkennbar ist.</span>
+              </label>
+              <label className="block text-xs font-semibold text-slate-700">
+                Auswertungsmethode
+                <select className="mt-1.5 w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm font-normal outline-none transition focus:border-violet-400 focus:ring-4 focus:ring-violet-100" value={task.evaluationMethod} onChange={event => update("evaluationMethod", event.target.value as Task["evaluationMethod"])}>
+                  <option value="completion">Bearbeitung / Abschluss</option>
+                  <option value="criteria">Feste Kriterien</option>
+                  <option value="choice">Auswahl / Entscheidung</option>
+                  <option value="reflection">Reflexion / Begründung</option>
+                  <option value="discussion">Diskussion / Austausch</option>
+                </select>
+              </label>
+              <label className="block text-xs font-semibold text-slate-700">
+                Erfolgskriterien
+                <textarea className="mt-1.5 w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm font-normal outline-none transition focus:border-violet-400 focus:ring-4 focus:ring-violet-100" rows={2} maxLength={1500} value={task.successCriteria} onChange={event => update("successCriteria", event.target.value)} placeholder="Welche Kriterien machen eine Antwort erfolgreich?" />
+              </label>
+              <label className="block text-xs font-semibold text-slate-700 sm:col-span-2">
+                Allgemeines Feedback
+                <textarea className="mt-1.5 w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm font-normal outline-none transition focus:border-violet-400 focus:ring-4 focus:ring-violet-100" rows={2} maxLength={1000} value={task.feedback} onChange={event => update("feedback", event.target.value)} placeholder="Welche Rückmeldung erhalten Lernende nach der Bearbeitung?" />
+              </label>
+            </div>
+          </section>
+
           <div className="space-y-3">
             <div className="flex flex-wrap items-center justify-between gap-3">
               <p className="max-w-2xl text-xs leading-relaxed text-slate-500">Alle Aktionen sind im Player immer sichtbar. Hier legst du fest, welche davon als Lernnachweis zählen und wann Lernende eine Rückmeldung erhalten.</p>
