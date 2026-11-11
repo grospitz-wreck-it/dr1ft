@@ -59,3 +59,16 @@ Damit ist die technische Existenz der drei Migrationsergebnisse bestätigt. Ein 
 - Der bekannte divergente Migrationsstand (lokal und remote unterschiedliche Historien) bleibt davon unberührt. Diese drei manuell ausgeführten Migrationen sind als zusätzliche bestätigte und technisch verifizierte Information zu berücksichtigen.
 
 Diese Notiz dokumentiert die vom Projektinhaber bestätigte Ausführung und die Read-only-Prüfung vom 11.11.2026. Sie ersetzt keine erneute technische Verifikation bei späteren Änderungen.
+
+
+## Testkandidaten aus der Content-Prüfung am 11.11.2026
+
+Die Assessment-Snapshot-Funktion nimmt Lernkarten nur dann in den Nenner auf, wenn sie **explizit** `required: true` enthalten, einen Typ ungleich `reflection` und eine ID haben. Legacy-Karten ohne `required: true` werden absichtlich nicht als Pflichtanforderung geraten.
+
+Bei der read-only Content-Prüfung wurden folgende Kandidaten gefunden:
+
+- `Grenzen im Netz: Wenn Spaß aufhört`: eine Lernkarte mit `required: true`; die vorhandene Klassen-Zuweisung ist derzeit inaktiv und hat daher keinen Snapshot.
+- `Gefahr von rechts - Wie Neonazis in sozialen Netzwerken arbeiten und wie sie zu erkennen sind`: acht Lernkarten, aber ohne explizites `required: true`; sie ergeben nach der aktuellen Snapshot-Regel deshalb keine bewertbaren Pflichtanforderungen.
+- Die aktiven Feed-Beiträge der geprüften Szenarien enthielten keine `extra.learningTask.assessment`-Konfiguration mit bewertbaren `assessedActions` und `acceptableActions`.
+
+Für einen End-to-End-Test ist `Grenzen im Netz: Wenn Spaß aufhört` derzeit der naheliegende Kandidat, sofern er einer ausdrücklich dafür vorgesehenen Testklasse zugewiesen wird. Nicht eigenständig aktivieren oder einer produktiven Klasse zuweisen.
