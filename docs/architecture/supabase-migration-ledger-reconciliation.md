@@ -67,7 +67,6 @@ The following rows have exactly one repository file with the same normalized mig
 | 20261106105535 | `create_student_comment_atomically_manual_reconcile_20261106` | `20261106240000_create_student_comment_atomically.sql` |
 | 20261106105543 | `pin_function_search_paths_reconciled_actual_overloads_20261106` | `20261106160000_pin_function_search_paths.sql` |
 | 20261106105549 | `get_class_instance_post_likes_rpc_manual_reconcile_20261106` | `20261106250000_get_class_instance_post_likes_rpc.sql` |
-| 20261106105610 | `pin_unlock_mission_delay_search_path_actual_overload_20261106` | `20261106260000_remove_user_profile_birth_year.sql` |
 | 20261106105700 | `get_student_class_peers_rpc_manual_reconcile_20261106` | `20261106230000_get_student_class_peers_rpc.sql` |
 | 20261106120615 | `restrict_class_instance_updates_to_school_admins` | `20261106121500_restrict_class_instance_updates_to_school_admins.sql` |
 | 20261106123614 | `restrict_class_creation_and_individual_reports` | `20261106143000_restrict_class_creation_and_individual_reports.sql` |
