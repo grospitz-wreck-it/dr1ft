@@ -1228,3 +1228,46 @@ export async function saveScenarioCoverUrl(scenarioId: string, formData: FormDat
   revalidatePath("/scenarios");
   revalidatePath("/scenarios/" + scenarioId);
 }
+
+/**
+ * Speichert die drei Abschlussrückmeldungen und ihre szenariobezogenen
+ * Fortschrittsschwellen. Die Schwellen sind Prozentwerte der Pflicht-
+ * Anforderungen; der Player berechnet daraus zur Laufzeit die Fallzahlen.
+ */
+export async function updateScenarioCompletionFeedback(scenarioId: string, formData: FormData) {
+  const supabase = supabaseServerClient();
+  const lowThreshold = Number(formData.get("lowThresholdPercent"));
+  const middleThreshold = Number(formData.get("middleThresholdPercent"));
+  const lowMessage = String(formData.get("lowMessage") ?? "").trim();
+  const middleMessage = String(formData.get("middleMessage") ?? "").trim();
+  const highMessage = String(formData.get("highMessage") ?? "").trim();
+
+  if (!Number.isFinite(lowThreshold) || !Number.isFinite(middleThreshold)
+      || lowThreshold < 0 || middleThreshold > 100
+      || lowThreshold >= middleThreshold) {
+    throw new Error("Die erste Schwelle muss kleiner als die zweite Schwelle sein (0–100 %).");
+  }
+  if (!lowMessage || !middleMessage || !highMessage) {
+    throw new Error("Bitte alle drei Abschlussrückmeldungen ausfüllen.");
+  }
+  if ([lowMessage, middleMessage, highMessage].some((message) => message.length > 500)) {
+    throw new Error("Eine Abschlussrückmeldung darf höchstens 500 Zeichen lang sein.");
+  }
+
+  const { error } = await supabase
+    .from("scenarios")
+    .update({
+      completion_feedback: {
+        low_threshold_percent: lowThreshold,
+        middle_threshold_percent: middleThreshold,
+        low_message: lowMessage,
+        middle_message: middleMessage,
+        high_message: highMessage,
+      },
+    })
+    .eq("id", scenarioId);
+
+  if (error) throw new Error(error.message);
+  revalidatePath(`/scenarios/${scenarioId}`);
+  revalidatePath("/feed");
+}
