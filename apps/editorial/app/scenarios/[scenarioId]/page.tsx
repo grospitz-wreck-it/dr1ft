@@ -245,7 +245,7 @@ export default async function ScenarioDetailPage({ params, searchParams = {} }: 
                     <ScenarioCompletionFeedbackEditor
                       scenarioId={scenarioId}
                       requiredRequirementCount={requiredRequirementCount}
-                      config={scenario.completion_feedback ?? null}
+                      config={(scenario as any).completion_feedback ?? null}
                       saveAction={updateScenarioCompletionFeedback.bind(null, scenarioId)}
                     />
                     {(searchParams.ai || searchParams.aiError) && (
