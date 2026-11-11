@@ -75,3 +75,48 @@ export async function finalizeScenarioAssessment(input: {
     };
   }
 }
+
+export type ScenarioCompletionFeedback = {
+  low_threshold_percent?: number;
+  middle_threshold_percent?: number;
+  low_message?: string;
+  middle_message?: string;
+  high_message?: string;
+};
+
+export type ScenarioAssessmentPreview = ScenarioAssessmentResult & {
+  completion_feedback?: ScenarioCompletionFeedback | null;
+};
+
+export async function previewScenarioAssessment(input: {
+  classInstanceId: string;
+  scenarioId: string;
+}): Promise<FinalizeResult & { result?: ScenarioAssessmentPreview }> {
+  try {
+    const supabase = supabaseServerClient();
+    const { data: { user }, error: authError } = await supabase.auth.getUser();
+    if (authError || !user) {
+      return { ok: false, scenarioId: input.scenarioId, error: "Bitte melde dich erneut an." };
+    }
+
+    const { data, error } = await supabase.rpc("preview_scenario_assessment_v1", {
+      p_class_instance_id: input.classInstanceId,
+      p_scenario_id: input.scenarioId,
+    });
+    if (error) {
+      console.error("[scenario-assessment] preview failed", {
+        code: error.code, message: error.message, scenarioId: input.scenarioId,
+      });
+      return { ok: false, scenarioId: input.scenarioId, error: "Dein aktueller Bearbeitungsstand konnte nicht ermittelt werden." };
+    }
+
+    const result = (Array.isArray(data) ? data[0] : data) as ScenarioAssessmentPreview | null;
+    if (!result || typeof result.status !== "string") {
+      return { ok: false, scenarioId: input.scenarioId, error: "Die Vorschau lieferte kein gültiges Ergebnis." };
+    }
+    return { ok: true, scenarioId: input.scenarioId, result };
+  } catch (error) {
+    console.error("[scenario-assessment] unexpected preview error", error);
+    return { ok: false, scenarioId: input.scenarioId, error: "Dein Bearbeitungsstand konnte gerade nicht ermittelt werden." };
+  }
+}
