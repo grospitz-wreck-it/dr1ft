@@ -300,11 +300,12 @@ This section supersedes earlier point-in-time counts and production observations
 
 - Repository: `grospitz-wreck-it/dr1ft`
 - Branch: `fix/scenario-assessment-v2`
-- Inspected code HEAD: `3b580fc4f76d031ccf07d678a437f7330bba360f`
+- Inspected code HEAD before the archive cleanup: `3b580fc4f76d031ccf07d678a437f7330bba360f`
+- Duplicate-version archive commit: `58fa24be1a27af452b65d4a6bec8b840cdb9f9d2`
 - The earlier source-recovery commit `d429def2606d3969455581ec44b2b252b7c3d878` is an ancestor; the current branch is 31 commits ahead.
-- Active migration directory: **187 SQL files**, with **181 distinct version prefixes**.
+- Active migration directory after archive cleanup: **176 SQL files**, with **176 distinct version prefixes**. All duplicate version prefixes have been removed from the active path.
 - Production ledger: **139 entries**.
-- After normalizing the `_manual_reconcile...` and `_reconciled...` suffixes: **50 repository files** have no same-name ledger entry, and **3 ledger entries** have no same-name repository file.
+- Before archive cleanup, 50 active repository files had no normalized same-name ledger entry. Two superseded files were moved to the archive, leaving **48 active repository files** in that category. Three ledger entries still have no same-name repository file, but all three are content-matched to active repository sources.
 - Those three ledger entries are already content-matched to existing repository SQL; they are not missing SQL sources and must not be duplicated:
   - `20261105062315_allow_school_image_as_class_visual` → `20261105113000_set_class_instance_visual_rpc.sql`
   - `20261105201549_archive_school_class_instance_and_skip_archived_rollover` → `20261105200000_archive_school_class_instance.sql`
@@ -313,9 +314,9 @@ This section supersedes earlier point-in-time counts and production observations
 - The four Scenario Assessment versions `20261110100000` through `20261110130000` are absent from the ledger, while their database effects are present.
 - There are no ledger entries with a `202610` version prefix. The presence of 202610-era objects in Production does not by itself establish which historical SQL file introduced them.
 
-### Duplicate local version prefixes
+### Duplicate local version prefixes – resolved by archive cleanup
 
-The current active migration directory contains six extra files sharing five version prefixes:
+The pre-cleanup active migration directory contained six extra files sharing five version prefixes. All eleven files involved in those five collisions have now been moved unchanged to `supabase/migration-archive/`:
 
 | Version prefix | Files sharing it |
 |---|---|
@@ -325,7 +326,7 @@ The current active migration directory contains six extra files sharing five ver
 | `20261106170000` | `allow_class_teachers_individual_reports`, `revoke_client_trigger_references`, `role_scope_security_alignment` |
 | `20261106171000` | `include_class_teachers_in_class_reporting`, `tighten_teacher_class_assignment_scope` |
 
-The nine files in the last four groups were compared with their corresponding remote ledger statements. Their SQL matches the remote source after comment/whitespace normalization, but the remote versions differ. The two `20260930130000` files are already classified as superseded in the 50-file review. These duplicate-prefix files must not be pushed as-is. They should be retained outside the active migration directory only after the archive move is reviewed; do not delete or renumber them to pretend they ran under another version.
+The nine files in the last four groups were compared with their corresponding remote ledger statements. Their SQL matches the remote source after comment/whitespace normalization, but the remote versions differ. The two `20260930130000` files are classified as superseded. The archive move is complete: all eleven files remain unchanged under `supabase/migration-archive/`, outside the active migration path. The active directory now has one file per version prefix. No archived SQL was executed.
 
 ### Live verification of Scenario Assessment V2
 
@@ -345,5 +346,7 @@ Read-only production queries confirm:
 - No migration-ledger entry was inserted, updated, or deleted.
 - No production schema or data was changed during this refresh.
 - No merge to `main` and no production deployment occurred.
-- `supabase db push` remains blocked until duplicate version prefixes and the remaining historical mappings have an explicit, evidence-backed disposition.
+- `supabase db push` remains blocked until the remaining historical mappings have an explicit, evidence-backed disposition. The duplicate-version-prefix blocker is resolved in the active path.
 - The four Scenario Assessment versions are the only currently identified, specifically documented candidates for a later targeted `migration repair --status applied`; this was not run as part of this refresh.
+
+Archive cleanup verification: the active `supabase/migrations/` directory contains 176 SQL files and 176 distinct version prefixes; no duplicate prefixes remain. The archive contains eleven original SQL files plus its README. Production ledger remains unchanged at 139 entries.
