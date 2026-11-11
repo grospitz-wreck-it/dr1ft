@@ -1,7 +1,7 @@
 import type { ReactNode } from "react";
 import { ArrowLeft, BookOpen, CheckCircle2, ChevronDown, Clock3, FileText, Flag, GraduationCap, Info, Layers3, Pencil, Route, School, Sparkles, Trash2, Users } from "lucide-react";
 import { supabaseServerClient } from "../../../lib/supabaseServerClient";
-import { deleteContentItem, generateScenarioContent, optimizeScenarioBasics, toggleScenarioActive, updateContentItemBody, updateScenarioBasics, updateScenarioAmbientDensity } from "../actions";
+import { deleteContentItem, generateScenarioContent, optimizeScenarioBasics, toggleScenarioActive, updateContentItemBody, updateScenarioBasics, updateScenarioAmbientDensity, updateScenarioCompletionFeedback } from "../actions";
 import { ContentStatusControl } from "./ContentStatusControl";
 import { ScenarioCoverEditor } from "../ScenarioCoverEditor";
 import { AiGenerationButton } from "../../components/AiGenerationButton";
@@ -11,6 +11,7 @@ import { ContentComposerModal } from "./ContentComposerModal";
 import { PostEditForm } from "./PostEditForm";
 import { ContentAttachmentEditor } from "./ContentAttachmentEditor";
 import { ContentLearningTaskEditor } from "./ContentLearningTaskEditor";
+import { ScenarioCompletionFeedbackEditor } from "./ScenarioCompletionFeedbackEditor";
 import { ImageEditPopover } from "./ImageEditPopover";
 import { ContentNpcAssignmentEditor } from "./ContentNpcAssignmentEditor";
 
@@ -150,6 +151,25 @@ export default async function ScenarioDetailPage({ params, searchParams = {} }: 
   const hasFeedPost = (contentItems ?? []).some((item) => item.type === "post");
   const hasMission = (missions ?? []).length > 0;
   const isReadyForReview = hasBasics && hasLearningPlan && hasFeedPost && hasMission;
+  const learningCardsForAssessment = Array.isArray(scenario.learning_cards) ? scenario.learning_cards : [];
+  const requiredCardCount = learningCardsForAssessment.filter((card: any) =>
+    card?.type !== "reflection" && card?.required === true && typeof card?.id === "string" && card.id.trim().length > 0
+  ).length;
+  const requiredFeedActionCount = (contentItems ?? []).reduce((count: number, item: any) => {
+    if (item.status !== "live") return count;
+    const task = item.extra?.learningTask;
+    const assessment = task?.assessment;
+    const assessed = Array.isArray(assessment?.assessedActions) ? assessment.assessedActions : [];
+    const acceptable = Array.isArray(assessment?.acceptableActions) ? assessment.acceptableActions : [];
+    if (!acceptable.length) return count;
+    const mode = assessment?.requirementMode ?? "any";
+    if (mode === "all_acceptable") {
+      return count + acceptable.filter((action: unknown) => typeof action === "string" && assessed.includes(action)).length;
+    }
+    return count + 1;
+  }, 0);
+  const requiredRequirementCount = requiredCardCount + requiredFeedActionCount;
+
 
   return (
     <div className="min-h-screen bg-slate-50 px-6 py-6">
@@ -222,6 +242,12 @@ export default async function ScenarioDetailPage({ params, searchParams = {} }: 
                         ))}
                       </div>
                     </header>
+                    <ScenarioCompletionFeedbackEditor
+                      scenarioId={scenarioId}
+                      requiredRequirementCount={requiredRequirementCount}
+                      config={scenario.completion_feedback ?? null}
+                      saveAction={updateScenarioCompletionFeedback.bind(null, scenarioId)}
+                    />
                     {(searchParams.ai || searchParams.aiError) && (
                       <section className={`rounded-2xl border px-5 py-4 ${searchParams.aiError ? "border-red-200 bg-red-50" : "border-accent/20 bg-accent/5"}`}>
                         <div className={`text-xs font-semibold uppercase tracking-wider ${searchParams.aiError ? "text-red-700" : "text-accent"}`}>
