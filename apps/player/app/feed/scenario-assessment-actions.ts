@@ -81,10 +81,14 @@ export type ScenarioAssessmentPreview = {
   completion_message: string;
 };
 
+type PreviewResult =
+  | { ok: true; scenarioId: string; result: ScenarioAssessmentPreview }
+  | { ok: false; scenarioId: string; error: string };
+
 export async function previewScenarioAssessment(input: {
   classInstanceId: string;
   scenarioId: string;
-}): Promise<FinalizeResult & { result?: ScenarioAssessmentPreview }> {
+}): Promise<PreviewResult> {
   try {
     const supabase = supabaseServerClient();
     const { data: { user }, error: authError } = await supabase.auth.getUser();
