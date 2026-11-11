@@ -239,7 +239,9 @@ Diese Quellen dürfen nicht durch doppelte Inserts künstlich vereinheitlicht we
 - Der Player bietet jetzt einen jederzeit erreichbaren Abschluss-Button, bestätigt das Beenden, ruft die Abschluss-RPC für jedes aktive Szenario auf und zeigt Prozentwert sowie vollständig/teilweise/nicht erfüllt/ohne Nachweis an. Das Ergebnis wird nach einem Reload erneut aus der Datenbank geladen.
 - Player- und Editorial-Vorschau bauen auf Vercel erfolgreich.
 
-**Noch nicht umgesetzt:** Die vier Kompetenzstufen und Confidence werden noch nicht aus Ereignissen berechnet. Die drei historisch erinnerten Abschlussformulierungen und ihre damaligen Schwellenwerte sind weiterhin nicht zweifelsfrei nachgewiesen und werden deshalb nicht erfunden. Bestehende aktive Zuweisungen erhalten beim Migration-Cutover nur dann einen Snapshot, wenn für diese Klassen-/Szenario-Kombination noch keinerlei bewertete Feed- oder Lernkartenereignisse existieren. Bei vorhandener Bewertungshistorie wird kein Snapshot erfunden; diese Zuweisung bleibt zunächst nicht auswertbar und muss für einen neuen Bewertungsdurchlauf ausdrücklich reaktiviert werden. Die neuen SQL-Migrationen liegen nur auf dem Arbeitsbranch und wurden nicht auf Supabase angewendet.
+**Noch nicht umgesetzt:** Die vier Kompetenzstufen und Confidence werden noch nicht aus Ereignissen berechnet. Die drei historisch erinnerten Abschlussformulierungen und ihre damaligen Schwellenwerte sind weiterhin nicht zweifelsfrei nachgewiesen und werden deshalb nicht erfunden. Bestehende aktive Zuweisungen erhalten beim Migration-Cutover nur dann einen Snapshot, wenn für diese Klassen-/Szenario-Kombination noch keinerlei bewertete Feed- oder Lernkartenereignisse existieren. Bei vorhandener Bewertungshistorie wird kein Snapshot erfunden; diese Zuweisung bleibt zunächst nicht auswertbar und muss für einen neuen Bewertungsdurchlauf ausdrücklich reaktiviert werden.
+
+**Produktionsstatus (11.11.2026):** Die vier Migrationen `20261110100000` bis `20261110130000` wurden vom Nutzer direkt im Supabase SQL Editor ausgeführt. Die zugehörigen Datenbankobjekte und Berechtigungen wurden read-only nachgewiesen; die Scoring-Funktion besteht einen Smoke-Test (1 von 2 Pflichtanforderungen = 50 %). Die vier Versionsnummern fehlen jedoch noch im Remote-Migrations-Ledger. Die Dateien dürfen nicht erneut ausgeführt werden. Nach exakter Prüfung der lokalen SQL-Quellen sind ausschließlich diese vier Versionsnummern mit `supabase migration repair <version> --status applied` zu registrieren. Die übrigen historischen Migration-Abweichungen bleiben separat zu reconciliieren. Die Realtime-/Index-/Privilege-Nachbesserung `20261111184418` wurde angewendet und ist registriert.
 
 ## 10. Zielbild der technischen Zusammenführung
 
@@ -270,6 +272,8 @@ Für ein Szenario soll die Redaktion nicht jede Interaktion einzeln bewerten mü
 
 ## 11. Implementierungsreihenfolge und Änderungsgrenzen
 
+**Aktualisierung 11.11.2026:** Die Anforderungsscore-Funktion, Assignment-Snapshots, Ergebnis-Persistenz, Finalizer, Lehrerfreigabe und erste Player-Abschlussanzeige sind bereits implementiert. Die vier zugehörigen SQL-Migrationen sind technisch in Produktion vorhanden, aber noch nicht im Remote-Ledger registriert. Die folgende Reihenfolge ist deshalb ein Plan für die noch offene Arbeit und kein Statusbericht über noch nicht begonnene Basiskomponenten.
+
 1. Die vier Stufen, Confidence und „nicht ausreichend beurteilbar“ sind fachlich festgelegt.
 2. Die bestehende Feed- und Lernkarten-Semantik wird gegen das Requirement-Modell abgeglichen.
 3. Die neue Editorial-Konfiguration für unabhängige Requirements und Indicator-Rubriken wird spezifiziert.
@@ -280,10 +284,10 @@ Für ein Szenario soll die Redaktion nicht jede Interaktion einzeln bewerten mü
 8. Langfristige Kompetenzentwicklung wird erst nach Validierung der Szenario-Snapshots angebunden.
 
 Änderungsgrenzen:
-- Nur `apps/player`, `apps/editorial` und notwendige Supabase-Objekte.
-- Keine Änderungen an Teacher oder anderen Apps.
+- Primär `apps/editorial` und `apps/player`; `apps/teacher` nur dort, wo der bestehende Lehrer-Report oder die Freigabesteuerung an denselben Ergebnisvertrag angeschlossen werden muss.
+- Keine Änderungen an anderen Apps ohne begründete Abhängigkeit.
 - Keine Änderungen an `main`, kein Merge und kein Deployment in Produktion ohne ausdrückliche Freigabe.
-- Keine Supabase-Produktionsmigration, kein `db push`, keine Datenänderung während der Analyse-/Spezifikationsphase.
+- Keine Supabase-Produktionsmigration, kein `db push` und keine produktive Datenänderung ohne ausdrückliche Freigabe und abgeschlossene Migration-Reconciliation.
 - Keine rückwirkende Erfindung von Evidenz aus fehlenden historischen Daten.
 
 ## 12. Verifikationsfälle
