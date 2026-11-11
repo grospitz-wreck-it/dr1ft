@@ -76,16 +76,9 @@ export async function finalizeScenarioAssessment(input: {
   }
 }
 
-export type ScenarioCompletionFeedback = {
-  low_threshold_percent?: number;
-  middle_threshold_percent?: number;
-  low_message?: string;
-  middle_message?: string;
-  high_message?: string;
-};
-
-export type ScenarioAssessmentPreview = ScenarioAssessmentResult & {
-  completion_feedback?: ScenarioCompletionFeedback | null;
+export type ScenarioAssessmentPreview = {
+  status: string;
+  completion_message: string;
 };
 
 export async function previewScenarioAssessment(input: {
