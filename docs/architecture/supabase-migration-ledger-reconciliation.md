@@ -29,6 +29,67 @@ There are also ambiguous name collisions:
 
 These must be resolved by comparing stored SQL, repository SQL, and resulting database definitions.
 
+
+## Remote versions with a unique same-name repository candidate
+
+The following rows have exactly one repository file with the same normalized migration name, but the version numbers differ. This is strong filename-level evidence of a renamed/re-versioned source candidate, **not yet proof that the SQL contents are identical**. These entries are safe to treat as candidates for exact SQL comparison, not as reconciled automatically.
+
+| Remote version | Remote ledger name | Repository candidate |
+|---|---|---|
+| 20261104220252 | `security_hardening_phase_1` | `20261104180000_security_hardening_phase_1.sql` |
+| 20261104220254 | `harden_student_message_reports` | `20261104190000_harden_student_message_reports.sql` |
+| 20261104220257 | `revoke_client_execute_on_trigger_functions` | `20261104200000_revoke_client_execute_on_trigger_functions.sql` |
+| 20261104220259 | `validate_student_promotion_source_membership` | `20261104210000_validate_student_promotion_source_membership.sql` |
+| 20261104220301 | `scope_membership_helper_to_caller` | `20261104220000_scope_membership_helper_to_caller.sql` |
+| 20261104220304 | `restrict_class_membership_and_instance_grants` | `20261104230000_restrict_class_membership_and_instance_grants.sql` |
+| 20261104220311 | `harden_legacy_class_memberships` | `20261104250000_harden_legacy_class_memberships.sql` |
+| 20261104220313 | `school_lead_teacher_assignment_and_membership_scope` | `20261104260000_school_lead_teacher_assignment_and_membership_scope.sql` |
+| 20261104220338 | `separate_school_lead_and_class_roster_access` | `20261104270000_separate_school_lead_and_class_roster_access.sql` |
+| 20261104221729 | `teacher_module_editor_posts_rpc` | `20261104230000_teacher_module_editor_posts_rpc.sql` |
+| 20261105061023 | `add_class_visual_id` | `20261105100000_add_class_visual_id.sql` |
+| 20261105061901 | `set_class_instance_visual_rpc` | `20261105113000_set_class_instance_visual_rpc.sql` |
+| 20261105182222 | `school_year_class_matrix_and_rollover` | `20261105150000_school_year_class_matrix_and_rollover.sql` |
+| 20261105190442 | `platform_admin_school_class_matrix_access` | `20261105173000_platform_admin_school_class_matrix_access.sql` |
+| 20261105201509 | `archive_school_class_instance` | `20261105200000_archive_school_class_instance.sql` |
+| 20261105202426 | `fix_school_year_short_format_validation` | `20261105210000_fix_school_year_short_format_validation.sql` |
+| 20261105204355 | `fix_class_access_code_generation` | `20261105220000_fix_class_access_code_generation.sql` |
+| 20261106064653 | `strict_single_class_delete_guard` | `20261106080000_strict_single_class_delete_guard.sql` |
+| 20261106105427 | `enforce_teacher_role_for_individual_reports_manual_reconcile_20261106110000` | `20261106110000_enforce_teacher_role_for_individual_reports.sql` |
+| 20261106105443 | `revoke_client_truncate_privileges_manual_reconcile_2026110612` | `20261106120000_revoke_client_truncate_privileges.sql` |
+| 20261106105456 | `fix_student_comment_membership_policy_manual_reconcile_20261106` | `20261106140000_fix_student_comment_membership_policy.sql` |
+| 20261106105500 | `guard_school_protected_fields_manual_reconcile_20261106` | `20261106150000_guard_school_protected_fields.sql` |
+| 20261106105505 | `revoke_client_trigger_references_manual_reconcile_20261106` | `20261106170000_revoke_client_trigger_references.sql` |
+| 20261106105509 | `fix_student_join_class_instance_runtime_manual_reconcile_20261106` | `20261106180000_fix_student_join_class_instance_runtime.sql` |
+| 20261106105516 | `protect_system_managed_learning_progress_manual_reconcile_20261106` | `20261106190000_protect_system_managed_learning_progress.sql` |
+| 20261106105521 | `restrict_learning_design_mapping_writes_manual_reconcile_20261106` | `20261106200000_restrict_learning_design_mapping_writes.sql` |
+| 20261106105528 | `restrict_npc_safety_event_visibility_manual_reconcile_20261106` | `20261106210000_restrict_npc_safety_event_visibility.sql` |
+| 20261106105532 | `record_interactions_through_validated_rpc_manual_reconcile_20261106` | `20261106220000_record_interactions_through_validated_rpc.sql` |
+| 20261106105535 | `create_student_comment_atomically_manual_reconcile_20261106` | `20261106240000_create_student_comment_atomically.sql` |
+| 20261106105543 | `pin_function_search_paths_reconciled_actual_overloads_20261106` | `20261106160000_pin_function_search_paths.sql` |
+| 20261106105549 | `get_class_instance_post_likes_rpc_manual_reconcile_20261106` | `20261106250000_get_class_instance_post_likes_rpc.sql` |
+| 20261106105610 | `pin_unlock_mission_delay_search_path_actual_overload_20261106` | `20261106260000_remove_user_profile_birth_year.sql` |
+| 20261106105700 | `get_student_class_peers_rpc_manual_reconcile_20261106` | `20261106230000_get_student_class_peers_rpc.sql` |
+| 20261106120615 | `restrict_class_instance_updates_to_school_admins` | `20261106121500_restrict_class_instance_updates_to_school_admins.sql` |
+| 20261106123614 | `restrict_class_creation_and_individual_reports` | `20261106143000_restrict_class_creation_and_individual_reports.sql` |
+| 20261106123935 | `grant_admin_scoped_report_rpcs` | `20261106150000_grant_admin_scoped_report_rpcs.sql` |
+| 20261106125611 | `allow_class_teachers_individual_reports` | `20261106170000_allow_class_teachers_individual_reports.sql` |
+| 20261106125620 | `include_class_teachers_in_class_reporting` | `20261106171000_include_class_teachers_in_class_reporting.sql` |
+| 20261106131923 | `remove_user_profile_birth_year` | `20261106260000_remove_user_profile_birth_year.sql` |
+| 20261106155723 | `role_scope_security_alignment` | `20261106170000_role_scope_security_alignment.sql` |
+| 20261106155937 | `role_aware_class_module_library` | `20261106170500_role_aware_class_module_library.sql` |
+| 20261106160054 | `tighten_teacher_class_assignment_scope` | `20261106171000_tighten_teacher_class_assignment_scope.sql` |
+| 20261106160159 | `school_lead_platform_admin_rls_parity` | `20261106171500_school_lead_platform_admin_rls_parity.sql` |
+| 20261107091141 | `regenerate_class_instance_access_code` | `20261107100000_regenerate_class_instance_access_code.sql` |
+| 20261107091236 | `tighten_class_access_code_teacher_scope` | `20261107100500_tighten_class_access_code_teacher_scope.sql` |
+| 20261107093355 | `student_onboarding_credentials_encrypted` | `20261107103000_student_onboarding_credentials_encrypted.sql` |
+| 20261107093642 | `restrict_onboarding_print_to_subject_teachers_and_school_admins` | `20261107110000_restrict_onboarding_print_to_subject_teachers_and_school_admins.sql` |
+| 20261107093756 | `add_role_scoped_onboarding_print_permission` | `20261107111500_add_role_scoped_onboarding_print_permission.sql` |
+| 20261107093910 | `consume_onboarding_credentials_after_password_change` | `20261107113000_consume_onboarding_credentials_after_password_change.sql` |
+| 20261107094755 | `allow_class_teacher_onboarding_and_code_rotation` | `20261107120000_allow_class_teacher_onboarding_and_code_rotation.sql` |
+| 20261107094824 | `allow_active_school_members_to_view_school_identity` | `20261107121500_allow_active_school_members_to_view_school_identity.sql` |
+| 20261107101744 | `teacher_module_authorization_alignment` | `20261107112000_teacher_module_authorization_alignment.sql` |
+| 20261107213509 | `delete_scenario_family` | `20261107230000_delete_scenario_family.sql` |
+
 ## Remote ledger entries without a same-name repository file
 
 | Remote version | Remote migration name |
