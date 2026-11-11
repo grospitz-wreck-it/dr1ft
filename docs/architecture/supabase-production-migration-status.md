@@ -6,6 +6,8 @@ Arbeitsbranch: `fix/scenario-assessment-v2`
 
 Dieses Dokument ist das verbindliche Arbeitsregister für die Migrationen, die direkt über den Supabase SQL Editor eingespielt wurden. Es trennt ausdrücklich den tatsächlichen Datenbankzustand von der Supabase-Migrationshistorie.
 
+Verbindliche Regeln stehen in [supabase-migration-rules.md](./supabase-migration-rules.md). Die vollständige technische Übergabe für die Fortsetzung liegt in [HANDOVER_scenario-assessment-and-migrations_2026-11-11.md](./HANDOVER_scenario-assessment-and-migrations_2026-11-11.md).
+
 ## Statusdefinitionen
 
 - **Angewendet + registriert:** Änderung ist in der Datenbank vorhanden und die Version steht in `supabase_migrations.schema_migrations`.
