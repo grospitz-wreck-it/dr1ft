@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import { studentAvatarUrl } from "../../lib/avatar";
 
 type StudentRow = {
   userId: string;
@@ -11,19 +12,7 @@ type StudentRow = {
   profile: { display_name?: string | null; username?: string | null; avatar_seed?: string | null } | null;
 };
 
-function studentAvatarUrl(seed: string | null | undefined, size = 96) {
-  if (seed && /^DR1FT-(COL|POP|ANI|MOV|MON|JOB)-\\d{3}$/.test(seed)) {
-    const category = ({ COL: "collectible", POP: "popculture", ANI: "animals", MOV: "movies", MON: "monsters", JOB: "professions" } as Record<string, string>)[seed.slice(6, 9)] ?? "collectible";
-    return `/avatars/${category}/${seed}.webp`;
-  }
-  const styles = ["voxel-art", "adventurer", "adventurer-neutral", "avataaars", "bottts", "fun-emoji", "lorelei", "micah", "miniavs", "personas", "pixel-art-neutral", "thumbs"];
-  const value = seed || "dr1ft";
-  const separator = value.indexOf("::");
-  const candidate = separator > 0 ? value.slice(0, separator) : "";
-  const style = styles.includes(candidate) ? candidate : "voxel-art";
-  const avatarSeed = separator > 0 && styles.includes(candidate) ? value.slice(separator + 2) || "dr1ft" : value;
-  return `https://api.dicebear.com/10.x/${style}/svg?seed=${encodeURIComponent(avatarSeed)}&size=${size}&animationVariant=medium&borderRadius=18`;
-}
+
 
 export function StudentsListClient({ students }: { students: StudentRow[] }) {
   const [query, setQuery] = useState("");
@@ -63,7 +52,7 @@ export function StudentsListClient({ students }: { students: StudentRow[] }) {
         {filtered.map((student) => {
           const name = student.profile?.display_name || student.profile?.username || "Ohne Namen";
           return <div key={student.classId + "-" + student.userId} className="flex items-center gap-3 px-5 py-3.5 transition hover:bg-canvas/70 sm:gap-4 sm:px-6">
-            <img src={studentAvatarUrl(student.profile?.avatar_seed || student.userId, 96)} alt={`Avatar von ${name}`} className="h-10 w-10 shrink-0 rounded-full border border-slate-200 bg-slate-100 object-cover" loading="lazy" />
+            <img src={studentAvatarUrl(student.profile?.avatar_seed || student.userId)} alt={`Avatar von ${name}`} className="h-10 w-10 shrink-0 rounded-full border border-slate-200 bg-slate-100 object-cover" loading="lazy" />
             <div className="min-w-0 flex-1">
               <p className="truncate font-medium text-slate-900">{name}</p>
               <p className="truncate text-sm text-slate-500">@{student.profile?.username || "—"}</p>
