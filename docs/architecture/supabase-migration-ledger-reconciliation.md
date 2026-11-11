@@ -285,3 +285,9 @@ Summary: 34 files have effects represented in the current database, 9 have been 
 This review did not execute SQL or modify Supabase. The Realtime publication and missing index are recorded as review items, not approved changes. The old one-active-module model must not be replayed.
 
 - Follow-up review committed on 2026-11-11.
+
+
+## Production migration status register
+
+The current operational checklist, including SQL-Editor-applied changes, verified production corrections, ledger status, and remaining repair steps, is maintained in [supabase-production-migration-status.md](./supabase-production-migration-status.md).
+
