@@ -22,14 +22,16 @@ Die 50 Dateien sind **keine Liste von 50 ausstehenden Migrationen**. Die Live-Da
 
 ## Einzelprüfung
 
+**Archivstatus:** Die Prüfung umfasste ursprünglich 50 Repository-Dateien ohne normalisierten Ledger-Namen. Zwei Dateien mit dem kollidierenden Versionspräfix `20260930130000` wurden inzwischen unverändert nach `supabase/migration-archive/` verschoben. Damit verbleiben 48 dieser Dateien im aktiven Migrationsverzeichnis; beide archivierten Dateien bleiben als historische Quellen erhalten.
+
 | # | Repository-Datei | Befund | Live-Evidenz / Einordnung |
 |---:|---|---|---|
 | 1 | `0056_ambient_generator_assets.sql` | **Wirkung vorhanden** | Tabelle `ambient_generation_profiles` vorhanden (5 Datensätze); Bucket `ambient-assets` sowie Lese-/Upload-/Delete-Policies vorhanden. |
 | 2 | `20260926210000_scenario_studio.sql` | **Wirkung vorhanden** | `scenarios.scenario_group`, `age_band` und die beiden zugehörigen Indizes vorhanden. |
 | 3 | `20260930100000_fix_join_class_as_student_instance_scope.sql` | **Ersetzt** | Join-RPC vorhanden, aber die aktuelle Implementierung ist die spätere, gehärtete Variante; Remote-Ledger enthält dafür die manuell umregistrierte Migration `20261106105509`. Nicht erneut ausführen. |
 | 4 | `20260930120000_student_comments_instance_scope.sql` | **Ersetzt** | Die alte Comment-Policy ist nicht mehr aktiv. Stattdessen besteht `students create own instance comments`; die spätere Policy-Änderung ist im Ledger unter `20261106105456` registriert. |
-| 5 | `20260930130000_enforce_one_active_class_module.sql` | **Ersetzt** | Alte Triggerfunktion, Trigger und Unique-Index für „genau ein Modul je Klasse“ fehlen. Die aktuelle Assignment-Struktur unterstützt Aktivierung/Deaktivierung und Archivierung; die alte Löschlogik wäre fachlich riskant. |
-| 6 | `20260930130000_teacher_workspace_hardening.sql` | **Wirkung vorhanden, später erweitert** | `teacher_reports` existiert mit RLS. Die ursprüngliche Lehrer-Policy ist durch die spätere rollen-/berichtsumfangsbezogene Policy ersetzt. |
+| 5 | `20260930130000_enforce_one_active_class_module.sql` | **Archiviert / ersetzt** | Unverändert nach `supabase/migration-archive/` verschoben. Alter Ein-Modul-pro-Klasse-Trigger und Unique-Index fehlen; die aktuelle Assignment-Struktur ersetzt dieses Modell. Nicht reaktivieren. |
+| 6 | `20260930130000_teacher_workspace_hardening.sql` | **Archiviert / Wirkung später erweitert** | Unverändert nach `supabase/migration-archive/` verschoben, um den doppelten Versionspräfix aufzulösen. `teacher_reports` und RLS sind vorhanden; spätere rollen-/berichtsumfangsbezogene Policies sind maßgeblich. |
 | 7 | `20260930150000_teacher_class_management.sql` | **Ersetzt** | `upsert_class_instance_scenario_assignment` existiert, hat aktuell aber einen anderen Rückgabetyp und eine spätere Implementierung. Nicht mit der alten Void-/Ersetzungslogik replayen. |
 | 8 | `20260930170000_restore_school_administration.sql` | **Wirkung vorhanden, später erweitert** | `school_memberships`, `is_school_admin_of`, `get_school_member_directory` und zugehörige Schulzugriffs-Policies vorhanden. |
 | 9 | `20261001170000_reconcile_class_instance_runtime.sql` | **Ersetzt / teilweise umbenannt** | Der NPC-Konversations-Unique-Index ist als `idx_user_npc_conversations_instance_unique` vorhanden. Der alte Ein-Modul-pro-Klasse-Index fehlt; die Assignment-Logik wurde später auf den aktuellen Status-/Archivierungsansatz umgestellt. |
