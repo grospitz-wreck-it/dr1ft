@@ -59,8 +59,12 @@ begin
   order by snap.snapshot_version desc
   limit 1;
 
-  select s.completion_feedback into v_feedback
-  from public.scenarios s where s.id = p_scenario_id;
+  select coalesce(snap.completion_feedback, s.completion_feedback)
+    into v_feedback
+  from public.scenarios s
+  left join public.scenario_assessment_snapshots snap
+    on snap.id = v_snapshot_id
+  where s.id = p_scenario_id;
 
   if v_snapshot_id is null then
     return jsonb_build_object(
