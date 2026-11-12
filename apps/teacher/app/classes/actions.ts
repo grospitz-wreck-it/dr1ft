@@ -1,0 +1,477 @@
+// apps/teacher/app/classes/actions.ts
+"use server";
+
+import { revalidatePath } from "next/cache";
+import { redirect } from "next/navigation";
+import { supabaseServerClient } from "../../lib/supabaseServerClient";
+
+function generateAccessCode(): string {
+  const alphabet = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
+  let code = "";
+  for (let i = 0; i < 6; i++) code += alphabet[Math.floor(Math.random() * alphabet.length)];
+  return code;
+}
+
+export async function regenerateClassInstanceAccessCode(classId: string): Promise<string> {
+  const supabase = supabaseServerClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) throw new Error("Nicht authentifiziert");
+
+  const { data: accessCode, error } = await supabase.rpc("regenerate_class_instance_access_code", {
+    p_class_id: classId,
+  });
+  if (error || !accessCode) throw new Error(error?.message ?? "Klassencode konnte nicht erneuert werden.");
+
+  revalidatePath(`/classes/${classId}`);
+  revalidatePath("/classes");
+  return accessCode as string;
+}
+
+export async function createClass(formData: FormData) {
+  const supabase = supabaseServerClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) throw new Error("Nicht authentifiziert");
+
+  const name = String(formData.get("name") ?? "").trim();
+  const { data: schoolMembership } = await supabase
+    .from("school_memberships")
+    .select("school_id,role")
+    .eq("user_id", user.id)
+    .eq("active", true)
+    .order("created_at", { ascending: true })
+    .limit(1)
+    .maybeSingle();
+  const { data: isPlatformAdmin } = await supabase.rpc("is_platform_admin");
+  if (!isPlatformAdmin && !["school_admin", "school_lead"].includes(schoolMembership?.role ?? "")) {
+    throw new Error("Nur Schuladmins, Schulleitung oder Plattformadmins dürfen Klassen anlegen.");
+  }
+  const schoolId = schoolMembership?.school_id ?? null;
+  if (!schoolId && !isPlatformAdmin) throw new Error("Deinem Konto ist keine Schule zugeordnet.");
+  const gradeLevelRaw = formData.get("gradeLevel");
+  const gradeLevel = gradeLevelRaw ? Number(gradeLevelRaw) : null;
+  if (!name) throw new Error("Klassenname darf nicht leer sein");
+
+  const { error: profileError } = await supabase
+    .from("user_profiles")
+    .upsert({ id: user.id }, { onConflict: "id" });
+  if (profileError) throw new Error(profileError.message);
+
+  let accessCode = generateAccessCode();
+  for (let attempt = 0; attempt < 5; attempt++) {
+    const { data: existing } = await supabase.from("classes").select("id").eq("access_code", accessCode).maybeSingle();
+    if (!existing) break;
+    accessCode = generateAccessCode();
+  }
+
+  const { data: newClass, error: classError } = await supabase
+    .from("classes")
+    .insert({ name, school_id: schoolId, grade_level: gradeLevel, access_code: accessCode, created_by: user.id })
+    .select()
+    .single();
+  if (classError || !newClass) throw new Error(classError?.message ?? "Klasse konnte nicht angelegt werden");
+
+  const { error: membershipError } = await supabase.from("class_memberships").insert({
+    class_id: newClass.id,
+    user_id: user.id,
+    role: "school_admin",
+  });
+  if (membershipError) throw new Error(membershipError.message);
+
+  const schoolYear = String(formData.get("schoolYear") ?? "2026/27").trim() || "2026/27";
+  const { data: instanceId, error: instanceError } = await supabase.rpc("create_class_instance_from_class", {
+    p_class_id: newClass.id,
+    p_school_year: schoolYear,
+  });
+  if (instanceError || !instanceId) throw new Error(instanceError?.message ?? "Klasseninstanz konnte nicht angelegt werden");
+
+  revalidatePath("/classes");
+  redirect(`/classes/${instanceId}`);
+}
+
+export async function toggleScenarioAssignment(
+  classId: string,
+  scenarioId: string,
+  shouldBeAssigned: boolean,
+  pacingMode: "compact" | "as_designed" = "compact"
+) {
+  const supabase = supabaseServerClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) throw new Error("Nicht authentifiziert");
+
+  const { data: classInfo } = await supabase.from("class_instances")
+    .select("school_id,school_year,is_active").eq("id", classId).maybeSingle();
+  if (!classInfo?.school_id || !classInfo.is_active) throw new Error("Die Klasseninstanz ist nicht aktiv.");
+
+  const { data: canManageClass, error: permissionError } = await supabase.rpc(
+    "can_manage_class_scenario_assignments",
+    { p_instance_id: classId },
+  );
+  if (permissionError) throw new Error(permissionError.message);
+
+  if (!shouldBeAssigned) {
+    if (!canManageClass) throw new Error("Nur Klassenlehrkräfte und die Schulleitung dürfen Szenarien für die ganze Klasse deaktivieren.");
+    const { error: scopedDeactivateError } = await supabase.from("teacher_class_module_assignments")
+      .update({ is_active: false, archived_at: new Date().toISOString() })
+      .eq("class_instance_id", classId)
+      .eq("teacher_user_id", user.id)
+      .eq("module_type", "scenario")
+      .eq("module_id", scenarioId)
+      .is("archived_at", null);
+    if (scopedDeactivateError) throw new Error(scopedDeactivateError.message);
+
+    const { error } = await supabase.from("class_instance_scenario_assignments")
+      .update({ is_active: false })
+      .eq("class_instance_id", classId)
+      .eq("scenario_id", scenarioId)
+      .is("archived_at", null);
+    if (error) throw new Error(error.message);
+    revalidatePath(`/classes/${classId}`);
+    revalidatePath("/classes");
+    return;
+  }
+
+  // Both class managers and subscribed subject teachers get a personal module subscription.
+  const { error: subscriptionError } = await supabase.rpc("subscribe_teacher_to_class_instance", {
+    p_class_instance_id: classId,
+  });
+  if (subscriptionError) throw new Error(subscriptionError.message);
+
+  const { data: subscription, error: subscriptionLookupError } = await supabase
+    .from("teacher_class_subscriptions")
+    .select("id")
+    .eq("class_instance_id", classId)
+    .eq("teacher_user_id", user.id)
+    .eq("is_active", true)
+    .maybeSingle();
+  if (subscriptionLookupError || !subscription) throw new Error("Dein Klassenabonnement konnte nicht geladen werden.");
+
+  const { error: scopedAssignmentError } = await supabase.from("teacher_class_module_assignments").upsert({
+    subscription_id: subscription.id,
+    school_id: classInfo.school_id,
+    class_instance_id: classId,
+    teacher_user_id: user.id,
+    school_year: classInfo.school_year,
+    module_type: "scenario",
+    module_id: scenarioId,
+    assigned_by: user.id,
+    is_active: true,
+    archived_at: null,
+  }, { onConflict: "teacher_user_id,class_instance_id,module_type,module_id" });
+  if (scopedAssignmentError) throw new Error(scopedAssignmentError.message);
+
+  if (canManageClass) {
+    const { error } = await supabase.rpc("upsert_class_instance_scenario_assignment", {
+      p_instance_id: classId,
+      p_scenario_id: scenarioId,
+      p_pacing_mode: pacingMode,
+    });
+    if (error) throw new Error(error.message);
+
+    const { error: restoreError } = await supabase
+      .from("class_instance_scenario_assignments")
+      .update({ archived_at: null, is_active: true })
+      .eq("class_instance_id", classId)
+      .eq("scenario_id", scenarioId);
+    if (restoreError) throw new Error(restoreError.message);
+  } else {
+    const { error } = await supabase.rpc("add_class_instance_scenario_assignment", {
+      p_instance_id: classId,
+      p_scenario_id: scenarioId,
+    });
+    if (error) throw new Error(error.message);
+  }
+
+  revalidatePath(`/classes/${classId}`);
+  revalidatePath("/classes");
+}
+
+export async function setScenarioAssignmentActive(classId: string, scenarioId: string, isActive: boolean) {
+  const supabase = supabaseServerClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) throw new Error("Nicht authentifiziert");
+
+  const { data: canManageClass, error: membershipError } = await supabase.rpc(
+    "can_manage_class_scenario_assignments",
+    { p_instance_id: classId },
+  );
+
+  if (membershipError || !canManageClass) {
+    throw new Error("Keine Berechtigung, den Modulstatus dieser Klasse zu ändern");
+  }
+
+  const { error } = await supabase
+    .from("class_instance_scenario_assignments")
+    .update({ is_active: isActive })
+    .eq("class_instance_id", classId)
+    .eq("scenario_id", scenarioId)
+    .is("archived_at", null);
+  if (error) throw new Error(error.message);
+
+  revalidatePath(`/classes/${classId}`);
+}
+
+export async function archiveScenarioAssignment(classId: string, scenarioId: string) {
+  const supabase = supabaseServerClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) throw new Error("Nicht authentifiziert");
+
+  const { data: canManageClass, error: membershipError } = await supabase.rpc(
+    "can_manage_class_scenario_assignments",
+    { p_instance_id: classId },
+  );
+
+  if (membershipError || !canManageClass) {
+    throw new Error("Keine Berechtigung, Module dieser Klasse zu archivieren");
+  }
+
+  const { error } = await supabase
+    .from("class_instance_scenario_assignments")
+    .update({ archived_at: new Date().toISOString(), is_active: false })
+    .eq("class_instance_id", classId)
+    .eq("scenario_id", scenarioId)
+    .is("archived_at", null);
+  if (error) throw new Error(error.message);
+
+  revalidatePath(`/classes/${classId}`);
+  revalidatePath("/classes");
+}
+
+export async function updateScenarioPacing(
+  classId: string,
+  scenarioId: string,
+  pacingMode: "compact" | "as_designed"
+) {
+  const supabase = supabaseServerClient();
+  const { error } = await supabase.rpc("update_class_instance_scenario_pacing", {
+    p_instance_id: classId,
+    p_scenario_id: scenarioId,
+    p_pacing_mode: pacingMode,
+  });
+  if (error) throw new Error(error.message);
+  revalidatePath(`/classes/${classId}`);
+}
+
+
+export async function updateScenarioSchedule(
+  classId: string,
+  scenarioId: string,
+  scheduledStartAt: string | null,
+  scheduledEndAt: string | null,
+  showReportsAtEnd: boolean
+) {
+  const supabase = supabaseServerClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) throw new Error("Nicht authentifiziert");
+
+  const { data: canManageClass, error: membershipError } = await supabase.rpc(
+    "can_manage_class_scenario_assignments",
+    { p_instance_id: classId },
+  );
+
+  if (membershipError || !canManageClass) {
+    throw new Error("Keine Berechtigung, den Zeitplan dieser Klasse zu ändern");
+  }
+
+  const start = scheduledStartAt ? new Date(scheduledStartAt) : null;
+  const end = scheduledEndAt ? new Date(scheduledEndAt) : null;
+  if (start && Number.isNaN(start.getTime())) throw new Error("Ungültiger Startzeitpunkt");
+  if (end && Number.isNaN(end.getTime())) throw new Error("Ungültiger Endzeitpunkt");
+  if (start && end && end <= start) throw new Error("Das Ende muss nach dem Start liegen");
+  if (showReportsAtEnd && !end) throw new Error("Für die automatische Reporting-Freigabe ist eine Endzeit erforderlich");
+
+  const { error } = await supabase
+    .from("class_instance_scenario_assignments")
+    .update({
+      scheduled_start_at: start?.toISOString() ?? null,
+      scheduled_end_at: end?.toISOString() ?? null,
+      show_reports_at_end: showReportsAtEnd,
+    })
+    .eq("class_instance_id", classId)
+    .eq("scenario_id", scenarioId);
+
+  if (error) throw new Error(error.message);
+  revalidatePath(`/classes/${classId}`);
+}
+
+export async function setClassActive(classId: string, isActive: boolean) {
+  const supabase = supabaseServerClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) throw new Error("Nicht authentifiziert");
+
+  const { data: canManageClass, error: membershipError } = await supabase.rpc(
+    "is_teacher_of_class_instance",
+    { target_instance_id: classId },
+  );
+
+  if (membershipError || !canManageClass) {
+    throw new Error("Keine Berechtigung, den Status dieser Klasse zu ändern");
+  }
+
+  const { error } = await supabase
+    .from("class_instances")
+    .update({ is_active: isActive, status: isActive ? "active" : "paused" })
+    .eq("id", classId);
+
+  if (error) throw new Error(error.message);
+  revalidatePath("/");
+  revalidatePath("/classes");
+  revalidatePath(`/classes/${classId}`);
+}
+
+
+export async function changeClassState(classId: string, active: boolean) {
+  const supabase = supabaseServerClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) throw new Error("Nicht authentifiziert");
+  const { error } = await supabase.from("class_instances").update({ is_active: active, status: active ? "active" : "ended" }).eq("id", classId);
+  if (error) throw new Error(error.message);
+  revalidatePath("/classes");
+  revalidatePath("/classes/" + classId);
+}
+
+
+
+export async function updateClassStatus(
+  classId: string,
+  formData: FormData,
+) {
+  const supabase = supabaseServerClient();
+  const { data: { user } } = await supabase.auth.getUser();
+
+  if (!user) throw new Error("Nicht authentifiziert");
+
+  const status = String(formData.get("status") ?? "");
+
+  if (!["active", "paused", "ended"].includes(status)) {
+    throw new Error("Ungültiger Klassenstatus");
+  }
+
+  const { error } = await supabase
+    .from("class_instances")
+    .update({
+      status,
+      is_active: status === "active",
+    })
+    .eq("id", classId);
+
+  if (error) throw new Error(error.message);
+
+  revalidatePath("/classes");
+  revalidatePath(`/classes/${classId}`);
+}
+
+
+export async function updateClassDetails(classId: string, formData: FormData) {
+  const supabase = supabaseServerClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) throw new Error("Nicht authentifiziert");
+
+  const name = String(formData.get("name") ?? "").trim();
+  const gradeLevelRaw = String(formData.get("gradeLevel") ?? "").trim();
+  const schoolYear = String(formData.get("schoolYear") ?? "").trim();
+
+  if (!name) throw new Error("Klassenname darf nicht leer sein");
+  const gradeLevel = gradeLevelRaw ? Number(gradeLevelRaw) : null;
+  if (gradeLevel !== null && (!Number.isInteger(gradeLevel) || gradeLevel < 1 || gradeLevel > 13)) {
+    throw new Error("Ungültiger Jahrgang");
+  }
+  if (!schoolYear) throw new Error("Schuljahr darf nicht leer sein");
+
+  const { data: classInfo, error: classLookupError } = await supabase
+    .from("class_instances")
+    .select("school_id")
+    .eq("id", classId)
+    .maybeSingle();
+  if (classLookupError || !classInfo?.school_id) {
+    throw new Error("Klasse oder Schulzuordnung nicht gefunden");
+  }
+
+  const { data: canManageSchool, error: roleError } = await supabase.rpc(
+    "can_manage_school",
+    { p_school_id: classInfo.school_id },
+  );
+  if (roleError || !canManageSchool) {
+    throw new Error("Nur Schuladmins, Schulleitung oder Plattformadmins dürfen Klassendaten bearbeiten.");
+  }
+
+  const { error } = await supabase
+    .from("class_instances")
+    .update({ name, grade_level: gradeLevel, school_year: schoolYear })
+    .eq("id", classId);
+
+  if (error) throw new Error(error.message);
+  revalidatePath("/classes");
+  revalidatePath("/classes/" + classId);
+}
+
+
+export async function archiveClass(classId: string) {
+  const supabase = supabaseServerClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) throw new Error("Nicht authentifiziert");
+  const { error } = await supabase.from("class_instances").update({ is_active: false, status: "ended" }).eq("id", classId);
+  if (error) throw new Error(error.message);
+  revalidatePath("/classes");
+  revalidatePath("/classes/" + classId);
+}
+
+
+export async function setClassVisual(classId: string, visualId: string | null) {
+  const supabase = supabaseServerClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) throw new Error("Nicht authentifiziert");
+
+  const allowedVisualIds = ["aurora", "nebula", "ocean", "sunrise", "forest", "cosmos", "spectrum", "glacier"];
+  if (visualId !== null && visualId !== "" && !allowedVisualIds.includes(visualId)) {
+    throw new Error("Ungültiges Klassenmotiv");
+  }
+
+  const { error } = await supabase.rpc("set_class_instance_visual", {
+    p_class_id: classId,
+    p_visual_id: visualId || null,
+  });
+  if (error) throw new Error(error.message);
+
+  revalidatePath("/");
+  revalidatePath("/classes");
+  revalidatePath(`/classes/${classId}`);
+}
+
+
+export async function updateStudentScenarioReportVisibility(
+  classId: string,
+  scenarioId: string,
+  enabled: boolean,
+) {
+  const supabase = supabaseServerClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) throw new Error("Nicht authentifiziert");
+
+  const { data: canManageClass, error: permissionError } = await supabase.rpc(
+    "is_teacher_of_class_instance",
+    { target_instance_id: classId },
+  );
+  if (permissionError || !canManageClass) {
+    throw new Error("Keine Berechtigung, die Schüler-Reporting-Sichtbarkeit zu ändern.");
+  }
+
+  const { data: assignment, error: assignmentError } = await supabase
+    .from("class_instance_scenario_assignments")
+    .select("id")
+    .eq("class_instance_id", classId)
+    .eq("scenario_id", scenarioId)
+    .is("archived_at", null)
+    .maybeSingle();
+
+  if (assignmentError || !assignment) {
+    throw new Error("Die Modulzuweisung wurde nicht gefunden.");
+  }
+
+  const { error } = await supabase
+    .from("class_instance_scenario_assignments")
+    .update({ student_reports_enabled: enabled })
+    .eq("id", assignment.id);
+
+  if (error) throw new Error(error.message);
+  revalidatePath(`/classes/${classId}`);
+}

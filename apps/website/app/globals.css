@@ -1,0 +1,61 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@import url("https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600&display=swap");
+
+:root {
+  --font-display: "Space Grotesk", sans-serif;
+  --font-body: "Inter", sans-serif;
+  --dr1ft-cyan: #22d3ee;
+  --dr1ft-blue: #06b6d4;
+  --dr1ft-red: #fb7185;
+  --dr1ft-magenta: #d946ef;
+  --dr1ft-night: #080d1d;
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  @apply bg-canvas text-ink font-body;
+  background:
+    radial-gradient(circle at 15% 5%, rgba(34, 211, 238, .06), transparent 28rem),
+    radial-gradient(circle at 85% 12%, rgba(217, 70, 239, .05), transparent 30rem),
+    #080d1d;
+}
+
+::selection {
+  background: rgba(34, 211, 238, .35);
+  color: white;
+}
+
+
+/* Hero portraits alternate on a slow, continuous crossfade. */
+.dr1ft-hero-image {
+  opacity: 0;
+  animation-duration: 12s;
+  animation-timing-function: ease-in-out;
+  animation-iteration-count: infinite;
+  will-change: opacity;
+}
+.dr1ft-hero-image-a { animation-name: dr1ft-hero-a; }
+.dr1ft-hero-image-b { animation-name: dr1ft-hero-b; }
+
+@keyframes dr1ft-hero-a {
+  0%, 45% { opacity: 1; }
+  50%, 95% { opacity: 0; }
+  100% { opacity: 1; }
+}
+@keyframes dr1ft-hero-b {
+  0%, 45% { opacity: 0; }
+  50%, 95% { opacity: 1; }
+  100% { opacity: 0; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .dr1ft-hero-image { animation: none; }
+  .dr1ft-hero-image-a { opacity: 1; }
+  .dr1ft-hero-image-b { opacity: 0; }
+}

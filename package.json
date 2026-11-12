@@ -1,0 +1,16 @@
+{
+  "name": "dr1ft",
+  "private": true,
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
+  "scripts": {
+    "player": "yarn workspace @dr1ft/player dev -p 3000",
+    "teacher": "yarn workspace @dr1ft/teacher dev -p 3001",
+    "editorial": "yarn workspace @dr1ft/editorial dev -p 3003",
+    "website": "yarn workspace @dr1ft/website dev -p 3002",
+    "db:push": "supabase db push",
+    "db:reset": "supabase db reset"
+  }
+}
