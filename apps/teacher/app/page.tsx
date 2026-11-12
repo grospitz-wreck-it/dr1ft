@@ -46,6 +46,7 @@ export default async function TeacherHomePage() {
   ].filter(Boolean).map((item: any) => [item.id, item])).values());
 
   const classIds = classes.map((item: any) => item.id);
+  const classIdSet = new Set(classIds);
 
   // Fetch school links, student roster counts and active missions concurrently.
   // The student rows also provide the dashboard total, so a separate COUNT(*) query is unnecessary.
@@ -104,7 +105,7 @@ export default async function TeacherHomePage() {
   const linkedSchools = Array.from(schoolsById.values());
   const schoolClassItems = schoolClassRows.data ?? [];
   const searchableClassIds = Array.from(new Set([...classIds, ...schoolClassItems.map((item: any) => item.id)]));
-  const externalSearchClassIds = searchableClassIds.filter((id) => !classIds.includes(id));
+  const externalSearchClassIds = searchableClassIds.filter((id) => !classIdSet.has(id));
   const externalStudentsStartedAt = Date.now();
   const { data: externalSchoolStudents } = externalSearchClassIds.length
     ? await supabase.from("class_instance_memberships")
@@ -132,7 +133,7 @@ export default async function TeacherHomePage() {
     schoolName: (schoolsById.get(item.school_id) as any)?.name ?? "Meine Schule",
     studentCount: candidateCounts.get(item.id) ?? 0,
     isSubscribed: subscriptionIds.has(item.id),
-    isMine: classIds.includes(item.id),
+    isMine: classIdSet.has(item.id),
     isActive: item.is_active ?? true,
     thumbnailUrl: null,
     classVisualId: item.class_visual_id ?? null,

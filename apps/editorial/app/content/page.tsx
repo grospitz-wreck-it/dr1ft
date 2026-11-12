@@ -36,13 +36,12 @@ export default async function ContentLibraryPage({ searchParams }: Props) {
   const supabase = supabaseServerClient();
   const page = Math.max(1, Number(searchParams.page ?? 1));
   const from = (page - 1) * PAGE_SIZE;
-  const to = from + PAGE_SIZE - 1;
 
   let query = supabase
     .from("content_items")
-    .select("*, scenarios(title), creators(display_name)", { count: "exact" })
+    .select("id, type, body, media_url, media_type, status, created_at, scenario_id, creator_id, extra, manipulation_techniques, scenarios(title), creators(display_name)")
     .order("created_at", { ascending: false })
-    .range(from, to);
+    .range(from, from + PAGE_SIZE);
 
   if (searchParams.q) {
     query = query.ilike("body", `%${searchParams.q}%`);
@@ -67,10 +66,12 @@ export default async function ContentLibraryPage({ searchParams }: Props) {
     query = query.is("media_url", null);
   }
 
-  const { data: rows, count } = await query;
-
-  const { data: scenarios } = await supabase.from("scenarios").select("id, title").order("title");
-  const { data: competencies } = await supabase.from("competencies").select("id, title");
+  const [{ data: fetchedRows }, { data: scenarios }] = await Promise.all([
+    query,
+    supabase.from("scenarios").select("id, title").order("title"),
+  ]);
+  const rows = (fetchedRows ?? []).slice(0, PAGE_SIZE);
+  const hasNext = (fetchedRows?.length ?? 0) > PAGE_SIZE;
 
   let detailItem = null;
   if (searchParams.item) {
@@ -81,8 +82,6 @@ export default async function ContentLibraryPage({ searchParams }: Props) {
       .single();
     detailItem = data;
   }
-
-  const totalPages = Math.max(1, Math.ceil((count ?? 0) / PAGE_SIZE));
 
   // Baut eine neue Query-String-URL, während bestehende Filter erhalten
   // bleiben — genutzt für Pagination-Links und Filter-Pills.
@@ -104,7 +103,7 @@ export default async function ContentLibraryPage({ searchParams }: Props) {
             <h1 className="text-3xl font-bold tracking-tight text-slate-950 sm:text-[34px]">Content-Bibliothek</h1>
             <p className="mt-2 text-sm text-slate-500">Inhalte durchsuchen, prüfen und ihren Freigabestatus verwalten.</p>
           </div>
-          <div className="inline-flex items-center gap-2 self-start rounded-xl border border-slate-200 bg-white px-4 py-3 sm:self-auto"><span className="text-2xl font-bold tracking-tight text-slate-950">{count ?? 0}</span><span className="text-xs font-medium text-slate-500">Einträge<br />gefunden</span></div>
+          <div className="inline-flex items-center gap-2 self-start rounded-xl border border-slate-200 bg-white px-4 py-3 sm:self-auto"><span className="text-2xl font-bold tracking-tight text-slate-950">{rows.length}</span><span className="text-xs font-medium text-slate-500">Einträge<br />auf dieser Seite</span></div>
         </header>
 
         {/* Filterleiste — natives GET-Formular, kein Client-JS nötig */}
@@ -166,7 +165,7 @@ export default async function ContentLibraryPage({ searchParams }: Props) {
         {/* Pagination */}
         <div className="mt-4 flex items-center justify-between gap-3 text-sm text-slate-500">
           <span>
-            {count ? from + 1 : 0}–{Math.min(to + 1, count ?? 0)} von {count ?? 0}
+            {rows.length} Einträge auf dieser Seite
           </span>
           <div className="flex gap-2">
             <a
@@ -176,11 +175,11 @@ export default async function ContentLibraryPage({ searchParams }: Props) {
             >
               Zurück
             </a>
-            <span className="px-2 py-1">{page} / {totalPages}</span>
+            <span className="px-2 py-1">Seite {page}</span>
             <a
-              href={page < totalPages ? hrefWith({ page: String(page + 1) }) : undefined}
-              aria-disabled={page >= totalPages}
-              className={`rounded-lg border border-slate-200 bg-white px-3 py-2 transition ${page >= totalPages ? "pointer-events-none opacity-40" : "hover:bg-slate-50"}`}
+              href={hasNext ? hrefWith({ page: String(page + 1) }) : undefined}
+              aria-disabled={!hasNext}
+              className={`rounded-lg border border-slate-200 bg-white px-3 py-2 transition ${!hasNext ? "pointer-events-none opacity-40" : "hover:bg-slate-50"}`}
             >
               Weiter
             </a>
@@ -188,7 +187,7 @@ export default async function ContentLibraryPage({ searchParams }: Props) {
         </div>
       </div>
 
-      <ContentDetailDrawer item={detailItem} competencies={competencies ?? []} />
+      <ContentDetailDrawer item={detailItem} competencies={[]} />
     </div>
   );
 }

@@ -84,7 +84,12 @@ export default async function FeedPage() {
     supabase.from("ambient_interests").select("key, parent_key").eq("is_active", true).eq("taxonomy_status", "active"),
     supabase.from("user_ambient_preferences").select("interest_keys").eq("user_id", user.id).maybeSingle(),
     supabase.from("user_interactions").select("content_item_id, interaction_type").eq("user_id", user.id).eq("class_instance_id", classInstanceId).order("created_at", { ascending: false }).limit(200),
-    supabase.from("content_items").select("*, creators(id, display_name, handle, avatar_url)").eq("status", "live").eq("type", "post").or(scenarioFilter).or(`class_instance_id.eq.${classInstanceId},class_instance_id.is.null`),
+    supabase.from("content_items")
+      .select("id,type,scenario_id,creator_id,parent_id,title,body,media_url,media_type,manipulation_techniques,target_competencies,difficulty,age_rating,source_refs,status,reviewed_by,reviewed_at,review_notes,extra,created_at,updated_at")
+      .eq("status", "live")
+      .eq("type", "post")
+      .or(scenarioFilter)
+      .or(`class_instance_id.eq.${classInstanceId},class_instance_id.is.null`),
   ]);
 
   const [{ data: teacherModuleRowsData, error: teacherModuleRowsError }, { data: teacherModulePostsData, error: teacherModulePostsError }] = await teacherModuleDataPromise;
@@ -113,13 +118,18 @@ export default async function FeedPage() {
   const eligibleTeacherModules = (teacherModuleRows.data ?? []).filter((module: any) => activeTeacherModuleIds.has(module.id));
   const eligibleTeacherModuleIds = new Set(eligibleTeacherModules.map((module: any) => module.id));
   const teacherModulePostRows = (teacherModulePostResult.data ?? []).filter((post: any) => eligibleTeacherModuleIds.has(post.module_id));
+  const postsByModuleId = new Map<string, any[]>();
+  for (const post of teacherModulePostRows) {
+    const modulePosts = postsByModuleId.get(post.module_id) ?? [];
+    modulePosts.push(post);
+    postsByModuleId.set(post.module_id, modulePosts);
+  }
 
   // Do not sign private image URLs during server rendering: Storage signing can
   // be slow and must never delay the module text or voting controls.
   const teacherModules = eligibleTeacherModules.map((module: any) => ({
     ...module,
-    posts: teacherModulePostRows
-      .filter((post: any) => post.module_id === module.id)
+    posts: (postsByModuleId.get(module.id) ?? [])
       .map((post: any) => ({ ...post, imageUrl: null, imagePath: post.image_path ?? null })),
   }));
 
@@ -229,7 +239,8 @@ export default async function FeedPage() {
   // failing profile query.
   const ageRating: FeedContext["userAgeRating"] = "12_plus";
   const progress = (competencyProgress ?? []).map((c) => ({ userId: c.user_id, competencyId: c.competency_id, evidence: c.evidence, level: c.level, updatedAt: c.updated_at }));
-  const recentTechniques = mappedPool.filter((item) => recentlySeenContentIds.includes(item.id)).flatMap((item) => item.manipulationTechniques).slice(0, 12);
+  const recentlySeenContentIdSet = new Set(recentlySeenContentIds);
+  const recentTechniques = mappedPool.filter((item) => recentlySeenContentIdSet.has(item.id)).flatMap((item) => item.manipulationTechniques).slice(0, 12);
   const densityRank: Record<string, number> = { off: 0, low: 1, medium: 2, high: 3 };
   const ambientDensity = scenarioIntros.reduce((highest, scenario) =>
     (densityRank[scenario.ambient_density ?? "medium"] ?? 2) > (densityRank[highest] ?? 2)
