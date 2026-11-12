@@ -2,6 +2,7 @@
 
 import { useMemo } from "react";
 import { UserRound, Sparkles } from "lucide-react";
+import { useAmbientInventoryUsageCounts } from "./AmbientInventoryContext";
 
 type Creator = {
   id: string;
@@ -28,7 +29,7 @@ export function AmbientNpcAssignment({
   interestLabels,
   postText,
   postTopic,
-  usageCounts,
+  usageCounts: suppliedUsageCounts,
 }: {
   action: Action;
   contentItemId: string;
@@ -39,8 +40,11 @@ export function AmbientNpcAssignment({
   interestLabels: string[];
   postText: string;
   postTopic?: string | null;
-  usageCounts: Record<string, number>;
+  usageCounts?: Record<string, number>;
 }) {
+  const loadedUsageCounts = useAmbientInventoryUsageCounts();
+  const usageCounts = suppliedUsageCounts ?? loadedUsageCounts;
+
   const recommendations = useMemo(() => {
     const normalize = (value: unknown) =>
       String(value ?? "").toLocaleLowerCase("de").replace(/[_-]+/g, " ").replace(/[^\wäöüß ]/gi, " ").replace(/\s+/g, " ").trim();

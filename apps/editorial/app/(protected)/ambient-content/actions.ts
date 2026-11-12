@@ -600,3 +600,76 @@ export async function validateEditorialImageHasNoText(imageUrl: string) {
 
   throw new Error("Teaserbild-QA nach drei Netzwerkversuchen nicht erreichbar: " + lastError.slice(0, 300));
 }
+
+
+/**
+ * Load Ambient inventory analytics after the page has rendered.
+ * This keeps the full inventory scan out of the initial server-render path.
+ */
+export async function getAmbientInventorySummary() {
+  const supabase = supabaseServerClient();
+  const [{ data: interestRows, error: interestError }] = await Promise.all([
+    supabase
+      .from("ambient_interests")
+      .select("key, label, emoji")
+      .eq("is_active", true)
+      .eq("is_selectable", true)
+      .eq("taxonomy_status", "active")
+      .order("sort_order")
+      .order("label"),
+  ]);
+  if (interestError) throw new Error(`Interessen-Katalog konnte nicht geladen werden: ${interestError.message}`);
+
+  const inventoryRows: Array<{ id: string; status: string; extra: Record<string, any> | null; creator_id: string | null }> = [];
+  for (let offset = 0; ; offset += 1000) {
+    const { data, error } = await supabase
+      .from("content_items")
+      .select("id, status, extra, creator_id")
+      .eq("type", "post")
+      .is("scenario_id", null)
+      .order("created_at", { ascending: false })
+      .range(offset, offset + 999);
+    if (error) throw new Error(`Ambient-Inventar konnte nicht geladen werden: ${error.message}`);
+    const batch = (data ?? []) as Array<{ id: string; status: string; extra: Record<string, any> | null; creator_id: string | null }>;
+    inventoryRows.push(...batch);
+    if (batch.length < 1000) break;
+  }
+
+  const usageCounts = inventoryRows.reduce<Record<string, number>>((counts, item) => {
+    if (item.creator_id) counts[item.creator_id] = (counts[item.creator_id] ?? 0) + 1;
+    return counts;
+  }, {});
+  const coverageByInterest = new Map((interestRows ?? []).map((interest) => [
+    interest.key,
+    { total: 0, live: 0, draft: 0 },
+  ]));
+  for (const item of inventoryRows) {
+    const rawKeys = item.extra?.interestKeys;
+    if (!Array.isArray(rawKeys) || rawKeys.length === 0) continue;
+    for (const key of Array.from(new Set(rawKeys.filter((value): value is string => typeof value === "string")))) {
+      const counts = coverageByInterest.get(key);
+      if (!counts) continue;
+      counts.total += 1;
+      if (item.status === "live") counts.live += 1;
+      if (item.status === "draft") counts.draft += 1;
+    }
+  }
+
+  const interestCoverage = (interestRows ?? []).map((interest) => ({
+    ...interest,
+    ...(coverageByInterest.get(interest.key) ?? { total: 0, live: 0, draft: 0 }),
+  })).sort((a, b) => a.total - b.total || a.label.localeCompare(b.label, "de"));
+
+  return {
+    inventoryCount: inventoryRows.length,
+    usageCounts,
+    interestCoverage,
+    coveredInterestCount: interestCoverage.filter((interest) => interest.total > 0).length,
+    untaggedPostCount: inventoryRows.filter((item) =>
+      !Array.isArray(item.extra?.interestKeys) || item.extra.interestKeys.length === 0
+    ).length,
+    legacyTaggedCount: inventoryRows.filter((item) =>
+      item.extra?.generatedBy === "ai" && item.extra?.generatorVersion !== "ambient-studio-v6"
+    ).length,
+  };
+}
