@@ -239,7 +239,8 @@ export default async function FeedPage() {
   // failing profile query.
   const ageRating: FeedContext["userAgeRating"] = "12_plus";
   const progress = (competencyProgress ?? []).map((c) => ({ userId: c.user_id, competencyId: c.competency_id, evidence: c.evidence, level: c.level, updatedAt: c.updated_at }));
-  const recentTechniques = mappedPool.filter((item) => recentlySeenContentIds.includes(item.id)).flatMap((item) => item.manipulationTechniques).slice(0, 12);
+  const recentlySeenContentIdSet = new Set(recentlySeenContentIds);
+  const recentTechniques = mappedPool.filter((item) => recentlySeenContentIdSet.has(item.id)).flatMap((item) => item.manipulationTechniques).slice(0, 12);
   const densityRank: Record<string, number> = { off: 0, low: 1, medium: 2, high: 3 };
   const ambientDensity = scenarioIntros.reduce((highest, scenario) =>
     (densityRank[scenario.ambient_density ?? "medium"] ?? 2) > (densityRank[highest] ?? 2)
