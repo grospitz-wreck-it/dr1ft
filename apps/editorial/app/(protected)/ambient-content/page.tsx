@@ -96,17 +96,28 @@ export default async function AmbientContentPage({ searchParams = {} }: Props) {
     return counts;
   }, {});
 
-  const interestCoverage = ambientInterests.map((interest) => {
-    const matching = inventoryRows.filter((item) =>
-      Array.isArray(item.extra?.interestKeys) && item.extra.interestKeys.includes(interest.key)
-    );
-    return {
-      ...interest,
-      total: matching.length,
-      live: matching.filter((item) => item.status === "live").length,
-      draft: matching.filter((item) => item.status === "draft").length,
-    };
-  }).sort((a, b) => a.total - b.total || a.label.localeCompare(b.label, "de"));
+  // Aggregate all interest coverage in one pass over the inventory instead of
+  // scanning the full inventory once per interest (O(posts × interests)).
+  const coverageByInterest = new Map(ambientInterests.map((interest) => [
+    interest.key,
+    { total: 0, live: 0, draft: 0 },
+  ]));
+  for (const item of inventoryRows) {
+    const rawKeys = item.extra?.interestKeys;
+    if (!Array.isArray(rawKeys) || rawKeys.length === 0) continue;
+    // Match the previous includes()-based behavior: one post counts once per key.
+    for (const key of new Set(rawKeys.filter((value): value is string => typeof value === "string"))) {
+      const counts = coverageByInterest.get(key);
+      if (!counts) continue;
+      counts.total += 1;
+      if (item.status === "live") counts.live += 1;
+      if (item.status === "draft") counts.draft += 1;
+    }
+  }
+  const interestCoverage = ambientInterests.map((interest) => ({
+    ...interest,
+    ...(coverageByInterest.get(interest.key) ?? { total: 0, live: 0, draft: 0 }),
+  })).sort((a, b) => a.total - b.total || a.label.localeCompare(b.label, "de"));
   const coveredInterestCount = interestCoverage.filter((interest) => interest.total > 0).length;
   const untaggedPostCount = inventoryRows.filter((item) =>
     !Array.isArray(item.extra?.interestKeys) || item.extra.interestKeys.length === 0
@@ -134,9 +145,10 @@ export default async function AmbientContentPage({ searchParams = {} }: Props) {
     missionByContent.set(mission.reflection_content_id, current);
   }
 
+  const arcById = new Map(arcRows.map((arc) => [arc.id, arc]));
   const arcByMission = new Map<string, { id: string; title: string }[]>();
   for (const step of arcStepRows) {
-    const arc = arcRows.find((candidate) => candidate.id === step.arc_id);
+    const arc = arcById.get(step.arc_id);
     if (!arc) continue;
     const current = arcByMission.get(step.mission_id) ?? [];
     if (!current.some((item) => item.id === arc.id)) current.push({ id: arc.id, title: arc.title });
