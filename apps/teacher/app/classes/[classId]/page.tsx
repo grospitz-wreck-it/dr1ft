@@ -237,7 +237,7 @@ export default async function ClassDetailPage({
         <ClassModuleLibrary
           classId={classId}
           schoolId={instance.school_id ?? null}
-          canManageClassScenarioAssignments={Boolean(canManageClassScenarioAssignments)}
+          canSelectModules={Boolean(canManageClassScenarioAssignments) || mayUseTeacherModules}
           teacherModules={teacherModules}
           availableTeacherModules={availableTeacherModules}
           scenarios={(scenarios ?? []).map((scenario: any) => ({
