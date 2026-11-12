@@ -153,8 +153,10 @@ export default async function ClassDetailPage({
     : [{ data: false }, { data: false }, { data: false }, { data: false }, { data: false }, { data: false }];
 
   const hasActiveTeachingSubscription = Boolean(teacherMembershipResult.data);
+  // Subject teachers are not class managers, but an active class subscription
+  // is sufficient to browse and select modules for their own teaching.
   const mayUseTeacherModules =
-    Boolean(canManageClassWorkspace) &&
+    (Boolean(canManageClassWorkspace) || activeSchoolRole === "teacher") &&
     (activeSchoolRole !== "teacher" || hasActiveTeachingSubscription);
 
   const availableTeacherModules = mayUseTeacherModules ? moduleLibrary.available : [];
