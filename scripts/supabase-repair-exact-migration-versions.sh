@@ -89,8 +89,8 @@ fi
 
 # First remove only the proven old ledger versions, then register the exact
 # same SQL under the repository's canonical local versions. No SQL is replayed.
-supabase migration repair --linked --status reverted "${REMOTE_VERSIONS[@]}"
-supabase migration repair --linked --status applied "${LOCAL_VERSIONS[@]}"
+supabase migration repair "${REMOTE_VERSIONS[@]}" --status reverted --linked
+supabase migration repair "${LOCAL_VERSIONS[@]}" --status applied --linked
 
 echo ""
 echo "Post-repair migration ledger:"
