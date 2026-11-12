@@ -330,3 +330,30 @@ The `0031` ↔ `0032` `fix_teacher_competency_rpc_types` candidate has not yet b
 ### Current decision
 
 The live-ledger SQL comparison proves 14 safe *candidate* remaps. It does not justify bulk-repairing all 37 pairs or touching the other 80+ discrepancies. The connected Supabase operations expose migration listing and SQL execution but do not expose the Supabase CLI's `migration repair` command. Therefore the safe next step is to generate and run the exact CLI repair commands from a linked local/Codespaces checkout, after backup and one final `db push --dry-run --linked` review. Do not update `supabase_migrations.schema_migrations` by hand.
+
+
+## Live re-verification — 12 November 2026 (supersedes earlier repair proposal)
+
+The earlier section "Exact SQL matches (14)" records a historical comparison and must not be treated as an instruction to repair the current ledger.
+
+A fresh read-only inspection of the linked production project `oegshknzeqmjmkraxozr` on 12 November 2026 returned the following state:
+
+- All 14 proposed canonical local versions are already present in the live migration ledger:
+  - `20261104180000`, `20261104190000`, `20261104200000`, `20261104210000`,
+    `20261104220000`, `20261104250000`, `20261104260000`, `20261104270000`,
+    `20261106143000`, `20261106170500`, `20261106171500`, `20261107120000`,
+    `20261107121500`, `20261107112000`.
+- None of the 14 old remote versions listed in the earlier repair proposal is present in the current live ledger.
+- Therefore, these 14 pairs require **zero** migration-history repairs in the current state.
+- The earlier repair script would attempt to mark absent old versions as reverted and re-mark already-present canonical versions as applied. It is obsolete and must not be run.
+
+This was a read-only verification. No migration SQL was executed, no migration history was changed, and no production data or schema was modified.
+
+### Updated disposition
+
+1. The proposed 14-pair repair is withdrawn as unnecessary for the current live state.
+2. The remaining 22 SQL-fingerprint mismatches remain unresolved and must be investigated individually; no remapping is authorized by this document.
+3. The 6 November manual reconciliation entries remain untouched.
+4. The historical inventory and candidate mappings above are retained as audit history, not as an executable repair plan.
+5. Before any future migration-history mutation, re-read the live ledger and compare it with the current branch. Never execute a stale repair list.
+
