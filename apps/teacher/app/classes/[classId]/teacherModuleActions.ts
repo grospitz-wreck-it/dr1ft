@@ -656,7 +656,15 @@ export async function assignExistingTeacherModule(classInstanceId: string, modul
   const { data: schoolMember } = await supabase.from("school_memberships").select("role")
     .eq("school_id", targetClass.school_id).eq("user_id", user.id).eq("active", true).maybeSingle();
   const isStaff = ["teacher", "school_admin", "school_lead"].includes(schoolMember?.role ?? "");
-  const canUseModule = module.visibility_scope === "school" || module.created_by === user.id;
+  const { data: classSharedAssignment } = module.visibility_scope === "class"
+    ? await supabase.from("teacher_module_class_assignments").select("id")
+        .eq("module_id", moduleId).eq("class_instance_id", classInstanceId)
+        .eq("is_active", true).is("archived_at", null).maybeSingle()
+    : { data: null };
+  const canUseModule =
+    module.visibility_scope === "school" ||
+    module.created_by === user.id ||
+    (module.visibility_scope === "class" && Boolean(classSharedAssignment));
   if (!isStaff || !canUseModule) throw new Error("Du darfst dieses Modul dieser Klasse nicht zuweisen.");
 
   const { error: subscriptionError } = await supabase.rpc("subscribe_teacher_to_class_instance", {
