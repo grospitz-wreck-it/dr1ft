@@ -291,8 +291,8 @@ export async function setClassActive(classId: string, isActive: boolean) {
   if (!user) throw new Error("Nicht authentifiziert");
 
   const { data: canManageClass, error: membershipError } = await supabase.rpc(
-    "can_manage_class_scenario_assignments",
-    { p_instance_id: classId },
+    "is_teacher_of_class_instance",
+    { target_instance_id: classId },
   );
 
   if (membershipError || !canManageClass) {
