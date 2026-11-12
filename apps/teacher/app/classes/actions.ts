@@ -103,8 +103,8 @@ export async function toggleScenarioAssignment(
   if (!classInfo?.school_id || !classInfo.is_active) throw new Error("Die Klasseninstanz ist nicht aktiv.");
 
   const { data: canManageClass, error: permissionError } = await supabase.rpc(
-    "is_teacher_of_class_instance",
-    { target_instance_id: classId },
+    "can_manage_class_scenario_assignments",
+    { p_instance_id: classId },
   );
 
   if (permissionError || !canManageClass) {
@@ -183,8 +183,8 @@ export async function setScenarioAssignmentActive(classId: string, scenarioId: s
   if (!user) throw new Error("Nicht authentifiziert");
 
   const { data: canManageClass, error: membershipError } = await supabase.rpc(
-    "is_teacher_of_class_instance",
-    { target_instance_id: classId },
+    "can_manage_class_scenario_assignments",
+    { p_instance_id: classId },
   );
 
   if (membershipError || !canManageClass) {
@@ -208,8 +208,8 @@ export async function archiveScenarioAssignment(classId: string, scenarioId: str
   if (!user) throw new Error("Nicht authentifiziert");
 
   const { data: canManageClass, error: membershipError } = await supabase.rpc(
-    "is_teacher_of_class_instance",
-    { target_instance_id: classId },
+    "can_manage_class_scenario_assignments",
+    { p_instance_id: classId },
   );
 
   if (membershipError || !canManageClass) {
@@ -256,8 +256,8 @@ export async function updateScenarioSchedule(
   if (!user) throw new Error("Nicht authentifiziert");
 
   const { data: canManageClass, error: membershipError } = await supabase.rpc(
-    "is_teacher_of_class_instance",
-    { target_instance_id: classId },
+    "can_manage_class_scenario_assignments",
+    { p_instance_id: classId },
   );
 
   if (membershipError || !canManageClass) {
@@ -291,8 +291,8 @@ export async function setClassActive(classId: string, isActive: boolean) {
   if (!user) throw new Error("Nicht authentifiziert");
 
   const { data: canManageClass, error: membershipError } = await supabase.rpc(
-    "is_teacher_of_class_instance",
-    { target_instance_id: classId },
+    "can_manage_class_scenario_assignments",
+    { p_instance_id: classId },
   );
 
   if (membershipError || !canManageClass) {
