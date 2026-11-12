@@ -265,3 +265,68 @@ The Git history contains explicit documentation that nine previously archived du
 Evidence: commits `58fa24b` (archive duplicate-prefix sources) and `5d1a1e9` (restore original remote versions). These are not candidates for further repair; their local version prefixes already match the remote ledger.
 
 The two remaining archived `20260930130000` files are explicitly documented as superseded/historical and must not be replayed.
+
+
+## Direct SQL fingerprint comparison against the live migration ledger
+
+For the same-name/different-version candidates, the live database exposes the original applied SQL in `supabase_migrations.schema_migrations.statements`. I compared MD5 fingerprints of the full SQL text (including comments and whitespace) against the current local migration file. An exact hash match is proof that the current file is byte-for-byte the SQL recorded remotely; a mismatch is **not** proof of unrelated SQL, but it is not safe to remap without a diff.
+
+### Exact SQL matches (14)
+
+| Remote applied version | Local file version | Result |
+|---|---|---|
+| `20261104220252` | `20261104180000` | exact SQL hash match |
+| `20261104220254` | `20261104190000` | exact SQL hash match |
+| `20261104220257` | `20261104200000` | exact SQL hash match |
+| `20261104220259` | `20261104210000` | exact SQL hash match |
+| `20261104220301` | `20261104220000` | exact SQL hash match |
+| `20261104220311` | `20261104250000` | exact SQL hash match |
+| `20261104220313` | `20261104260000` | exact SQL hash match |
+| `20261104220338` | `20261104270000` | exact SQL hash match |
+| `20261106123614` | `20261106143000` | exact SQL hash match |
+| `20261106155937` | `20261106170500` | exact SQL hash match |
+| `20261106160159` | `20261106171500` | exact SQL hash match |
+| `20261107094755` | `20261107120000` | exact SQL hash match |
+| `20261107094824` | `20261107121500` | exact SQL hash match |
+| `20261107101744` | `20261107112000` | exact SQL hash match |
+
+These 14 pairs are technically eligible for a ledger-only version remap after the operator verifies the target project and takes a database backup. No SQL needs to be replayed for these pairs.
+
+### Same-name pairs that are NOT exact matches
+
+The following current local files have a different SQL fingerprint from the SQL stored in the corresponding remote ledger row. Do not remap these based on filename alone; compare the SQL and determine whether the local file was edited after deployment, consolidated, or superseded.
+
+| Remote version | Local file version | Migration |
+|---|---|---|
+| `20261105061023` | `20261105100000` | add_class_visual_id |
+| `20261105061901` | `20261105113000` | set_class_instance_visual_rpc |
+| `20261105182222` | `20261105150000` | school_year_class_matrix_and_rollover |
+| `20261105190442` | `20261105173000` | platform_admin_school_class_matrix_access |
+| `20261105201509` | `20261105200000` | archive_school_class_instance |
+| `20261105202426` | `20261105210000` | fix_school_year_short_format_validation |
+| `20261105204355` | `20261105220000` | fix_class_access_code_generation |
+| `20261106064653` | `20261106080000` | strict_single_class_delete_guard |
+| `20261106120615` | `20261106121500` | restrict_class_instance_updates_to_school_admins |
+| `20261106131923` | `20261106260000` | remove_user_profile_birth_year |
+| `20261107091141` | `20261107100000` | regenerate_class_instance_access_code |
+| `20261107091236` | `20261107100500` | tighten_class_access_code_teacher_scope |
+| `20261107093355` | `20261107103000` | student_onboarding_credentials_encrypted |
+| `20261107093642` | `20261107110000` | restrict_onboarding_print_to_subject_teachers_and_school_admins |
+| `20261107093756` | `20261107111500` | add_role_scoped_onboarding_print_permission |
+| `20261107093910` | `20261107113000` | consume_onboarding_credentials_after_password_change |
+| `20261107213509` | `20261107230000` | delete_scenario_family |
+| `20261112103910` | `20261112120000` | restrict_class_scenario_assignment_management |
+| `20261112104911` | `20261112130000` | allow_subject_teachers_add_scenarios |
+| `20261112105031` | `20261112140000` | include_class_shared_modules_in_teacher_library |
+| `20261112105810` | `20261112150000` | fix_scenario_snapshot_feedback_and_class_module_rls |
+| `20261112110124` | `20261112160000` | allow_subscribed_teachers_read_class_module_shares |
+
+**Additional exact match:** `20261106123614` ↔ `20261106143000` was included above; the local and remote hashes are identical.
+
+### Remaining version-name candidate
+
+The `0031` ↔ `0032` `fix_teacher_competency_rpc_types` candidate has not yet been fingerprinted. It remains unresolved.
+
+### Current decision
+
+The live-ledger SQL comparison proves 14 safe *candidate* remaps. It does not justify bulk-repairing all 37 pairs or touching the other 80+ discrepancies. The connected Supabase operations expose migration listing and SQL execution but do not expose the Supabase CLI's `migration repair` command. Therefore the safe next step is to generate and run the exact CLI repair commands from a linked local/Codespaces checkout, after backup and one final `db push --dry-run --linked` review. Do not update `supabase_migrations.schema_migrations` by hand.
