@@ -357,3 +357,46 @@ This was a read-only verification. No migration SQL was executed, no migration h
 4. The historical inventory and candidate mappings above are retained as audit history, not as an executable repair plan.
 5. Before any future migration-history mutation, re-read the live ledger and compare it with the current branch. Never execute a stale repair list.
 
+
+
+## Individual SQL review of the 22 fingerprint mismatches — 12 November 2026
+
+The 22 pairs below were compared by reading the current local SQL files from `main` and the original SQL stored in the live production migration ledger. This is a source comparison, not a migration execution. A semantic-equivalence assessment is not a byte-identical SQL match and does not by itself authorize a ledger repair.
+
+| # | Remote version | Local version | Migration | Read-only finding |
+|---:|---|---|---|---|
+| 1 | `20261105061023` | `20261105100000` | `add_class_visual_id` | Same column and constraint behavior; differences are statement formatting/layout. No material behavior difference identified. |
+| 2 | `20261105061901` | `20261105113000` | `set_class_instance_visual_rpc` | Same authorization and update behavior. Local adds an explicit `p_visual_id is not null` guard; the remote `NOT IN` condition also does not raise for NULL in a PL/pgSQL IF. Equivalent for the inspected behavior, not byte-identical. |
+| 3 | `20261105182222` | `20261105150000` | `school_year_class_matrix_and_rollover` | Not identical. Remote explicitly drops the existing `school_class_matrix_admin_read` policy before recreating it; local file does not. Keep unresolved until the policy's historical state and the complete SQL lineage are established. |
+| 4 | `20261105190442` | `20261105173000` | `platform_admin_school_class_matrix_access` | Local file is composite: in addition to the platform-admin/matrix SQL, it contains teacher assign/unassign functions stored separately in live migration `20261105190518` (`platform_admin_teacher_class_assignments`). Not a one-to-one file/ledger pair. Both remote ledger entries are present. |
+| 5 | `20261105201509` | `20261105200000` | `archive_school_class_instance` | Local file is composite: besides the archive RPC it contains the revised rollover function recorded separately in live migration `20261105201549` (`archive_school_class_instance_and_skip_archived_rollover`). Not a one-to-one pair; both remote ledger entries are present. |
+| 6 | `20261105202426` | `20261105210000` | `fix_school_year_short_format_validation` | Different implementation (`regexp_match` versus `split_part`) but the inspected format and consecutive-school-year validations are equivalent. Local file also contains the rollover function. Not byte-identical. |
+| 7 | `20261105204355` | `20261105220000` | `fix_class_access_code_generation` | The inspected function bodies and access-code generation behavior match; local adds explanatory comments/formatting. |
+| 8 | `20261106064653` | `20261106080000` | `strict_single_class_delete_guard` | Same exact-instance lock, authorization, FK-reference guard and exactly-one-row deletion check. Differences are formatting/comments. |
+| 9 | `20261106120615` | `20261106121500` | `restrict_class_instance_updates_to_school_admins` | Same policy removal/recreation and school-admin/platform-admin update scope. Formatting only in the inspected SQL. |
+| 10 | `20261106131923` | `20261106260000` | `remove_user_profile_birth_year` | Same `DROP COLUMN IF EXISTS birth_year`; local adds comments. |
+| 11 | `20261107091141` | `20261107100000` | `regenerate_class_instance_access_code` | Same function behavior and permission branches in the inspected SQL; formatting differs. |
+| 12 | `20261107091236` | `20261107100500` | `tighten_class_access_code_teacher_scope` | Same additional active-teacher school-membership join and authorization behavior; formatting differs. |
+| 13 | `20261107093355` | `20261107103000` | `student_onboarding_credentials_encrypted` | Same Vault key setup, encrypted credential storage, service-role write restriction and credential-read function. Formatting differs. |
+| 14 | `20261107093642` | `20261107110000` | `restrict_onboarding_print_to_subject_teachers_and_school_admins` | Same subject-teacher/school-admin authorization and credential return behavior. Formatting differs. |
+| 15 | `20261107093756` | `20261107111500` | `add_role_scoped_onboarding_print_permission` | Same permission helper and guarded credential-read function in the inspected SQL. Formatting differs. |
+| 16 | `20261107093910` | `20261107113000` | `consume_onboarding_credentials_after_password_change` | Same trigger function, trigger replacement and password-change condition. Formatting differs. |
+| 17 | `20261107213509` | `20261107230000` | `delete_scenario_family` | **Material bug fix.** Local regex correctly strips the age suffix; the remote SQL's extra escaping does not. A read-only SQL test returned `Demo` for the local pattern but left `Demo – 9–11` unchanged for the remote pattern. The currently installed `public.delete_scenario_family(uuid,text)` definition was inspected with `pg_get_functiondef` and still contains the remote/broken escaping. Do not remap this pair as if the local fix were already applied. A separate forward migration is needed to correct the live function. |
+| 18 | `20261112103910` | `20261112120000` | `restrict_class_scenario_assignment_management` | Same manager-role helper, RLS policy and guarded upsert/remove/pacing RPCs in the inspected SQL. Formatting differs. |
+| 19 | `20261112104911` | `20261112130000` | `allow_subject_teachers_add_scenarios` | Same insert-only assignment RPC, subscription checks and conflict behavior. Formatting/comments differ. |
+| 20 | `20261112105031` | `20261112140000` | `include_class_shared_modules_in_teacher_library` | Same class-scoped teacher-library function and visibility/subscription checks in the inspected SQL. Formatting differs. |
+| 21 | `20261112105810` | `20261112150000` | `fix_scenario_snapshot_feedback_and_class_module_rls` | Same snapshot-feedback trigger logic and module-assignment policy conditions. Local includes an additional `s.id is not null` predicate inside an inner join; this is redundant, not a behavior change. |
+| 22 | `20261112110124` | `20261112160000` | `allow_subscribed_teachers_read_class_module_shares` | Same subscribed-teacher read branch and management-policy scope in the inspected SQL. The local/remote policy expressions differ in qualification/formatting; no behavior change established. |
+
+### Review outcome
+
+- **1 material behavior difference requiring a forward fix:** pair 17 (`delete_scenario_family`). The live function still has the broken remote regex. The local migration file is not proof that this fix has reached production.
+- **2 composite local files:** pairs 4 and 5 include SQL also recorded under separate live migration versions `20261105190518` and `20261105201549`. They must not be treated as simple one-to-one pairs.
+- **1 unresolved policy-creation difference:** pair 3 has a meaningful `DROP POLICY IF EXISTS` difference.
+- The remaining pairs look semantically equivalent from the inspected SQL, despite fingerprint mismatches. This is a manual source review, not formal proof of byte identity or a complete schema-state proof.
+- **No migration repair was run.** No production schema, data, function, policy or migration-ledger row was changed during this review.
+- Do not use a blanket repair list. Any proposed ledger-only mapping must account for composite files and prove that every statement in the local file is already represented by applied remote migrations. Pair 17 requires a forward SQL migration, not a ledger remap.
+
+### Separate item outside the 22
+
+The historical `0031` ↔ `0032` `fix_teacher_competency_rpc_types` name candidate is not part of these 22 fingerprint mismatches and remains un-fingerprinted. It is still unresolved.
