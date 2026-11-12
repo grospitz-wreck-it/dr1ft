@@ -137,6 +137,7 @@ export default async function ClassDetailPage({
   const [
     { data: canViewIndividualReports },
     { data: canManageClassWorkspace },
+    { data: canManageClassScenarioAssignments },
     { data: canManageClassImage },
     { data: canManageStudents },
     { data: canPrintOnboarding },
@@ -144,11 +145,12 @@ export default async function ClassDetailPage({
     ? await Promise.all([
         supabase.rpc("can_view_class_individual_reports", { p_class_id: classId }),
         supabase.rpc("is_teacher_of_class_instance", { target_instance_id: classId }),
+        supabase.rpc("can_manage_class_scenario_assignments", { p_instance_id: classId }),
         supabase.rpc("can_manage_class_image", { object_name: `${classId}/class-image` }),
         supabase.rpc("can_manage_student_accounts", { p_class_id: classId }),
         supabase.rpc("can_print_class_onboarding_credentials", { p_class_id: classId }),
       ])
-    : [{ data: false }, { data: false }, { data: false }, { data: false }, { data: false }];
+    : [{ data: false }, { data: false }, { data: false }, { data: false }, { data: false }, { data: false }];
 
   const hasActiveTeachingSubscription = Boolean(teacherMembershipResult.data);
   const mayUseTeacherModules =
@@ -235,6 +237,7 @@ export default async function ClassDetailPage({
         <ClassModuleLibrary
           classId={classId}
           schoolId={instance.school_id ?? null}
+          canManageClassScenarioAssignments={Boolean(canManageClassScenarioAssignments)}
           teacherModules={teacherModules}
           availableTeacherModules={availableTeacherModules}
           scenarios={(scenarios ?? []).map((scenario: any) => ({
