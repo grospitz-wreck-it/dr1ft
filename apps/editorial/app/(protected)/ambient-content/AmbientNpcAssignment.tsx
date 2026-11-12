@@ -25,7 +25,8 @@ export function AmbientNpcAssignment({
   postText: string;
   postTopic?: string | null;
 }) {
-Use shared usage counts directly  const { creators, loading: creatorsLoading, error: creatorsError, load: loadCreators } = useAmbientNpcCreators();
+const usageCounts = useAmbientInventoryUsageCounts();
+  const { creators, loading: creatorsLoading, error: creatorsError, load: loadCreators } = useAmbientNpcCreators();
   const [isOpen, setIsOpen] = useState(false);
 
   const recommendations = useMemo(() => {
