@@ -50,11 +50,9 @@ function resolveAvatar(seed: string | null | undefined): { style: PlayerAvatarSt
   }
   return { style: PLAYER_AVATAR_STYLE, seed: value };
 }
-export function avatarUrl(seed: string | null | undefined, size = 96): string {
-  if (isDr1ftAvatarId(seed)) return `/avatars/${avatarCategoryFromId(seed)}/${seed}.webp`;
-  if (seed && seed.startsWith("DR1FT-")) return `/avatars/collectible/${getDefaultAvatarId(seed)}.webp`;
-  const avatar = resolveAvatar(seed);
-  return `https://api.dicebear.com/10.x/${avatar.style}/svg?seed=${encodeURIComponent(avatar.seed)}&size=${size}&animationVariant=medium&borderRadius=18`;
+export function avatarUrl(seed: string | null | undefined, _size = 96): string {
+  const id = isDr1ftAvatarId(seed) ? seed : getDefaultAvatarId(seed);
+  return `/avatars/${avatarCategoryFromId(id)}/${id}.webp`;
 }
 export function avatarStyleFromSeed(seed: string | null | undefined): PlayerAvatarStyle { return resolveAvatar(seed).style; }
 export function avatarSeedWithStyle(seed: string | null | undefined, style: PlayerAvatarStyle): string {
