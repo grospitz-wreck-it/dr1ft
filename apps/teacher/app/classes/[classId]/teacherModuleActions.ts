@@ -653,8 +653,21 @@ export async function assignExistingTeacherModule(classInstanceId: string, modul
   const { data: module, error: moduleError } = await supabase
     .from("teacher_modules").select("id,school_id,created_by,visibility_scope,status")
     .eq("id", moduleId).maybeSingle();
-  if (moduleError || !module || module.school_id !== targetClass.school_id || module.status !== "published") {
-    throw new Error("Dieses Modul ist nicht verfügbar.");
+  if (moduleError || !module) {
+    console.error("[assign-existing-teacher-module] module lookup failed", {
+      classInstanceId, moduleId, userId: user.id,
+      code: moduleError?.code, message: moduleError?.message,
+    });
+    throw new Error("Das Modul konnte nicht gelesen werden. Bitte lade die Seite neu; falls der Fehler bleibt, prüfen wir die Leseberechtigung.");
+  }
+  if (module.school_id !== targetClass.school_id) {
+    throw new Error("Dieses Modul gehört zu einer anderen Schule.");
+  }
+  if (module.status !== "published") {
+    console.warn("[assign-existing-teacher-module] draft module blocked", {
+      classInstanceId, moduleId, userId: user.id, status: module.status,
+    });
+    throw new Error("Dieses eigene Modul ist noch ein Entwurf und kann erst nach erfolgreicher Veröffentlichung abonniert werden.");
   }
 
   const { data: schoolMember } = await supabase.from("school_memberships").select("role")
