@@ -1,25 +1,52 @@
 "use client";
 
-import { createContext, useContext, useEffect, useState } from "react";
+import { createContext, useCallback, useContext, useEffect, useRef, useState } from "react";
 import type { ReactNode } from "react";
-import { getAmbientInventorySummary } from "./actions";
+import { getAmbientInventorySummary, getAmbientNpcCreators } from "./actions";
 
 type InventorySummary = Awaited<ReturnType<typeof getAmbientInventorySummary>>;
+type NpcCreator = Awaited<ReturnType<typeof getAmbientNpcCreators>>[number];
 type InventoryContextValue = {
   summary: InventorySummary | null;
   loading: boolean;
   error: string | null;
+  npcCreators: NpcCreator[];
+  npcLoading: boolean;
+  npcError: string | null;
+  loadNpcCreators: () => void;
 };
 const InventoryContext = createContext<InventoryContextValue>({
   summary: null,
   loading: true,
   error: null,
+  npcCreators: [],
+  npcLoading: false,
+  npcError: null,
+  loadNpcCreators: () => {},
 });
 
 export function AmbientInventoryProvider({ children }: { children: ReactNode }) {
   const [summary, setSummary] = useState<InventorySummary | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [npcCreators, setNpcCreators] = useState<NpcCreator[]>([]);
+  const [npcLoading, setNpcLoading] = useState(false);
+  const [npcError, setNpcError] = useState<string | null>(null);
+  const npcRequestStarted = useRef(false);
+
+  const loadNpcCreators = useCallback(() => {
+    if (npcRequestStarted.current) return;
+    npcRequestStarted.current = true;
+    setNpcLoading(true);
+    setNpcError(null);
+    getAmbientNpcCreators()
+      .then(setNpcCreators)
+      .catch((reason: unknown) => {
+        npcRequestStarted.current = false;
+        setNpcError(reason instanceof Error ? reason.message : "NPCs konnten nicht geladen werden.");
+      })
+      .finally(() => setNpcLoading(false));
+  }, []);
 
   useEffect(() => {
     let active = true;
@@ -39,7 +66,7 @@ export function AmbientInventoryProvider({ children }: { children: ReactNode }) 
   }, []);
 
   return (
-    <InventoryContext.Provider value={{ summary, loading, error }}>
+    <InventoryContext.Provider value={{ summary, loading, error, npcCreators, npcLoading, npcError, loadNpcCreators }}>
       {children}
     </InventoryContext.Provider>
   );
@@ -47,6 +74,11 @@ export function AmbientInventoryProvider({ children }: { children: ReactNode }) 
 
 export function useAmbientInventoryUsageCounts() {
   return useContext(InventoryContext).summary?.usageCounts ?? {};
+}
+
+export function useAmbientNpcCreators() {
+  const { npcCreators, npcLoading, npcError, loadNpcCreators } = useContext(InventoryContext);
+  return { creators: npcCreators, loading: npcLoading, error: npcError, load: loadNpcCreators };
 }
 
 export function AmbientInventoryPanel() {

@@ -2,7 +2,7 @@
 
 import { useMemo, useState } from "react";
 import { UserRound, Sparkles } from "lucide-react";
-import { useAmbientInventoryUsageCounts } from "./AmbientInventoryContext";
+import { useAmbientInventoryUsageCounts, useAmbientNpcCreators } from "./AmbientInventoryContext";
 
 type Creator = {
   id: string;
@@ -24,7 +24,6 @@ export function AmbientNpcAssignment({
   contentItemId,
   currentCreatorId,
   currentCreatorName,
-  creators,
   interestKeys,
   interestLabels,
   postText,
@@ -35,7 +34,6 @@ export function AmbientNpcAssignment({
   contentItemId: string;
   currentCreatorId: string | null;
   currentCreatorName?: string | null;
-  creators: Creator[];
   interestKeys: string[];
   interestLabels: string[];
   postText: string;
@@ -44,10 +42,11 @@ export function AmbientNpcAssignment({
 }) {
   const loadedUsageCounts = useAmbientInventoryUsageCounts();
   const usageCounts = suppliedUsageCounts ?? loadedUsageCounts;
+  const { creators, loading: creatorsLoading, error: creatorsError, load: loadCreators } = useAmbientNpcCreators();
   const [isOpen, setIsOpen] = useState(false);
 
   const recommendations = useMemo(() => {
-    if (!isOpen) return [];
+    if (!isOpen || creatorsLoading) return [];
     const normalize = (value: unknown) =>
       String(value ?? "").toLocaleLowerCase("de").replace(/[_-]+/g, " ").replace(/[^\wäöüß ]/gi, " ").replace(/\s+/g, " ").trim();
     const tokens = (value: unknown) => normalize(value).split(" ").filter((token) => token.length >= 4);
@@ -107,7 +106,7 @@ export function AmbientNpcAssignment({
       })
       .filter((item) => item.allowed && item.rawScore >= 8)
       .sort((a, b) => b.score - a.score || a.useCount - b.useCount || a.creator.display_name.localeCompare(b.creator.display_name, "de"));
-  }, [creators, interestKeys, interestLabels, postText, postTopic, usageCounts, isOpen]);
+  }, [creators, interestKeys, interestLabels, postText, postTopic, usageCounts, isOpen, creatorsLoading]);
 
   const suggested = recommendations.slice(0, 3);
   const suggestedIds = new Set(suggested.map((item) => item.creator.id));
@@ -115,12 +114,12 @@ export function AmbientNpcAssignment({
   const selectedCreatorId = currentCreatorId ?? suggested[0]?.creator.id ?? "";
 
   return (
-    <details onToggle={(event) => setIsOpen(event.currentTarget.open)} className="mt-3 rounded-xl border border-slate-200 bg-slate-50">
+    <details onToggle={(event) => { const open = event.currentTarget.open; setIsOpen(open); if (open) loadCreators(); }} className="mt-3 rounded-xl border border-slate-200 bg-slate-50">
       <summary className="flex cursor-pointer list-none items-center justify-between gap-3 px-3 py-2.5 text-xs font-medium text-slate-700">
         <span className="inline-flex items-center gap-2"><UserRound className="h-3.5 w-3.5 text-violet-600" /> NPC-Zuordnung</span>
         <span className="max-w-[55%] truncate text-right text-slate-500">{current?.display_name ?? currentCreatorName ?? suggested[0]?.creator.display_name ?? "Keine passende Figur"}</span>
       </summary>
-      {isOpen ? <form action={action} className="space-y-3 border-t border-slate-200 p-3">
+      {isOpen ? creatorsLoading ? <p className="border-t border-slate-200 p-3 text-xs text-slate-500">NPC-Katalog wird geladen …</p> : creatorsError ? <div className="border-t border-slate-200 p-3 text-xs text-red-700"><p>{creatorsError}</p><button type="button" onClick={loadCreators} className="mt-2 underline">Erneut versuchen</button></div> : creators.length === 0 ? <p className="border-t border-slate-200 p-3 text-xs text-slate-500">Keine globalen NPCs verfügbar.</p> : <form action={action} className="space-y-3 border-t border-slate-200 p-3">
         <input type="hidden" name="contentItemId" value={contentItemId} />
         <label className="block text-xs font-medium text-slate-700">
           Wer soll diesen Post veröffentlichen?

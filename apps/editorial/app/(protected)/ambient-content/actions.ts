@@ -673,3 +673,17 @@ export async function getAmbientInventorySummary() {
     ).length,
   };
 }
+
+
+/** Load the global NPC catalogue only when an editor opens an assignment. */
+export async function getAmbientNpcCreators() {
+  const supabase = supabaseServerClient();
+  const { data, error } = await supabase
+    .from("creators")
+    .select("id, kind, display_name, creator_role, persona, interest_tags, bio, story_role, npc_category, npc_role, age_bands, is_active, scenario_id")
+    .eq("kind", "npc")
+    .is("scenario_id", null)
+    .order("display_name");
+  if (error) throw new Error(`NPC-Katalog konnte nicht geladen werden: ${error.message}`);
+  return (data ?? []).filter((creator) => creator.kind === "npc" && creator.is_active !== false);
+}
