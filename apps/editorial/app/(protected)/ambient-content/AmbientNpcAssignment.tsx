@@ -25,7 +25,7 @@ export function AmbientNpcAssignment({
   postText: string;
   postTopic?: string | null;
 }) {
-const usageCounts = useAmbientInventoryUsageCounts();
+  const usageCounts = useAmbientInventoryUsageCounts();
   const { creators, loading: creatorsLoading, error: creatorsError, load: loadCreators } = useAmbientNpcCreators();
   const [isOpen, setIsOpen] = useState(false);
 
