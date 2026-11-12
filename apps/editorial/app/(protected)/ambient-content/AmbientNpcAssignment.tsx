@@ -4,7 +4,7 @@ import { useMemo, useState } from "react";
 import { UserRound, Sparkles } from "lucide-react";
 import { useAmbientInventoryUsageCounts, useAmbientNpcCreators } from "./AmbientInventoryContext";
 
-Remove now-unused Creator prop typetype Action = (formData: FormData) => Promise<void>;
+type Action = (formData: FormData) => Promise<void>;
 
 export function AmbientNpcAssignment({
   action,
@@ -15,7 +15,7 @@ export function AmbientNpcAssignment({
   interestLabels,
   postText,
   postTopic,
-Remove obsolete usage count prop}: {
+}: {
   action: Action;
   contentItemId: string;
   currentCreatorId: string | null;
@@ -24,7 +24,7 @@ Remove obsolete usage count prop}: {
   interestLabels: string[];
   postText: string;
   postTopic?: string | null;
-Remove obsolete usage count prop type}) {
+}) {
 Use shared usage counts directly  const { creators, loading: creatorsLoading, error: creatorsError, load: loadCreators } = useAmbientNpcCreators();
   const [isOpen, setIsOpen] = useState(false);
 
