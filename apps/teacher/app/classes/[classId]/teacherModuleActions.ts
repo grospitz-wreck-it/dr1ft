@@ -548,24 +548,28 @@ export async function archiveTeacherModuleAssignment(classInstanceId: string, as
   const supabase = supabaseServerClient();
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) throw new Error("Nicht authentifiziert.");
-  const { data: assignment, error: lookupError } = await supabase.from("teacher_class_module_assignments")
-    .select("id,school_id,module_id").eq("id", assignmentId).eq("class_instance_id", classInstanceId)
-    .eq("teacher_user_id", user.id).eq("module_type", "teacher_module").maybeSingle();
-  if (lookupError || !assignment) throw new Error("Modulzuordnung nicht gefunden.");
-  const { data: canManageClass, error: permissionError } = await supabase.rpc(
-    "is_teacher_of_class_instance",
-    { target_instance_id: classInstanceId },
-  );
-  if (permissionError || !canManageClass) throw new Error("Du darfst dieses Modul nicht archivieren.");
-  const archivedAt = new Date().toISOString();
-  const { error } = await supabase.from("teacher_class_module_assignments")
-    .update({ archived_at: archivedAt, is_active: false })
-    .eq("id", assignmentId).eq("class_instance_id", classInstanceId).eq("teacher_user_id", user.id);
-  if (!error) {
-    await supabase.from("teacher_module_class_assignments")
-      .update({ archived_at: archivedAt, is_active: false })
-      .eq("module_id", (assignment as any).module_id).eq("class_instance_id", classInstanceId);
-  }
+
+  // This is a personal assignment. Ownership of this exact row is sufficient;
+  // class-wide sharing is a separate record and must remain untouched.
+  const { data: assignment, error: lookupError } = await supabase
+    .from("teacher_class_module_assignments")
+    .select("id")
+    .eq("id", assignmentId)
+    .eq("class_instance_id", classInstanceId)
+    .eq("teacher_user_id", user.id)
+    .eq("module_type", "teacher_module")
+    .maybeSingle();
+
+  if (lookupError || !assignment) throw new Error("Eigene Modulzuordnung nicht gefunden.");
+
+  const { error } = await supabase
+    .from("teacher_class_module_assignments")
+    .update({ archived_at: new Date().toISOString(), is_active: false })
+    .eq("id", assignmentId)
+    .eq("class_instance_id", classInstanceId)
+    .eq("teacher_user_id", user.id)
+    .eq("module_type", "teacher_module");
+
   if (error) throw new Error(error.message);
   revalidatePath("/classes/" + classInstanceId);
 }
