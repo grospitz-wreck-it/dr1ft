@@ -83,7 +83,7 @@ export default async function ClassDetailPage({
 
     timed(timings, "scenario-assignments", supabase
       .from("class_instance_scenario_assignments")
-      .select("scenario_id,pacing_mode,scheduled_start_at,scheduled_end_at,show_reports_at_end,archived_at,is_active,scenarios(title)")
+      .select("scenario_id,pacing_mode,scheduled_start_at,scheduled_end_at,show_reports_at_end,student_reports_enabled,archived_at,is_active,scenarios(title)")
       .eq("class_instance_id", classId)
       .is("archived_at", null)),
 
@@ -250,6 +250,7 @@ export default async function ClassDetailPage({
             scheduled_start_at: item.scheduled_start_at,
             scheduled_end_at: item.scheduled_end_at,
             show_reports_at_end: Boolean(item.show_reports_at_end),
+            student_reports_enabled: Boolean(item.student_reports_enabled),
             title: item.scenarios?.title ?? null,
           }))}
           moduleStatus="Noch nicht begonnen"

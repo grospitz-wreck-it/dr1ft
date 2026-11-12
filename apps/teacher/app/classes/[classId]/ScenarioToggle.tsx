@@ -1,8 +1,8 @@
 "use client";
 
 import { useEffect, useState, useTransition } from "react";
-import { CalendarClock, Check, Clock3, Image as ImageIcon, Trash2 } from "lucide-react";
-import { archiveScenarioAssignment, setScenarioAssignmentActive, updateScenarioSchedule } from "../actions";
+import { CalendarClock, Check, Clock3, Eye, Image as ImageIcon, Users, Trash2 } from "lucide-react";
+import { archiveScenarioAssignment, setScenarioAssignmentActive, updateScenarioSchedule, updateStudentScenarioReportVisibility } from "../actions";
 import { useRouter } from "next/navigation";
 
 type ModuleStatus = "Abgeschlossen" | "In Bearbeitung" | "Noch nicht begonnen" | "Nicht zugewiesen";
@@ -20,7 +20,7 @@ function timePart(value?: string | null) {
 
 export function ScenarioToggle({
   classId, scenarioId, title, description, coverImageUrl, ageRating, initiallyAssigned, initiallyActive,
-  moduleStatus, moduleReport, scheduledStartAt = null, scheduledEndAt = null, showReportsAtEnd = false,
+  moduleStatus, moduleReport, scheduledStartAt = null, scheduledEndAt = null, showReportsAtEnd = false, studentReportsEnabled = false,
 }: {
   classId: string;
   scenarioId: string;
@@ -36,6 +36,7 @@ export function ScenarioToggle({
   scheduledStartAt?: string | null;
   scheduledEndAt?: string | null;
   showReportsAtEnd?: boolean;
+  studentReportsEnabled?: boolean;
 }) {
   const [selected, setSelected] = useState(initiallyActive);
   const [archiveMessage, setArchiveMessage] = useState("");
@@ -45,6 +46,8 @@ export function ScenarioToggle({
   const [endDate, setEndDate] = useState(datePart(scheduledEndAt));
   const [endTime, setEndTime] = useState(timePart(scheduledEndAt));
   const [releaseReports, setReleaseReports] = useState(showReportsAtEnd);
+  const [studentReportsVisible, setStudentReportsVisible] = useState(studentReportsEnabled);
+  const [visibilityMessage, setVisibilityMessage] = useState("");
   const [pending, startTransition] = useTransition();
   const [scheduleMessage, setScheduleMessage] = useState("");
   const [scheduleOpen, setScheduleOpen] = useState(false);
@@ -56,7 +59,8 @@ export function ScenarioToggle({
     setEndDate(datePart(scheduledEndAt));
     setEndTime(timePart(scheduledEndAt));
     setReleaseReports(showReportsAtEnd);
-  }, [initiallyActive, scheduledStartAt, scheduledEndAt, showReportsAtEnd]);
+    setStudentReportsVisible(studentReportsEnabled);
+  }, [initiallyActive, scheduledStartAt, scheduledEndAt, showReportsAtEnd, studentReportsEnabled]);
 
   const status = moduleStatus ?? (initiallyAssigned ? "Noch nicht begonnen" : "Nicht zugewiesen");
   const now = Date.now();
@@ -74,6 +78,22 @@ export function ScenarioToggle({
       } catch (error) {
         setSelected(!next);
         setScheduleMessage(error instanceof Error ? error.message : "Modulstatus konnte nicht geändert werden.");
+      }
+    });
+  }
+
+  function changeStudentReportVisibility(next: boolean) {
+    if (pending || next === studentReportsVisible) return;
+    const previous = studentReportsVisible;
+    setStudentReportsVisible(next);
+    setVisibilityMessage("");
+    startTransition(async () => {
+      try {
+        await updateStudentScenarioReportVisibility(classId, scenarioId, next);
+        setVisibilityMessage(next ? "Schüler-Reporting freigegeben." : "Schüler-Reporting verborgen.");
+      } catch (error) {
+        setStudentReportsVisible(previous);
+        setVisibilityMessage(error instanceof Error ? error.message : "Sichtbarkeit konnte nicht gespeichert werden.");
       }
     });
   }
@@ -125,6 +145,16 @@ export function ScenarioToggle({
           <p className="mt-1 line-clamp-2 text-xs leading-4 text-slate-600">{description?.trim() || "Für dieses Szenario liegt noch keine Kurzbeschreibung vor."}</p>
           {selected && moduleReport && <p className="mt-1 line-clamp-1 text-[10px] text-slate-500">{moduleReport}</p>}
           {selected && hasSchedule && <p className="mt-1 text-[10px] text-slate-500">{scheduledStartAt ? new Date(scheduledStartAt).toLocaleString("de-DE") : "Sofort"}{scheduledEndAt ? " – " + new Date(scheduledEndAt).toLocaleString("de-DE") : ""}</p>}
+          <div className="mt-2 flex flex-wrap items-center gap-2">
+            <span className="inline-flex items-center gap-1.5 text-[11px] font-medium text-slate-600"><Users className="h-3.5 w-3.5" />Schüler</span>
+            <Eye className="h-3.5 w-3.5 text-slate-500" aria-hidden="true" />
+            <span className="text-[11px] text-slate-600">Reporting sichtbar</span>
+            <button type="button" role="switch" aria-checked={studentReportsVisible} aria-label="Schüler-Reporting anzeigen" onClick={() => changeStudentReportVisibility(!studentReportsVisible)} disabled={pending} className={"relative inline-flex h-5 w-9 items-center rounded-full transition-colors disabled:opacity-50 " + (studentReportsVisible ? "bg-violet-600" : "bg-slate-300")}>
+              <span className={"inline-block h-3.5 w-3.5 rounded-full bg-white shadow transition-transform " + (studentReportsVisible ? "translate-x-4" : "translate-x-1")} />
+            </button>
+            <span className="text-[10px] font-medium text-slate-500">{pending ? "Speichert …" : studentReportsVisible ? "AN" : "AUS"}</span>
+            {visibilityMessage && <span role="status" className="text-[10px] text-slate-500">{visibilityMessage}</span>}
+          </div>
         </div>
 
         <div className="flex shrink-0 flex-col items-center gap-1.5">
@@ -160,7 +190,7 @@ export function ScenarioToggle({
                 <fieldset className="grid grid-cols-2 gap-2"><legend className="mb-1 text-xs font-medium text-slate-700">Live ab</legend><input aria-label="Startdatum" type="date" value={startDate} onChange={(e) => setStartDate(e.target.value)} disabled={pending} className="min-w-0 rounded-lg border border-slate-200 bg-white px-2 py-2 text-xs" /><input aria-label="Startuhrzeit" type="time" value={startTime} onChange={(e) => setStartTime(e.target.value)} disabled={pending} className="min-w-0 rounded-lg border border-slate-200 bg-white px-2 py-2 text-xs" /></fieldset>
                 <fieldset className="grid grid-cols-2 gap-2"><legend className="mb-1 text-xs font-medium text-slate-700">Live bis</legend><input aria-label="Enddatum" type="date" value={endDate} onChange={(e) => setEndDate(e.target.value)} disabled={pending} className="min-w-0 rounded-lg border border-slate-200 bg-white px-2 py-2 text-xs" /><input aria-label="Enduhrzeit" type="time" value={endTime} onChange={(e) => setEndTime(e.target.value)} disabled={pending} className="min-w-0 rounded-lg border border-slate-200 bg-white px-2 py-2 text-xs" /></fieldset>
               </div>
-              <label className="mt-3 flex items-start gap-2 text-xs text-slate-700"><input type="checkbox" checked={releaseReports} onChange={(e) => setReleaseReports(e.target.checked)} disabled={pending} className="mt-0.5 accent-violet-600" /><span><span className="font-medium">Schüler-Reportings nach Ende freigeben</span><span className="mt-0.5 block text-slate-500">Die Auswertung wird erst nach der Endzeit im Lehrer-Dashboard freigeschaltet.</span></span></label>
+              <label className="mt-3 flex items-start gap-2 text-xs text-slate-700"><input type="checkbox" checked={releaseReports} onChange={(e) => setReleaseReports(e.target.checked)} disabled={pending} className="mt-0.5 accent-violet-600" /><span><span className="font-medium">Lehrer-Auswertung nach Ende freigeben</span><span className="mt-0.5 block text-slate-500">Die Auswertung im Lehrer-Dashboard wird erst nach der Endzeit freigeschaltet.</span></span></label>
               <div className="mt-3 flex flex-wrap items-center gap-3"><button type="button" onClick={saveSchedule} disabled={pending} className="rounded-lg bg-violet-600 px-3 py-2 text-xs font-semibold text-white hover:bg-violet-700 disabled:opacity-50">{pending ? "Speichert …" : "Zeitplan speichern"}</button>{scheduleMessage && <p role="status" className="text-xs text-slate-600">{scheduleMessage}</p>}</div>
             </div>
           )}

@@ -428,3 +428,42 @@ export async function setClassVisual(classId: string, visualId: string | null) {
   revalidatePath("/classes");
   revalidatePath(`/classes/${classId}`);
 }
+
+
+export async function updateStudentScenarioReportVisibility(
+  classId: string,
+  scenarioId: string,
+  enabled: boolean,
+) {
+  const supabase = supabaseServerClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) throw new Error("Nicht authentifiziert");
+
+  const { data: canManageClass, error: permissionError } = await supabase.rpc(
+    "is_teacher_of_class_instance",
+    { target_instance_id: classId },
+  );
+  if (permissionError || !canManageClass) {
+    throw new Error("Keine Berechtigung, die Schüler-Reporting-Sichtbarkeit zu ändern.");
+  }
+
+  const { data: assignment, error: assignmentError } = await supabase
+    .from("class_instance_scenario_assignments")
+    .select("id")
+    .eq("class_instance_id", classId)
+    .eq("scenario_id", scenarioId)
+    .is("archived_at", null)
+    .maybeSingle();
+
+  if (assignmentError || !assignment) {
+    throw new Error("Die Modulzuweisung wurde nicht gefunden.");
+  }
+
+  const { error } = await supabase
+    .from("class_instance_scenario_assignments")
+    .update({ student_reports_enabled: enabled })
+    .eq("id", assignment.id);
+
+  if (error) throw new Error(error.message);
+  revalidatePath(`/classes/${classId}`);
+}

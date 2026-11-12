@@ -270,6 +270,23 @@ export default async function StudentReportPage({
       </main>
     );
   }
+  const { data: savedAssessmentResult, error: savedAssessmentError } = await supabase
+    .from("scenario_assessment_results")
+    .select("requirement_result, completed_at")
+    .eq("class_instance_id", classId)
+    .eq("user_id", studentId)
+    .eq("scenario_id", selectedScenario.id)
+    .order("completed_at", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+
+  if (savedAssessmentError) {
+    console.warn("[student-report] saved scenario assessment unavailable", {
+      classId, studentId, scenarioId: selectedScenario.id,
+      code: savedAssessmentError.code, message: savedAssessmentError.message,
+    });
+  }
+
   const { data: profile } = await supabase
     .from("user_profiles")
     .select("display_name, username, avatar_seed")
@@ -333,6 +350,16 @@ export default async function StudentReportPage({
       </header>
 
       <div className="student-report-print-content space-y-4">
+      {savedAssessmentResult?.requirement_result && <section className="rounded-2xl border border-violet-200 bg-white p-4 shadow-sm sm:p-5">
+        <div className="flex flex-wrap items-start justify-between gap-3">
+          <div><p className="text-[9px] font-black uppercase tracking-[.18em] text-violet-600">DR1FT · Abschlussauswertung</p><h2 className="mt-1 text-base font-black text-slate-900">Bewertung der Pflichtanforderungen</h2><p className="mt-1 text-xs text-slate-500">Gespeichertes Ergebnis vom {new Date(savedAssessmentResult.completed_at).toLocaleString("de-DE")}</p></div>
+          {savedAssessmentResult.requirement_result.status === "assessed" && <div className="text-right"><strong className="text-3xl font-black tabular-nums text-violet-700">{Number(savedAssessmentResult.requirement_result.percentage ?? 0).toLocaleString("de-DE",{maximumFractionDigits:1})}%</strong><p className="text-[10px] text-slate-500">Pflichtanforderungen erfüllt</p></div>}
+        </div>
+        {savedAssessmentResult.requirement_result.status === "assessed"
+          ? <p className="mt-3 text-xs leading-5 text-slate-600">{savedAssessmentResult.requirement_result.completed_count ?? 0} vollständig · {savedAssessmentResult.requirement_result.partial_count ?? 0} teilweise · {savedAssessmentResult.requirement_result.not_yet_count ?? 0} nicht erfüllt · {savedAssessmentResult.requirement_result.unobserved_count ?? 0} ohne Nachweis</p>
+          : <p className="mt-3 text-xs text-slate-600">{savedAssessmentResult.requirement_result.message ?? "Für dieses Szenario liegt keine bewertbare Abschlussauswertung vor."}</p>}
+        <p className="mt-2 text-[10px] leading-4 text-slate-400">Die Prozentzahl beschreibt die Erfüllung der festgelegten Pflichtanforderungen. Sie ist keine Schulnote und kein langfristiger Kompetenzstand.</p>
+      </section>}
       <section className="relative isolate overflow-hidden rounded-[30px] bg-[#171d35] text-white shadow-[0_18px_50px_rgba(82,45,150,.22)] ring-1 ring-white/80 print:rounded-none print:shadow-none">
         {selectedReport && scenarioMeta.get(selectedReport.id)?.cover_image_url && <img src={scenarioMeta.get(selectedReport.id)?.cover_image_url ?? ""} alt="" className="absolute inset-0 -z-20 h-full w-full object-cover opacity-35" />}
         <div className="absolute inset-0 -z-10 bg-[radial-gradient(ellipse_at_45%_46%,rgba(217,70,239,.48),transparent_37%),radial-gradient(ellipse_at_75%_5%,rgba(99,102,241,.32),transparent_31%),linear-gradient(100deg,rgba(34,24,65,.88)_0%,rgba(28,28,62,.84)_46%,rgba(15,39,62,.90)_100%)]" />

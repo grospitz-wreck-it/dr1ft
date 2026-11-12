@@ -25,6 +25,7 @@ type Assignment = {
   scheduled_start_at: string | null;
   scheduled_end_at: string | null;
   show_reports_at_end: boolean;
+  student_reports_enabled: boolean;
   title: string | null;
 };
 
@@ -125,6 +126,7 @@ export function ClassModuleLibrary({
                   scheduledStartAt={assignment.scheduled_start_at}
                   scheduledEndAt={assignment.scheduled_end_at}
                   showReportsAtEnd={assignment.show_reports_at_end}
+                  studentReportsEnabled={assignment.student_reports_enabled}
                 />
               );
             })}

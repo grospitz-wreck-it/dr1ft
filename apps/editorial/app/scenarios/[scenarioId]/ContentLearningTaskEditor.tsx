@@ -5,7 +5,7 @@ import { updateContentLearningTask } from "../learning-content-actions";
 import { Check, ChevronDown, ChevronRight, GraduationCap, Save, Search, Image as ImageIcon, ShieldCheck, UserRound, ArrowLeftRight, Share2, Flag, CircleOff, MessageCircle, Brain, Plus, X } from "lucide-react";
 
 type Interaction = { id: string; label: string; instruction?: string; custom?: boolean; discoveryTitle?: string; discoveryMessage?: string; discoveryCompetency?: string };
-type InteractionAssessment = { assessedActions: string[]; acceptableActions: string[]; evidenceKey: string };
+type InteractionAssessment = { assessedActions: string[]; acceptableActions: string[]; evidenceKey: string; requirementMode: "any" | "all_acceptable" };
 type Task = {
   purpose: string;
   learnerAction: string;
@@ -44,6 +44,7 @@ export function ContentLearningTaskEditor({ scenarioId, contentItemId, initialTa
         assessedActions: Array.isArray((saved as any).assessment?.assessedActions) ? (saved as any).assessment.assessedActions : [],
         acceptableActions: Array.isArray((saved as any).assessment?.acceptableActions) ? (saved as any).assessment.acceptableActions : [],
         evidenceKey: typeof (saved as any).assessment?.evidenceKey === "string" ? (saved as any).assessment.evidenceKey : "in_feed_decision",
+        requirementMode: (saved as any).assessment?.requirementMode === "all_acceptable" ? "all_acceptable" : "any",
       },
     };
   });
@@ -135,6 +136,20 @@ export function ContentLearningTaskEditor({ scenarioId, contentItemId, initialTa
           <div className="space-y-3">
             <div className="flex flex-wrap items-center justify-between gap-3">
               <p className="max-w-2xl text-xs leading-relaxed text-slate-500">Alle Aktionen sind im Player immer sichtbar. Hier legst du fest, welche davon als Lernnachweis zählen und wann Lernende eine Rückmeldung erhalten.</p>
+              <label className="flex min-w-[250px] flex-col gap-1 text-xs font-semibold text-slate-700">
+                Wie werden passende Aktionen gewertet?
+                <select
+                  value={task.assessment.requirementMode}
+                  onChange={event => update("assessment", { ...task.assessment, requirementMode: event.target.value as "any" | "all_acceptable" })}
+                  className="rounded-xl border border-violet-200 bg-white px-3 py-2 text-xs font-medium outline-none focus:border-violet-400 focus:ring-2 focus:ring-violet-100"
+                >
+                  <option value="any">Eine passende Aktion genügt</option>
+                  <option value="all_acceptable">Alle als passend markierten Aktionen sind erforderlich</option>
+                </select>
+                <span className="font-normal leading-relaxed text-slate-500">
+                  Bei „Alle“ zählt jede passend markierte Aktion einzeln. Werden zwei erwartet und nur eine ausgeführt, ist eine von zwei Anforderungen erfüllt.
+                </span>
+              </label>
               <div className="flex gap-2 text-[11px] font-bold">
                 <span className="rounded-full bg-violet-100 px-2.5 py-1 text-violet-700">{assessmentCount} bewertet</span>
                 {acceptableCount > 0 && <span className="rounded-full bg-emerald-100 px-2.5 py-1 text-emerald-700">{acceptableCount} passend</span>}

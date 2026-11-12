@@ -7,6 +7,7 @@ import { supabaseBrowserClient } from "../../lib/supabaseBrowserClient";
 import { PostCard } from "../../components/PostCard";
 import { LearningCardFeedItem, type PlayerLearningCard } from "../../components/LearningCardFeedItem";
 import { ReflectionOverlay } from "../../components/ReflectionOverlay";
+import { finalizeScenarioAssessment, previewScenarioAssessment, type ScenarioAssessmentPreview, type ScenarioAssessmentResult } from "./scenario-assessment-actions";
 
 // Keep signed URLs across feed remounts/navigation and deduplicate concurrent
 // requests. Use a conservative one-hour expiry compatible with Storage settings.
@@ -250,6 +251,10 @@ export function FeedClient({ initialItems, teacherModules = [], userId, classIns
   const [scenarioStarted, setScenarioStarted] = useState(false);
   const [scenarioFinished, setScenarioFinished] = useState(false);
   const [scenarioStateLoaded, setScenarioStateLoaded] = useState(false);
+  const [scenarioAssessmentResults, setScenarioAssessmentResults] = useState<Array<{ scenarioId: string; result: ScenarioAssessmentResult }>>([]);
+  const [completionPreviews, setCompletionPreviews] = useState<Array<{ scenarioId: string; result: ScenarioAssessmentPreview }>>([]);
+  const [scenarioFinishPending, setScenarioFinishPending] = useState(false);
+  const [scenarioFinishError, setScenarioFinishError] = useState<string | null>(null);
   const scenarioStateKey = `dr1ft:scenario-state:${userId}:${classInstanceId}:${[...scenarioIds].sort().join(",") || scenarioIntro?.id || "none"}`;
   const multipleScenarios = scenarioIds.length > 1;
   const scenarioIdsKey = scenarioIds.join(",");
@@ -277,6 +282,35 @@ export function FeedClient({ initialItems, teacherModules = [], userId, classIns
     if (!scenarioStateLoaded) return;
     window.sessionStorage.setItem(scenarioStateKey, JSON.stringify({ started: scenarioStarted, finished: scenarioFinished }));
   }, [scenarioStateKey, scenarioStateLoaded, scenarioStarted, scenarioFinished]);
+
+  useEffect(() => {
+    if (!scenarioStateLoaded || !scenarioFinished || scenarioAssessmentResults.length > 0) return;
+    const ids = Array.from(new Set(
+      scenarioIds.length > 0 ? scenarioIds : scenarioIntro?.id ? [scenarioIntro.id] : []
+    ));
+    if (ids.length === 0) return;
+    let cancelled = false;
+    void Promise.all(ids.map((scenarioId) =>
+      finalizeScenarioAssessment({ classInstanceId, scenarioId })
+    )).then((entries) => {
+      if (cancelled) return;
+      for (const entry of entries) {
+        if (entry.ok === false) {
+          setScenarioFinishError(entry.error);
+          return;
+        }
+      }
+      setScenarioAssessmentResults(entries.flatMap((entry) =>
+        entry.ok ? [{ scenarioId: entry.scenarioId, result: entry.result }] : []
+      ));
+    }).catch((error) => {
+      if (!cancelled) {
+        console.error("[FeedClient] Scenario result restore failed", error);
+        setScenarioFinishError("Das gespeicherte Szenario-Ergebnis konnte nicht geladen werden.");
+      }
+    });
+    return () => { cancelled = true; };
+  }, [scenarioStateLoaded, scenarioFinished, scenarioAssessmentResults.length, scenarioIdsKey, scenarioIntro?.id, classInstanceId]);
   useEffect(() => {
     if (!scenarioStateLoaded || !scenarioStarted || scenarioFinished) return;
     const timer = window.setTimeout(() => window.dispatchEvent(new CustomEvent("dr1ft:scenario-started", {
@@ -384,6 +418,79 @@ export function FeedClient({ initialItems, teacherModules = [], userId, classIns
     if (scenarioStarted) return;
     setScenarioStarted(true);
   }
+
+  async function handleScenarioFinish() {
+    if (scenarioFinishPending || completionPreviews.length > 0) return;
+    const ids = Array.from(new Set(
+      scenarioIds.length > 0 ? scenarioIds : scenarioIntro?.id ? [scenarioIntro.id] : []
+    ));
+    if (ids.length === 0) {
+      setScenarioFinishError("Für diesen Lernlauf konnte kein Szenario zur Auswertung ermittelt werden.");
+      return;
+    }
+
+    setScenarioFinishPending(true);
+    setScenarioFinishError(null);
+    try {
+      const previews = await Promise.all(ids.map((scenarioId) =>
+        previewScenarioAssessment({ classInstanceId, scenarioId })
+      ));
+      for (const entry of previews) {
+        if (entry.ok === false) {
+          setScenarioFinishError(entry.error);
+          return;
+        }
+      }
+      setCompletionPreviews(previews.flatMap((entry) =>
+        entry.ok && entry.result ? [{ scenarioId: entry.scenarioId, result: entry.result }] : []
+      ));
+    } catch (error) {
+      console.error("[FeedClient] Scenario preview failed", error);
+      setScenarioFinishError("Dein Bearbeitungsstand konnte gerade nicht ermittelt werden. Bitte versuche es erneut.");
+    } finally {
+      setScenarioFinishPending(false);
+    }
+  }
+
+  async function confirmScenarioFinish() {
+    if (scenarioFinishPending || completionPreviews.length === 0) return;
+    setScenarioFinishPending(true);
+    setScenarioFinishError(null);
+    try {
+      const finalized = await Promise.all(completionPreviews.map(({ scenarioId }) =>
+        finalizeScenarioAssessment({ classInstanceId, scenarioId })
+      ));
+      for (const entry of finalized) {
+        if (entry.ok === false) {
+          setScenarioFinishError(entry.error);
+          return;
+        }
+      }
+
+      const results = finalized.flatMap((entry) =>
+        entry.ok ? [{ scenarioId: entry.scenarioId, result: entry.result }] : []
+      );
+      setScenarioAssessmentResults(results);
+      setScenarioFinished(true);
+      setCompletionPreviews([]);
+      window.dispatchEvent(new CustomEvent("dr1ft:scenario-completed", {
+        detail: {
+          scenarioId: scenarioIntro?.id ?? completionPreviews[0].scenarioId,
+          scenarioIds: completionPreviews.map((entry) => entry.scenarioId),
+          completedAt: new Date().toISOString(),
+        },
+      }));
+    } catch (error) {
+      console.error("[FeedClient] Scenario finalization failed", error);
+      setScenarioFinishError("Das Szenario konnte gerade nicht abgeschlossen werden. Bitte versuche es erneut.");
+    } finally {
+      setScenarioFinishPending(false);
+    }
+  }
+
+  function completionMessage(result: ScenarioAssessmentPreview) {
+    return result.completion_message;
+  }
   return <main className="min-h-screen text-[#27213d]"><div className="max-w-4xl mx-auto"><div className="min-w-0 space-y-5">{(multipleScenarios || scenarioIntro) && <section className="relative overflow-hidden rounded-[26px] border border-violet-100 bg-white/90 p-6 shadow-sm md:p-7">
   {multipleScenarios ? (
     <>
@@ -418,7 +525,7 @@ export function FeedClient({ initialItems, teacherModules = [], userId, classIns
       <ArrowRight className="h-4 w-4 text-cyan-200" />
     </button>
   </div>}
-</section>}{scenarioStarted&&!scenarioFinished&&learningCards.filter(card=>card.position==="before_feed").map(card=><LearningCardFeedItem key={card.id} card={card} classInstanceId={classInstanceId}/>)}
+</section>}{scenarioStarted&&!scenarioFinished&&(scenarioIntro||scenarioIds.length>0)&&<div className="flex justify-end"><button type="button" onClick={()=>void handleScenarioFinish()} disabled={scenarioFinishPending} className="inline-flex items-center gap-2 rounded-xl border border-violet-200 bg-white px-4 py-2.5 text-xs font-bold text-violet-700 shadow-sm transition hover:border-violet-300 hover:bg-violet-50 disabled:cursor-wait disabled:opacity-60">{scenarioFinishPending ? "Wird ausgewertet …" : multipleScenarios ? "Lernlauf beenden" : "Szenario beenden"}</button></div>}{completionPreviews.length>0&&!scenarioFinished&&<div className="fixed inset-0 z-[100] flex items-center justify-center bg-slate-950/50 p-4" role="presentation"><section role="dialog" aria-modal="true" aria-labelledby="scenario-finish-title" className="w-full max-w-xl rounded-3xl bg-white p-6 shadow-2xl"><div className="flex items-start gap-3"><span className="grid h-10 w-10 shrink-0 place-items-center rounded-2xl bg-violet-100"><Sparkles className="h-5 w-5 text-violet-700"/></span><div><h2 id="scenario-finish-title" className="font-display text-xl font-semibold text-[#27213d]">{multipleScenarios?"Lernlauf wirklich beenden?":"Szenario wirklich beenden?"}</h2><p className="mt-1 text-sm leading-5 text-[#746d89]">Schau dir deine Abschlussrückmeldung an. Erst danach wird die Auswertung endgültig gespeichert.</p></div></div><div className="mt-5 space-y-3">{completionPreviews.map(({scenarioId,result})=>{const title=scenarioSummaries.find(item=>item.id===scenarioId)?.title??(scenarioIntro?.id===scenarioId?scenarioIntro.title:"Dein Szenario");return <article key={scenarioId} className="rounded-2xl border border-violet-100 bg-violet-50/50 p-4"><p className="text-[10px] font-bold uppercase tracking-wide text-violet-600">{title}</p><p className="mt-2 text-sm leading-6 text-[#35264d]">{completionMessage(result)}</p></article>;})}</div>{scenarioFinishError&&<p role="alert" className="mt-3 text-sm text-rose-700">{scenarioFinishError}</p>}<div className="mt-6 flex flex-wrap justify-end gap-2"><button type="button" onClick={()=>setCompletionPreviews([])} disabled={scenarioFinishPending} className="rounded-xl border border-slate-200 px-4 py-2.5 text-sm font-semibold text-slate-700 disabled:opacity-50">Weiter bearbeiten</button><button type="button" onClick={()=>void confirmScenarioFinish()} disabled={scenarioFinishPending} className="rounded-xl bg-violet-700 px-4 py-2.5 text-sm font-semibold text-white disabled:opacity-50">{scenarioFinishPending?"Wird gespeichert …":"Jetzt abschließen"}</button></div></section></div>}{scenarioFinishError&&!scenarioFinished&&<p role="alert" className="rounded-xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700">{scenarioFinishError}</p>}{scenarioStarted&&!scenarioFinished&&learningCards.filter(card=>card.position==="before_feed").map(card=><LearningCardFeedItem key={card.id} card={card} classInstanceId={classInstanceId}/>)}
 {!scenarioFinished&&teacherModules.length>0&&<section className="space-y-5" aria-label="Lernmodule deiner Lehrkraft">
   {teacherModules.map((module)=><article key={module.id} className="teacher-module-feed overflow-hidden rounded-[26px] border border-violet-100 bg-white/95 shadow-sm">
     {module.title_card_enabled!==false&&<header className="teacher-module-header border-b border-violet-100 bg-gradient-to-r from-violet-50 via-white to-cyan-50 px-5 py-5 sm:px-6">
@@ -445,5 +552,5 @@ export function FeedClient({ initialItems, teacherModules = [], userId, classIns
     </div>}
   </article>)}
 </section>}
-{scenarioStarted&&!scenarioFinished&&initialItems.length===0&&teacherModules.length===0&&<div className="rounded-[28px] bg-white/80 border border-dashed border-violet-200 p-12 text-center shadow-sm"><p className="font-display font-semibold">Noch ist es ruhig.</p><p className="text-sm text-[#746d89] mt-2">Für dich sind gerade keine Szenarien freigeschaltet.</p></div>}{scenarioStarted&&!scenarioFinished&&initialItems.slice(0,visibleCount).map((item,index)=><div key={item.id} className="space-y-3"><PostCard item={item} userId={userId} classInstanceId={classInstanceId} initiallyLiked={likedContentIds.has(item.id)} onView={()=>handleView(item)}/>{index===2&&<div className="h-px bg-gradient-to-r from-transparent via-violet-200 to-transparent"/>}</div>)}{scenarioStarted&&!scenarioFinished&&visibleCount<initialItems.length&&<div ref={loadMoreRef} className="flex justify-center py-6 text-violet-300" aria-label="Weitere Beiträge werden geladen"><ArrowDown className="w-5 h-5 animate-bounce"/></div>}{scenarioStarted&&!scenarioFinished&&visibleCount>=initialItems.length&&learningCards.filter(card=>card.position==="feed_end").map(card=><LearningCardFeedItem key={card.id} card={card} classInstanceId={classInstanceId}/>)}{scenarioFinished&&<section className="rounded-[26px] border border-violet-100 bg-white p-8 text-center shadow-sm"><span className="mx-auto grid h-12 w-12 place-items-center rounded-2xl bg-violet-50"><CheckCircle2 className="h-6 w-6 text-violet-600"/></span><h2 className="mt-4 font-display text-2xl font-semibold text-[#27213d]">{multipleScenarios ? "Lernlauf beendet" : "Szenario beendet"}</h2><p className="mt-2 text-sm text-[#746d89]">Du kannst jetzt aufhören. Nicht abgeschlossene Aufgaben bleiben offen.</p></section>}</div></div>{reflection&&<ReflectionOverlay contentItemId={reflection.contentItemId} onClose={()=>setReflection(null)}/>}</main>;
+{scenarioStarted&&!scenarioFinished&&initialItems.length===0&&teacherModules.length===0&&<div className="rounded-[28px] bg-white/80 border border-dashed border-violet-200 p-12 text-center shadow-sm"><p className="font-display font-semibold">Noch ist es ruhig.</p><p className="text-sm text-[#746d89] mt-2">Für dich sind gerade keine Szenarien freigeschaltet.</p></div>}{scenarioStarted&&!scenarioFinished&&initialItems.slice(0,visibleCount).map((item,index)=><div key={item.id} className="space-y-3"><PostCard item={item} userId={userId} classInstanceId={classInstanceId} initiallyLiked={likedContentIds.has(item.id)} onView={()=>handleView(item)}/>{index===2&&<div className="h-px bg-gradient-to-r from-transparent via-violet-200 to-transparent"/>}</div>)}{scenarioStarted&&!scenarioFinished&&visibleCount<initialItems.length&&<div ref={loadMoreRef} className="flex justify-center py-6 text-violet-300" aria-label="Weitere Beiträge werden geladen"><ArrowDown className="w-5 h-5 animate-bounce"/></div>}{scenarioStarted&&!scenarioFinished&&visibleCount>=initialItems.length&&learningCards.filter(card=>card.position==="feed_end").map(card=><LearningCardFeedItem key={card.id} card={card} classInstanceId={classInstanceId}/>)}{scenarioFinished&&<section className="space-y-5 rounded-[26px] border border-violet-100 bg-white p-6 shadow-sm sm:p-8"><div className="text-center"><span className="mx-auto grid h-12 w-12 place-items-center rounded-2xl bg-violet-50"><CheckCircle2 className="h-6 w-6 text-violet-600"/></span><h2 className="mt-4 font-display text-2xl font-semibold text-[#27213d]">{multipleScenarios ? "Lernlauf beendet" : "Szenario beendet"}</h2><p className="mt-2 text-sm text-[#746d89]">Dein Szenario wurde abgeschlossen. Die Auswertung wurde gespeichert; ob du sie sehen kannst, entscheidet deine Lehrkraft.</p></div>{scenarioAssessmentResults.map(({scenarioId,result})=>{const title=scenarioSummaries.find(item=>item.id===scenarioId)?.title??(scenarioIntro?.id===scenarioId?scenarioIntro.title:"Szenario");return <div key={scenarioId} className="rounded-2xl border border-violet-100 bg-violet-50/40 p-4 text-left"><h3 className="text-sm font-bold text-[#35264d]">{title}</h3>{result.status==="hidden"?<p className="mt-2 text-sm leading-5 text-[#746d89]">Die Auswertung wurde gespeichert. Deine Lehrkraft hat die Ergebnisanzeige noch nicht freigegeben.</p>:result.status==="assessed"?<><div className="mt-3 flex items-end gap-2"><span className="font-display text-3xl font-semibold tabular-nums text-violet-700">{Number(result.percentage??0).toLocaleString("de-DE",{maximumFractionDigits:1})}%</span><span className="pb-1 text-xs text-[#746d89]">Pflichtanforderungen erfüllt</span></div><p className="mt-2 text-xs leading-5 text-[#746d89]">{result.completed_count??0} vollständig · {result.partial_count??0} teilweise · {result.not_yet_count??0} nicht erfüllt · {result.unobserved_count??0} ohne Nachweis</p></>:<p className="mt-2 text-sm leading-5 text-[#746d89]">{result.message??(result.status==="snapshot_missing"?"Für diese Zuweisung liegt noch keine eingefrorene Bewertungsgrundlage vor.":"Dieses Szenario ist derzeit nicht ausreichend bewertbar.")}</p>}</div>;})}{scenarioAssessmentResults.length===0&&<p role="status" className="text-center text-sm text-[#746d89]">Das Szenario wurde beendet. Das Ergebnis konnte hier nicht geladen werden.</p>}<p className="border-t border-slate-100 pt-4 text-xs leading-relaxed text-[#746d89]">Die Prozentzahl beschreibt die Erfüllung der festgelegten Pflichtanforderungen. Sie ist keine Schulnote und noch kein langfristiger Kompetenzstand.</p></section>}</div></div>{reflection&&<ReflectionOverlay contentItemId={reflection.contentItemId} onClose={()=>setReflection(null)}/>}</main>;
 }
