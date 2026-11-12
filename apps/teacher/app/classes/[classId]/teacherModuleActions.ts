@@ -548,24 +548,28 @@ export async function archiveTeacherModuleAssignment(classInstanceId: string, as
   const supabase = supabaseServerClient();
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) throw new Error("Nicht authentifiziert.");
-  const { data: assignment, error: lookupError } = await supabase.from("teacher_class_module_assignments")
-    .select("id,school_id,module_id").eq("id", assignmentId).eq("class_instance_id", classInstanceId)
-    .eq("teacher_user_id", user.id).eq("module_type", "teacher_module").maybeSingle();
-  if (lookupError || !assignment) throw new Error("Modulzuordnung nicht gefunden.");
-  const { data: canManageClass, error: permissionError } = await supabase.rpc(
-    "is_teacher_of_class_instance",
-    { target_instance_id: classInstanceId },
-  );
-  if (permissionError || !canManageClass) throw new Error("Du darfst dieses Modul nicht archivieren.");
-  const archivedAt = new Date().toISOString();
-  const { error } = await supabase.from("teacher_class_module_assignments")
-    .update({ archived_at: archivedAt, is_active: false })
-    .eq("id", assignmentId).eq("class_instance_id", classInstanceId).eq("teacher_user_id", user.id);
-  if (!error) {
-    await supabase.from("teacher_module_class_assignments")
-      .update({ archived_at: archivedAt, is_active: false })
-      .eq("module_id", (assignment as any).module_id).eq("class_instance_id", classInstanceId);
-  }
+
+  // This is a personal assignment. Ownership of this exact row is sufficient;
+  // class-wide sharing is a separate record and must remain untouched.
+  const { data: assignment, error: lookupError } = await supabase
+    .from("teacher_class_module_assignments")
+    .select("id")
+    .eq("id", assignmentId)
+    .eq("class_instance_id", classInstanceId)
+    .eq("teacher_user_id", user.id)
+    .eq("module_type", "teacher_module")
+    .maybeSingle();
+
+  if (lookupError || !assignment) throw new Error("Eigene Modulzuordnung nicht gefunden.");
+
+  const { error } = await supabase
+    .from("teacher_class_module_assignments")
+    .update({ archived_at: new Date().toISOString(), is_active: false })
+    .eq("id", assignmentId)
+    .eq("class_instance_id", classInstanceId)
+    .eq("teacher_user_id", user.id)
+    .eq("module_type", "teacher_module");
+
   if (error) throw new Error(error.message);
   revalidatePath("/classes/" + classInstanceId);
 }
@@ -649,14 +653,35 @@ export async function assignExistingTeacherModule(classInstanceId: string, modul
   const { data: module, error: moduleError } = await supabase
     .from("teacher_modules").select("id,school_id,created_by,visibility_scope,status")
     .eq("id", moduleId).maybeSingle();
-  if (moduleError || !module || module.school_id !== targetClass.school_id || module.status !== "published") {
-    throw new Error("Dieses Modul ist nicht verfügbar.");
+  if (moduleError || !module) {
+    console.error("[assign-existing-teacher-module] module lookup failed", {
+      classInstanceId, moduleId, userId: user.id,
+      code: moduleError?.code, message: moduleError?.message,
+    });
+    throw new Error("Das Modul konnte nicht gelesen werden. Bitte lade die Seite neu; falls der Fehler bleibt, prüfen wir die Leseberechtigung.");
+  }
+  if (module.school_id !== targetClass.school_id) {
+    throw new Error("Dieses Modul gehört zu einer anderen Schule.");
+  }
+  if (module.status !== "published") {
+    console.warn("[assign-existing-teacher-module] draft module blocked", {
+      classInstanceId, moduleId, userId: user.id, status: module.status,
+    });
+    throw new Error("Dieses eigene Modul ist noch ein Entwurf und kann erst nach erfolgreicher Veröffentlichung abonniert werden.");
   }
 
   const { data: schoolMember } = await supabase.from("school_memberships").select("role")
     .eq("school_id", targetClass.school_id).eq("user_id", user.id).eq("active", true).maybeSingle();
   const isStaff = ["teacher", "school_admin", "school_lead"].includes(schoolMember?.role ?? "");
-  const canUseModule = module.visibility_scope === "school" || module.created_by === user.id;
+  const { data: classSharedAssignment } = module.visibility_scope === "class"
+    ? await supabase.from("teacher_module_class_assignments").select("id")
+        .eq("module_id", moduleId).eq("class_instance_id", classInstanceId)
+        .eq("is_active", true).is("archived_at", null).maybeSingle()
+    : { data: null };
+  const canUseModule =
+    module.visibility_scope === "school" ||
+    module.created_by === user.id ||
+    (module.visibility_scope === "class" && Boolean(classSharedAssignment));
   if (!isStaff || !canUseModule) throw new Error("Du darfst dieses Modul dieser Klasse nicht zuweisen.");
 
   const { error: subscriptionError } = await supabase.rpc("subscribe_teacher_to_class_instance", {
