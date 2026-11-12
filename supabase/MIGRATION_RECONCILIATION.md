@@ -246,3 +246,22 @@ The following remote/local pairs have the same migration name but different vers
 ## Repair decision
 
 No production repair command is approved by this inventory alone. The next executable step is to compare the local SQL blobs against the historical blobs in Git history (including archived/renamed paths), then generate a literal `supabase migration repair` command list for only the pairs proven to represent the same already-applied SQL. Local-only migrations with no proven remote counterpart must remain unresolved until the live schema or archived migration history establishes their disposition.
+
+
+## Historical blob-identity evidence already present in Git
+
+The Git history contains explicit documentation that nine previously archived duplicate-prefix files were compared with their corresponding remote migration SQL and restored under the original remote versions **without changing their blobs**. This is stronger than a name-only match and confirms that these nine cases are already represented correctly in the active migration directory:
+
+- `20261104220304_restrict_class_membership_and_instance_grants.sql`
+- `20261104221729_teacher_module_editor_posts_rpc.sql`
+- `20261106123935_grant_admin_scoped_report_rpcs.sql`
+- `20261106105500_guard_school_protected_fields_manual_reconcile_20261106.sql`
+- `20261106125611_allow_class_teachers_individual_reports.sql`
+- `20261106105505_revoke_client_trigger_references_manual_reconcile_20261106.sql`
+- `20261106155723_role_scope_security_alignment.sql`
+- `20261106125620_include_class_teachers_in_class_reporting.sql`
+- `20261106160054_tighten_teacher_class_assignment_scope.sql`
+
+Evidence: commits `58fa24b` (archive duplicate-prefix sources) and `5d1a1e9` (restore original remote versions). These are not candidates for further repair; their local version prefixes already match the remote ledger.
+
+The two remaining archived `20260930130000` files are explicitly documented as superseded/historical and must not be replayed.
