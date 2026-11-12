@@ -106,7 +106,7 @@ export default async function AmbientContentPage({ searchParams = {} }: Props) {
     const rawKeys = item.extra?.interestKeys;
     if (!Array.isArray(rawKeys) || rawKeys.length === 0) continue;
     // Match the previous includes()-based behavior: one post counts once per key.
-    for (const key of new Set(rawKeys.filter((value): value is string => typeof value === "string"))) {
+    for (const key of Array.from(new Set(rawKeys.filter((value): value is string => typeof value === "string")))) {
       const counts = coverageByInterest.get(key);
       if (!counts) continue;
       counts.total += 1;
