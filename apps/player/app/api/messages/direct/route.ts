@@ -12,24 +12,20 @@ export async function GET(request: Request) {
   const url = new URL(request.url);
   const peerId = url.searchParams.get("peerId");
   if (!peerId) {
-    const { data: memberships, error: membershipError } = await supabase
-      .from("class_instance_memberships")
-      .select("user_id")
-      .eq("class_instance_id", classInstanceId)
-      .eq("role", "student")
-      .is("left_at", null);
-    if (membershipError) return NextResponse.json({ error: "Klassenmitglieder konnten nicht geladen werden." }, { status: 500 });
+    // Students cannot enumerate class_instance_memberships through RLS.
+    // Use the existing security-definer RPC, which returns only active peers
+    // in the caller's own active class.
+    const { data: peers, error: peersError } = await supabase.rpc("get_student_class_peers", {
+      p_class_instance_id: classInstanceId,
+    });
+    if (peersError) return NextResponse.json({ error: "Klassenmitglieder konnten nicht geladen werden." }, { status: 500 });
 
-    const memberIds = Array.from(new Set((memberships ?? []).map((membership) => membership.user_id))).filter((id) => id !== user.id);
-    const { data: profiles, error } = memberIds.length
-      ? await supabase
-          .from("user_profiles")
-          .select("id, display_name, username, avatar_seed")
-          .in("id", memberIds)
-          .order("display_name", { ascending: true })
-          .limit(200)
-      : { data: [], error: null };
-    if (error) return NextResponse.json({ error: "Kontakte konnten nicht geladen werden." }, { status: 500 });
+    const profiles = (peers ?? []).map((peer: { peer_user_id: string; display_name: string; username: string }) => ({
+      id: peer.peer_user_id,
+      display_name: peer.display_name,
+      username: peer.username,
+    }));
+    const memberIds = profiles.map((profile) => profile.id);
 
     const { data: unreadMessages, error: unreadError } = await supabase
       .from("student_direct_messages")
@@ -78,18 +74,12 @@ export async function GET(request: Request) {
     });
   }
 
-  const { data: peerMembership, error: peerMembershipError } = await supabase
-    .from("class_instance_memberships")
-    .select("user_id")
-    .eq("user_id", peerId)
-    .eq("class_instance_id", classInstanceId)
-    .eq("role", "student")
-    .is("left_at", null)
-    .maybeSingle();
-  if (peerMembershipError || !peerMembership) return NextResponse.json({ error: "Dieser Kontakt gehört nicht zu deiner Klasse." }, { status: 404 });
-
-  const { data: peer, error: peerError } = await supabase.from("user_profiles").select("id, display_name, username").eq("id", peerId).maybeSingle();
-  if (peerError || !peer) return NextResponse.json({ error: "Kontaktprofil konnte nicht geladen werden." }, { status: 404 });
+  const { data: peers, error: peersError } = await supabase.rpc("get_student_class_peers", {
+    p_class_instance_id: classInstanceId,
+  });
+  if (peersError) return NextResponse.json({ error: "Kontakte konnten nicht geprüft werden." }, { status: 500 });
+  const peer = (peers ?? []).find((candidate: { peer_user_id: string }) => candidate.peer_user_id === peerId);
+  if (!peer) return NextResponse.json({ error: "Dieser Kontakt gehört nicht zu deiner Klasse." }, { status: 404 });
 
   const { data: newestFirstMessages, error } = await supabase
     .from("student_direct_messages")
@@ -108,7 +98,7 @@ export async function GET(request: Request) {
     if (readError) return NextResponse.json({ error: "Nachrichten geladen, Gelesen-Status konnte nicht gespeichert werden." }, { status: 500 });
   }
 
-  return NextResponse.json({ messages, peer: { id: peer.id, display_name: peer.display_name || peer.username || "DR1FT Schüler" } });
+  return NextResponse.json({ messages, peer: { id: peer.peer_user_id, display_name: peer.display_name || peer.username || "DR1FT Schüler" } });
 }
 
 export async function POST(request: Request) {
@@ -131,25 +121,14 @@ export async function POST(request: Request) {
   if (!recipientId || !body || body.length > 4000) return NextResponse.json({ error: "Bitte eine Nachricht mit maximal 4000 Zeichen eingeben." }, { status: 400 });
   if (recipientId === user.id) return NextResponse.json({ error: "Du kannst dir selbst keine Nachricht senden." }, { status: 400 });
 
-  const { data: senderMembership, error: senderError } = await supabase
-    .from("class_instance_memberships")
-    .select("user_id")
-    .eq("user_id", user.id)
-    .eq("class_instance_id", classInstanceId)
-    .eq("role", "student")
-    .is("left_at", null)
-    .maybeSingle();
-  if (senderError || !senderMembership) return NextResponse.json({ error: "Nur aktive Schüler:innen können Direktnachrichten senden." }, { status: 403 });
-
-  const { data: recipientMembership, error: recipientError } = await supabase
-    .from("class_instance_memberships")
-    .select("user_id")
-    .eq("user_id", recipientId)
-    .eq("class_instance_id", classInstanceId)
-    .eq("role", "student")
-    .is("left_at", null)
-    .maybeSingle();
-  if (recipientError || !recipientMembership) return NextResponse.json({ error: "Du kannst nur aktive Schüler:innen aus deiner Klasse anschreiben." }, { status: 403 });
+  // The peer RPC validates the caller's active student membership and
+  // confirms that the recipient is an active student in the same class.
+  const { data: peers, error: peersError } = await supabase.rpc("get_student_class_peers", {
+    p_class_instance_id: classInstanceId,
+  });
+  if (peersError) return NextResponse.json({ error: "Deine Klassenkontakte konnten nicht geprüft werden." }, { status: 403 });
+  const isClassPeer = (peers ?? []).some((peer: { peer_user_id: string }) => peer.peer_user_id === recipientId);
+  if (!isClassPeer) return NextResponse.json({ error: "Du kannst nur aktive Schüler:innen aus deiner Klasse anschreiben." }, { status: 403 });
 
   const { data: message, error } = await supabase
     .from("student_direct_messages")
