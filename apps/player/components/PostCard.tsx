@@ -223,7 +223,6 @@ export function PostCard({ item, userId, classInstanceId, initiallyLiked, onView
         outcome = row?.outcome === "success" || row?.outcome === "not_yet" ? row.outcome : undefined;
       }
     }
-    if (outcome === "success" && configured?.discoveryMessage?.trim()) showFeedback(configured.discoveryMessage.trim());
     return { saved: true, outcome };
   }
 
