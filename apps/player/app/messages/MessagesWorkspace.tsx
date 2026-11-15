@@ -3,8 +3,9 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { MessageCircle, Search, Users, UserRoundPlus, Send, ChevronLeft, Smile, Flag, X } from "lucide-react";
 import EmojiPicker, { EmojiStyle, Theme } from "emoji-picker-react";
+import { avatarUrl } from "../../lib/avatar";
 
-type Contact = { id: string; display_name: string; handle: string; isDue: boolean; lastMessage?: string | null; lastMessageAt?: string | null; lastMessageFromMe?: boolean };
+type Contact = { id: string; display_name: string; handle: string; isDue: boolean; avatar_seed?: string | null; lastMessage?: string | null; lastMessageAt?: string | null; lastMessageFromMe?: boolean };
 type DirectMessage = { id: string; sender_id: string; recipient_id: string; body: string; created_at: string; read_at: string | null };
 type GroupChat = { id: string; title: string };
 type ScenarioMessage = { id: string; senderName: string; title: string; preview: string; deliveredAt: string; isRead: boolean };
@@ -244,7 +245,10 @@ export default function MessagesWorkspace({
               <p className="px-2 pb-1 text-[10px] font-bold uppercase tracking-[.2em] text-white/35">Direktnachrichten</p>
               {filteredContacts.map((contact) => (
                 <button key={contact.id} onClick={() => { setDirectMessages([]); setMessageError(""); setMessageLoading(true); setSelected(contact.id); setShowContacts(false); }} className={`group flex w-full items-center gap-3 rounded-2xl border p-3 text-left transition ${selected === contact.id ? "border-cyan-300/25 bg-gradient-to-r from-fuchsia-500/15 via-violet-500/10 to-cyan-400/10" : "border-transparent hover:border-white/10 hover:bg-white/[.045]"}`}>
-                  <span className="relative grid h-11 w-11 shrink-0 place-items-center rounded-[15px] bg-gradient-to-br from-fuchsia-500/30 via-violet-500/25 to-cyan-400/25 text-sm font-bold ring-1 ring-white/10">{contact.display_name.slice(0, 1).toUpperCase()}{contact.isDue && <span className="absolute -right-0.5 -top-0.5 h-2.5 w-2.5 rounded-full bg-pink-400 shadow-[0_0_10px_rgba(236,72,153,.75)]" />}</span>
+                  <span className="relative h-11 w-11 shrink-0">
+                    <img src={avatarUrl(contact.avatar_seed || contact.id, 88)} alt="" className="h-11 w-11 rounded-[15px] bg-gradient-to-br from-fuchsia-500/30 via-violet-500/25 to-cyan-400/25 object-cover ring-1 ring-white/15" loading="lazy" />
+                    {contact.isDue && <span className="absolute -right-0.5 -top-0.5 h-2.5 w-2.5 rounded-full bg-pink-400 shadow-[0_0_10px_rgba(236,72,153,.75)]" />}
+                  </span>
                   <span className="min-w-0 flex-1"><span className="flex min-w-0 items-center justify-between gap-2"><span className="block truncate text-sm font-semibold text-white/90">{contact.display_name}</span>{contact.lastMessageAt && <time className="shrink-0 text-[10px] text-white/40">{new Date(contact.lastMessageAt).toLocaleTimeString("de-DE", { hour: "2-digit", minute: "2-digit" })}</time>}</span><span className="mt-1 block truncate text-xs text-white/50">{contact.lastMessage ? (contact.lastMessageFromMe ? "Du: " : "") + contact.lastMessage : contact.handle}</span></span>
                   <MessageCircle className="h-4 w-4 shrink-0 text-white/25 group-hover:text-cyan-200" />
                 </button>
@@ -276,6 +280,7 @@ export default function MessagesWorkspace({
           <header className="flex h-[74px] shrink-0 items-center justify-between border-b border-white/[.07] px-5 sm:px-7">
             <div className="flex min-w-0 items-center gap-3">
               <button onClick={() => setShowContacts(true)} className="grid h-9 w-9 shrink-0 place-items-center rounded-xl text-white/60 hover:bg-white/[.07] lg:hidden" aria-label="Zur Kontaktliste"><ChevronLeft className="h-5 w-5" /></button>
+              {(selectedStudent || selectedContact) && <img src={avatarUrl((selectedStudent || selectedContact)?.avatar_seed || (selectedStudent || selectedContact)?.id, 80)} alt="" className="h-10 w-10 shrink-0 rounded-[13px] object-cover ring-1 ring-white/15" />}
               <div className="min-w-0"><p className="truncate text-base font-bold">{selectedStudent?.display_name || selectedContact?.display_name || selectedGroup?.title || "Nachrichten"}</p><p className="mt-1 text-[10px] font-semibold uppercase tracking-[.17em] text-white/30">{selectedStudent || selectedContact ? "Direktnachricht" : selectedGroup ? "Klassengruppe" : "Dein DR1FT-Postfach"}</p></div>
             </div>
             <span aria-hidden="true" className="h-10 w-10" />
