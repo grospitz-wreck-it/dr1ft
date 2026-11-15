@@ -20,12 +20,23 @@ export async function GET(request: Request) {
     });
     if (peersError) return NextResponse.json({ error: "Klassenmitglieder konnten nicht geladen werden." }, { status: 500 });
 
-    const profiles = (peers ?? []).map((peer: { peer_user_id: string; display_name: string; username: string }) => ({
+    const peerProfiles = (peers ?? []).map((peer: { peer_user_id: string; display_name: string; username: string }) => ({
       id: peer.peer_user_id,
       display_name: peer.display_name,
       username: peer.username,
     }));
-    const memberIds = profiles.map((profile) => profile.id);
+    const memberIds = peerProfiles.map((profile) => profile.id);
+    // Avatar seeds are presentation data only. Fetch them only for IDs already
+    // authorized by the class-scoped peer RPC; never enumerate all profiles.
+    const { data: avatarProfiles, error: avatarError } = memberIds.length
+      ? await supabase.from("user_profiles").select("id, avatar_seed").in("id", memberIds)
+      : { data: [], error: null };
+    if (avatarError) return NextResponse.json({ error: "Profilbilder konnten nicht geladen werden." }, { status: 500 });
+    const avatarSeedById = new Map((avatarProfiles ?? []).map((profile) => [profile.id, profile.avatar_seed]));
+    const profiles = peerProfiles.map((profile) => ({
+      ...profile,
+      avatar_seed: avatarSeedById.get(profile.id) ?? profile.id,
+    }));
 
     const { data: unreadMessages, error: unreadError } = await supabase
       .from("student_direct_messages")
@@ -80,6 +91,12 @@ export async function GET(request: Request) {
   if (peersError) return NextResponse.json({ error: "Kontakte konnten nicht geprüft werden." }, { status: 500 });
   const peer = (peers ?? []).find((candidate: { peer_user_id: string }) => candidate.peer_user_id === peerId);
   if (!peer) return NextResponse.json({ error: "Dieser Kontakt gehört nicht zu deiner Klasse." }, { status: 404 });
+  const { data: peerProfile, error: peerProfileError } = await supabase
+    .from("user_profiles")
+    .select("avatar_seed")
+    .eq("id", peerId)
+    .maybeSingle();
+  if (peerProfileError) return NextResponse.json({ error: "Kontaktprofil konnte nicht geladen werden." }, { status: 500 });
 
   const { data: newestFirstMessages, error } = await supabase
     .from("student_direct_messages")
@@ -98,7 +115,7 @@ export async function GET(request: Request) {
     if (readError) return NextResponse.json({ error: "Nachrichten geladen, Gelesen-Status konnte nicht gespeichert werden." }, { status: 500 });
   }
 
-  return NextResponse.json({ messages, peer: { id: peer.peer_user_id, display_name: peer.display_name || peer.username || "DR1FT Schüler" } });
+  return NextResponse.json({ messages, peer: { id: peer.peer_user_id, display_name: peer.display_name || peer.username || "DR1FT Schüler", avatar_seed: peerProfile?.avatar_seed ?? peer.peer_user_id } });
 }
 
 export async function POST(request: Request) {
