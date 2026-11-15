@@ -22,7 +22,7 @@ create policy "students send direct messages to classmates"
     and sender_id <> recipient_id
     and exists (
       select 1
-      from public.get_student_class_peers(class_instance_id) peer
+      from public.get_student_class_peers(student_direct_messages.class_instance_id) peer
       where peer.peer_user_id = student_direct_messages.recipient_id
     )
   );
@@ -39,7 +39,7 @@ create policy "students read own direct messages"
     and (select auth.uid()) in (sender_id, recipient_id)
     and exists (
       select 1
-      from public.get_student_class_peers(class_instance_id) peer
+      from public.get_student_class_peers(student_direct_messages.class_instance_id) peer
       where peer.peer_user_id = case
         when student_direct_messages.sender_id = (select auth.uid())
           then student_direct_messages.recipient_id
